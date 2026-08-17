@@ -1,14 +1,39 @@
 #!/bin/sh
-# Runs exactly what CI runs, before anything leaves this machine.
+# Runs exactly what CI runs, on the SAME Node version CI uses, before anything
+# leaves this machine.
 #
-# Branch protection on a private repo needs GitHub Pro, so this hook is our
-# free enforcement of "red never merges". Enable it once per clone:
+# Branch protection on a private repo needs GitHub Pro, so this hook is our free
+# enforcement of "red never merges". Enable it once per clone:
 #
 #   git config core.hooksPath .githooks
 #
 # Emergency escape hatch (use it and you own the red build): git push --no-verify
 
-echo "pre-push: running npm run verify"
+REQUIRED=$(tr -d 'v \n' < .nvmrc)
+current_major() { node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1; }
+
+if [ "$(current_major)" != "$REQUIRED" ]; then
+  # Homebrew installs Node as a dependency of other formulae (the Vercel CLI
+  # pulled in Node 26), and it lands ahead of the pinned version on PATH.
+  # Prefer a matching Node if one is installed somewhere obvious.
+  for dir in /usr/local/bin /opt/homebrew/bin; do
+    if [ -x "$dir/node" ] &&
+       [ "$("$dir/node" -v | sed 's/^v//' | cut -d. -f1)" = "$REQUIRED" ]; then
+      PATH="$dir:$PATH"
+      export PATH
+      break
+    fi
+  done
+fi
+
+if [ "$(current_major)" != "$REQUIRED" ]; then
+  echo "pre-push BLOCKED: this shell has Node $(current_major), the project pins Node $REQUIRED (.nvmrc)."
+  echo "Verifying on the wrong major tests a different runtime than CI and Vercel."
+  echo "Install Node $REQUIRED, or put a matching node earlier on your PATH."
+  exit 1
+fi
+
+echo "pre-push: running npm run verify on Node $(node -v)"
 
 if ! npm run verify; then
   echo ""

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { navigation } from "@/components/shell/nav-config";
 import { EmptyDashboard } from "@/components/shell/empty-dashboard";
 import { Sidebar } from "@/components/shell/sidebar";
+import { clearPersistedState } from "@/lib/client-state";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
@@ -27,7 +28,11 @@ describe("nav config", () => {
 
 describe("Sidebar", () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    // Not every environment provides localStorage (Node 26 + jsdom does not),
+    // so the component falls back to memory. Clear BOTH, or state leaks between
+    // tests on whichever environment is using the fallback.
+    window.localStorage?.clear();
+    clearPersistedState();
   });
 
   it("renders every navigation group and item", () => {
@@ -72,9 +77,14 @@ describe("Sidebar", () => {
 
     await user.click(screen.getByRole("button", { name: /collapse sidebar/i }));
     expect(sidebar).toHaveAttribute("data-collapsed", "true");
-    expect(window.localStorage.getItem("gvos.sidebar.collapsed")).toBe("true");
 
-    // The preference survives a remount.
+    // Where localStorage exists it must actually be written to. Where it does
+    // not, the memory fallback covers it and the behaviour below still holds.
+    if (window.localStorage) {
+      expect(window.localStorage.getItem("gvos.sidebar.collapsed")).toBe("true");
+    }
+
+    // The behaviour that matters either way: the preference survives a remount.
     unmount();
     render(<Sidebar />);
     expect(screen.getByTestId("sidebar")).toHaveAttribute("data-collapsed", "true");
