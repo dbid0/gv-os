@@ -1,10 +1,20 @@
+import { fileURLToPath } from "node:url";
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
-  // Resolves the "@/*" alias straight from tsconfig.json, natively.
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    // Resolves the "@/*" alias straight from tsconfig.json, natively.
+    tsconfigPaths: true,
+    alias: {
+      // See tests/stubs/server-only.ts for why this is safe.
+      "server-only": fileURLToPath(
+        new URL("./tests/stubs/server-only.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
@@ -14,9 +24,15 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       // Modules where a regression costs real money get a hard gate.
       // lib/money and lib/splits land in a later PR and must stay at 100%.
-      include: ["src/env.ts", "src/lib/**"],
+      include: ["src/env.ts", "src/env.server.ts", "src/lib/**"],
       thresholds: {
         "src/env.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/env.server.ts": {
           statements: 100,
           branches: 100,
           functions: 100,
