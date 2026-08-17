@@ -33,6 +33,21 @@ if [ "$(current_major)" != "$REQUIRED" ]; then
   exit 1
 fi
 
+# Incremental `npm install` on macOS drops optional dependencies that only apply
+# to other platforms, so the lockfile passes here and `npm ci` fails on the Linux
+# runner. Documenting that was not enough (it recurred within the hour), so this
+# regenerates the lockfile mechanically whenever dependencies changed.
+if ! git diff --quiet origin/main -- package.json 2>/dev/null; then
+  echo "pre-push: package.json changed, regenerating the lockfile for all platforms"
+  npm run deps:relock >/dev/null 2>&1
+  if ! git diff --quiet -- package-lock.json; then
+    echo ""
+    echo "pre-push BLOCKED: package-lock.json was incomplete and has been regenerated."
+    echo "Review the diff and commit it, then push again."
+    exit 1
+  fi
+fi
+
 echo "pre-push: running npm run verify on Node $(node -v)"
 
 if ! npm run verify; then

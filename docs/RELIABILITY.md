@@ -48,8 +48,18 @@ Incremental `npm install` on macOS re-resolves the tree and drops optional
 packages that only apply to other platforms (the `@emnapi/*` packages that the
 `@tailwindcss/oxide` wasm fallback needs on linux-x64). The lockfile then looks
 fine locally and `npm ci` fails on the Linux CI runner. A clean regeneration
-includes every platform. This has bitten us twice; it is a known trap, not a
-mystery.
+includes every platform.
+
+This has now bitten us three times, the third within an hour of this warning
+being written. Documentation does not prevent it, so the pre-push hook
+regenerates the lockfile automatically whenever `package.json` has changed and
+blocks the push if that produces a diff. Prefer mechanisms over reminders.
+
+## Watch CI after every push
+
+A green local `verify` is not a green CI. CI installs from the lockfile on
+Linux; your machine does not. Two commits landed red because they were pushed
+without checking the run. Pushing is not finishing.
 
 ## Environments
 
