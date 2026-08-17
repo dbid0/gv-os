@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GV OS
 
-## Getting Started
+The Global Ventures agency OS. Sales, accounting, and ops for Daniel and Gus in
+one hosted app.
 
-First, run the development server:
+- **Plan:** `Operator/global-ventures/gv-os/BUILD-PLAN.md` (the full architecture
+  and phase roadmap)
+- **Rules:** [`docs/RELIABILITY.md`](docs/RELIABILITY.md) — read this before
+  changing anything that touches money
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript strict · Tailwind 4 · shadcn/ui · motion ·
+Postgres on Supabase · Drizzle ORM · Supabase Auth · Vitest · Vercel
+
+## Run it
+
+Requires **Node 24** (see `.nvmrc`; Homebrew may put a newer Node first on your
+`PATH`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local   # fill in the values
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command                 | What it does                                     |
+| ----------------------- | ------------------------------------------------ |
+| `npm run dev`           | Dev server                                       |
+| `npm run build`         | Production build                                 |
+| `npm run typecheck`     | `tsc --noEmit`                                   |
+| `npm run lint`          | ESLint                                           |
+| `npm run test`          | Vitest, once                                     |
+| `npm run test:watch`    | Vitest, watching                                 |
+| `npm run test:coverage` | Coverage, with gates on money modules            |
+| `npm run format`        | Prettier write                                   |
+| `npm run verify`        | **Everything CI runs.** Do this before you push. |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environments
 
-## Learn More
+| Environment         | Database                 |
+| ------------------- | ------------------------ |
+| Local               | Supabase `gv-os-staging` |
+| Preview (per PR)    | Supabase `gv-os-staging` |
+| Production (`main`) | Supabase `gv-os-prod`    |
 
-To learn more about Next.js, take a look at the following resources:
+A preview deployment never touches production data. That separation is a
+control, not a convention.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build order
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Foundation** — repo, CI, database, auth, app shell, live URL ← _here_
+2. Sales module (VSL → application → setter → closer)
+3. Accounting ledger (append-only, reconciled to the Master Finance Sheet)
+4. Ops (tasks + EOD)
+5. Ads
+6. Migrate the GGV job boards in, retire Lovable
