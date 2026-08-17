@@ -17,6 +17,7 @@
     "test:coverage": "vitest run tests/unit --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "deps:relock": "rm -rf node_modules package-lock.json && npm install",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build"

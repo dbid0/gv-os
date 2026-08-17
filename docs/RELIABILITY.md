@@ -39,6 +39,18 @@ month, Global Ventures loses real money.
 - Two separate Supabase projects: `gv-os-prod` and `gv-os-staging`. Preview
   deployments point at staging. **A preview may never touch production data.**
 
+## Dependencies
+
+**After any change to dependencies, run `npm run deps:relock` and commit the
+lockfile.**
+
+Incremental `npm install` on macOS re-resolves the tree and drops optional
+packages that only apply to other platforms (the `@emnapi/*` packages that the
+`@tailwindcss/oxide` wasm fallback needs on linux-x64). The lockfile then looks
+fine locally and `npm ci` fails on the Linux CI runner. A clean regeneration
+includes every platform. This has bitten us twice; it is a known trap, not a
+mystery.
+
 ## Environments
 
 - `src/env.ts` parses every environment variable through Zod at load. A missing
