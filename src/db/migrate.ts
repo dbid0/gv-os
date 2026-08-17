@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-import { parseServerEnv } from "@/env.server";
+import { parseServerEnv } from "@/env.schema";
 
 /**
  * Applies every pending migration in ./drizzle, in order.
@@ -14,7 +14,9 @@ import { parseServerEnv } from "@/env.server";
  * transaction pooler is unreliable.
  */
 export async function runMigrations(databaseUrl?: string) {
-  const url = databaseUrl ?? parseServerEnv(process.env).DATABASE_URL;
+  const env = databaseUrl ? undefined : parseServerEnv(process.env);
+  // Session pooler when we have one, otherwise whatever DATABASE_URL points at.
+  const url = databaseUrl ?? env!.MIGRATION_DATABASE_URL ?? env!.DATABASE_URL;
 
   const client = postgres(url, { max: 1, prepare: false });
 
