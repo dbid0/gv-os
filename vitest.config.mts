@@ -38,6 +38,20 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Money math. A regression here costs real money, so nothing ships
+        // untested. If this gate fails, write the test, do not lower the bar.
+        "src/lib/money.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/splits.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
