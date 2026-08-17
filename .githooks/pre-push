@@ -1,0 +1,21 @@
+#!/bin/sh
+# Runs exactly what CI runs, before anything leaves this machine.
+#
+# Branch protection on a private repo needs GitHub Pro, so this hook is our
+# free enforcement of "red never merges". Enable it once per clone:
+#
+#   git config core.hooksPath .githooks
+#
+# Emergency escape hatch (use it and you own the red build): git push --no-verify
+
+echo "pre-push: running npm run verify"
+
+if ! npm run verify; then
+  echo ""
+  echo "pre-push BLOCKED: verify failed. Fix it, or push with --no-verify if you"
+  echo "know exactly why that is safe."
+  exit 1
+fi
+
+echo "pre-push: verify passed"
+exit 0
