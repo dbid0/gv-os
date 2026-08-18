@@ -22,6 +22,13 @@
       "when": 1787069361566,
       "tag": "0002_append_only_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787095694753,
+      "tag": "0003_sales_module",
+      "breakpoints": true
     }
   ]
 }
