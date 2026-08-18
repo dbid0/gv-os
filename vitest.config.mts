@@ -66,6 +66,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The rows -> rollup adapter feeds the payout run, so it ships covered.
+        "src/lib/sales/rollup-adapter.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
