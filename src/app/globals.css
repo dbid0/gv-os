@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-poppins);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,108 +51,134 @@
 /* ---------------------------------------------------------------------------
    GV OS design tokens
    ---------------------------------------------------------------------------
-   Direction: dark operator console. Near-black, blue-tinted neutrals, hairline
-   borders, one electric-blue accent, monospaced tabular numerals for money.
+   Ported from the GGV Portal (globalventures.app), which is the real Global
+   Ventures design system. Same brand, same feel, so the job board and the
+   operating system read as one company's software.
 
-   The accent is deliberately COOLER and more electric than the client brands so
-   GV OS reads as the parent system rather than echoing a client:
-     The Grid  #3B82F6   Racks  #0166E0   GV OS  ~#2B8BFF
+   The brand is MONOCHROME and that is deliberate:
+     charcoal  #25242B      off-white  #F0F0F0      Poppins
+   Both come from the GV Typeform theme. Buttons are inverted, light on dark.
+   There is no accent colour.
 
-   Rules:
-   - Accent is a signal, not decoration. One accented element per view.
-   - Neutrals carry a small blue chroma (~0.01) so greys feel intentional
-     rather than muddy.
-   - Borders are hairlines at low alpha. Depth comes from surface lightness
-     steps, not from heavy shadows.
+   Keeping it colourless is also functional here. GV OS displays several client
+   brands at once (The Grid blue, The Vault purple, Racks cobalt), and a
+   colourless shell lets those appear as DATA without fighting the interface.
+
+   The one exception is money: negative amounts stay red, because "this number
+   is negative" has to be unmistakable at a glance. That is information, not
+   decoration.
    --------------------------------------------------------------------------- */
 
 :root {
-  /* Light stays a first-class skin, just not the default. */
-  --background: oklch(0.985 0.002 255);
-  --foreground: oklch(0.19 0.012 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.012 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.012 255);
-  --primary: oklch(0.55 0.2 252);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.004 255);
-  --secondary-foreground: oklch(0.24 0.012 255);
-  --muted: oklch(0.96 0.004 255);
-  --muted-foreground: oklch(0.5 0.012 255);
-  --accent: oklch(0.94 0.008 255);
-  --accent-foreground: oklch(0.24 0.012 255);
-  --destructive: oklch(0.58 0.22 25);
-  --success: oklch(0.6 0.15 150);
-  --warning: oklch(0.72 0.16 75);
-  --border: oklch(0.9 0.006 255);
-  --input: oklch(0.9 0.006 255);
-  --ring: oklch(0.55 0.2 252);
-  --chart-1: oklch(0.55 0.2 252);
-  --chart-2: oklch(0.6 0.15 150);
-  --chart-3: oklch(0.72 0.16 75);
-  --chart-4: oklch(0.55 0.16 300);
-  --chart-5: oklch(0.62 0.14 200);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.97 0.004 255);
-  --sidebar-foreground: oklch(0.19 0.012 255);
-  --sidebar-primary: oklch(0.55 0.2 252);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.93 0.008 255);
-  --sidebar-accent-foreground: oklch(0.24 0.012 255);
-  --sidebar-border: oklch(0.9 0.006 255);
-  --sidebar-ring: oklch(0.55 0.2 252);
+  /* Light is the same monochrome brand, inverted. Charcoal on off-white, with
+     the accent as charcoal so buttons stay dark-on-light. First-class, but the
+     GV brand is a dark brand, so dark is the default. */
+  --background: #f0f0f0;
+  --bg-elevated: #ffffff;
+  --surface-3: #d8d8dd;
+  --foreground: #1a1a1e;
+
+  --card: #ffffff;
+  --card-foreground: #1a1a1e;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1e;
+
+  --primary: #25242b;
+  --primary-foreground: #f0f0f0;
+
+  --secondary: #e7e7ea;
+  --secondary-foreground: #25242b;
+  --muted: #ebebee;
+  --muted-foreground: #5c5c66;
+  --faint: #8a8a94;
+  --accent: #e7e7ea;
+  --accent-foreground: #25242b;
+
+  --destructive: oklch(0.55 0.21 25);
+  --success: oklch(0.55 0.14 155);
+  --warning: oklch(0.65 0.14 75);
+
+  --border: #dcdce1;
+  --border-strong: #c4c4cc;
+  --input: #c4c4cc;
+  --ring: #25242b;
+
+  --chart-1: #25242b;
+  --chart-2: #4a4a54;
+  --chart-3: #6f6f79;
+  --chart-4: #a2a2ab;
+  --chart-5: #c4c4cc;
+
+  --radius: 0.75rem;
+
+  --sidebar: #e9e9ec;
+  --sidebar-foreground: #5c5c66;
+  --sidebar-primary: #25242b;
+  --sidebar-primary-foreground: #f0f0f0;
+  --sidebar-accent: #dcdce1;
+  --sidebar-accent-foreground: #25242b;
+  --sidebar-border: #dcdce1;
+  --sidebar-ring: #25242b;
 }
 
 .dark {
-  /* Three surface steps: page < card < popover. Depth without shadows. */
-  --background: oklch(0.155 0.009 258);
-  --foreground: oklch(0.97 0.003 255);
-  --card: oklch(0.185 0.01 258);
-  --card-foreground: oklch(0.97 0.003 255);
-  --popover: oklch(0.21 0.011 258);
-  --popover-foreground: oklch(0.97 0.003 255);
+  /* Surfaces, exactly the GGV ladder: bg -> elevated -> surface -> charcoal. */
+  --background: #131316;
+  --bg-elevated: #181819;
+  --surface-3: #303037;
+  --foreground: #f0f0f0;
 
-  /* Electric blue. Bright enough to hold contrast on near-black. */
-  --primary: oklch(0.66 0.19 252);
-  --primary-foreground: oklch(0.14 0.01 258);
+  --card: #1d1d20;
+  --card-foreground: #f0f0f0;
+  --popover: #25242b;
+  --popover-foreground: #f0f0f0;
 
-  --secondary: oklch(0.25 0.011 258);
-  --secondary-foreground: oklch(0.97 0.003 255);
-  --muted: oklch(0.23 0.01 258);
-  --muted-foreground: oklch(0.68 0.012 258);
-  --accent: oklch(0.27 0.014 258);
-  --accent-foreground: oklch(0.98 0.003 255);
+  /* Accent IS off-white. Buttons are light on dark, inverted. */
+  --primary: #f0f0f0;
+  --primary-foreground: #1a1a1e;
 
-  --destructive: oklch(0.66 0.2 25);
-  --success: oklch(0.72 0.16 155);
-  --warning: oklch(0.78 0.15 80);
+  --secondary: #25242b;
+  --secondary-foreground: #f0f0f0;
+  --muted: #1d1d20;
+  --muted-foreground: #a2a2ab;
+  --faint: #6f6f79;
+  --accent: #25242b;
+  --accent-foreground: #f0f0f0;
 
-  /* Hairlines, not walls. */
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.66 0.19 252);
+  /* Money only. Everything else stays monochrome. */
+  --destructive: oklch(0.68 0.19 25);
+  --success: oklch(0.75 0.15 155);
+  --warning: oklch(0.8 0.14 80);
 
-  --chart-1: oklch(0.66 0.19 252);
-  --chart-2: oklch(0.72 0.16 155);
-  --chart-3: oklch(0.78 0.15 80);
-  --chart-4: oklch(0.65 0.17 300);
-  --chart-5: oklch(0.7 0.13 200);
+  --border: #2b2b31;
+  --border-strong: #3c3c44;
+  --input: #3c3c44;
+  --ring: #f0f0f0;
 
-  /* Sidebar sits BELOW the page surface so content reads as the foreground. */
-  --sidebar: oklch(0.135 0.009 258);
-  --sidebar-foreground: oklch(0.9 0.006 258);
-  --sidebar-primary: oklch(0.66 0.19 252);
-  --sidebar-primary-foreground: oklch(0.14 0.01 258);
-  --sidebar-accent: oklch(0.24 0.013 258);
-  --sidebar-accent-foreground: oklch(0.98 0.003 255);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.66 0.19 252);
+  /* Charts step by BRIGHTNESS, not hue, so series stay on-brand. */
+  --chart-1: #f0f0f0;
+  --chart-2: #cfcfd6;
+  --chart-3: #a2a2ab;
+  --chart-4: #6f6f79;
+  --chart-5: #4a4a54;
+
+  --sidebar: #0f0f12;
+  --sidebar-foreground: #a2a2ab;
+  --sidebar-primary: #f0f0f0;
+  --sidebar-primary-foreground: #1a1a1e;
+  --sidebar-accent: #25242b;
+  --sidebar-accent-foreground: #f0f0f0;
+  --sidebar-border: #2b2b31;
+  --sidebar-ring: #f0f0f0;
 }
 
 @theme inline {
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-faint: var(--faint);
+  --color-border-strong: var(--border-strong);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-surface-3: var(--surface-3);
 }
 
 @layer base {
@@ -160,12 +186,36 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    /* Slightly tighter tracking reads as more precise at small sizes. */
+    /* The signature GGV move: a soft light bloom above the fold, so the page
+       has a light source instead of being flatly dark. */
+    background:
+      radial-gradient(
+        1100px 600px at 50% -15%,
+        color-mix(in oklab, var(--foreground) 5%, transparent),
+        transparent 60%
+      ),
+      var(--background);
+    @apply text-foreground;
     letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--foreground) 22%, transparent);
+    color: var(--foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 2px solid var(--background);
   }
 
   /* Money and any figure in a column: monospaced, tabular, so digits line up
@@ -187,5 +237,78 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Signature utilities, ported from the GGV Portal. These are what make the
+   surface feel like Global Ventures rather than a default shadcn dashboard.
+   --------------------------------------------------------------------------- */
+@layer utilities {
+  /* Faint 44px graph paper, masked so it fades out as it descends. Used behind
+     headers and empty states to stop large dark areas reading as a void. */
+  .grid-noise {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--border) 50%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--border) 50%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+  }
+
+  /* White fading to grey. The brand's way of emphasising a phrase without
+     reaching for a colour. */
+  .text-gradient {
+    background: linear-gradient(100deg, var(--foreground) 20%, var(--muted-foreground));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glass {
+    background: color-mix(in oklab, var(--background) 80%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .card-grad {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--popover) 75%, transparent),
+      var(--card)
+    );
+  }
+
+  .ring-accent {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 16%, transparent),
+      0 10px 40px -14px color-mix(in oklab, #000 70%, transparent);
+  }
+
+  /* Interactive tiles rise slightly. 3px, not 8: restraint is the point. */
+  .hover-lift {
+    transition:
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.22s ease,
+      border-color 0.22s ease;
+    will-change: transform;
+  }
+  .hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px -16px rgb(0 0 0 / 0.55);
+  }
+
+  /* Tactile press for buttons. */
+  .press {
+    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .press:active {
+    transform: scale(0.95);
   }
 }

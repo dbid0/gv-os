@@ -38,12 +38,17 @@ export function EmptyDashboard() {
       variants={stagger()}
       className="mx-auto w-full max-w-6xl space-y-8"
     >
-      <motion.div variants={fadeUp} className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight">Good to go</h2>
-        <p className="text-muted-foreground text-sm">
-          The foundation is live. Modules get designed before they get built, so nothing
-          here shows a number until the data behind it is real.
-        </p>
+      <motion.div variants={fadeUp} className="relative overflow-hidden rounded-xl">
+        <div className="grid-noise pointer-events-none absolute inset-0" aria-hidden />
+        <div className="relative space-y-2 py-2">
+          <h2 className="text-2xl font-bold tracking-tight">
+            The foundation is <span className="text-gradient">live</span>.
+          </h2>
+          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+            Modules get designed before they get built, so nothing here shows a number
+            until the data behind it is real.
+          </p>
+        </div>
       </motion.div>
 
       <motion.div
@@ -56,7 +61,7 @@ export function EmptyDashboard() {
           <motion.div
             key={tile.label}
             variants={fadeUp}
-            className="bg-card p-5 outline outline-transparent"
+            className="bg-card hover-lift p-5 outline outline-transparent"
           >
             <Metric label={tile.label} pending={tile.waiting} />
           </motion.div>

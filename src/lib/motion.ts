@@ -32,10 +32,22 @@ export const smooth: Transition = {
   damping: 30,
 };
 
-/** Ambient, non-interactive: content arriving. */
+/**
+ * Ambient, non-interactive: content arriving.
+ *
+ * The easing is the GGV Portal's signature curve, cubic-bezier(0.16, 1, 0.3, 1)
+ * — a hard expo-out that moves fast then settles. Using the same curve is most
+ * of why two apps feel like the same product.
+ */
 export const gentle: Transition = {
-  duration: 0.28,
-  ease: [0.22, 1, 0.36, 1],
+  duration: 0.3,
+  ease: [0.16, 1, 0.3, 1],
+};
+
+/** Larger entrances: page and route content. */
+export const entrance: Transition = {
+  duration: 0.38,
+  ease: [0.16, 1, 0.3, 1],
 };
 
 /** Content entering a page or a list. */
