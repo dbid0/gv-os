@@ -4,6 +4,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { allNavItems } from "@/components/shell/nav-config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useIsHydrated } from "@/lib/client-state";
@@ -25,6 +26,8 @@ export function Topbar() {
 
   return (
     <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
+      <MobileNav />
+
       <div className="min-w-0">
         <h1 className="truncate text-sm font-medium">{current?.label ?? "GV OS"}</h1>
         {current && (

@@ -4,7 +4,6 @@ import {
   CalendarDays,
   LayoutDashboard,
   Megaphone,
-  Palette,
   Receipt,
   Settings,
   Users,
@@ -107,13 +106,6 @@ export const navigation: NavGroup[] = [
   {
     label: "System",
     items: [
-      {
-        label: "Design system",
-        href: "/system",
-        icon: Palette,
-        status: "ready",
-        description: "Every primitive, in one place",
-      },
       {
         label: "Settings",
         href: "/settings",
