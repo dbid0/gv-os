@@ -31,11 +31,12 @@ describe("Money", () => {
 });
 
 describe("Metric", () => {
-  it("shows what it is waiting on instead of a zero", () => {
+  it("shows an em dash and what it is waiting on, never a zero", () => {
     render(<Metric label="Cash collected" pending="Accounting" />);
 
     expect(screen.getByText(/waiting on: accounting/i)).toBeInTheDocument();
-    // A zero would be a claim about reality. There must not be one.
+    // An em dash means "no data". A zero would claim the real answer is nothing.
+    expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("0")).toBeNull();
     expect(screen.queryByText("$0.00")).toBeNull();
   });

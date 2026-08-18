@@ -116,7 +116,7 @@ describe("EmptyDashboard", () => {
     render(<EmptyDashboard />);
 
     // Scope to the one tile, since several wait on the same module.
-    const tile = screen.getByText("Cash collected").closest('[data-slot="metric"]');
+    const tile = screen.getByText("Rev share owed").closest('[data-slot="metric"]');
     expect(tile).not.toBeNull();
     // Presence, not visibility: motion renders the entry variant at opacity 0
     // and jsdom never runs the animation to completion.
