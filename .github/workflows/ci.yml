@@ -42,6 +42,11 @@ jobs:
         run: npm run test
 
       - name: Build
+        # Placeholders only. The real values live in Vercel; the build just
+        # needs the contract in src/env.ts to be satisfiable.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://build.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder-anon-key-value
         run: npm run build
 
   integration:
