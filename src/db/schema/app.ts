@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   bigint,
   index,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -49,6 +50,49 @@ export const clients = appSchema.table(
 );
 
 /**
+ * A sales rep on a team. A team is a client brand, so a rep belongs to a
+ * client — there is no separate `teams` table to drift out of step with the
+ * roster we already keep.
+ *
+ * The comp columns hold a rep's STANDING terms. A per-deal override lives on
+ * the commission split, and the dollar commission itself is never stored here —
+ * it is derived from collected cash at rollup time, the same rule that keeps
+ * the ledger honest.
+ */
+export const reps = appSchema.table(
+  "reps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The team (client brand) this rep sells for. */
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** Set when the rep also signs in to GV OS. Null for a rep we only track. */
+    profileId: uuid("profile_id").references(() => profiles.id),
+    name: text("name").notNull(),
+    /** closer · setter · dm_setter · manager · operator */
+    role: text("role").notNull(),
+
+    /** Default commission rate in basis points (1000 = 10%). Null = no default. */
+    commissionBps: bigint("commission_bps", { mode: "number" }),
+    /** Fixed base pay for a period, in cents. */
+    basePayCents: bigint("base_pay_cents", { mode: "number" }),
+    /** A manager's top-line skim across the team, in basis points. */
+    topLineSkimBps: bigint("top_line_skim_bps", { mode: "number" }),
+
+    /** active | inactive. Inactive reps drop off leaderboards and payout runs. */
+    status: text("status").notNull().default("active"),
+    externalRef: text("external_ref"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("reps_client_idx").on(table.clientId),
+    uniqueIndex("reps_external_ref_key").on(table.externalRef),
+  ],
+);
+
+/**
  * An agreement. NOT a money event.
  *
  * `contractValueCents` is what was agreed, which is a fact about the deal.
@@ -75,6 +119,22 @@ export const deals = appSchema.table(
     closedAt: timestamp("closed_at", { withTimezone: true }),
     agreementSigned: text("agreement_signed"),
     notes: text("notes"),
+
+    /**
+     * Sales attribution. A deal is closed BY a rep, comes FROM a source, and is
+     * either one-time or recurring. These are facts about the sale; the rep's
+     * pay is a separate commission split, and the cash is the ledger.
+     */
+    /** The rep who closed it. Null for pre-sales-module deals and imports. */
+    repId: uuid("rep_id").references(() => reps.id),
+    /** one_time | recurring — RepVision's deal "Type". */
+    recurrence: text("recurrence"),
+    /** How the deal came in: inbound · outbound · referral · paid_ads … */
+    source: text("source"),
+    /** The specific channel within the source. */
+    leadSource: text("lead_source"),
+    /** The end customer, for the deals ledger view. */
+    customerName: text("customer_name"),
 
     /**
      * Stable key for the source row this came from. Makes import idempotent:
@@ -121,12 +181,107 @@ export const partnerSplits = appSchema.table(
   (table) => [index("partner_splits_client_idx").on(table.clientId)],
 );
 
+/**
+ * One participant's cut of one deal. A deal can carry several: a closer, a
+ * setter, a manager's skim. The RATE and ROLE live here; the dollar commission
+ * is DERIVED from the deal's collected cash (or revenue) at rollup time, never
+ * stored — the same rule that keeps a balance from drifting off the ledger.
+ *
+ * This is the rep-money layer, distinct from the partner (Daniel/Gus) split:
+ * one deal, two split layers, on the same agreement.
+ */
+export const commissionSplits = appSchema.table(
+  "commission_splits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    dealId: uuid("deal_id")
+      .notNull()
+      .references(() => deals.id),
+    repId: uuid("rep_id")
+      .notNull()
+      .references(() => reps.id),
+    /** closer · setter · dm_setter · manager */
+    role: text("role").notNull(),
+    /** This participant's rate on this deal, in basis points. */
+    rateBps: bigint("rate_bps", { mode: "number" }).notNull(),
+    /** cash_collected | deal_revenue — what the rate is applied to. */
+    basis: text("basis").notNull().default("cash_collected"),
+    /** A one-off bonus for this participant on this deal, in cents. */
+    bonusCents: bigint("bonus_cents", { mode: "number" }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("commission_splits_deal_idx").on(table.dealId),
+    index("commission_splits_rep_idx").on(table.repId),
+  ],
+);
+
+/**
+ * A rep's daily activity submission — the EOD, and its end-of-week and
+ * beginning-of-day variants. These are SELF-REPORTED operational counts (dials,
+ * shows, appointments set), not money. Any cash figure a rep types here is
+ * their own number and stays inside `metrics`, deliberately walled off from the
+ * ledger, which remains the only source of truth for money.
+ */
+export const activityReports = appSchema.table(
+  "activity_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repId: uuid("rep_id")
+      .notNull()
+      .references(() => reps.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** The day this report covers. */
+    reportDate: timestamp("report_date", { withTimezone: true }).notNull(),
+    /** eod | eow | bod */
+    kind: text("kind").notNull().default("eod"),
+    /** The activity bundle: { dials, contacts, appts_set, shows, pitched, … }. */
+    metrics: jsonb("metrics").$type<Record<string, number>>().notNull().default({}),
+    notes: text("notes"),
+    externalRef: text("external_ref"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("activity_reports_rep_idx").on(table.repId),
+    index("activity_reports_date_idx").on(table.reportDate),
+    uniqueIndex("activity_reports_external_ref_key").on(table.externalRef),
+  ],
+);
+
 export const clientsRelations = relations(clients, ({ many }) => ({
   deals: many(deals),
+  reps: many(reps),
 }));
 
-export const dealsRelations = relations(deals, ({ one }) => ({
+export const repsRelations = relations(reps, ({ one, many }) => ({
+  client: one(clients, { fields: [reps.clientId], references: [clients.id] }),
+  profile: one(profiles, { fields: [reps.profileId], references: [profiles.id] }),
+  deals: many(deals),
+  commissionSplits: many(commissionSplits),
+}));
+
+export const dealsRelations = relations(deals, ({ one, many }) => ({
   client: one(clients, { fields: [deals.clientId], references: [clients.id] }),
+  rep: one(reps, { fields: [deals.repId], references: [reps.id] }),
+  commissionSplits: many(commissionSplits),
+}));
+
+export const commissionSplitsRelations = relations(commissionSplits, ({ one }) => ({
+  deal: one(deals, { fields: [commissionSplits.dealId], references: [deals.id] }),
+  rep: one(reps, { fields: [commissionSplits.repId], references: [reps.id] }),
+}));
+
+export const activityReportsRelations = relations(activityReports, ({ one }) => ({
+  rep: one(reps, { fields: [activityReports.repId], references: [reps.id] }),
+  client: one(clients, {
+    fields: [activityReports.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export type Profile = typeof profiles.$inferSelect;
@@ -136,3 +291,10 @@ export type NewClient = typeof clients.$inferInsert;
 export type Deal = typeof deals.$inferSelect;
 export type NewDeal = typeof deals.$inferInsert;
 export type PartnerSplit = typeof partnerSplits.$inferSelect;
+export type NewPartnerSplit = typeof partnerSplits.$inferInsert;
+export type Rep = typeof reps.$inferSelect;
+export type NewRep = typeof reps.$inferInsert;
+export type CommissionSplit = typeof commissionSplits.$inferSelect;
+export type NewCommissionSplit = typeof commissionSplits.$inferInsert;
+export type ActivityReport = typeof activityReports.$inferSelect;
+export type NewActivityReport = typeof activityReports.$inferInsert;
