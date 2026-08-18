@@ -52,6 +52,20 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The payout engine and processor fees. Same rule: a regression here
+        // moves money, so it ships fully covered or not at all.
+        "src/lib/accounting/fees.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/accounting/payout.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
