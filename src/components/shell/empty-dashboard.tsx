@@ -2,8 +2,8 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Metric } from "@/components/ui/metric";
 import { fadeUp, stagger } from "@/lib/motion";
 
 /**
@@ -15,10 +15,17 @@ import { fadeUp, stagger } from "@/lib/motion";
  */
 
 const tiles = [
-  { title: "Cash collected", waiting: "Accounting module" },
-  { title: "Applications", waiting: "Sales module" },
-  { title: "Calls booked", waiting: "Sales module" },
-  { title: "Rev share owed", waiting: "Accounting module" },
+  { label: "Cash collected", waiting: "Accounting" },
+  { label: "Applications", waiting: "Sales" },
+  { label: "Calls booked", waiting: "Sales" },
+  { label: "Rev share owed", waiting: "Accounting" },
+];
+
+const foundation = [
+  { label: "Database", detail: "Postgres, migrated, prod and staging separated" },
+  { label: "Money math", detail: "Integer cents, penny-exact splits, 100% covered" },
+  { label: "Pipeline", detail: "Typecheck, lint, tests, and build on every commit" },
+  { label: "Deploys", detail: "Production on main, a preview per pull request" },
 ];
 
 export function EmptyDashboard() {
@@ -29,52 +36,71 @@ export function EmptyDashboard() {
       initial={reduceMotion ? false : "hidden"}
       animate="visible"
       variants={stagger()}
-      className="mx-auto w-full max-w-6xl space-y-6"
+      className="mx-auto w-full max-w-6xl space-y-8"
     >
-      <motion.div variants={fadeUp}>
+      <motion.div variants={fadeUp} className="space-y-1">
         <h2 className="text-xl font-semibold tracking-tight">Good to go</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          The foundation is live: database, migrations, CI, and deploys. Modules get
-          designed before they get built.
+        <p className="text-muted-foreground text-sm">
+          The foundation is live. Modules get designed before they get built, so nothing
+          here shows a number until the data behind it is real.
         </p>
       </motion.div>
 
       <motion.div
         variants={stagger()}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4"
       >
+        {/* A single hairline grid rather than four floating cards: denser, and it
+            reads as one instrument instead of four unrelated widgets. */}
         {tiles.map((tile) => (
-          <motion.div key={tile.title} variants={fadeUp}>
-            <Card className="h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  {tile.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-7 w-24" />
-                <p className="text-muted-foreground/70 text-xs">
-                  Waiting on: {tile.waiting}
-                </p>
-              </CardContent>
-            </Card>
+          <motion.div
+            key={tile.label}
+            variants={fadeUp}
+            className="bg-card p-5 outline outline-transparent"
+          >
+            <Metric label={tile.label} pending={tile.waiting} />
           </motion.div>
         ))}
       </motion.div>
 
       <motion.div variants={fadeUp}>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">What happens next</CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground space-y-2 text-sm">
-            <p>
-              Nothing here shows a number until the data behind it is real. Placeholder
-              metrics on a money screen are how a demo quietly becomes a belief.
-            </p>
-            <p>
-              Next: decide what this dashboard should actually answer each morning, then
-              design the Sales module against it.
+          <CardContent className="space-y-4">
+            <div className="flex items-baseline justify-between gap-4">
+              <h3 className="text-sm font-medium">What is already standing</h3>
+              <span className="text-success text-[11px] tracking-wider uppercase">
+                Verified
+              </span>
+            </div>
+
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {foundation.map((item) => (
+                <li key={item.label} className="flex gap-3">
+                  <span
+                    className="bg-success mt-1.5 size-1.5 shrink-0 rounded-full"
+                    aria-hidden
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm">{item.label}</span>
+                    <span className="text-muted-foreground block text-xs">
+                      {item.detail}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div variants={fadeUp}>
+        <Card>
+          <CardContent className="space-y-2">
+            <h3 className="text-sm font-medium">Next</h3>
+            <p className="text-muted-foreground text-sm">
+              Decide what this screen should answer first thing each morning. That
+              answer defines the Sales module, and the Sales module defines what the
+              tiles above become.
             </p>
           </CardContent>
         </Card>

@@ -48,73 +48,111 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ---------------------------------------------------------------------------
+   GV OS design tokens
+   ---------------------------------------------------------------------------
+   Direction: dark operator console. Near-black, blue-tinted neutrals, hairline
+   borders, one electric-blue accent, monospaced tabular numerals for money.
+
+   The accent is deliberately COOLER and more electric than the client brands so
+   GV OS reads as the parent system rather than echoing a client:
+     The Grid  #3B82F6   Racks  #0166E0   GV OS  ~#2B8BFF
+
+   Rules:
+   - Accent is a signal, not decoration. One accented element per view.
+   - Neutrals carry a small blue chroma (~0.01) so greys feel intentional
+     rather than muddy.
+   - Borders are hairlines at low alpha. Depth comes from surface lightness
+     steps, not from heavy shadows.
+   --------------------------------------------------------------------------- */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Light stays a first-class skin, just not the default. */
+  --background: oklch(0.985 0.002 255);
+  --foreground: oklch(0.19 0.012 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.19 0.012 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.19 0.012 255);
+  --primary: oklch(0.55 0.2 252);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.004 255);
+  --secondary-foreground: oklch(0.24 0.012 255);
+  --muted: oklch(0.96 0.004 255);
+  --muted-foreground: oklch(0.5 0.012 255);
+  --accent: oklch(0.94 0.008 255);
+  --accent-foreground: oklch(0.24 0.012 255);
+  --destructive: oklch(0.58 0.22 25);
+  --success: oklch(0.6 0.15 150);
+  --warning: oklch(0.72 0.16 75);
+  --border: oklch(0.9 0.006 255);
+  --input: oklch(0.9 0.006 255);
+  --ring: oklch(0.55 0.2 252);
+  --chart-1: oklch(0.55 0.2 252);
+  --chart-2: oklch(0.6 0.15 150);
+  --chart-3: oklch(0.72 0.16 75);
+  --chart-4: oklch(0.55 0.16 300);
+  --chart-5: oklch(0.62 0.14 200);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.97 0.004 255);
+  --sidebar-foreground: oklch(0.19 0.012 255);
+  --sidebar-primary: oklch(0.55 0.2 252);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.008 255);
+  --sidebar-accent-foreground: oklch(0.24 0.012 255);
+  --sidebar-border: oklch(0.9 0.006 255);
+  --sidebar-ring: oklch(0.55 0.2 252);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Three surface steps: page < card < popover. Depth without shadows. */
+  --background: oklch(0.155 0.009 258);
+  --foreground: oklch(0.97 0.003 255);
+  --card: oklch(0.185 0.01 258);
+  --card-foreground: oklch(0.97 0.003 255);
+  --popover: oklch(0.21 0.011 258);
+  --popover-foreground: oklch(0.97 0.003 255);
+
+  /* Electric blue. Bright enough to hold contrast on near-black. */
+  --primary: oklch(0.66 0.19 252);
+  --primary-foreground: oklch(0.14 0.01 258);
+
+  --secondary: oklch(0.25 0.011 258);
+  --secondary-foreground: oklch(0.97 0.003 255);
+  --muted: oklch(0.23 0.01 258);
+  --muted-foreground: oklch(0.68 0.012 258);
+  --accent: oklch(0.27 0.014 258);
+  --accent-foreground: oklch(0.98 0.003 255);
+
+  --destructive: oklch(0.66 0.2 25);
+  --success: oklch(0.72 0.16 155);
+  --warning: oklch(0.78 0.15 80);
+
+  /* Hairlines, not walls. */
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.66 0.19 252);
+
+  --chart-1: oklch(0.66 0.19 252);
+  --chart-2: oklch(0.72 0.16 155);
+  --chart-3: oklch(0.78 0.15 80);
+  --chart-4: oklch(0.65 0.17 300);
+  --chart-5: oklch(0.7 0.13 200);
+
+  /* Sidebar sits BELOW the page surface so content reads as the foreground. */
+  --sidebar: oklch(0.135 0.009 258);
+  --sidebar-foreground: oklch(0.9 0.006 258);
+  --sidebar-primary: oklch(0.66 0.19 252);
+  --sidebar-primary-foreground: oklch(0.14 0.01 258);
+  --sidebar-accent: oklch(0.24 0.013 258);
+  --sidebar-accent-foreground: oklch(0.98 0.003 255);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.66 0.19 252);
+}
+
+@theme inline {
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 }
 
 @layer base {
@@ -123,8 +161,31 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Slightly tighter tracking reads as more precise at small sizes. */
+    letter-spacing: -0.006em;
   }
   html {
     @apply font-sans;
+  }
+
+  /* Money and any figure in a column: monospaced, tabular, so digits line up
+     vertically and a changing number does not make the layout twitch. */
+  .numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.02em;
+  }
+
+  /* Motion is considered, not showy: anyone who asks for less gets none. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

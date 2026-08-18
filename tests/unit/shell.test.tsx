@@ -115,13 +115,11 @@ describe("EmptyDashboard", () => {
   it("names which module each tile depends on", () => {
     render(<EmptyDashboard />);
 
-    // Scope to the one card, since several tiles wait on the same module.
-    const cashCard = screen.getByText("Cash collected").closest('[data-slot="card"]');
-    expect(cashCard).not.toBeNull();
+    // Scope to the one tile, since several wait on the same module.
+    const tile = screen.getByText("Cash collected").closest('[data-slot="metric"]');
+    expect(tile).not.toBeNull();
     // Presence, not visibility: motion renders the entry variant at opacity 0
     // and jsdom never runs the animation to completion.
-    expect(
-      within(cashCard as HTMLElement).getByText(/accounting module/i),
-    ).toBeInTheDocument();
+    expect(within(tile as HTMLElement).getByText(/accounting/i)).toBeInTheDocument();
   });
 });
