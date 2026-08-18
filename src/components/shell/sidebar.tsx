@@ -129,7 +129,7 @@ function NavLink({
         <motion.span
           layoutId="nav-active"
           transition={reduceMotion ? { duration: 0 } : snappy}
-          className="bg-accent absolute inset-0 -z-10 rounded-md"
+          className="nav-active absolute inset-0 -z-10 rounded-md"
         >
           {/* Brand rail on the active item. The blue marks where you are. */}
           <span className="bg-brand absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full" />

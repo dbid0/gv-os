@@ -2,8 +2,10 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/shell/page-header";
 import { Metric } from "@/components/ui/metric";
+import { Panel, Row, Rows } from "@/components/ui/panel";
+import { StatusDot, StatusPill } from "@/components/ui/status";
 import { fadeUp, stagger } from "@/lib/motion";
 
 /**
@@ -28,6 +30,12 @@ const foundation = [
   { label: "Deploys", detail: "Production on main, a preview per pull request" },
 ];
 
+const next = [
+  { label: "Sales", detail: "VSL to application to setter to closer" },
+  { label: "Accounting", detail: "Append-only ledger, reconciled to the sheet" },
+  { label: "Operations", detail: "Tasks, EODs, and the calendar" },
+];
+
 export function EmptyDashboard() {
   const reduceMotion = useReducedMotion();
 
@@ -38,81 +46,84 @@ export function EmptyDashboard() {
       variants={stagger()}
       className="mx-auto w-full max-w-6xl space-y-8"
     >
-      <motion.div variants={fadeUp} className="relative overflow-hidden rounded-xl">
-        <div className="grid-noise pointer-events-none absolute inset-0" aria-hidden />
-        <div className="relative space-y-3 py-2">
-          <span className="border-border-strong bg-surface-brand text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
-            <span className="dot-brand size-1.5 rounded-full" />
-            Foundation live
-          </span>
-          <h2 className="text-2xl font-bold tracking-tight">
-            The foundation is <span className="text-gradient-brand">live</span>.
-          </h2>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Modules get designed before they get built, so nothing here shows a number
-            until the data behind it is real.
-          </p>
-        </div>
-      </motion.div>
+      <PageHeader
+        title="The foundation is"
+        highlight="live."
+        description="Modules get designed before they get built, so nothing here shows a number until the data behind it is real."
+        status={<StatusPill tone="live">All systems green</StatusPill>}
+      />
 
+      {/* One hairline grid rather than four floating cards: denser, and it reads
+          as a single instrument instead of four unrelated widgets. */}
       <motion.div
         variants={stagger()}
-        className="grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4"
+        className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4"
       >
-        {/* A single hairline grid rather than four floating cards: denser, and it
-            reads as one instrument instead of four unrelated widgets. */}
         {tiles.map((tile) => (
           <motion.div
             key={tile.label}
             variants={fadeUp}
-            className="bg-card hover-lift p-5 outline outline-transparent"
+            className="bg-card hover-lift p-5"
           >
             <Metric label={tile.label} pending={tile.waiting} />
           </motion.div>
         ))}
       </motion.div>
 
-      <motion.div variants={fadeUp}>
-        <Card>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <h3 className="text-sm font-medium">What is already standing</h3>
-              <span className="text-brand text-[11px] tracking-wider uppercase">
-                Verified
-              </span>
-            </div>
-
-            <ul className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <motion.div variants={fadeUp}>
+          <Panel
+            title="What is already standing"
+            aside={<StatusPill tone="live">Verified</StatusPill>}
+            padded={false}
+          >
+            <Rows>
               {foundation.map((item) => (
-                <li key={item.label} className="flex gap-3">
-                  <span
-                    className="dot-brand mt-1.5 size-1.5 shrink-0 rounded-full"
-                    aria-hidden
-                  />
-                  <span className="min-w-0">
+                <Row key={item.label}>
+                  <StatusDot tone="live" />
+                  <span className="min-w-0 flex-1">
                     <span className="block text-sm">{item.label}</span>
                     <span className="text-muted-foreground block text-xs">
                       {item.detail}
                     </span>
                   </span>
-                </li>
+                </Row>
               ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </Rows>
+          </Panel>
+        </motion.div>
+
+        <motion.div variants={fadeUp}>
+          <Panel
+            title="What comes next"
+            aside={<StatusPill tone="pending">Not started</StatusPill>}
+            padded={false}
+          >
+            <Rows>
+              {next.map((item) => (
+                <Row key={item.label}>
+                  <StatusDot tone="muted" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm">{item.label}</span>
+                    <span className="text-muted-foreground block text-xs">
+                      {item.detail}
+                    </span>
+                  </span>
+                </Row>
+              ))}
+            </Rows>
+          </Panel>
+        </motion.div>
+      </div>
 
       <motion.div variants={fadeUp}>
-        <Card>
-          <CardContent className="space-y-2">
-            <h3 className="text-sm font-medium">Next</h3>
-            <p className="text-muted-foreground text-sm">
-              Decide what this screen should answer first thing each morning. That
-              answer defines the Sales module, and the Sales module defines what the
-              tiles above become.
-            </p>
-          </CardContent>
-        </Card>
+        <Panel title="The first decision">
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Decide what this screen should answer first thing each morning. That answer
+            defines the Sales module, and the Sales module defines what the tiles above
+            become.
+          </p>
+        </Panel>
       </motion.div>
     </motion.div>
   );

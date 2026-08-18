@@ -106,6 +106,17 @@
   --brand: #0e7ac2;
   --brand-soft: #dceefb;
 
+  --shadow-card:
+    0 2px 8px -2px rgb(20 22 30 / 0.06), 0 4px 16px -4px rgb(20 22 30 / 0.1);
+  --shadow-elevated: 0 8px 30px -8px rgb(20 22 30 / 0.15);
+  --shadow-glow: 0 0 30px color-mix(in oklab, var(--brand) 12%, transparent);
+  --gradient-nav-active: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--brand) 12%, transparent) 0%,
+    transparent 100%
+  );
+  --gradient-card: linear-gradient(180deg, #ffffff 0%, #fafafb 100%);
+
   --destructive: #c0473f;
   --destructive-foreground: #ffffff;
   --success: oklch(0.55 0.14 155);
@@ -161,6 +172,22 @@
   /* The one brand colour, straight off the live site. */
   --brand: #52b7ff;
   --brand-soft: #1b3a55;
+
+  /* Elevation as a scale, borrowed from RepVision's token approach. Three
+     steps only: resting, raised, and a brand glow for the one live thing.
+     Naming them stops every component inventing its own box-shadow. */
+  --shadow-card: 0 4px 20px -2px rgb(0 0 0 / 0.3);
+  --shadow-elevated: 0 10px 40px -10px rgb(0 0 0 / 0.45);
+  --shadow-glow: 0 0 40px color-mix(in oklab, var(--brand) 15%, transparent);
+
+  /* Active navigation: a horizontal wash that fades out to the right, rather
+     than a flat block. RepVision's pattern, GV's colour. */
+  --gradient-nav-active: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--brand) 16%, transparent) 0%,
+    transparent 100%
+  );
+  --gradient-card: linear-gradient(180deg, #202024 0%, var(--card) 100%);
 
   --destructive: #c0473f;
   --destructive-foreground: #f0f0f0;
@@ -321,11 +348,23 @@
   }
 
   .card-grad {
-    background: linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--popover) 75%, transparent),
-      var(--card)
-    );
+    background: var(--gradient-card);
+  }
+
+  /* The named elevation steps. Components reach for these, never a raw
+     box-shadow, so depth stays consistent across the app. */
+  .elev-card {
+    box-shadow: var(--shadow-card);
+  }
+  .elev-raised {
+    box-shadow: var(--shadow-elevated);
+  }
+  .elev-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .nav-active {
+    background: var(--gradient-nav-active);
   }
 
   .ring-accent {
