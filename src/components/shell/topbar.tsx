@@ -1,10 +1,12 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 
 import { MobileNav } from "@/components/shell/mobile-nav";
+import { signOut } from "@/lib/auth/actions";
+import type { ShellUser } from "@/lib/auth/user";
 import { allNavItems } from "@/components/shell/nav-config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useIsHydrated } from "@/lib/client-state";
@@ -20,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { env } from "@/env";
 
-export function Topbar() {
+export function Topbar({ user }: { user: ShellUser | null }) {
   const pathname = usePathname();
   const current = allNavItems.find((item) => item.href === pathname);
 
@@ -46,7 +48,7 @@ export function Topbar() {
 
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />
-        <UserMenu />
+        <UserMenu user={user} />
       </div>
     </header>
   );
@@ -77,24 +79,37 @@ function ThemeToggle() {
   );
 }
 
-function UserMenu() {
+function UserMenu({ user }: { user: ShellUser | null }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={<Button variant="ghost" size="icon" aria-label="Account menu" />}
       >
         <Avatar className="size-7">
-          <AvatarFallback className="text-[11px]">GV</AvatarFallback>
+          <AvatarFallback className="text-[11px]">
+            {user?.initial ?? "?"}
+          </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="font-normal">
-          <p className="text-sm font-medium">Signed out</p>
-          <p className="text-muted-foreground text-xs">Auth lands in the next step</p>
+          <p className="text-sm font-medium">{user?.name ?? "Signed out"}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {user?.email ?? "No session"}
+          </p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>Settings</DropdownMenuItem>
-        <DropdownMenuItem disabled>Sign out</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="hover:bg-accent flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors"
+          >
+            <LogOut className="size-3.5" />
+            Sign out
+          </button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

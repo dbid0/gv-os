@@ -15,13 +15,15 @@ import {
 import { navigation, type NavItem } from "@/components/shell/nav-config";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { signOut } from "@/lib/auth/actions";
+import type { ShellUser } from "@/lib/auth/user";
 import { useIsHydrated, usePersistedBoolean } from "@/lib/client-state";
 import { smooth, snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "gvos.sidebar.collapsed";
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: ShellUser | null }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const [collapsed, setCollapsed] = usePersistedBoolean(STORAGE_KEY, false);
@@ -132,14 +134,16 @@ export function Sidebar() {
       <div className="border-t px-3 py-3">
         <div className="flex items-center gap-2.5">
           <span className="bg-secondary text-foreground grid size-8 shrink-0 place-items-center rounded-full border text-xs font-semibold">
-            D
+            {user?.initial ?? "?"}
           </span>
           {!collapsed && (
             <span className="min-w-0 flex-1">
               <span className="text-foreground block truncate text-sm font-medium">
-                Signed out
+                {user?.name ?? "Signed out"}
               </span>
-              <span className="text-faint block truncate text-xs">Auth is next</span>
+              <span className="text-faint block truncate text-xs">
+                {user?.email ?? "No session"}
+              </span>
             </span>
           )}
         </div>
@@ -149,9 +153,14 @@ export function Sidebar() {
             <span className="hover:text-muted-foreground inline-flex cursor-not-allowed items-center gap-1.5">
               <LifeBuoy className="size-3.5" /> Support
             </span>
-            <span className="hover:text-muted-foreground inline-flex cursor-not-allowed items-center gap-1.5">
-              <LogOut className="size-3.5" /> Sign out
-            </span>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="hover:text-foreground press inline-flex items-center gap-1.5 transition-colors"
+              >
+                <LogOut className="size-3.5" /> Sign out
+              </button>
+            </form>
           </div>
         )}
 
