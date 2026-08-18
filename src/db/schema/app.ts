@@ -72,6 +72,17 @@ export const deals = appSchema.table(
       .notNull()
       .default(0),
 
+    /**
+     * Daniel's recorded split for THIS deal, in basis points (5000 = 50%).
+     *
+     * Null means "use the standing rule", which is now always 50/50. It is set
+     * only to preserve history: some early deals were split 30/70, 45/55 or
+     * 40/60, and that is a fact about what happened, not a rule going forward.
+     * Storing it per deal keeps the mirror faithful without inventing
+     * partner_splits rows for one-off historical overrides.
+     */
+    danielBps: bigint("daniel_bps", { mode: "number" }),
+
     closedAt: timestamp("closed_at", { withTimezone: true }),
     agreementSigned: text("agreement_signed"),
     notes: text("notes"),
