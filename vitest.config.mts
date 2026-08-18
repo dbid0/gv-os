@@ -66,6 +66,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Translating the finance sheet into deals and events. A wrong mapping
+        // mirrors wrong money, so it ships fully covered.
+        "src/lib/accounting/sheet-import.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
