@@ -3,6 +3,7 @@ import { Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Poppins is the Global Ventures typeface, matching the GGV Portal and the GV
@@ -40,7 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider delay={200}>{children}</TooltipProvider>
+          <TooltipProvider delay={200}>
+            <ToastProvider>{children}</ToastProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

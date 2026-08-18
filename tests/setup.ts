@@ -7,6 +7,26 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key-not-a-real-credenti
 
 import "@testing-library/jest-dom/vitest";
 
+// Tests run as if the user asked for reduced motion. Two reasons: jsdom cannot
+// complete an animation, so any assertion about a node disappearing would hang
+// on an exit that never finishes; and a test should assert behaviour, never the
+// state of a tween. Components must behave correctly with motion disabled, which
+// is exactly what this checks on every run.
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: (query: string) => ({
+    matches: query.includes("prefers-reduced-motion"),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
