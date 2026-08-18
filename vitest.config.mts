@@ -52,6 +52,20 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Sales commissions move money to reps, so the engine ships fully covered.
+        "src/lib/sales/commission.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // The payout rollup decides what each rep is actually paid — same bar.
+        "src/lib/sales/commission-rollup.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
