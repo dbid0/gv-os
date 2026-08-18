@@ -59,6 +59,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The payout rollup decides what each rep is actually paid — same bar.
+        "src/lib/sales/commission-rollup.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
