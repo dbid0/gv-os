@@ -12,20 +12,23 @@ import "@testing-library/jest-dom/vitest";
 // on an exit that never finishes; and a test should assert behaviour, never the
 // state of a tween. Components must behave correctly with motion disabled, which
 // is exactly what this checks on every run.
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  configurable: true,
-  value: (query: string) => ({
-    matches: query.includes("prefers-reduced-motion"),
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
-});
+// Integration tests run in the node environment, where there is no window.
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
 
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
