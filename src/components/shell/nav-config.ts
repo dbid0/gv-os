@@ -59,8 +59,8 @@ export const navigation: NavGroup[] = [
         label: "Sales",
         href: "/sales",
         icon: BarChart3,
-        status: "planned",
-        description: "Applications, setter calls, closer calls, deals",
+        status: "ready",
+        description: "Deals, commissions, and the rep leaderboard",
       },
       {
         label: "Clients",

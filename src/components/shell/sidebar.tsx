@@ -108,7 +108,9 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
                   <NavLink
                     item={item}
                     collapsed={collapsed}
-                    active={pathname === item.href}
+                    active={
+                      pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    }
                     reduceMotion={Boolean(reduceMotion)}
                   />
                 </li>
