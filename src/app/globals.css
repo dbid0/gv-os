@@ -55,18 +55,27 @@
    Ventures design system. Same brand, same feel, so the job board and the
    operating system read as one company's software.
 
-   The brand is MONOCHROME and that is deliberate:
-     charcoal  #25242B      off-white  #F0F0F0      Poppins
-   Both come from the GV Typeform theme. Buttons are inverted, light on dark.
-   There is no accent colour.
+   Tokens read from the LIVE stylesheet at
+   globalventures.app/assets/styles-DHvjo_YU.css, not from ~/dev/ggv-portal.
+   The two have diverged: the local Next.js repo is monochrome, the live Vite
+   build added a blue layer. The live site is the truth.
 
-   Keeping it colourless is also functional here. GV OS displays several client
-   brands at once (The Grid blue, The Vault purple, Racks cobalt), and a
-   colourless shell lets those appear as DATA without fighting the interface.
+   The base is charcoal and off-white, from the GV Typeform theme:
+     bg #131316 -> elevated #181819 -> surface #1d1d20 -> charcoal #25242B
+     text #F0F0F0, muted #a2a2ab, faint #6f6f79
+     hairline #2b2b31, strong #3c3c44
+     Poppins, radius 0.75rem
 
-   The one exception is money: negative amounts stay red, because "this number
-   is negative" has to be unmistakable at a glance. That is information, not
-   decoration.
+   On top of that sits ONE brand colour:
+     --brand       #52b7ff   bright sky blue, the highlight
+     --brand-soft  #1b3a55   its dark tinted surface
+
+   Buttons stay inverted (off-white on dark). The blue is a HIGHLIGHT, not a
+   button colour: it marks the live thing, the active thing, the emphasised
+   phrase. Used everywhere it stops meaning anything.
+
+   Client brand colours (Grid blue, Vault purple, Racks cobalt) appear only as
+   DATA, never as chrome, so they never compete with #52b7ff.
    --------------------------------------------------------------------------- */
 
 :root {
@@ -94,7 +103,11 @@
   --accent: #e7e7ea;
   --accent-foreground: #25242b;
 
-  --destructive: oklch(0.55 0.21 25);
+  --brand: #0e7ac2;
+  --brand-soft: #dceefb;
+
+  --destructive: #c0473f;
+  --destructive-foreground: #ffffff;
   --success: oklch(0.55 0.14 155);
   --warning: oklch(0.65 0.14 75);
 
@@ -145,19 +158,24 @@
   --accent: #25242b;
   --accent-foreground: #f0f0f0;
 
-  /* Money only. Everything else stays monochrome. */
-  --destructive: oklch(0.68 0.19 25);
+  /* The one brand colour, straight off the live site. */
+  --brand: #52b7ff;
+  --brand-soft: #1b3a55;
+
+  --destructive: #c0473f;
+  --destructive-foreground: #f0f0f0;
   --success: oklch(0.75 0.15 155);
   --warning: oklch(0.8 0.14 80);
 
   --border: #2b2b31;
   --border-strong: #3c3c44;
   --input: #3c3c44;
-  --ring: #f0f0f0;
+  --ring: #3c3c44;
 
-  /* Charts step by BRIGHTNESS, not hue, so series stay on-brand. */
-  --chart-1: #f0f0f0;
-  --chart-2: #cfcfd6;
+  /* Charts lead with the brand, then step by BRIGHTNESS rather than hue, so a
+     multi-series chart never turns into a rainbow. */
+  --chart-1: #52b7ff;
+  --chart-2: #f0f0f0;
   --chart-3: #a2a2ab;
   --chart-4: #6f6f79;
   --chart-5: #4a4a54;
@@ -179,6 +197,8 @@
   --color-border-strong: var(--border-strong);
   --color-bg-elevated: var(--bg-elevated);
   --color-surface-3: var(--surface-3);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
 }
 
 @layer base {
@@ -265,11 +285,34 @@
 
   /* White fading to grey. The brand's way of emphasising a phrase without
      reaching for a colour. */
+  /* Two emphasis gradients, matching the live site exactly.
+     text-gradient       white -> grey, quiet emphasis
+     text-gradient-brand white -> blue, for the one phrase that matters most */
   .text-gradient {
-    background: linear-gradient(100deg, var(--foreground) 20%, var(--muted-foreground));
+    background: linear-gradient(100deg, #fff 15%, var(--muted-foreground));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(100deg, #fff 10%, var(--brand) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* The blue as a surface: soft tinted panel with a brand hairline. Reserved
+     for the live or active thing, never for ordinary containers. */
+  .surface-brand {
+    background: color-mix(in oklab, var(--brand-soft) 70%, transparent);
+    border-color: color-mix(in oklab, var(--brand) 35%, transparent);
+  }
+
+  /* A small brand dot with a halo, for "this is live" indicators. */
+  .dot-brand {
+    background: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
   }
 
   .glass {

@@ -40,9 +40,13 @@ export function EmptyDashboard() {
     >
       <motion.div variants={fadeUp} className="relative overflow-hidden rounded-xl">
         <div className="grid-noise pointer-events-none absolute inset-0" aria-hidden />
-        <div className="relative space-y-2 py-2">
+        <div className="relative space-y-3 py-2">
+          <span className="border-border-strong bg-surface-brand text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
+            <span className="dot-brand size-1.5 rounded-full" />
+            Foundation live
+          </span>
           <h2 className="text-2xl font-bold tracking-tight">
-            The foundation is <span className="text-gradient">live</span>.
+            The foundation is <span className="text-gradient-brand">live</span>.
           </h2>
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
             Modules get designed before they get built, so nothing here shows a number
@@ -73,7 +77,7 @@ export function EmptyDashboard() {
           <CardContent className="space-y-4">
             <div className="flex items-baseline justify-between gap-4">
               <h3 className="text-sm font-medium">What is already standing</h3>
-              <span className="text-success text-[11px] tracking-wider uppercase">
+              <span className="text-brand text-[11px] tracking-wider uppercase">
                 Verified
               </span>
             </div>
@@ -82,7 +86,7 @@ export function EmptyDashboard() {
               {foundation.map((item) => (
                 <li key={item.label} className="flex gap-3">
                   <span
-                    className="bg-success mt-1.5 size-1.5 shrink-0 rounded-full"
+                    className="dot-brand mt-1.5 size-1.5 shrink-0 rounded-full"
                     aria-hidden
                   />
                   <span className="min-w-0">

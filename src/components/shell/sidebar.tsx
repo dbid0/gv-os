@@ -32,7 +32,7 @@ export function Sidebar() {
       className="bg-sidebar text-sidebar-foreground relative hidden shrink-0 flex-col border-r md:flex"
     >
       <div className="flex h-14 items-center gap-2 px-4">
-        <div className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-md text-sm font-semibold">
+        <div className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-md text-sm font-bold">
           GV
         </div>
         <AnimatePresence initial={false}>
@@ -130,9 +130,12 @@ function NavLink({
           layoutId="nav-active"
           transition={reduceMotion ? { duration: 0 } : snappy}
           className="bg-accent absolute inset-0 -z-10 rounded-md"
-        />
+        >
+          {/* Brand rail on the active item. The blue marks where you are. */}
+          <span className="bg-brand absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+        </motion.span>
       )}
-      <item.icon className="size-4 shrink-0" />
+      <item.icon className={cn("size-4 shrink-0", active && "text-brand")} />
       {!collapsed && <span className="truncate">{item.label}</span>}
       {!collapsed && planned && (
         <span className="text-muted-foreground/70 ml-auto text-[10px] tracking-wide uppercase">
