@@ -1,0 +1,1 @@
+ALTER TABLE "app"."deals" ADD COLUMN "daniel_bps" bigint;
