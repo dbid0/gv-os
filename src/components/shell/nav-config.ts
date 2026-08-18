@@ -2,6 +2,7 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
+  Clapperboard,
   LayoutDashboard,
   Megaphone,
   Receipt,
@@ -78,6 +79,25 @@ export const navigation: NavGroup[] = [
     ],
   },
   {
+    label: "Marketing",
+    items: [
+      {
+        label: "Content",
+        href: "/content",
+        icon: Clapperboard,
+        status: "planned",
+        description: "Reels and posts per creator, hooks, and what converts",
+      },
+      {
+        label: "Ads",
+        href: "/ads",
+        icon: Megaphone,
+        status: "planned",
+        description: "Spend and performance by offer",
+      },
+    ],
+  },
+  {
     label: "Operations",
     items: [
       {
@@ -93,13 +113,6 @@ export const navigation: NavGroup[] = [
         icon: CalendarDays,
         status: "planned",
         description: "Tasks generated from the systems, synced to Google",
-      },
-      {
-        label: "Ads",
-        href: "/ads",
-        icon: Megaphone,
-        status: "planned",
-        description: "Spend and performance by offer",
       },
     ],
   },
