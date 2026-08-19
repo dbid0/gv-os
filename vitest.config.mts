@@ -52,6 +52,27 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Sales commissions move money to reps, so the engine ships fully covered.
+        "src/lib/sales/commission.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // The payout rollup decides what each rep is actually paid — same bar.
+        "src/lib/sales/commission-rollup.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // The rows -> rollup adapter feeds the payout run, so it ships covered.
+        "src/lib/sales/rollup-adapter.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Choosing which partner split applies moves money to the wrong person
         // if it is wrong, so it ships fully covered like the rest of the core.
         "src/lib/accounting/split-rules.ts": {
