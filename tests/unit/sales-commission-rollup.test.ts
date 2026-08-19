@@ -85,6 +85,23 @@ describe("rollupCommissions", () => {
     expect(rollup.totalOwedCents).toBe(336_000);
   });
 
+  it("pays a team-default split but still flags the deal as missing", () => {
+    const rollup = rollupCommissions(
+      [
+        {
+          deal: amounts(100_000, 100_000),
+          splits: [{ repId: "rep1", role: "closer", rateBps: 1000, source: "default" }],
+        },
+      ],
+      [{ repId: "rep1", role: "closer" }],
+      "cash_collected",
+    );
+    // The default split pays 10%...
+    expect(rollup.reps[0].totalOwedCents).toBe(10_000);
+    // ...but the deal is still counted as missing an explicit split.
+    expect(rollup.dealsMissingSplits).toBe(1);
+  });
+
   it("gives a rep who closed without a comp row their split anyway", () => {
     const rollup = rollupCommissions(
       [

@@ -132,7 +132,73 @@ describe("buildRollupInputs", () => {
   });
 });
 
+describe("buildRollupInputs — team-default fallback", () => {
+  // A deal with a closing rep but no explicit split row.
+  const bare = makeDeal({
+    id: "dx",
+    clientId: "teamA",
+    repId: "r1",
+    contractValueCents: 100_000,
+  });
+
+  it("synthesizes a default closer split when the team has a default rate", () => {
+    const { deals } = buildRollupInputs(
+      [bare],
+      [],
+      REPS,
+      new Map([["dx", cents(80_000)]]),
+      new Map([["teamA", 1000]]),
+    );
+    expect(deals[0].splits).toHaveLength(1);
+    expect(deals[0].splits[0]).toMatchObject({
+      repId: "r1",
+      role: "closer",
+      rateBps: 1000,
+      source: "default",
+    });
+  });
+
+  it("leaves the deal bare when no team default is configured", () => {
+    const { deals } = buildRollupInputs([bare], [], REPS, new Map(), new Map());
+    expect(deals[0].splits).toHaveLength(0);
+  });
+
+  it("tags explicit splits as explicit, and does not override them", () => {
+    const { deals } = buildRollupInputs(
+      [makeDeal({ id: "dy", clientId: "teamA", repId: "r1" })],
+      [makeSplit({ id: "s", dealId: "dy", repId: "r2", role: "setter", rateBps: 500 })],
+      REPS,
+      new Map(),
+      new Map([["teamA", 1000]]), // default exists but must NOT apply
+    );
+    expect(deals[0].splits).toHaveLength(1);
+    expect(deals[0].splits[0]).toMatchObject({ repId: "r2", source: "explicit" });
+  });
+});
+
 describe("rollupFromRows", () => {
+  it("reconciles a deal with no split via the team default (RepVision parity)", () => {
+    // Mirrors the real Grid case: a closer with no explicit split still earns
+    // the team default 10%, and the deal is flagged missing.
+    const rollup = rollupFromRows(
+      [
+        makeDeal({
+          id: "g1",
+          clientId: "grid",
+          repId: "r1",
+          contractValueCents: 2_349_400,
+        }),
+      ],
+      [],
+      [makeRep({ id: "r1", role: "closer" })],
+      new Map([["g1", cents(2_349_400)]]),
+      "cash_collected",
+      new Map([["grid", 1000]]),
+    );
+    expect(rollup.reps[0].totalOwedCents).toBe(234_940); // $2,349.40
+    expect(rollup.dealsMissingSplits).toBe(1);
+  });
+
   it("computes the whole team's owed position from rows, to the cent", () => {
     const rollup = rollupFromRows(DEALS, SPLITS, REPS, CASH, "cash_collected");
 

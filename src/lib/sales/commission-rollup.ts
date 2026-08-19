@@ -34,6 +34,13 @@ export interface SplitInput {
   role: string;
   rateBps: Bps;
   bonusCents?: Cents;
+  /**
+   * Where the split came from. "explicit" is a real split row; "default" is one
+   * synthesized from the team's default rate because the deal had no explicit
+   * split. A default split still pays, but the deal is still flagged as missing
+   * an explicit split — the way RepVision both pays the default and warns.
+   */
+  source?: "explicit" | "default";
 }
 
 /** A deal in the period, with its collected amounts and the splits on it. */
@@ -116,10 +123,11 @@ export function rollupCommissions(
 
   let dealsMissingSplits = 0;
   for (const { deal, splits } of deals) {
-    if (splits.length === 0) {
-      dealsMissingSplits += 1;
-      continue;
-    }
+    // Flagged when there is no EXPLICIT split — whether the deal is bare or only
+    // carries a team-default split. A default split still pays (it accrues
+    // below); the flag is the "N deals missing commission splits" warning.
+    const hasExplicit = splits.some((s) => (s.source ?? "explicit") === "explicit");
+    if (!hasExplicit) dealsMissingSplits += 1;
     for (const s of splits) {
       let acc = accruals.get(s.repId);
       if (!acc) {
