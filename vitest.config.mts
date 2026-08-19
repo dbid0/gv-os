@@ -52,6 +52,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Choosing which partner split applies moves money to the wrong person
+        // if it is wrong, so it ships fully covered like the rest of the core.
+        "src/lib/accounting/split-rules.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
