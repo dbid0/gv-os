@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutDashboard, Receipt, Trophy } from "lucide-react";
+import { BarChart3, LayoutDashboard, Receipt, Trophy, Users } from "lucide-react";
 
 import { snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const tabs = [
   { label: "Deals", href: "/sales/deals", icon: Receipt },
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
+  { label: "Teams", href: "/sales/teams", icon: Users },
 ];
 
 export function SalesTabs() {
