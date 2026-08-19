@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   index,
   jsonb,
   pgSchema,
@@ -43,6 +44,26 @@ export const clients = appSchema.table(
     status: text("status").notNull().default("active"),
     /** Where a row came from, so imported records are always identifiable. */
     externalRef: text("external_ref"),
+
+    /**
+     * Team commission defaults, by role, in basis points. Applied to a deal
+     * that has no explicit split — mirrors RepVision's team default rates. Null
+     * means "no default for this role"; a deal without a split then goes
+     * uncommissioned and is flagged, rather than paid a made-up rate.
+     */
+    defaultCloserBps: bigint("default_closer_bps", { mode: "number" }),
+    defaultSetterBps: bigint("default_setter_bps", { mode: "number" }),
+    defaultDmSetterBps: bigint("default_dm_setter_bps", { mode: "number" }),
+    defaultManagerBps: bigint("default_manager_bps", { mode: "number" }),
+
+    /**
+     * Processor fees for this team's collections. When set, the fee is deducted
+     * before commission, the same way the accounting side already models it.
+     */
+    deductProcessorFees: boolean("deduct_processor_fees").notNull().default(false),
+    processorFeeBps: bigint("processor_fee_bps", { mode: "number" }),
+    processorFeeFlatCents: bigint("processor_fee_flat_cents", { mode: "number" }),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

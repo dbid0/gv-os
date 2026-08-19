@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { clients, commissionSplits, deals, reps } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { type Cents, ZERO, cents, sum } from "@/lib/money";
+import { type Bps } from "@/lib/splits";
 import { type CommissionBasis } from "@/lib/sales/commission";
 import { type CommissionRollup } from "@/lib/sales/commission-rollup";
 import { type CashByDeal, rollupFromRows } from "@/lib/sales/rollup-adapter";
@@ -117,6 +118,9 @@ export async function getCommissionRollup(
   const db = getDb();
   const dealRows = await db.select().from(deals);
   const repRows = await db.select().from(reps);
+  const teamRows = await db
+    .select({ id: clients.id, defaultCloserBps: clients.defaultCloserBps })
+    .from(clients);
   const dealIds = dealRows.map((d) => d.id);
   const splitRows = dealIds.length
     ? await db
@@ -125,7 +129,22 @@ export async function getCommissionRollup(
         .where(inArray(commissionSplits.dealId, dealIds))
     : [];
   const cash = await cashByDeal(dealIds);
-  return rollupFromRows(dealRows, splitRows, repRows, cash, basis);
+
+  // A deal with no explicit split falls back to its team's default closer rate.
+  const teamDefaultCloserBps = new Map<string, Bps>();
+  for (const t of teamRows) {
+    if (t.defaultCloserBps !== null)
+      teamDefaultCloserBps.set(t.id, t.defaultCloserBps as Bps);
+  }
+
+  return rollupFromRows(
+    dealRows,
+    splitRows,
+    repRows,
+    cash,
+    basis,
+    teamDefaultCloserBps,
+  );
 }
 
 /** The focused KPIs the Sales overview leads with. */
