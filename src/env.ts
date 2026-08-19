@@ -50,7 +50,17 @@ export function parseEnv(raw: NodeJS.ProcessEnv | Record<string, unknown>): Env 
   return result.data;
 }
 
-export const env = parseEnv(process.env);
+// NEXT_PUBLIC_* variables are inlined by the bundler ONLY when read as static
+// `process.env.NAME` member accesses. Passing `process.env` as an object leaves
+// them undefined in the browser (there is no real process.env there), which
+// crashes the client at load. Each key is therefore named explicitly.
+export const env = parseEnv({
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+});
 
 /** Alias used by the auth clients, to read as "the public half" at the call site. */
 export const publicEnv = env;
