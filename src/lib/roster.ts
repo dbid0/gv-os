@@ -68,5 +68,8 @@ export function clientBySlug(slug: string): RosterClient | undefined {
 
 /** The initial shown in a client's avatar chip: first letter, ignoring "The". */
 export function clientInitial(name: string): string {
-  return name.replace(/^The\s+/i, "").charAt(0).toUpperCase();
+  return name
+    .replace(/^The\s+/i, "")
+    .charAt(0)
+    .toUpperCase();
 }

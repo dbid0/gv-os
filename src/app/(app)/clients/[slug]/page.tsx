@@ -85,10 +85,7 @@ export default async function ClientPage({
         actions={
           <Link
             href="/clients"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "gap-2",
-            )}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
           >
             <ArrowLeft className="size-3.5" /> All clients
           </Link>
