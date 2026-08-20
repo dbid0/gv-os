@@ -1,0 +1,26 @@
+name: keep-warm
+
+# Keeps the deployed app and its database pool warm so the first click after an
+# idle stretch never hangs on a cold serverless + Postgres cold-start. Runs in
+# GitHub's cloud on a schedule, so it works whether or not any laptop is on.
+#
+# GitHub caps schedule granularity at 5 minutes and may delay runs under load;
+# that's fine — this only has to keep something warm, not be exact.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Warm the function + DB pool
+        run: |
+          for path in /api/health /sales /dashboard; do
+            code=$(curl -s -o /dev/null -m 40 --retry 3 --retry-delay 8 --retry-all-errors \
+              -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
+            echo "$path -> $code"
+          done
