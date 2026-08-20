@@ -3,7 +3,15 @@ import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, commissionSplits, deals, reps } from "@/db/schema/app";
+import {
+  type EodCalcField,
+  type EodCustomField,
+  clients,
+  commissionSplits,
+  deals,
+  eodTemplates,
+  reps,
+} from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { type Cents, ZERO, cents, sum } from "@/lib/money";
 import { type Bps } from "@/lib/splits";
@@ -171,4 +179,40 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
     dealsClosed: dealRows.length,
     teamCount: teams.length,
   };
+}
+
+/** An EOD template shaped for the Templates screen. */
+export interface EodTemplateRow {
+  id: string;
+  clientId: string;
+  teamName: string | null;
+  role: string;
+  cadence: string;
+  name: string;
+  baseFields: string[];
+  customFields: EodCustomField[];
+  calcFields: EodCalcField[];
+  isActive: boolean;
+}
+
+/** Every EOD template, ordered by team then role, for the Templates screen. */
+export async function listEodTemplates(): Promise<EodTemplateRow[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: eodTemplates.id,
+      clientId: eodTemplates.clientId,
+      teamName: clients.name,
+      role: eodTemplates.role,
+      cadence: eodTemplates.cadence,
+      name: eodTemplates.name,
+      baseFields: eodTemplates.baseFields,
+      customFields: eodTemplates.customFields,
+      calcFields: eodTemplates.calcFields,
+      isActive: eodTemplates.isActive,
+    })
+    .from(eodTemplates)
+    .leftJoin(clients, eq(eodTemplates.clientId, clients.id))
+    .orderBy(clients.name, eodTemplates.role);
+  return rows;
 }

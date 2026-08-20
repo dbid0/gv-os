@@ -274,9 +274,83 @@ export const activityReports = appSchema.table(
   ],
 );
 
+/** A team-specific extra question on an EOD form. */
+export type EodCustomField = {
+  /** Stable key stored in an activity_reports metrics bundle. */
+  key: string;
+  label: string;
+  type: "number" | "currency" | "text";
+  /** Surface this field as a dashboard metric tile. */
+  showOnDashboard?: boolean;
+};
+
+/**
+ * A derived metric computed from other fields, e.g. show rate. Kept as a simple
+ * numerator ÷ denominator over field keys, which is exactly the vocabulary
+ * RepVision's template builder exposes ("Rate: numerator ÷ denominator").
+ */
+export type EodCalcField = {
+  key: string;
+  label: string;
+  format: "number" | "percent" | "currency";
+  numerator: string;
+  denominator: string;
+  showOnDashboard?: boolean;
+};
+
+/**
+ * An EOD template: the fields a rep of a given role fills out on their daily
+ * (or end-of-week / beginning-of-day) report. One per team + role + cadence.
+ *
+ * This ONE object drives three surfaces — the Submit-EOD form, the leaderboard
+ * columns, and the dashboard metric tiles — so a field turned on here shows up
+ * everywhere it should. That single-source wiring is the heart of RepVision.
+ *
+ * Fields are DATA, not columns, so a team can shape its own form without a
+ * migration:
+ *  - `baseFields`  — keys from the fixed activity vocabulary that are turned on
+ *    (dials · connects · dms_sent · sets_booked · calls_taken · shows ·
+ *     no_shows · cancelled_calls · follow_up_calls).
+ *  - `customFields` — team-specific extra questions.
+ *  - `calcFields`   — derived metrics computed from the others.
+ */
+export const eodTemplates = appSchema.table(
+  "eod_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** closer · setter · dm_setter · manager */
+    role: text("role").notNull(),
+    /** eod · eow · bod */
+    cadence: text("cadence").notNull().default("eod"),
+    name: text("name").notNull(),
+    baseFields: jsonb("base_fields").$type<string[]>().notNull().default([]),
+    customFields: jsonb("custom_fields")
+      .$type<EodCustomField[]>()
+      .notNull()
+      .default([]),
+    calcFields: jsonb("calc_fields").$type<EodCalcField[]>().notNull().default([]),
+    isActive: boolean("is_active").notNull().default(true),
+    externalRef: text("external_ref"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("eod_templates_client_idx").on(table.clientId),
+    uniqueIndex("eod_templates_external_ref_key").on(table.externalRef),
+  ],
+);
+
 export const clientsRelations = relations(clients, ({ many }) => ({
   deals: many(deals),
   reps: many(reps),
+  eodTemplates: many(eodTemplates),
+}));
+
+export const eodTemplatesRelations = relations(eodTemplates, ({ one }) => ({
+  client: one(clients, { fields: [eodTemplates.clientId], references: [clients.id] }),
 }));
 
 export const repsRelations = relations(reps, ({ one, many }) => ({
@@ -319,3 +393,5 @@ export type CommissionSplit = typeof commissionSplits.$inferSelect;
 export type NewCommissionSplit = typeof commissionSplits.$inferInsert;
 export type ActivityReport = typeof activityReports.$inferSelect;
 export type NewActivityReport = typeof activityReports.$inferInsert;
+export type EodTemplate = typeof eodTemplates.$inferSelect;
+export type NewEodTemplate = typeof eodTemplates.$inferInsert;
