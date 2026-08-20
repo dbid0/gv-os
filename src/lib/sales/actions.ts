@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { clients, commissionSplits, deals, reps } from "@/db/schema/app";
+import { clients, commissionSplits, deals, eodTemplates, reps } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -192,4 +192,53 @@ export async function logDeal(raw: z.input<typeof dealInput>) {
   revalidatePath("/sales/commissions");
   revalidatePath("/sales");
   return { id: dealId };
+}
+
+// ---------------------------------------------------------------- EOD Templates
+
+const customFieldInput = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(["number", "currency", "text"]),
+  showOnDashboard: z.boolean().optional(),
+});
+
+const calcFieldInput = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  format: z.enum(["number", "percent", "currency"]),
+  numerator: z.string().min(1),
+  denominator: z.string().min(1),
+  showOnDashboard: z.boolean().optional(),
+});
+
+const eodTemplateInput = z.object({
+  clientId: z.string().uuid(),
+  name: z.string().min(1, "A template needs a name."),
+  role: z.enum(["closer", "setter", "dm_setter", "manager"]),
+  cadence: z.enum(["eod", "eow", "bod"]).default("eod"),
+  baseFields: z.array(z.string()).default([]),
+  customFields: z.array(customFieldInput).default([]),
+  calcFields: z.array(calcFieldInput).default([]),
+});
+
+export async function createEodTemplate(raw: z.input<typeof eodTemplateInput>) {
+  await requireUser();
+  const input = eodTemplateInput.parse(raw);
+  const db = getDb();
+  const [template] = await db
+    .insert(eodTemplates)
+    .values({
+      clientId: input.clientId,
+      name: input.name,
+      role: input.role,
+      cadence: input.cadence,
+      baseFields: input.baseFields,
+      customFields: input.customFields,
+      calcFields: input.calcFields,
+      isActive: true,
+    })
+    .returning();
+  revalidatePath("/sales/templates");
+  return { id: template.id };
 }
