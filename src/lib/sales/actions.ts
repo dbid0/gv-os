@@ -24,6 +24,9 @@ import { percentToBps } from "@/lib/splits";
  */
 
 async function requireUser() {
+  // Build phase: auth is off (see middleware DISABLE_AUTH), so the write
+  // actions must not gate either. Flip DISABLE_AUTH off to restore the check.
+  if (process.env.DISABLE_AUTH === "true") return null;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) {
     throw new Error("Not authorized.");
