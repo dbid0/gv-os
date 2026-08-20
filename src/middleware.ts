@@ -28,6 +28,13 @@ function isPublic(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  // Build phase: the app is internal and unpublished, so the whole thing is
+  // open — no login wall. Set DISABLE_AUTH back to unset/false to restore the
+  // gate before any real launch. This is the ONE switch; nothing else changes.
+  if (process.env.DISABLE_AUTH === "true") {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
