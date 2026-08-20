@@ -336,10 +336,20 @@
     border-color: color-mix(in oklab, var(--brand) 35%, transparent);
   }
 
-  /* A small brand dot with a halo, for "this is live" indicators. */
+  /* A small brand dot with a halo, for "this is live" indicators. It breathes:
+     a slow halo pulse that says the system is running, not a static sticker.
+     Killed under prefers-reduced-motion by the global rule in @layer base. */
   .dot-brand {
     background: var(--brand);
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
+    animation: gv-live-pulse 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  /* Brand glow behind the mark in the sidebar. Breathes gently so the logo
+     feels alive without spinning or bouncing. */
+  .logo-glow {
+    background: radial-gradient(circle at center, var(--brand), transparent 68%);
+    animation: gv-breathe 4.5s ease-in-out infinite;
   }
 
   .glass {
@@ -392,5 +402,31 @@
   }
   .press:active {
     transform: scale(0.95);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Keyframes for the ambient "alive" motion. Kept out of any @layer so they are
+   never purged. The prefers-reduced-motion rule in @layer base zeroes them.
+   --------------------------------------------------------------------------- */
+@keyframes gv-live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--brand) 4%, transparent);
+  }
+}
+
+@keyframes gv-breathe {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.34;
+    transform: scale(1.14);
   }
 }

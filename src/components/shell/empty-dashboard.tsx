@@ -1,26 +1,26 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import {
   BarChart3,
+  ChevronRight,
   CircleDollarSign,
-  Download,
   FileText,
   Percent,
   PhoneCall,
-  RefreshCw,
   TrendingUp,
   Users,
 } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
-import { Button } from "@/components/ui/button";
 import { Kpi, Metric } from "@/components/ui/metric";
 import { Panel, Row, Rows } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
 import { StatusDot, StatusPill } from "@/components/ui/status";
 import { fadeUp, stagger } from "@/lib/motion";
+import { roster } from "@/lib/roster";
 
 /**
  * The dashboard, before there is anything to put on it.
@@ -32,8 +32,8 @@ import { fadeUp, stagger } from "@/lib/motion";
 
 const headline = [
   { label: "Cash collected", icon: CircleDollarSign, tone: "brand" as const },
-  { label: "Revenue", icon: TrendingUp, tone: "success" as const },
-  { label: "Deals closed", icon: BarChart3, tone: "warning" as const },
+  { label: "Revenue", icon: TrendingUp, tone: "brand" as const },
+  { label: "Deals closed", icon: BarChart3, tone: "brand" as const },
   { label: "Close rate", icon: Percent, tone: "default" as const },
 ];
 
@@ -57,8 +57,6 @@ const next = [
   { label: "Operations", detail: "Tasks, EODs, and the calendar" },
 ];
 
-const clients = ["The Grid", "The Vault", "Racks Closes"];
-
 export function EmptyDashboard() {
   const reduceMotion = useReducedMotion();
   const [view, setView] = useState("sales");
@@ -75,16 +73,6 @@ export function EmptyDashboard() {
         highlight="live."
         description="Modules get designed before they get built, so nothing here shows a number until the data behind it is real."
         status={<StatusPill tone="live">All systems green</StatusPill>}
-        actions={
-          <>
-            <Button variant="outline" size="sm" disabled className="gap-2">
-              <RefreshCw className="size-3.5" /> Refresh
-            </Button>
-            <Button variant="outline" size="sm" disabled className="gap-2">
-              <Download className="size-3.5" /> Export
-            </Button>
-          </>
-        }
       />
 
       <motion.div variants={fadeUp}>
@@ -114,15 +102,20 @@ export function EmptyDashboard() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2 border-t pt-4">
-            {clients.map((client) => (
-              <span
-                key={client}
-                className="border-border-strong bg-secondary/50 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+            {roster.map((client) => (
+              <Link
+                key={client.slug}
+                href={`/clients/${client.slug}`}
+                className="group border-border-strong bg-secondary/50 hover:border-brand/40 hover:bg-brand-soft/40 text-muted-foreground hover:text-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors"
               >
-                {client}
-                <span className="text-faint">•</span>
-                <span className="numeric text-faint">—</span>
-              </span>
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ background: client.accent }}
+                />
+                {client.name}
+                <ChevronRight className="text-faint size-3 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             ))}
           </div>
         </Panel>

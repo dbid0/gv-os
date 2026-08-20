@@ -66,7 +66,7 @@ export const navigation: NavGroup[] = [
         label: "Clients",
         href: "/clients",
         icon: Building2,
-        status: "planned",
+        status: "ready",
         description: "The active roster and each engagement",
       },
       {

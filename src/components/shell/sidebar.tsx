@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { navigation, type NavItem } from "@/components/shell/nav-config";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
@@ -40,11 +41,32 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
       transition={reduceMotion ? { duration: 0 } : smooth}
       className="bg-sidebar text-sidebar-foreground relative hidden shrink-0 flex-col border-r md:flex"
     >
-      {/* Wordmark */}
-      <div className="flex h-16 items-center gap-2.5 px-4">
-        <div className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg text-sm font-bold">
-          GV
-        </div>
+      {/* Wordmark — the globe-V mark, which breathes a faint brand glow and
+          leans in on hover. Links home. */}
+      <Link
+        href="/dashboard"
+        aria-label="Global Ventures"
+        className="group flex h-16 items-center gap-2.5 px-4"
+      >
+        <motion.span
+          whileHover={reduceMotion ? undefined : { scale: 1.07 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.92 }}
+          transition={snappy}
+          className="relative grid size-8 shrink-0 place-items-center"
+        >
+          <span
+            aria-hidden
+            className="logo-glow pointer-events-none absolute -inset-1.5 rounded-full blur-md"
+          />
+          <Image
+            src="/brand/gv-mark-white.png"
+            alt=""
+            width={32}
+            height={32}
+            priority
+            className="relative size-8 object-contain"
+          />
+        </motion.span>
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.span
@@ -58,7 +80,7 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
             </motion.span>
           )}
         </AnimatePresence>
-      </div>
+      </Link>
 
       {/* Workspace switcher. Placeholder until the Clients module exists, but
           the slot belongs here from the start: an agency OS is always operating
@@ -120,16 +142,18 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
         ))}
       </nav>
 
-      {/* Primary action, pinned. */}
+      {/* Primary action, pinned. Live: logs a real deal. */}
       <div className="px-3 pb-2">
-        <Button
-          disabled
-          className="press w-full justify-center gap-2"
-          size={collapsed ? "icon" : "default"}
+        <Link
+          href="/sales/deals/new"
+          className={cn(
+            buttonVariants({ size: collapsed ? "icon" : "default" }),
+            "press w-full justify-center gap-2",
+          )}
         >
           <Plus className="size-4" />
           {!collapsed && <span>Log a deal</span>}
-        </Button>
+        </Link>
       </div>
 
       {/* Who you are. */}
