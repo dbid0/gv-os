@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  date,
   index,
   jsonb,
   pgSchema,
@@ -356,6 +357,39 @@ export const settings = appSchema.table("settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * The action list: the daily/weekly/monthly task board the whole team runs on.
+ *
+ * A `client_id` of null means the item belongs to the AGENCY scope (Daniel +
+ * Gus), keeping client work walled from agency work. `assignee` is a free name
+ * for now; it becomes a team_members reference when that module lands. Later the
+ * Discord bot syncs status both ways against these rows.
+ */
+export const actionItems = appSchema.table(
+  "action_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** daily · weekly · monthly */
+    cadence: text("cadence").notNull().default("daily"),
+    /** not_started · in_progress · completed */
+    status: text("status").notNull().default("not_started"),
+    dueDate: date("due_date", { mode: "string" }),
+    /** A team member's name for now; becomes a reference in the Team module. */
+    assignee: text("assignee"),
+    /** Null = agency scope (Daniel + Gus); set = this client's board. */
+    clientId: uuid("client_id").references(() => clients.id),
+    notes: text("notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("action_items_cadence_idx").on(table.cadence),
+    index("action_items_client_idx").on(table.clientId),
+  ],
+);
+
 export const clientsRelations = relations(clients, ({ many }) => ({
   deals: many(deals),
   reps: many(reps),
@@ -409,3 +443,5 @@ export type NewActivityReport = typeof activityReports.$inferInsert;
 export type EodTemplate = typeof eodTemplates.$inferSelect;
 export type NewEodTemplate = typeof eodTemplates.$inferInsert;
 export type Settings = typeof settings.$inferSelect;
+export type ActionItem = typeof actionItems.$inferSelect;
+export type NewActionItem = typeof actionItems.$inferInsert;
