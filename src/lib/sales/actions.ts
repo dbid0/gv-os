@@ -1,10 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { clients, commissionSplits, deals, eodTemplates, reps } from "@/db/schema/app";
+import {
+  activityReports,
+  clients,
+  commissionSplits,
+  deals,
+  eodTemplates,
+  reps,
+} from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -241,4 +249,94 @@ export async function createEodTemplate(raw: z.input<typeof eodTemplateInput>) {
     .returning();
   revalidatePath("/sales/templates");
   return { id: template.id };
+}
+
+// ---------------------------------------------------------------- Submit EOD
+
+const submitEodInput = z.object({
+  repId: z.string().uuid(),
+  /** ISO date (YYYY-MM-DD) the report covers. */
+  reportDate: z.string().min(1),
+  cadence: z.enum(["eod", "eow", "bod"]).default("eod"),
+  dayOff: z.boolean().default(false),
+  /** Numeric activity counts, keyed by base/custom field key. */
+  metrics: z.record(z.string(), z.number()).default({}),
+  notes: z.string().optional(),
+  /** Closer-only: when cash is logged, a deal is auto-created (RepVision's wiring). */
+  cashCollected: z.string().optional(),
+  revenue: z.string().optional(),
+});
+
+export async function submitEod(raw: z.input<typeof submitEodInput>) {
+  await requireUser();
+  const input = submitEodInput.parse(raw);
+  const db = getDb();
+  const [rep] = await db.select().from(reps).where(eq(reps.id, input.repId)).limit(1);
+  if (!rep) throw new Error("Unknown rep.");
+
+  const reportDate = new Date(`${input.reportDate}T12:00:00Z`);
+  const metrics = input.dayOff ? { day_off: 1 } : input.metrics;
+
+  await db.transaction(async (tx) => {
+    // One report per rep + date + cadence. Re-submitting is a no-op rather than
+    // a duplicate — the external ref carries the identity.
+    await tx
+      .insert(activityReports)
+      .values({
+        repId: rep.id,
+        clientId: rep.clientId,
+        reportDate,
+        kind: input.cadence,
+        metrics,
+        notes: input.notes ?? null,
+        externalRef: `eod:${rep.id}:${input.reportDate}:${input.cadence}`,
+      })
+      .onConflictDoNothing();
+
+    // A closer who logs cash collected auto-creates a deal + its ledger payment,
+    // the same way RepVision turns a closer's EOD into a deal. The cash lives in
+    // the ledger, never on the deal, so the derived numbers can't drift.
+    const cashCents =
+      !input.dayOff && rep.role === "closer" && input.cashCollected?.trim()
+        ? fromDollars(input.cashCollected)
+        : 0;
+    if (cashCents > 0) {
+      const revenueCents =
+        input.revenue && input.revenue.trim() !== ""
+          ? fromDollars(input.revenue)
+          : cashCents;
+      const [deal] = await tx
+        .insert(deals)
+        .values({
+          clientId: rep.clientId,
+          dealType: "Other",
+          contractValueCents: revenueCents,
+          repId: rep.id,
+          recurrence: "one_time",
+          source: "eod",
+          closedAt: reportDate,
+          agreementSigned: "yes",
+          notes: `Auto-created from ${rep.name}'s EOD ${input.reportDate}`,
+          externalRef: `eod-deal:${rep.id}:${input.reportDate}`,
+        })
+        .onConflictDoNothing()
+        .returning();
+      if (deal) {
+        await tx.insert(moneyEvents).values({
+          occurredAt: reportDate,
+          eventType: "payment_received",
+          amountCents: cashCents,
+          clientId: rep.clientId,
+          dealId: deal.id,
+          source: "sales.submitEod",
+          idempotencyKey: `eod-deal:${deal.id}:cash`,
+        });
+      }
+    }
+  });
+
+  revalidatePath("/sales/eod");
+  revalidatePath("/sales/commissions");
+  revalidatePath("/sales");
+  return { ok: true };
 }
