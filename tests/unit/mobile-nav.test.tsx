@@ -53,7 +53,7 @@ describe("MobileNav", () => {
       "aria-current",
       "page",
     );
-    expect(within(nav).queryByRole("link", { name: /accounting/i })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /content/i })).toBeNull();
   });
 
   it("reports its open state on the trigger", async () => {

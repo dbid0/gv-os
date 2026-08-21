@@ -66,7 +66,7 @@ describe("Sidebar", () => {
     );
 
     // Planned sections must not be links to nowhere.
-    expect(screen.queryByRole("link", { name: /accounting/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /content/i })).toBeNull();
     expect(screen.getAllByText("Soon").length).toBeGreaterThan(0);
   });
 
