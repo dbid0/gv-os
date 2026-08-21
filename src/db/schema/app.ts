@@ -514,6 +514,34 @@ export const crmActivity = appSchema.table(
 );
 
 /**
+ * Kit (email) account snapshots — one row per sync per connection. Email
+ * stats are STATE, not events, so the capture is a periodic snapshot; the
+ * Email section charts growth by comparing snapshots over time. Raw sequence
+ * list kept so later views can drill without re-pulling.
+ */
+export const kitSnapshots = appSchema.table(
+  "kit_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    /** Scope inherited from the connection. Null = agency. */
+    clientId: uuid("client_id").references(() => clients.id),
+    accountName: text("account_name"),
+    plan: text("plan"),
+    sequenceCount: bigint("sequence_count", { mode: "number" }).notNull().default(0),
+    tagCount: bigint("tag_count", { mode: "number" }).notNull().default(0),
+    sequences: jsonb("sequences")
+      .$type<{ id: number; name: string; hold?: boolean }[]>()
+      .notNull()
+      .default([]),
+    takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("kit_snapshots_integration_idx").on(table.integrationId)],
+);
+
+/**
  * One run of the Master Finance Sheet mirror (Accounting Phase A). The sheet
  * stays the system of record; each run snapshots what it said and what our
  * engine recomputed. Runs are kept as history — the reconciliation screen

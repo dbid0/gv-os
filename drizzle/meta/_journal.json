@@ -99,6 +99,13 @@
       "when": 1787300306335,
       "tag": "0013_crm_activity",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787302227986,
+      "tag": "0014_kit_snapshots",
+      "breakpoints": true
     }
   ]
 }
