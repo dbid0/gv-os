@@ -19,7 +19,14 @@ import { isAllowed } from "@/lib/auth/allowlist";
  * next request rather than lingering until it expires.
  */
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/error", "/api/health"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/callback",
+  "/auth/error",
+  "/api/health",
+  // Carries its own SYNC_SECRET bearer auth for the scheduled drift job.
+  "/api/sync/finance-sheet",
+];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(

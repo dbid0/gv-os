@@ -431,6 +431,63 @@ export const integrations = appSchema.table(
 );
 
 /**
+ * One run of the Master Finance Sheet mirror (Accounting Phase A). The sheet
+ * stays the system of record; each run snapshots what it said and what our
+ * engine recomputed. Runs are kept as history — the reconciliation screen
+ * reads the latest.
+ */
+export const sheetSyncRuns = appSchema.table("sheet_sync_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** ok · error */
+  status: text("status").notNull().default("ok"),
+  note: text("note"),
+  rowCount: bigint("row_count", { mode: "number" }).notNull().default(0),
+  driftRowCount: bigint("drift_row_count", { mode: "number" }).notNull().default(0),
+  totalAbsDriftCents: bigint("total_abs_drift_cents", { mode: "number" })
+    .notNull()
+    .default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * One mirrored deal row from a sync run: the sheet's inputs, the sheet's own
+ * computed figures, our recomputed figures, and the per-figure drift. NOT the
+ * ledger — a replaceable mirror used for verification, per ACCOUNTING-DESIGN
+ * Phase A. Real client names and dollars live only in the database, never in
+ * the repo.
+ */
+export const sheetMirrorDeals = appSchema.table(
+  "sheet_mirror_deals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => sheetSyncRuns.id),
+    rowIndex: bigint("row_index", { mode: "number" }).notNull(),
+    dateClosed: text("date_closed").notNull(),
+    client: text("client").notNull(),
+    dealType: text("deal_type").notNull(),
+    offer: text("offer"),
+    method: text("method").notNull(),
+    payoutStatus: text("payout_status"),
+    revenueCents: bigint("revenue_cents", { mode: "number" }).notNull(),
+    cashCents: bigint("cash_cents", { mode: "number" }).notNull(),
+    /** ours = the GV OS engine · sheet = the sheet's own figures, in cents. */
+    figures: jsonb("figures")
+      .$type<{
+        ours: Record<string, number>;
+        sheet: Record<string, number>;
+        driftCents: Record<string, number>;
+      }>()
+      .notNull(),
+    hasDrift: boolean("has_drift").notNull().default(false),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("sheet_mirror_deals_run_idx").on(table.runId)],
+);
+
+/**
  * The action list: the daily/weekly/monthly task board the whole team runs on.
  *
  * A `client_id` of null means the item belongs to the AGENCY scope (Daniel +

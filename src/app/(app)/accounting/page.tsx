@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -64,6 +65,14 @@ export default async function AccountingPage() {
           <StatusPill tone={summary.eventCount ? "live" : "muted"}>
             {summary.eventCount} {summary.eventCount === 1 ? "event" : "events"}
           </StatusPill>
+        }
+        actions={
+          <Link
+            href="/accounting/reconciliation"
+            className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
+          >
+            <Scale className="size-4" /> Sheet reconciliation
+          </Link>
         }
       />
 

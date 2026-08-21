@@ -48,6 +48,12 @@ export const serverEnvSchema = z.object({
    * that tooling lands with the first sync job.
    */
   CREDENTIALS_KEY: z.string().min(1).optional(),
+
+  /**
+   * Bearer secret for the scheduled sync endpoints (/api/sync/*). Optional —
+   * without it, only a signed-in allowlisted user can trigger a sync.
+   */
+  SYNC_SECRET: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
