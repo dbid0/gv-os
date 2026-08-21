@@ -105,6 +105,95 @@ export async function listLedgerEvents(limit = 100): Promise<LedgerEventRow[]> {
   }));
 }
 
+/** One deal's accounts-receivable line: revenue agreed vs cash collected. */
+export interface ReceivableRow {
+  dealId: string;
+  customerName: string | null;
+  teamName: string | null;
+  closedAtISO: string | null;
+  revenueCents: Cents;
+  cashCents: Cents;
+  balanceDueCents: Cents;
+}
+
+export interface ReceivablesSummary {
+  totalRevenueCents: Cents;
+  totalCashCents: Cents;
+  totalArCents: Cents;
+  openCount: number;
+  rows: ReceivableRow[];
+}
+
+/**
+ * Accounts receivable: what has been agreed vs what has been collected.
+ *
+ * Balance due = max(revenue − cash collected, 0) per deal, the finance sheet's
+ * own AR formula. Revenue is the deal's agreed value; cash is summed from the
+ * ledger's payments — never a stored balance. Only deals still owed money are
+ * listed; the totals cover the whole book.
+ */
+export async function getReceivables(): Promise<ReceivablesSummary> {
+  const db = getDb();
+
+  const dealRows = await db
+    .select({
+      id: deals.id,
+      revenueCents: deals.contractValueCents,
+      customerName: deals.customerName,
+      teamName: clients.name,
+      closedAt: deals.closedAt,
+    })
+    .from(deals)
+    .leftJoin(clients, eq(deals.clientId, clients.id))
+    .orderBy(desc(deals.closedAt));
+
+  const cashRows = await db
+    .select({
+      dealId: moneyEvents.dealId,
+      total: sql<number>`coalesce(sum(${moneyEvents.amountCents}), 0)`,
+    })
+    .from(moneyEvents)
+    .where(eq(moneyEvents.eventType, "payment_received"))
+    .groupBy(moneyEvents.dealId);
+  const cashByDeal = new Map<string, Cents>();
+  for (const r of cashRows) {
+    if (r.dealId) cashByDeal.set(r.dealId, cents(Number(r.total)));
+  }
+
+  const rows: ReceivableRow[] = [];
+  let totalRevenue = ZERO;
+  let totalCash = ZERO;
+  let totalAr = ZERO;
+
+  for (const d of dealRows) {
+    const revenue = cents(d.revenueCents);
+    const cash = cashByDeal.get(d.id) ?? ZERO;
+    const balance = cents(Math.max(revenue - cash, 0));
+    totalRevenue = cents(totalRevenue + revenue);
+    totalCash = cents(totalCash + cash);
+    totalAr = cents(totalAr + balance);
+    if (balance > 0) {
+      rows.push({
+        dealId: d.id,
+        customerName: d.customerName,
+        teamName: d.teamName,
+        closedAtISO: d.closedAt ? d.closedAt.toISOString() : null,
+        revenueCents: revenue,
+        cashCents: cash,
+        balanceDueCents: balance,
+      });
+    }
+  }
+
+  return {
+    totalRevenueCents: totalRevenue,
+    totalCashCents: totalCash,
+    totalArCents: totalAr,
+    openCount: rows.length,
+    rows,
+  };
+}
+
 /** One deal's partner split: net cash allocated between Daniel and Gus. */
 export interface PartnerPayoutRow {
   dealId: string;
