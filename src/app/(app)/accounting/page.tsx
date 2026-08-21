@@ -13,6 +13,7 @@ import { StatusPill } from "@/components/ui/status";
 import {
   getLedgerSummary,
   getPartnerPayouts,
+  getReceivables,
   listLedgerEvents,
 } from "@/lib/accounting";
 
@@ -35,8 +36,9 @@ const fmtDate = (iso: string) =>
   });
 
 export default async function AccountingPage() {
-  const [summary, partner, events] = await Promise.all([
+  const [summary, receivables, partner, events] = await Promise.all([
     getLedgerSummary(),
+    getReceivables(),
     getPartnerPayouts(),
     listLedgerEvents(100),
   ]);
@@ -81,6 +83,70 @@ export default async function AccountingPage() {
             value={<Money amount={summary.netCents} />}
           />
         </div>
+      </Panel>
+
+      <Panel
+        title="Accounts receivable"
+        aside={<span className="text-faint text-xs">{receivables.openCount} open</span>}
+      >
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Kpi
+            label="Revenue"
+            tone="brand"
+            value={<Money amount={receivables.totalRevenueCents} />}
+          />
+          <Kpi
+            label="Collected"
+            tone="brand"
+            value={<Money amount={receivables.totalCashCents} />}
+          />
+          <Kpi
+            label="Outstanding (AR)"
+            value={<Money amount={receivables.totalArCents} />}
+          />
+        </div>
+
+        {receivables.rows.length === 0 ? (
+          <p className="text-muted-foreground mt-5 border-t pt-4 text-sm">
+            Everything agreed has been collected — no outstanding balances.
+          </p>
+        ) : (
+          <div className="mt-5 overflow-x-auto border-t pt-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
+                  <th className="px-4 py-2.5 font-medium">Customer</th>
+                  <th className="px-4 py-2.5 font-medium">Team</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Revenue</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Collected</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Balance due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receivables.rows.map((r) => (
+                  <tr
+                    key={r.dealId}
+                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
+                  >
+                    <td className="px-4 py-2.5">{r.customerName ?? "—"}</td>
+                    <td className="text-muted-foreground px-4 py-2.5">
+                      {r.teamName ?? "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Money amount={r.revenueCents} />
+                    </td>
+                    <td className="text-muted-foreground px-4 py-2.5 text-right">
+                      <Money amount={r.cashCents} />
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium">
+                      <Money amount={r.balanceDueCents} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Panel>
 
       {partner.rows.length > 0 && (
