@@ -156,6 +156,26 @@ export async function getCommissionRollup(
   );
 }
 
+/** The payout run's period label — one run per calendar month. */
+export function currentPayoutPeriod(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+/** Reps already marked paid for a period — the presence of a payout ledger event. */
+export async function getPaidRepIds(period: string): Promise<Set<string>> {
+  const db = getDb();
+  const rows = await db
+    .select({ repId: moneyEvents.repId })
+    .from(moneyEvents)
+    .where(
+      and(
+        eq(moneyEvents.eventType, "payout"),
+        sql`${moneyEvents.payload}->>'period' = ${period}`,
+      ),
+    );
+  return new Set(rows.map((r) => r.repId).filter((x): x is string => Boolean(x)));
+}
+
 /** The focused KPIs the Sales overview leads with. */
 export interface SalesOverviewStats {
   cashCollectedCents: Cents;

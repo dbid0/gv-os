@@ -1,14 +1,20 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { AlertTriangle, Check } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { DataTable, type Column } from "@/components/ui/table";
 import { type Cents } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
+import { markAllPaid, markRepPaid } from "@/lib/sales/actions";
+import { cn } from "@/lib/utils";
 
 /** One rep's owed line, flattened and serialisable for the client. */
 export interface CommissionLine {
@@ -23,6 +29,7 @@ export interface CommissionLine {
   bonusCents: Cents;
   skimCents: Cents;
   totalOwedCents: Cents;
+  paid: boolean;
 }
 
 export interface CommissionSummary {
@@ -38,14 +45,76 @@ const dash = <span className="text-faint">—</span>;
 const pct = (bps: number | null) =>
   bps === null ? dash : `${(bps / 100).toFixed(1)}%`;
 
+function PayCell({ line }: { line: CommissionLine }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  if (line.paid) return <StatusPill tone="live">Paid</StatusPill>;
+  if (line.totalOwedCents <= 0) return dash;
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          await markRepPaid(line.repId);
+          router.refresh();
+        })
+      }
+    >
+      {pending ? "Marking…" : "Mark paid"}
+    </Button>
+  );
+}
+
+function MarkAllButton() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      size="sm"
+      disabled={pending}
+      className="gap-1.5"
+      onClick={() =>
+        start(async () => {
+          await markAllPaid();
+          router.refresh();
+        })
+      }
+    >
+      <Check className="size-3.5" />
+      {pending ? "Marking…" : "Mark all paid"}
+    </Button>
+  );
+}
+
 export function CommissionsTable({
   lines,
   summary,
+  basis,
 }: {
   lines: CommissionLine[];
   summary: CommissionSummary;
+  basis: "cash_collected" | "deal_revenue";
 }) {
   const reduceMotion = useReducedMotion();
+  const paidCount = lines.filter((l) => l.paid).length;
+
+  const basisTab = (key: "cash_collected" | "deal_revenue", label: string) => (
+    <Link
+      href={`/sales/commissions?basis=${key}`}
+      className={cn(
+        "rounded-md px-2.5 py-1 transition-colors",
+        basis === key
+          ? "bg-card text-foreground border-border-strong border font-medium"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </Link>
+  );
 
   const columns: Column<CommissionLine>[] = [
     {
@@ -96,6 +165,16 @@ export function CommissionsTable({
       sortBy: (r) => r.totalOwedCents,
       render: (r) => <Money amount={r.totalOwedCents} className="font-medium" />,
     },
+    {
+      key: "status",
+      header: "Payout",
+      numeric: true,
+      render: (r) => (
+        <div className="flex justify-end">
+          <PayCell line={r} />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -108,8 +187,16 @@ export function CommissionsTable({
       <Panel title="Commissions" aside={<StatusPill tone="live">Live</StatusPill>}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
-            label="Cash collected"
-            value={<Money amount={summary.cashCollectedCents} />}
+            label={basis === "deal_revenue" ? "Deal revenue" : "Cash collected"}
+            value={
+              <Money
+                amount={
+                  basis === "deal_revenue"
+                    ? summary.revenueCents
+                    : summary.cashCollectedCents
+                }
+              />
+            }
           />
           <Kpi
             label="Rep commissions"
@@ -131,6 +218,23 @@ export function CommissionsTable({
             {summary.dealsMissingSplits === 1 ? "" : "s"} — paid at the team default.
           </div>
         )}
+
+        {/* Payout checklist controls: basis toggle + mark-all. */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="text-xs">
+            <span className="text-muted-foreground">Payout checklist · </span>
+            <span className="font-medium">
+              {paidCount}/{lines.length} paid this month
+            </span>
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="bg-secondary/60 inline-flex rounded-lg border p-0.5 text-xs">
+              {basisTab("cash_collected", "Cash collected")}
+              {basisTab("deal_revenue", "Deal revenue")}
+            </div>
+            {paidCount < lines.length && <MarkAllButton />}
+          </div>
+        </div>
       </Panel>
 
       <Panel title="Who gets paid" padded={false}>
