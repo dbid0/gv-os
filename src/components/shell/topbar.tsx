@@ -1,7 +1,8 @@
 "use client";
 
-import { LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { MobileNav } from "@/components/shell/mobile-nav";
@@ -99,7 +100,12 @@ function UserMenu({ user }: { user: ShellUser | null }) {
           </p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/profile" />} className="gap-2">
+          <User className="size-3.5" /> Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/settings" />} className="gap-2">
+          <Settings className="size-3.5" /> Settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOut}>
           <button
