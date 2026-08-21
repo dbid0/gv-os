@@ -16,12 +16,14 @@ export interface IntegrationRow {
   status: string;
   lastSyncAt: Date | null;
   lastSyncNote: string | null;
+  /** For payments connections: the catch-hook path to paste into the processor. */
+  webhookPath: string | null;
 }
 
 /** Every connection, with its scope resolved. The sealed secret stays server-side. */
 export async function listIntegrations(): Promise<IntegrationRow[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select({
       id: integrations.id,
       provider: integrations.provider,
@@ -32,8 +34,17 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
       status: integrations.status,
       lastSyncAt: integrations.lastSyncAt,
       lastSyncNote: integrations.lastSyncNote,
+      config: integrations.config,
     })
     .from(integrations)
     .leftJoin(clients, eq(integrations.clientId, clients.id))
     .orderBy(asc(integrations.provider), asc(integrations.label));
+
+  return rows.map(({ config, ...row }) => {
+    const token = (config as { webhook_token?: string }).webhook_token;
+    return {
+      ...row,
+      webhookPath: token ? `/api/webhooks/payments/${token}` : null,
+    };
+  });
 }

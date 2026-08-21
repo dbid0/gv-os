@@ -24,8 +24,11 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/auth/error",
   "/api/health",
-  // Carries its own SYNC_SECRET bearer auth for the scheduled drift job.
+  // Carry their own SYNC_SECRET bearer auth for scheduled jobs.
   "/api/sync/finance-sheet",
+  "/api/sync/payments",
+  // Capability-URL token IS the auth; unknown tokens 404 in the route.
+  "/api/webhooks/payments",
 ];
 
 function isPublic(pathname: string) {

@@ -104,6 +104,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Payment normalizers shape real money amounts from processor
+        // payloads — a wrong sign or scale here misstates cash. Fully covered.
+        "src/lib/payments/normalize.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },

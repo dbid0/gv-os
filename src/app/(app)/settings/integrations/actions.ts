@@ -1,5 +1,7 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -9,7 +11,7 @@ import { integrations } from "@/db/schema/app";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { seal, secretHint } from "@/lib/crypto/secretbox";
-import { PROVIDER_VALUES } from "@/lib/integrations/providers";
+import { PROVIDER_VALUES, providerByValue } from "@/lib/integrations/providers";
 import { serverEnv } from "@/env.server";
 
 async function requireUser() {
@@ -45,6 +47,10 @@ export async function connectIntegration(raw: z.input<typeof connectInput>) {
   const input = connectInput.parse(raw);
   const key = requireKey();
   const db = getDb();
+  // Payments providers get a capability-URL webhook token at connect time —
+  // the address IS the credential the processor posts to.
+  const isPayments = providerByValue(input.provider)?.group === "Payments";
+  const config = isPayments ? { webhook_token: randomBytes(24).toString("hex") } : {};
   const [row] = await db
     .insert(integrations)
     .values({
@@ -53,6 +59,7 @@ export async function connectIntegration(raw: z.input<typeof connectInput>) {
       clientId: input.clientId ?? null,
       secretBox: seal(input.secret, key),
       secretHint: secretHint(input.secret),
+      config,
       status: "connected",
     })
     .returning({ id: integrations.id, secretHint: integrations.secretHint });

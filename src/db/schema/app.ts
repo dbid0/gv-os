@@ -431,6 +431,49 @@ export const integrations = appSchema.table(
 );
 
 /**
+ * Captured payment events — the staging layer between processors and the
+ * ledger. A webhook or API pull lands here first, deduped forever on
+ * (provider, external_id). NOTHING here touches `ledger.money_events`
+ * automatically: posting to the append-only ledger is a deliberate action
+ * once the event is attributed to a deal. That separation is what lets us
+ * capture aggressively without ever corrupting the numbers.
+ */
+export const paymentEvents = appSchema.table(
+  "payment_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    provider: text("provider").notNull(),
+    /** The processor's own event/transaction id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    /** Scope inherited from the connection. Null = agency. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** charge · refund · unknown */
+    kind: text("kind").notNull().default("unknown"),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
+    currency: text("currency").notNull().default("usd"),
+    email: text("email"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    /** What the processor called it, for display. */
+    label: text("label"),
+    /** captured · posted · ignored */
+    status: text("status").notNull().default("captured"),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_events_provider_external_key").on(
+      table.provider,
+      table.externalId,
+    ),
+    index("payment_events_client_idx").on(table.clientId),
+    index("payment_events_integration_idx").on(table.integrationId),
+  ],
+);
+
+/**
  * One run of the Master Finance Sheet mirror (Accounting Phase A). The sheet
  * stays the system of record; each run snapshots what it said and what our
  * engine recomputed. Runs are kept as history — the reconciliation screen
@@ -596,3 +639,5 @@ export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type PaymentEvent = typeof paymentEvents.$inferSelect;
+export type NewPaymentEvent = typeof paymentEvents.$inferInsert;
