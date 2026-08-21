@@ -19,7 +19,10 @@ async function authorized(req: NextRequest): Promise<boolean> {
   const secret = process.env.SYNC_SECRET;
   const header = req.headers.get("authorization");
   if (secret && header === `Bearer ${secret}`) return true;
-  if (process.env.DISABLE_AUTH === "true") return true;
+  // Deliberately NO DISABLE_AUTH bypass here: even when the app's login wall
+  // is down for convenience, this machine endpoint stays secret-gated so
+  // strangers can't trigger sheet pulls. The in-app Sync button uses the
+  // server action, which follows the wall.
   const user = await currentUser();
   return Boolean(user?.email && isAllowed(user.email));
 }
