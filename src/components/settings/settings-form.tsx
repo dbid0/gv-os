@@ -8,6 +8,7 @@ import { updateSettings } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
+import { useToast } from "@/components/ui/toast";
 import type { OrgSettings } from "@/lib/settings";
 
 const selectClass =
@@ -52,6 +53,8 @@ export function SettingsForm({ settings }: { settings: OrgSettings }) {
 
   const num = (s: string): number | null => (s.trim() === "" ? null : Number(s));
 
+  const { toast } = useToast();
+
   function submit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -64,9 +67,11 @@ export function SettingsForm({ settings }: { settings: OrgSettings }) {
           closeRateGoalPct: num(closeGoal),
         });
         setSaved(true);
+        toast({ tone: "success", title: "Settings saved" });
         router.refresh();
       } catch (error) {
         setErr(error instanceof Error ? error.message : "Could not save.");
+        toast({ tone: "error", title: "Couldn't save settings" });
       }
     });
   }

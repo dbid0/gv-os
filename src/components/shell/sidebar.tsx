@@ -15,7 +15,15 @@ import {
 
 import { navigation, type NavItem } from "@/components/shell/nav-config";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { clientInitial, roster } from "@/lib/roster";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
 import { useIsHydrated, usePersistedBoolean } from "@/lib/client-state";
@@ -26,6 +34,8 @@ const STORAGE_KEY = "gvos.sidebar.collapsed";
 
 export function Sidebar({ user }: { user: ShellUser | null }) {
   const pathname = usePathname();
+  const activeClient =
+    roster.find((c) => pathname.startsWith(`/clients/${c.slug}`)) ?? null;
   const reduceMotion = useReducedMotion();
   const [collapsed, setCollapsed] = usePersistedBoolean(STORAGE_KEY, false);
   const hydrated = useIsHydrated();
@@ -82,29 +92,58 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
         </AnimatePresence>
       </Link>
 
-      {/* Workspace switcher. Placeholder until the Clients module exists, but
-          the slot belongs here from the start: an agency OS is always operating
-          "as" some client, and burying that choice in a menu hides it. */}
+      {/* Workspace switcher: which client the OS is operating "as". Jumps to
+          that client's command center; All clients = the roster overview. */}
       {!collapsed && (
         <div className="px-3 pb-3">
-          <button
-            type="button"
-            disabled
-            className="border-border-strong bg-secondary/60 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left"
-          >
-            <span className="bg-card grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold">
-              GV
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="text-muted-foreground block text-[10px] tracking-wider uppercase">
-                Workspace
+          <DropdownMenu>
+            <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors">
+              <span
+                className="bg-card grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold"
+                style={activeClient ? { color: activeClient.accent } : undefined}
+              >
+                {activeClient ? clientInitial(activeClient.name) : "GV"}
               </span>
-              <span className="text-foreground block truncate text-sm font-medium">
+              <span className="min-w-0 flex-1">
+                <span className="text-muted-foreground block text-[10px] tracking-wider uppercase">
+                  Workspace
+                </span>
+                <span className="text-foreground block truncate text-sm font-medium">
+                  {activeClient?.name ?? "All clients"}
+                </span>
+              </span>
+              <ChevronRight className="text-faint size-4 shrink-0" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem render={<Link href="/clients" />} className="gap-2">
+                <span className="bg-card grid size-6 place-items-center rounded-md border text-[10px] font-semibold">
+                  GV
+                </span>
                 All clients
-              </span>
-            </span>
-            <ChevronRight className="text-faint size-4 shrink-0" />
-          </button>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {roster.map((client) => (
+                <DropdownMenuItem
+                  key={client.slug}
+                  render={<Link href={`/clients/${client.slug}`} />}
+                  className="gap-2"
+                >
+                  <span
+                    className="grid size-6 place-items-center rounded-md border text-[10px] font-bold"
+                    style={{
+                      color: client.accent,
+                      borderColor: `${client.accent}55`,
+                      background: `${client.accent}14`,
+                    }}
+                  >
+                    {clientInitial(client.name)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{client.name}</span>
+                  <span className="text-faint text-[10px]">{client.owner}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 

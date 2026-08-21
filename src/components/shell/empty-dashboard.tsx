@@ -81,7 +81,7 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
     if (!stats) return undefined;
     if (label === "Cash collected") return <Money amount={stats.cash} />;
     if (label === "Revenue") return <Money amount={stats.revenue} />;
-    if (label === "Deals closed") return stats.deals.toLocaleString();
+    if (label === "Deals closed") return stats.deals.toLocaleString("en-US");
     return stats.closeRatePct == null ? "—" : `${stats.closeRatePct}%`;
   };
 
