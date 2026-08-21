@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Warm the function + DB pool
         run: |
-          for path in /api/health /sales /dashboard; do
+          for path in /api/health /dashboard /sales /accounting /accounting/reconciliation /action-list /team /clients /settings/integrations; do
             code=$(curl -s -o /dev/null -m 40 --retry 3 --retry-delay 8 --retry-all-errors \
               -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
             echo "$path -> $code"
