@@ -5,6 +5,7 @@ import {
   Clapperboard,
   LayoutDashboard,
   ListChecks,
+  Mail,
   Megaphone,
   Plug,
   Receipt,
@@ -83,6 +84,13 @@ export const navigation: NavGroup[] = [
   {
     label: "Marketing",
     items: [
+      {
+        label: "Email",
+        href: "/email",
+        icon: Mail,
+        status: "ready",
+        description: "Every client's Kit account — sequences, tags, plan health",
+      },
       {
         label: "Content",
         href: "/content",
