@@ -61,3 +61,54 @@ export async function listActiveMembers(): Promise<
     .where(eq(teamMembers.status, "active"))
     .orderBy(asc(teamMembers.name));
 }
+
+/** One member with their lane resolved, or null. */
+export async function getTeamMember(id: string) {
+  const db = getDb();
+  const [member] = await db
+    .select({
+      id: teamMembers.id,
+      name: teamMembers.name,
+      role: teamMembers.role,
+      email: teamMembers.email,
+      status: teamMembers.status,
+      clientName: clients.name,
+      notes: teamMembers.notes,
+    })
+    .from(teamMembers)
+    .leftJoin(clients, eq(teamMembers.clientId, clients.id))
+    .where(eq(teamMembers.id, id))
+    .limit(1);
+  return member ?? null;
+}
+
+export interface MemberActionRow {
+  id: string;
+  title: string;
+  cadence: string;
+  status: string;
+  dueDate: string | null;
+  teamName: string | null;
+  notes: string | null;
+}
+
+/** A member's OWN slice of the action list — the heart of their view. */
+export async function listMemberActionItems(
+  memberId: string,
+): Promise<MemberActionRow[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: actionItems.id,
+      title: actionItems.title,
+      cadence: actionItems.cadence,
+      status: actionItems.status,
+      dueDate: actionItems.dueDate,
+      teamName: clients.name,
+      notes: actionItems.notes,
+    })
+    .from(actionItems)
+    .leftJoin(clients, eq(actionItems.clientId, clients.id))
+    .where(eq(actionItems.assigneeId, memberId))
+    .orderBy(asc(actionItems.dueDate), asc(actionItems.createdAt));
+}
