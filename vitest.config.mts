@@ -88,6 +88,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Sealed credential storage. A regression here leaks client API keys
+        // or bricks every stored connection, so it ships fully covered.
+        "src/lib/crypto/secretbox.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
