@@ -12,6 +12,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import {
   getLedgerSummary,
+  getMonthlyFinance,
   getPartnerPayouts,
   getReceivables,
   listLedgerEvents,
@@ -36,8 +37,9 @@ const fmtDate = (iso: string) =>
   });
 
 export default async function AccountingPage() {
-  const [summary, receivables, partner, events] = await Promise.all([
+  const [summary, months, receivables, partner, events] = await Promise.all([
     getLedgerSummary(),
+    getMonthlyFinance(),
     getReceivables(),
     getPartnerPayouts(),
     listLedgerEvents(100),
@@ -84,6 +86,50 @@ export default async function AccountingPage() {
           />
         </div>
       </Panel>
+
+      {months.length > 0 && (
+        <Panel
+          title="By month"
+          aside={<span className="text-faint text-xs">{months.length} months</span>}
+          padded={false}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
+                  <th className="px-4 py-2.5 font-medium">Month</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Cash in</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Fees</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Payouts</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Net</th>
+                </tr>
+              </thead>
+              <tbody>
+                {months.map((m) => (
+                  <tr
+                    key={m.month}
+                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
+                  >
+                    <td className="px-4 py-2.5 whitespace-nowrap">{m.label}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Money amount={m.cashInCents} />
+                    </td>
+                    <td className="text-muted-foreground px-4 py-2.5 text-right">
+                      <Money amount={m.feesCents} />
+                    </td>
+                    <td className="text-muted-foreground px-4 py-2.5 text-right">
+                      <Money amount={m.payoutsCents} />
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium">
+                      <Money amount={m.netCents} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
 
       <Panel
         title="Accounts receivable"

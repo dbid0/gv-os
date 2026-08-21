@@ -105,6 +105,62 @@ export async function listLedgerEvents(limit = 100): Promise<LedgerEventRow[]> {
   }));
 }
 
+/** One month's money, aggregated from the ledger. */
+export interface MonthRow {
+  month: string;
+  label: string;
+  cashInCents: Cents;
+  feesCents: Cents;
+  payoutsCents: Cents;
+  netCents: Cents;
+}
+
+/**
+ * Money by calendar month, newest first — the month-over-month view the finance
+ * sheet lives on. Aggregated from the ledger; nothing stored, nothing invented.
+ */
+export async function getMonthlyFinance(): Promise<MonthRow[]> {
+  const db = getDb();
+  const monthExpr = sql<string>`to_char(${moneyEvents.occurredAt}, 'YYYY-MM')`;
+  const rows = await db
+    .select({
+      month: monthExpr,
+      type: moneyEvents.eventType,
+      total: sql<number>`coalesce(sum(${moneyEvents.amountCents}), 0)`,
+    })
+    .from(moneyEvents)
+    .groupBy(monthExpr, moneyEvents.eventType);
+
+  const byMonth = new Map<string, MonthRow>();
+  for (const r of rows) {
+    const m = byMonth.get(r.month) ?? {
+      month: r.month,
+      label: monthLabel(r.month),
+      cashInCents: ZERO,
+      feesCents: ZERO,
+      payoutsCents: ZERO,
+      netCents: ZERO,
+    };
+    const amt = cents(Number(r.total));
+    if (r.type === "payment_received") m.cashInCents = cents(m.cashInCents + amt);
+    else if (r.type === "processor_fee") m.feesCents = cents(m.feesCents + amt);
+    else if (r.type === "payout") m.payoutsCents = cents(m.payoutsCents + amt);
+    m.netCents = cents(m.netCents + amt);
+    byMonth.set(r.month, m);
+  }
+
+  return [...byMonth.values()].sort((a, b) => b.month.localeCompare(a.month));
+}
+
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** One deal's accounts-receivable line: revenue agreed vs cash collected. */
 export interface ReceivableRow {
   dealId: string;
