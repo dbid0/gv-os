@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { useToast } from "@/components/ui/toast";
 import {
   CREDENTIAL_LABELS,
   PROVIDER_GROUPS,
@@ -142,6 +143,7 @@ export function IntegrationsPanel({
   teams: TeamOption[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, start] = useTransition();
   const [provider, setProvider] = useState(PROVIDERS[0].value);
   const [label, setLabel] = useState("");
@@ -164,6 +166,11 @@ export function IntegrationsPanel({
           label,
           secret,
           clientId: scope || null,
+        });
+        toast({
+          tone: "success",
+          title: "Sealed and connected",
+          detail: "The key is encrypted — only its last 4 characters stay visible.",
         });
         setLabel("");
         setSecret("");

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
+import { useToast } from "@/components/ui/toast";
 import type { ActionItemRow } from "@/lib/action-list";
 import { cn } from "@/lib/utils";
 
@@ -52,13 +53,22 @@ const fmtDate = (d: string | null) =>
 
 function Card({ item }: { item: ActionItemRow }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, start] = useTransition();
   const due = fmtDate(item.dueDate);
 
   const act = (fn: () => Promise<unknown>) =>
     start(async () => {
-      await fn();
-      router.refresh();
+      try {
+        await fn();
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: "Couldn't update the task",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
     });
 
   return (
@@ -127,6 +137,7 @@ export function ActionBoard({
   members: MemberOption[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, start] = useTransition();
   const [cadence, setCadence] = useState("daily");
   const [title, setTitle] = useState("");
@@ -142,17 +153,26 @@ export function ActionBoard({
   function add() {
     if (title.trim() === "") return;
     start(async () => {
-      await createActionItem({
-        title,
-        cadence: cadence as "daily" | "weekly" | "monthly",
-        dueDate: due || undefined,
-        assigneeId: assignee || null,
-        clientId: scope || null,
-      });
-      setTitle("");
-      setDue("");
-      setAssignee("");
-      router.refresh();
+      try {
+        await createActionItem({
+          title,
+          cadence: cadence as "daily" | "weekly" | "monthly",
+          dueDate: due || undefined,
+          assigneeId: assignee || null,
+          clientId: scope || null,
+        });
+        toast({ tone: "success", title: "Action added" });
+        setTitle("");
+        setDue("");
+        setAssignee("");
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: "Couldn't add the action",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
     });
   }
 
