@@ -474,6 +474,46 @@ export const paymentEvents = appSchema.table(
 );
 
 /**
+ * Captured CRM activity — rep dials, texts, and emails pulled from Close per
+ * client connection. Same staging discipline as payment_events: idempotent on
+ * the source's own id, raw kept, views aggregate. Self-reported EODs live in
+ * activity_reports; this table is what the CRM actually recorded — the two
+ * get compared, not merged.
+ */
+export const crmActivity = appSchema.table(
+  "crm_activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    provider: text("provider").notNull().default("close"),
+    /** The CRM's own activity id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    /** Scope inherited from the connection. Null = agency. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** call · sms · email */
+    kind: text("kind").notNull(),
+    userId: text("user_id"),
+    userName: text("user_name"),
+    direction: text("direction"),
+    durationSeconds: bigint("duration_seconds", { mode: "number" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    leadId: text("lead_id"),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("crm_activity_provider_external_key").on(
+      table.provider,
+      table.externalId,
+    ),
+    index("crm_activity_client_idx").on(table.clientId),
+    index("crm_activity_occurred_idx").on(table.occurredAt),
+  ],
+);
+
+/**
  * One run of the Master Finance Sheet mirror (Accounting Phase A). The sheet
  * stays the system of record; each run snapshots what it said and what our
  * engine recomputed. Runs are kept as history — the reconciliation screen

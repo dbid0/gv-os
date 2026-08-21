@@ -92,6 +92,13 @@
       "when": 1787294138938,
       "tag": "0012_payment_events",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787300306335,
+      "tag": "0013_crm_activity",
+      "breakpoints": true
     }
   ]
 }
