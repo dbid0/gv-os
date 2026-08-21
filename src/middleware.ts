@@ -27,6 +27,7 @@ const PUBLIC_PATHS = [
   // Carry their own SYNC_SECRET bearer auth for scheduled jobs.
   "/api/sync/finance-sheet",
   "/api/sync/payments",
+  "/api/sync/close",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
   // Discord bot's task API — its own BOT_API_TOKEN bearer.
