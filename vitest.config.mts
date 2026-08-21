@@ -96,6 +96,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The finance-sheet mirror recomputes Daniel + Gus's real payouts and
+        // is the drift detector for the system of record — fully covered.
+        "src/lib/accounting/sheet-mirror.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },

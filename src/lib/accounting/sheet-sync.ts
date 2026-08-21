@@ -1,0 +1,132 @@
+import "server-only";
+
+import { desc, eq } from "drizzle-orm";
+
+import { getDb } from "@/db/client";
+import { sheetMirrorDeals, sheetSyncRuns } from "@/db/schema/app";
+import { reconcileSheet, type MirrorReport } from "@/lib/accounting/sheet-mirror";
+import { fetchFinanceSheet } from "@/lib/google/sheets";
+
+/**
+ * Accounting Phase A orchestration: pull the sheet, recompute, store the
+ * snapshot. Import-only — nothing here ever writes back to the sheet, and
+ * nothing touches the ledger. The sheet remains the system of record.
+ */
+
+export interface SyncSummary {
+  runId: string;
+  rowCount: number;
+  driftRowCount: number;
+  totalAbsDriftCents: number;
+}
+
+export async function runFinanceSheetSync(): Promise<SyncSummary> {
+  const db = getDb();
+  const data = await fetchFinanceSheet();
+  const report: MirrorReport = reconcileSheet(data.rawRows, data.computedRows);
+
+  const [run] = await db
+    .insert(sheetSyncRuns)
+    .values({
+      status: "ok",
+      rowCount: report.rowCount,
+      driftRowCount: report.driftRowCount,
+      totalAbsDriftCents: report.totalAbsDriftCents,
+    })
+    .returning({ id: sheetSyncRuns.id });
+
+  if (report.deals.length > 0) {
+    await db.insert(sheetMirrorDeals).values(
+      report.deals.map((d) => ({
+        runId: run.id,
+        rowIndex: d.input.rowIndex,
+        dateClosed: d.input.dateClosed,
+        client: d.input.client,
+        dealType: d.input.dealType,
+        offer: d.input.offer || null,
+        method: d.input.method,
+        payoutStatus: d.input.payoutStatus || null,
+        revenueCents: d.input.revenueCents,
+        cashCents: d.input.cashCents,
+        figures: {
+          ours: { ...d.ours },
+          sheet: { ...d.sheet },
+          driftCents: { ...d.driftCents },
+        },
+        hasDrift: d.hasDrift,
+        notes: d.input.notes || null,
+      })),
+    );
+  }
+
+  return {
+    runId: run.id,
+    rowCount: report.rowCount,
+    driftRowCount: report.driftRowCount,
+    totalAbsDriftCents: report.totalAbsDriftCents,
+  };
+}
+
+export interface LatestReconciliation {
+  run: {
+    id: string;
+    createdAt: Date;
+    status: string;
+    rowCount: number;
+    driftRowCount: number;
+    totalAbsDriftCents: number;
+  } | null;
+  deals: {
+    rowIndex: number;
+    dateClosed: string;
+    client: string;
+    dealType: string;
+    method: string;
+    payoutStatus: string | null;
+    revenueCents: number;
+    cashCents: number;
+    figures: {
+      ours: Record<string, number>;
+      sheet: Record<string, number>;
+      driftCents: Record<string, number>;
+    };
+    hasDrift: boolean;
+  }[];
+}
+
+/** The latest run and its rows, for the reconciliation screen. */
+export async function latestReconciliation(): Promise<LatestReconciliation> {
+  const db = getDb();
+  const [run] = await db
+    .select({
+      id: sheetSyncRuns.id,
+      createdAt: sheetSyncRuns.createdAt,
+      status: sheetSyncRuns.status,
+      rowCount: sheetSyncRuns.rowCount,
+      driftRowCount: sheetSyncRuns.driftRowCount,
+      totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
+    })
+    .from(sheetSyncRuns)
+    .orderBy(desc(sheetSyncRuns.createdAt))
+    .limit(1);
+  if (!run) return { run: null, deals: [] };
+
+  const deals = await db
+    .select({
+      rowIndex: sheetMirrorDeals.rowIndex,
+      dateClosed: sheetMirrorDeals.dateClosed,
+      client: sheetMirrorDeals.client,
+      dealType: sheetMirrorDeals.dealType,
+      method: sheetMirrorDeals.method,
+      payoutStatus: sheetMirrorDeals.payoutStatus,
+      revenueCents: sheetMirrorDeals.revenueCents,
+      cashCents: sheetMirrorDeals.cashCents,
+      figures: sheetMirrorDeals.figures,
+      hasDrift: sheetMirrorDeals.hasDrift,
+    })
+    .from(sheetMirrorDeals)
+    .where(eq(sheetMirrorDeals.runId, run.id))
+    .orderBy(sheetMirrorDeals.rowIndex);
+
+  return { run, deals };
+}

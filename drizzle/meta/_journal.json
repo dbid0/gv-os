@@ -78,6 +78,13 @@
       "when": 1787288417562,
       "tag": "0010_integrations",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787290109206,
+      "tag": "0011_finance_sheet_mirror",
+      "breakpoints": true
     }
   ]
 }
