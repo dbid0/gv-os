@@ -50,6 +50,13 @@
       "when": 1787272960323,
       "tag": "0006_money_events_rep_id",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787273723137,
+      "tag": "0007_settings",
+      "breakpoints": true
     }
   ]
 }

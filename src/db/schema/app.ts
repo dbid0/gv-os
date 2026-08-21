@@ -343,6 +343,19 @@ export const eodTemplates = appSchema.table(
   ],
 );
 
+/**
+ * Org-level settings, as a single JSON row.
+ *
+ * A key/value blob rather than a wide column list, so a new preference (a goal,
+ * a toggle, a display option) is a code change, not a migration. Goals are
+ * TARGETS, not ledger money — they live here, never in the money tables.
+ */
+export const settings = appSchema.table("settings", {
+  id: text("id").primaryKey().default("org"),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const clientsRelations = relations(clients, ({ many }) => ({
   deals: many(deals),
   reps: many(reps),
@@ -395,3 +408,4 @@ export type ActivityReport = typeof activityReports.$inferSelect;
 export type NewActivityReport = typeof activityReports.$inferInsert;
 export type EodTemplate = typeof eodTemplates.$inferSelect;
 export type NewEodTemplate = typeof eodTemplates.$inferInsert;
+export type Settings = typeof settings.$inferSelect;
