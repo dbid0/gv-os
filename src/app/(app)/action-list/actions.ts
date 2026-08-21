@@ -20,7 +20,8 @@ const createInput = z.object({
   title: z.string().min(1, "An action needs a title."),
   cadence: z.enum(["daily", "weekly", "monthly"]),
   dueDate: z.string().optional(),
-  assignee: z.string().optional(),
+  /** A roster member. The old free-text assignee only survives on old rows. */
+  assigneeId: z.string().uuid().nullable().optional(),
   clientId: z.string().uuid().nullable().optional(),
   notes: z.string().optional(),
 });
@@ -36,7 +37,7 @@ export async function createActionItem(raw: z.input<typeof createInput>) {
       cadence: input.cadence,
       status: "not_started",
       dueDate: input.dueDate?.trim() ? input.dueDate : null,
-      assignee: input.assignee?.trim() || null,
+      assigneeId: input.assigneeId ?? null,
       clientId: input.clientId ?? null,
       notes: input.notes?.trim() || null,
     })

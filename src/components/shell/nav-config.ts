@@ -112,8 +112,8 @@ export const navigation: NavGroup[] = [
         label: "Team",
         href: "/team",
         icon: Users,
-        status: "planned",
-        description: "Reps, roles, EODs, scoreboards",
+        status: "ready",
+        description: "The roster — roles, lanes, and each member's workload",
       },
       {
         label: "Calendar",

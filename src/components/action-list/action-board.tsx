@@ -21,6 +21,11 @@ interface TeamOption {
   name: string;
 }
 
+interface MemberOption {
+  id: string;
+  name: string;
+}
+
 const CADENCES = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
@@ -115,9 +120,11 @@ function Card({ item }: { item: ActionItemRow }) {
 export function ActionBoard({
   items,
   teams,
+  members,
 }: {
   items: ActionItemRow[];
   teams: TeamOption[];
+  members: MemberOption[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -139,7 +146,7 @@ export function ActionBoard({
         title,
         cadence: cadence as "daily" | "weekly" | "monthly",
         dueDate: due || undefined,
-        assignee: assignee || undefined,
+        assigneeId: assignee || null,
         clientId: scope || null,
       });
       setTitle("");
@@ -188,12 +195,18 @@ export function ActionBoard({
           </label>
           <label className="space-y-1.5">
             <span className="text-muted-foreground text-xs font-medium">Assignee</span>
-            <Input
+            <select
+              className={cn(selectClass, "w-40")}
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
-              placeholder="Name"
-              className="w-36"
-            />
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="space-y-1.5">
             <span className="text-muted-foreground text-xs font-medium">Scope</span>
