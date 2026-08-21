@@ -47,6 +47,58 @@ export async function listReps(clientId?: string) {
   return rows;
 }
 
+/** A team's editable configuration + its reps, for the client config hub. */
+export interface TeamConfig {
+  id: string;
+  name: string;
+  slug: string;
+  defaultCloserBps: number | null;
+  defaultSetterBps: number | null;
+  defaultDmSetterBps: number | null;
+  defaultManagerBps: number | null;
+  deductProcessorFees: boolean;
+  processorFeeBps: number | null;
+  processorFeeFlatCents: number | null;
+  reps: {
+    id: string;
+    name: string;
+    role: string;
+    commissionBps: number | null;
+    status: string;
+  }[];
+}
+
+/** Load a team (DB client) by slug with its reps. Null if no team matches. */
+export async function getTeamBySlug(slug: string): Promise<TeamConfig | null> {
+  const db = getDb();
+  const [c] = await db.select().from(clients).where(eq(clients.slug, slug)).limit(1);
+  if (!c) return null;
+  const repRows = await db
+    .select({
+      id: reps.id,
+      name: reps.name,
+      role: reps.role,
+      commissionBps: reps.commissionBps,
+      status: reps.status,
+    })
+    .from(reps)
+    .where(eq(reps.clientId, c.id))
+    .orderBy(reps.name);
+  return {
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    defaultCloserBps: c.defaultCloserBps,
+    defaultSetterBps: c.defaultSetterBps,
+    defaultDmSetterBps: c.defaultDmSetterBps,
+    defaultManagerBps: c.defaultManagerBps,
+    deductProcessorFees: c.deductProcessorFees,
+    processorFeeBps: c.processorFeeBps,
+    processorFeeFlatCents: c.processorFeeFlatCents,
+    reps: repRows,
+  };
+}
+
 /** Cash collected per deal, summed from the ledger's payment_received events. */
 async function cashByDeal(dealIds: string[]): Promise<CashByDeal> {
   const map = new Map<string, Cents>();

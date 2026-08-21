@@ -430,3 +430,59 @@ export async function markAllPaid() {
   revalidatePath("/sales/commissions");
   return { ok: true, count: owed.length };
 }
+
+// ---------------------------------------------------------------- Team config
+
+const teamDefaultsInput = z.object({
+  clientId: z.string().uuid(),
+  defaultCloserPct: z.number().min(0).max(100).nullable(),
+  defaultSetterPct: z.number().min(0).max(100).nullable(),
+  defaultDmSetterPct: z.number().min(0).max(100).nullable(),
+  defaultManagerPct: z.number().min(0).max(100).nullable(),
+  deductProcessorFees: z.boolean(),
+  processorFeePct: z.number().min(0).max(100).nullable(),
+  processorFeeFlat: z.string().optional(),
+});
+
+export async function updateTeamDefaults(raw: z.input<typeof teamDefaultsInput>) {
+  await requireUser();
+  const input = teamDefaultsInput.parse(raw);
+  const toBps = (p: number | null) => (p === null ? null : percentToBps(p));
+  const db = getDb();
+  await db
+    .update(clients)
+    .set({
+      defaultCloserBps: toBps(input.defaultCloserPct),
+      defaultSetterBps: toBps(input.defaultSetterPct),
+      defaultDmSetterBps: toBps(input.defaultDmSetterPct),
+      defaultManagerBps: toBps(input.defaultManagerPct),
+      deductProcessorFees: input.deductProcessorFees,
+      processorFeeBps: toBps(input.processorFeePct),
+      processorFeeFlatCents: input.processorFeeFlat?.trim()
+        ? fromDollars(input.processorFeeFlat)
+        : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(clients.id, input.clientId));
+
+  revalidatePath("/clients");
+  revalidatePath("/sales/commissions");
+  revalidatePath("/sales");
+  return { ok: true };
+}
+
+/** Activate or deactivate a rep. Inactive reps drop off leaderboards and payouts. */
+export async function setRepActive(repId: string, active: boolean) {
+  await requireUser();
+  const id = z.string().uuid().parse(repId);
+  const db = getDb();
+  await db
+    .update(reps)
+    .set({ status: active ? "active" : "inactive", updatedAt: new Date() })
+    .where(eq(reps.id, id));
+
+  revalidatePath("/clients");
+  revalidatePath("/sales/commissions");
+  revalidatePath("/sales/leaderboard");
+  return { ok: true };
+}
