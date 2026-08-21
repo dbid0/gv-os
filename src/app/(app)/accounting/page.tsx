@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
+import { ExportCsv } from "@/components/ui/export-csv";
 import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -43,6 +44,14 @@ export default async function AccountingPage() {
     getReceivables(),
     getPartnerPayouts(),
     listLedgerEvents(100),
+  ]);
+
+  const ledgerCsv = events.map((e) => [
+    new Date(e.occurredAtISO).toLocaleDateString("en-US"),
+    EVENT_LABEL[e.eventType] ?? e.eventType,
+    e.teamName ?? "",
+    e.customerName ?? e.memo ?? e.source,
+    (e.amountCents / 100).toFixed(2),
   ]);
 
   return (
@@ -278,7 +287,16 @@ export default async function AccountingPage() {
       ) : (
         <Panel
           title="Ledger"
-          aside={<span className="text-faint text-xs">{events.length} recent</span>}
+          aside={
+            <div className="flex items-center gap-3">
+              <span className="text-faint text-xs">{events.length} recent</span>
+              <ExportCsv
+                filename="gv-os-ledger.csv"
+                headers={["Date", "Type", "Team", "Detail", "Amount"]}
+                rows={ledgerCsv}
+              />
+            </div>
+          }
           padded={false}
         >
           <div className="overflow-x-auto">
