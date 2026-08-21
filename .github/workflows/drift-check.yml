@@ -1,0 +1,45 @@
+name: daily-drift-check
+
+# Accounting safety feature #8 (ACCOUNTING-DESIGN.md): every day, re-sync the
+# Master Finance Sheet mirror and verify GV OS still reproduces the sheet's
+# numbers. A failed run is the alert — GitHub emails on workflow failure.
+#
+# The job fails when:
+#   - the sync itself errors, or
+#   - total absolute drift exceeds the documented baseline. The baseline is
+#     5 cents: the sheet's five historical half-cent 50/50 splits each read
+#     one cent high on Gus, permanently, by construction (engine resolves
+#     them as residuals). Anything ABOVE that is new, real drift.
+
+on:
+  schedule:
+    # 11:00 UTC = 6am CT — the report is fresh before the workday.
+    - cron: "0 11 * * *"
+  workflow_dispatch: {}
+
+env:
+  DRIFT_BASELINE_CENTS: 5
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sync the sheet and check drift
+        run: |
+          out=$(curl -s -m 90 --retry 2 --retry-delay 10 -X POST \
+            -H "Authorization: Bearer ${{ secrets.SYNC_SECRET }}" \
+            https://os.globalventures.app/api/sync/finance-sheet)
+          echo "sync response: $out"
+          ok=$(echo "$out" | python3 -c "import json,sys; print(json.load(sys.stdin).get('ok'))" 2>/dev/null || echo "parse-error")
+          if [ "$ok" != "True" ]; then
+            echo "::error::Finance-sheet sync FAILED: $out"
+            exit 1
+          fi
+          drift=$(echo "$out" | python3 -c "import json,sys; print(json.load(sys.stdin)['totalAbsDriftCents'])")
+          rows=$(echo "$out" | python3 -c "import json,sys; print(json.load(sys.stdin)['rowCount'])")
+          echo "mirrored $rows deals, total |drift| = ${drift}¢ (baseline ${DRIFT_BASELINE_CENTS}¢)"
+          if [ "$drift" -gt "$DRIFT_BASELINE_CENTS" ]; then
+            echo "::error::NEW DRIFT: ${drift}¢ exceeds the ${DRIFT_BASELINE_CENTS}¢ baseline — open /accounting/reconciliation"
+            exit 1
+          fi
