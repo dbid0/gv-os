@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -93,12 +94,17 @@ function UserMenu({ user }: { user: ShellUser | null }) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="font-normal">
-          <p className="text-sm font-medium">{user?.name ?? "Signed out"}</p>
-          <p className="text-muted-foreground truncate text-xs">
-            {user?.email ?? "No session"}
-          </p>
-        </DropdownMenuLabel>
+        {/* Base UI law: GroupLabel MUST live inside a Group, or the menu
+            throws error #31 on open and crashes the page to the error
+            boundary. This exact omission broke the profile menu for weeks. */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <p className="text-sm font-medium">{user?.name ?? "Signed out"}</p>
+            <p className="text-muted-foreground truncate text-xs">
+              {user?.email ?? "No session"}
+            </p>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/profile" />} className="gap-2">
           <User className="size-3.5" /> Profile
