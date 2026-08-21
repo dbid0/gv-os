@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   Receipt,
   Trophy,
@@ -29,6 +30,7 @@ const tabs = [
   { label: "Deals", href: "/sales/deals", icon: Receipt },
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
+  { label: "EOD Reports", href: "/sales/eod", icon: FileText },
   { label: "Templates", href: "/sales/templates", icon: ClipboardList },
   { label: "Teams", href: "/sales/teams", icon: Users },
 ];

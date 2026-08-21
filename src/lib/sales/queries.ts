@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import {
   type EodCalcField,
   type EodCustomField,
+  activityReports,
   clients,
   commissionSplits,
   deals,
@@ -179,6 +180,39 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
     dealsClosed: dealRows.length,
     teamCount: teams.length,
   };
+}
+
+/** A submitted activity report shaped for the EOD Reports history. */
+export interface EodReportRow {
+  id: string;
+  reportDate: Date;
+  kind: string;
+  repName: string | null;
+  role: string | null;
+  teamName: string | null;
+  metrics: Record<string, number>;
+  notes: string | null;
+}
+
+/** EOD/EOW/BOD submissions, newest first, for the reports history. */
+export async function listActivityReports(kind = "eod"): Promise<EodReportRow[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: activityReports.id,
+      reportDate: activityReports.reportDate,
+      kind: activityReports.kind,
+      repName: reps.name,
+      role: reps.role,
+      teamName: clients.name,
+      metrics: activityReports.metrics,
+      notes: activityReports.notes,
+    })
+    .from(activityReports)
+    .leftJoin(reps, eq(activityReports.repId, reps.id))
+    .leftJoin(clients, eq(activityReports.clientId, clients.id))
+    .where(eq(activityReports.kind, kind))
+    .orderBy(desc(activityReports.reportDate));
 }
 
 /** A rep shaped for the Submit-EOD picker. */
