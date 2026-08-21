@@ -55,37 +55,36 @@ export async function getMorningGlance(): Promise<MorningGlance> {
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const today = new Date().toISOString().slice(0, 10);
 
-  const [
-    [lastRun],
-    [openActions],
-    [dueToday],
-    byMember,
-    connections,
-    [pay24],
-    [payTotal],
-    [crm24],
-    [crmTotal],
-    kitAccounts,
-  ] = await Promise.all([
-    db
-      .select({
-        createdAt: sheetSyncRuns.createdAt,
-        driftRowCount: sheetSyncRuns.driftRowCount,
-        totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
-      })
-      .from(sheetSyncRuns)
-      .orderBy(desc(sheetSyncRuns.createdAt))
-      .limit(1),
-    db
-      .select({ n: count() })
-      .from(actionItems)
-      .where(ne(actionItems.status, "completed")),
-    db
-      .select({ n: count() })
-      .from(actionItems)
-      .where(
-        sql`${actionItems.status} <> 'completed' and ${actionItems.dueDate} = ${today}`,
-      ),
+  // THE POOL LAW (learned twice the hard way): concurrent queries in flight
+  // must stay comfortably below the pool's `max`, or the excess gets pipelined
+  // onto busy connections and Supabase's transaction pooler never answers —
+  // the page hangs forever, not slowly. This function once fired 10 parallel
+  // queries and, combined with the page's own four, crossed the limit and hung
+  // the dashboard for 90s+. All the scalar counts are now ONE round trip of
+  // scalar subqueries; total burst here is 4.
+  const [[scalars], byMember, connections, kitAccounts] = await Promise.all([
+    db.execute<{
+      last_run_at: Date | null;
+      drift_row_count: number | null;
+      total_abs_drift_cents: number | null;
+      open_actions: number;
+      due_today: number;
+      pay_24h: number;
+      pay_total: number;
+      crm_24h: number;
+      crm_total: number;
+    }>(sql`
+      select
+        (select created_at from app.sheet_sync_runs order by created_at desc limit 1) as last_run_at,
+        (select drift_row_count from app.sheet_sync_runs order by created_at desc limit 1)::int as drift_row_count,
+        (select total_abs_drift_cents from app.sheet_sync_runs order by created_at desc limit 1)::int as total_abs_drift_cents,
+        (select count(*) from app.action_items where status <> 'completed')::int as open_actions,
+        (select count(*) from app.action_items where status <> 'completed' and due_date = ${today})::int as due_today,
+        (select count(*) from app.payment_events where created_at >= ${dayAgo})::int as pay_24h,
+        (select count(*) from app.payment_events)::int as pay_total,
+        (select count(*) from app.crm_activity where created_at >= ${dayAgo})::int as crm_24h,
+        (select count(*) from app.crm_activity)::int as crm_total
+    `),
     db
       .select({ name: teamMembers.name, open: count() })
       .from(actionItems)
@@ -107,16 +106,6 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       .where(eq(integrations.status, "connected"))
       .orderBy(integrations.provider),
     db
-      .select({ n: count() })
-      .from(paymentEvents)
-      .where(gte(paymentEvents.createdAt, dayAgo)),
-    db.select({ n: count() }).from(paymentEvents),
-    db
-      .select({ n: count() })
-      .from(crmActivity)
-      .where(gte(crmActivity.createdAt, dayAgo)),
-    db.select({ n: count() }).from(crmActivity),
-    db
       .selectDistinct({ integrationId: kitSnapshots.integrationId })
       .from(kitSnapshots)
       .innerJoin(integrations, eq(kitSnapshots.integrationId, integrations.id))
@@ -124,16 +113,16 @@ export async function getMorningGlance(): Promise<MorningGlance> {
   ]);
 
   return {
-    sheet: lastRun
+    sheet: scalars?.last_run_at
       ? {
-          lastRunAt: lastRun.createdAt,
-          driftRowCount: lastRun.driftRowCount,
-          totalAbsDriftCents: lastRun.totalAbsDriftCents,
+          lastRunAt: new Date(scalars.last_run_at),
+          driftRowCount: scalars.drift_row_count ?? 0,
+          totalAbsDriftCents: scalars.total_abs_drift_cents ?? 0,
         }
       : null,
     actions: {
-      open: openActions?.n ?? 0,
-      dueToday: dueToday?.n ?? 0,
+      open: scalars?.open_actions ?? 0,
+      dueToday: scalars?.due_today ?? 0,
       byMember: byMember.map((m) => ({ name: m.name, open: m.open })),
     },
     integrations: connections.map((c) => ({
@@ -143,10 +132,10 @@ export async function getMorningGlance(): Promise<MorningGlance> {
         Date.now() - c.lastSyncAt.getTime() > STALE_AFTER_HOURS * 60 * 60 * 1000,
     })),
     captures: {
-      payments24h: pay24?.n ?? 0,
-      paymentsTotal: payTotal?.n ?? 0,
-      crm24h: crm24?.n ?? 0,
-      crmTotal: crmTotal?.n ?? 0,
+      payments24h: scalars?.pay_24h ?? 0,
+      paymentsTotal: scalars?.pay_total ?? 0,
+      crm24h: scalars?.crm_24h ?? 0,
+      crmTotal: scalars?.crm_total ?? 0,
       kitAccounts: kitAccounts.length,
     },
   };
