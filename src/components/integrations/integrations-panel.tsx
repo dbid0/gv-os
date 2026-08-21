@@ -38,6 +38,7 @@ interface ConnectionRow {
   status: string;
   lastSyncAt: string | null;
   lastSyncNote: string | null;
+  webhookPath: string | null;
 }
 
 const selectClass =
@@ -83,6 +84,21 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
           </span>
         </p>
       </div>
+
+      {row.webhookPath && !revoked && (
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard?.writeText(
+              `${window.location.origin}${row.webhookPath}`,
+            )
+          }
+          className="text-faint hover:text-foreground rounded-md border px-2 py-1 font-mono text-[10px] transition-colors"
+          title="Copy the webhook URL to paste into the processor"
+        >
+          copy webhook URL
+        </button>
+      )}
 
       <span
         className={cn(

@@ -67,12 +67,20 @@ export default async function AccountingPage() {
           </StatusPill>
         }
         actions={
-          <Link
-            href="/accounting/reconciliation"
-            className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
-          >
-            <Scale className="size-4" /> Sheet reconciliation
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/accounting/payments"
+              className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
+            >
+              <Receipt className="size-4" /> Payments
+            </Link>
+            <Link
+              href="/accounting/reconciliation"
+              className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
+            >
+              <Scale className="size-4" /> Sheet reconciliation
+            </Link>
+          </div>
         }
       />
 
