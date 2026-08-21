@@ -358,12 +358,47 @@ export const settings = appSchema.table("settings", {
 });
 
 /**
+ * The agency team roster: copywriters, VAs, creative directors, and the rest of
+ * the crew who run out of GV OS. Distinct from sales `reps` — a rep is comped on
+ * a client's deals; a team member is who work gets ASSIGNED to. The two unify
+ * later if that distinction stops earning its keep.
+ *
+ * `client_id` scopes a member to one client's lane (the trial copywriter works
+ * Grid + Vault only, etc.); null = agency-wide. Role-based views hang off this
+ * table: a member's board is their assigned action items filtered to their
+ * scope.
+ */
+export const teamMembers = appSchema.table(
+  "team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    /** copywriter · va · creative_director · setter · closer · manager · operator */
+    role: text("role").notNull(),
+    /** Set when the member signs in to GV OS. Null for someone we only assign. */
+    email: text("email"),
+    /** Null = agency-wide; set = this member works one client's lane. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** active | inactive. Inactive members keep history but leave the pickers. */
+    status: text("status").notNull().default("active"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("team_members_client_idx").on(table.clientId),
+    index("team_members_role_idx").on(table.role),
+  ],
+);
+
+/**
  * The action list: the daily/weekly/monthly task board the whole team runs on.
  *
  * A `client_id` of null means the item belongs to the AGENCY scope (Daniel +
- * Gus), keeping client work walled from agency work. `assignee` is a free name
- * for now; it becomes a team_members reference when that module lands. Later the
- * Discord bot syncs status both ways against these rows.
+ * Gus), keeping client work walled from agency work. `assignee_id` points at
+ * the team roster; the legacy free-text `assignee` stays readable on old rows
+ * but new items assign real members. Later the Discord bot syncs status both
+ * ways against these rows.
  */
 export const actionItems = appSchema.table(
   "action_items",
@@ -375,8 +410,10 @@ export const actionItems = appSchema.table(
     /** not_started · in_progress · completed */
     status: text("status").notNull().default("not_started"),
     dueDate: date("due_date", { mode: "string" }),
-    /** A team member's name for now; becomes a reference in the Team module. */
+    /** Legacy free-text name from before the Team module. Superseded below. */
     assignee: text("assignee"),
+    /** Who this action belongs to, from the team roster. */
+    assigneeId: uuid("assignee_id").references(() => teamMembers.id),
     /** Null = agency scope (Daniel + Gus); set = this client's board. */
     clientId: uuid("client_id").references(() => clients.id),
     notes: text("notes"),
@@ -387,6 +424,7 @@ export const actionItems = appSchema.table(
   (table) => [
     index("action_items_cadence_idx").on(table.cadence),
     index("action_items_client_idx").on(table.clientId),
+    index("action_items_assignee_idx").on(table.assigneeId),
   ],
 );
 
@@ -426,6 +464,19 @@ export const activityReportsRelations = relations(activityReports, ({ one }) => 
   }),
 }));
 
+export const teamMembersRelations = relations(teamMembers, ({ one, many }) => ({
+  client: one(clients, { fields: [teamMembers.clientId], references: [clients.id] }),
+  actionItems: many(actionItems),
+}));
+
+export const actionItemsRelations = relations(actionItems, ({ one }) => ({
+  assignee: one(teamMembers, {
+    fields: [actionItems.assigneeId],
+    references: [teamMembers.id],
+  }),
+  client: one(clients, { fields: [actionItems.clientId], references: [clients.id] }),
+}));
+
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type Client = typeof clients.$inferSelect;
@@ -445,3 +496,5 @@ export type NewEodTemplate = typeof eodTemplates.$inferInsert;
 export type Settings = typeof settings.$inferSelect;
 export type ActionItem = typeof actionItems.$inferSelect;
 export type NewActionItem = typeof actionItems.$inferInsert;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type NewTeamMember = typeof teamMembers.$inferInsert;
