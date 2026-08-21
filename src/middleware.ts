@@ -29,6 +29,8 @@ const PUBLIC_PATHS = [
   "/api/sync/payments",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
+  // Discord bot's task API — its own BOT_API_TOKEN bearer.
+  "/api/bot/tasks",
 ];
 
 function isPublic(pathname: string) {

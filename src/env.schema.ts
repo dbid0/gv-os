@@ -54,6 +54,13 @@ export const serverEnvSchema = z.object({
    * without it, only a signed-in allowlisted user can trigger a sync.
    */
   SYNC_SECRET: z.string().min(1).optional(),
+
+  /**
+   * Bearer for the Discord bot's task API (/api/bot/*). Its own credential —
+   * a leaked bot token must never unlock money syncs. Optional: unset means
+   * the bot API is simply off.
+   */
+  BOT_API_TOKEN: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
