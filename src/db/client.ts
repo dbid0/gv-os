@@ -26,7 +26,16 @@ let database: ReturnType<typeof drizzle<typeof schema>> | undefined;
 export function getDb() {
   if (!database) {
     client = postgres(serverEnv().DATABASE_URL, {
-      max: 1,
+      // NEVER set this to 1. postgres-js pipelines concurrent queries onto a
+      // single connection, and Supabase's transaction pooler (port 6543) does
+      // not answer pipelined simple queries — the response never arrives and
+      // every page that runs queries in parallel (Promise.all) hangs forever.
+      // Reproduced 2026-08-20: max:1 + 5 parallel counts = infinite hang;
+      // max:10 = ~500ms. One instance serves many concurrent requests under
+      // Fluid compute, so the pool must cover parallel queries across ALL
+      // in-flight requests. Client connections to the pooler are cheap; the
+      // pooler multiplexes real backends itself.
+      max: 10,
       idle_timeout: 20,
       connect_timeout: 10,
       prepare: false,
