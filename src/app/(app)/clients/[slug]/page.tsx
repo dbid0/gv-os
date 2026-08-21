@@ -3,11 +3,15 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
+import { TeamConfig } from "@/components/sales/team-config";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
 import { clientBySlug } from "@/lib/roster";
+import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -60,6 +64,8 @@ export default async function ClientPage({
   const { slug } = await params;
   const client = clientBySlug(slug);
   if (!client) notFound();
+
+  const team = await getTeamBySlug(slug);
 
   const facts = [
     { label: "Owner", value: client.owner },
@@ -172,6 +178,8 @@ export default async function ClientPage({
           </Panel>
         </div>
       </div>
+
+      {team && <TeamConfig team={team} />}
     </div>
   );
 }
