@@ -182,6 +182,89 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
   };
 }
 
+/** One rep's ranked line: EOD activity summed, plus deals and cash from real rows. */
+export interface LeaderboardRow {
+  repId: string;
+  name: string;
+  role: string;
+  teamName: string | null;
+  dials: number;
+  connects: number;
+  setsBooked: number;
+  callsTaken: number;
+  shows: number;
+  followUps: number;
+  dealsClosed: number;
+  cashCents: Cents;
+}
+
+/**
+ * The leaderboard: every active rep, their EOD activity totalled, and their
+ * deals and collected cash. Nothing invented — activity comes from submitted
+ * reports, cash from the ledger. Ranked by cash, then deals, then shows.
+ */
+export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
+  const db = getDb();
+  const repRows = await db
+    .select({ id: reps.id, name: reps.name, role: reps.role, teamName: clients.name })
+    .from(reps)
+    .leftJoin(clients, eq(reps.clientId, clients.id))
+    .where(
+      role
+        ? and(eq(reps.status, "active"), eq(reps.role, role))
+        : eq(reps.status, "active"),
+    );
+
+  // Sum each rep's activity metrics across all their reports.
+  const acts = await db
+    .select({ repId: activityReports.repId, metrics: activityReports.metrics })
+    .from(activityReports);
+  const actByRep = new Map<string, Record<string, number>>();
+  for (const a of acts) {
+    const cur = actByRep.get(a.repId) ?? {};
+    for (const [k, v] of Object.entries(a.metrics ?? {})) {
+      cur[k] = (cur[k] ?? 0) + (typeof v === "number" ? v : 0);
+    }
+    actByRep.set(a.repId, cur);
+  }
+
+  // Deals closed and cash collected, per rep, from real rows + the ledger.
+  const dealRows = await db.select({ id: deals.id, repId: deals.repId }).from(deals);
+  const cash = await cashByDeal(dealRows.map((d) => d.id));
+  const dealsByRep = new Map<string, number>();
+  const cashByRep = new Map<string, Cents>();
+  for (const d of dealRows) {
+    if (!d.repId) continue;
+    dealsByRep.set(d.repId, (dealsByRep.get(d.repId) ?? 0) + 1);
+    const prev = cashByRep.get(d.repId) ?? ZERO;
+    cashByRep.set(d.repId, cents(prev + (cash.get(d.id) ?? ZERO)));
+  }
+
+  const rows: LeaderboardRow[] = repRows.map((r) => {
+    const m = actByRep.get(r.id) ?? {};
+    return {
+      repId: r.id,
+      name: r.name,
+      role: r.role,
+      teamName: r.teamName,
+      dials: m.dials ?? 0,
+      connects: m.connects ?? 0,
+      setsBooked: m.sets_booked ?? 0,
+      callsTaken: m.calls_taken ?? 0,
+      shows: m.shows ?? 0,
+      followUps: m.follow_up_calls ?? 0,
+      dealsClosed: dealsByRep.get(r.id) ?? 0,
+      cashCents: cashByRep.get(r.id) ?? ZERO,
+    };
+  });
+
+  rows.sort(
+    (a, b) =>
+      b.cashCents - a.cashCents || b.dealsClosed - a.dealsClosed || b.shows - a.shows,
+  );
+  return rows;
+}
+
 /** A submitted activity report shaped for the EOD Reports history. */
 export interface EodReportRow {
   id: string;
