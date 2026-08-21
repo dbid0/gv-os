@@ -52,6 +52,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Processor fees come straight out of collected cash, so same bar.
+        "src/lib/fees.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Sales commissions move money to reps, so the engine ships fully covered.
         "src/lib/sales/commission.ts": {
           statements: 100,

@@ -16,7 +16,8 @@ import {
 import { moneyEvents } from "@/db/schema/ledger";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
-import { fromDollars } from "@/lib/money";
+import { processorFee } from "@/lib/fees";
+import { type Cents, ZERO, cents, fromDollars } from "@/lib/money";
 import {
   currentPayoutPeriod,
   getCommissionRollup,
@@ -57,6 +58,26 @@ const slugify = (s: string) =>
 const pctToBps = (p: number | undefined) => (p === undefined ? null : percentToBps(p));
 const dollarsToCents = (v: string | undefined) =>
   v && v.trim() !== "" ? fromDollars(v) : null;
+
+/** The processor fee on a collection, per the team's fee settings. Zero if off. */
+async function processorFeeForClient(
+  db: ReturnType<typeof getDb>,
+  clientId: string,
+  cashCents: Cents,
+): Promise<Cents> {
+  if (cashCents <= 0) return ZERO;
+  const [team] = await db
+    .select({
+      deduct: clients.deductProcessorFees,
+      feeBps: clients.processorFeeBps,
+      feeFlat: clients.processorFeeFlatCents,
+    })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!team?.deduct) return ZERO;
+  return processorFee(cashCents, team.feeBps, team.feeFlat);
+}
 
 // ---------------------------------------------------------------- Teams
 
@@ -155,6 +176,7 @@ export async function logDeal(raw: z.input<typeof dealInput>) {
   const db = getDb();
   const contractCents = fromDollars(input.contractValue);
   const cashCents = fromDollars(input.cashCollected);
+  const feeCents = await processorFeeForClient(db, input.clientId, cashCents);
 
   const dealId = await db.transaction(async (tx) => {
     const [deal] = await tx
@@ -182,6 +204,20 @@ export async function logDeal(raw: z.input<typeof dealInput>) {
         dealId: deal.id,
         source: "sales.logDeal",
         idempotencyKey: `deal:${deal.id}:initial`,
+      });
+    }
+
+    // If the team deducts processor fees, record the fee as its own ledger event
+    // (money out) so net cash stays accurate — the same shape as the sheet.
+    if (feeCents > 0) {
+      await tx.insert(moneyEvents).values({
+        occurredAt: new Date(),
+        eventType: "processor_fee",
+        amountCents: -feeCents,
+        clientId: input.clientId,
+        dealId: deal.id,
+        source: "sales.logDeal",
+        idempotencyKey: `deal:${deal.id}:fee`,
       });
     }
 
@@ -336,6 +372,23 @@ export async function submitEod(raw: z.input<typeof submitEodInput>) {
           source: "sales.submitEod",
           idempotencyKey: `eod-deal:${deal.id}:cash`,
         });
+
+        const feeCents = await processorFeeForClient(
+          db,
+          rep.clientId,
+          cents(cashCents),
+        );
+        if (feeCents > 0) {
+          await tx.insert(moneyEvents).values({
+            occurredAt: reportDate,
+            eventType: "processor_fee",
+            amountCents: -feeCents,
+            clientId: rep.clientId,
+            dealId: deal.id,
+            source: "sales.submitEod",
+            idempotencyKey: `eod-deal:${deal.id}:fee`,
+          });
+        }
       }
     }
   });
