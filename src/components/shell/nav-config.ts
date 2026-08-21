@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Clapperboard,
   LayoutDashboard,
+  ListChecks,
   Megaphone,
   Receipt,
   Settings,
@@ -100,6 +101,13 @@ export const navigation: NavGroup[] = [
   {
     label: "Operations",
     items: [
+      {
+        label: "Action list",
+        href: "/action-list",
+        icon: ListChecks,
+        status: "ready",
+        description: "Daily, weekly, and monthly tasks for the team",
+      },
       {
         label: "Team",
         href: "/team",
