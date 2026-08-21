@@ -73,7 +73,7 @@ export const navigation: NavGroup[] = [
         label: "Accounting",
         href: "/accounting",
         icon: Receipt,
-        status: "planned",
+        status: "ready",
         description: "Payments, fees, splits, payouts",
       },
     ],
