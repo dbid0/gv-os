@@ -29,6 +29,7 @@ export interface DashboardStats {
   revenue: Cents;
   deals: number;
   closeRatePct: number | null;
+  revenueGoalCents: number;
   compliance: {
     submitted: number;
     total: number;
@@ -157,6 +158,29 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
                   · Missing: {stats.compliance.missing.join(", ")}
                 </span>
               )}
+            </div>
+          )}
+
+          {stats && stats.revenueGoalCents > 0 && (
+            <div className="mt-4 space-y-1.5 border-t pt-4">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Monthly revenue goal</span>
+                <span className="text-faint">
+                  <Money amount={stats.revenue} /> of{" "}
+                  <Money amount={stats.revenueGoalCents as Cents} />
+                </span>
+              </div>
+              <div className="bg-secondary h-1.5 overflow-hidden rounded-full">
+                <div
+                  className="bg-brand h-full rounded-full transition-[width] duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round((stats.revenue / stats.revenueGoalCents) * 100),
+                    )}%`,
+                  }}
+                />
+              </div>
             </div>
           )}
 
