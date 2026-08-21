@@ -4,17 +4,35 @@ import {
 } from "@/components/sales/commissions-table";
 import { SectionScaffold } from "@/components/sales/section-scaffold";
 import { sum } from "@/lib/money";
-import { getCommissionRollup, listReps, listTeams } from "@/lib/sales/queries";
+import {
+  currentPayoutPeriod,
+  getCommissionRollup,
+  getPaidRepIds,
+  listReps,
+  listTeams,
+} from "@/lib/sales/queries";
 
 export const metadata = {
   title: "Commissions - GV OS",
 };
 
-export default async function SalesCommissionsPage() {
-  const [rollup, reps, teams] = await Promise.all([
-    getCommissionRollup("cash_collected"),
+// Always read fresh from the database; commission figures must never be cached.
+export const dynamic = "force-dynamic";
+
+export default async function SalesCommissionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ basis?: string }>;
+}) {
+  const { basis: basisParam } = await searchParams;
+  const basis = basisParam === "deal_revenue" ? "deal_revenue" : "cash_collected";
+  const period = currentPayoutPeriod();
+
+  const [rollup, reps, teams, paid] = await Promise.all([
+    getCommissionRollup(basis),
     listReps(),
     listTeams(),
+    getPaidRepIds(period),
   ]);
 
   if (rollup.reps.length === 0) {
@@ -56,12 +74,14 @@ export default async function SalesCommissionsPage() {
       bonusCents: line.run.bonusCents,
       skimCents: line.skimCents,
       totalOwedCents: line.totalOwedCents,
+      paid: paid.has(line.repId),
     };
   });
 
   return (
     <CommissionsTable
       lines={lines}
+      basis={basis}
       summary={{
         cashCollectedCents: rollup.teamCashCents,
         revenueCents: rollup.teamRevenueCents,
@@ -73,6 +93,3 @@ export default async function SalesCommissionsPage() {
     />
   );
 }
-
-// Always read fresh from the database; commission figures must never be cached.
-export const dynamic = "force-dynamic";

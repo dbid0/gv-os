@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
@@ -17,6 +17,11 @@ import { moneyEvents } from "@/db/schema/ledger";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { fromDollars } from "@/lib/money";
+import {
+  currentPayoutPeriod,
+  getCommissionRollup,
+  getPaidRepIds,
+} from "@/lib/sales/queries";
 import { percentToBps } from "@/lib/splits";
 
 /**
@@ -339,4 +344,89 @@ export async function submitEod(raw: z.input<typeof submitEodInput>) {
   revalidatePath("/sales/commissions");
   revalidatePath("/sales");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------- Payouts
+
+/**
+ * Mark a rep paid for the current month. The amount is RECOMPUTED here from the
+ * commission rollup — never taken from the client — and recorded as a `payout`
+ * ledger event (money out, negative). Idempotent per rep + period, so a double
+ * click can't double-pay. "Paid" is then derived from the event's existence.
+ */
+export async function markRepPaid(repId: string) {
+  await requireUser();
+  const id = z.string().uuid().parse(repId);
+  const period = currentPayoutPeriod();
+  const rollup = await getCommissionRollup("cash_collected");
+  const line = rollup.reps.find((r) => r.repId === id);
+  if (!line) throw new Error("No owed line for this rep.");
+
+  const db = getDb();
+  const [rep] = await db
+    .select({ clientId: reps.clientId })
+    .from(reps)
+    .where(eq(reps.id, id))
+    .limit(1);
+
+  await db
+    .insert(moneyEvents)
+    .values({
+      occurredAt: new Date(),
+      eventType: "payout",
+      amountCents: -line.totalOwedCents,
+      clientId: rep?.clientId ?? null,
+      repId: id,
+      source: "sales.markPaid",
+      idempotencyKey: `payout:${id}:${period}`,
+      payload: { period, owed: line.totalOwedCents },
+    })
+    .onConflictDoNothing();
+
+  revalidatePath("/sales/commissions");
+  return { ok: true };
+}
+
+/** Mark every rep with a positive balance paid for the current month. */
+export async function markAllPaid() {
+  await requireUser();
+  const period = currentPayoutPeriod();
+  const rollup = await getCommissionRollup("cash_collected");
+  const paid = await getPaidRepIds(period);
+  const owed = rollup.reps.filter((r) => !paid.has(r.repId) && r.totalOwedCents > 0);
+  if (owed.length === 0) return { ok: true, count: 0 };
+
+  const db = getDb();
+  const clientByRep = new Map(
+    (
+      await db
+        .select({ id: reps.id, clientId: reps.clientId })
+        .from(reps)
+        .where(
+          inArray(
+            reps.id,
+            owed.map((r) => r.repId),
+          ),
+        )
+    ).map((r) => [r.id, r.clientId]),
+  );
+
+  await db
+    .insert(moneyEvents)
+    .values(
+      owed.map((r) => ({
+        occurredAt: new Date(),
+        eventType: "payout" as const,
+        amountCents: -r.totalOwedCents,
+        clientId: clientByRep.get(r.repId) ?? null,
+        repId: r.repId,
+        source: "sales.markPaid",
+        idempotencyKey: `payout:${r.repId}:${period}`,
+        payload: { period, owed: r.totalOwedCents },
+      })),
+    )
+    .onConflictDoNothing();
+
+  revalidatePath("/sales/commissions");
+  return { ok: true, count: owed.length };
 }

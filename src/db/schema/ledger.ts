@@ -11,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { clients, deals, profiles } from "@/db/schema/app";
+import { clients, deals, profiles, reps } from "@/db/schema/app";
 
 /**
  * The `ledger` schema holds append-only money events.
@@ -54,6 +54,8 @@ export const moneyEvents = ledgerSchema.table(
 
     clientId: uuid("client_id").references(() => clients.id),
     dealId: uuid("deal_id").references(() => deals.id),
+    /** The rep a payout event pays. Null for deal-level events (payments, fees). */
+    repId: uuid("rep_id").references(() => reps.id),
 
     /** fanbasis · wire · ach · zelle · stripe … */
     processor: text("processor"),
@@ -81,6 +83,7 @@ export const moneyEvents = ledgerSchema.table(
     index("money_events_occurred_at_idx").on(table.occurredAt),
     index("money_events_client_idx").on(table.clientId),
     index("money_events_deal_idx").on(table.dealId),
+    index("money_events_rep_idx").on(table.repId),
     index("money_events_batch_idx").on(table.importBatchId),
   ],
 );
