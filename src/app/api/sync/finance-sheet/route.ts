@@ -41,3 +41,8 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+/** Vercel cron entry — the platform only issues GETs. Same auth, same job. */
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
