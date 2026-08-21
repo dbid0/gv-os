@@ -52,7 +52,11 @@ const STALE_AFTER_HOURS = 26;
 
 export async function getMorningGlance(): Promise<MorningGlance> {
   const db = getDb();
-  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Raw-SQL params must be strings with explicit casts: drizzle's db.execute
+  // does NOT run driver param mapping, so a JS Date stringifies as
+  // "Thu Aug 20 2026 …" — which Postgres rejects and the whole page 500s
+  // (shipped broken once; caught by Daniel, not by a timing-only check).
+  const dayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const today = new Date().toISOString().slice(0, 10);
 
   // THE POOL LAW (learned twice the hard way): concurrent queries in flight
@@ -80,9 +84,9 @@ export async function getMorningGlance(): Promise<MorningGlance> {
         (select total_abs_drift_cents from app.sheet_sync_runs order by created_at desc limit 1)::int as total_abs_drift_cents,
         (select count(*) from app.action_items where status <> 'completed')::int as open_actions,
         (select count(*) from app.action_items where status <> 'completed' and due_date = ${today})::int as due_today,
-        (select count(*) from app.payment_events where created_at >= ${dayAgo})::int as pay_24h,
+        (select count(*) from app.payment_events where created_at >= ${dayAgoIso}::timestamptz)::int as pay_24h,
         (select count(*) from app.payment_events)::int as pay_total,
-        (select count(*) from app.crm_activity where created_at >= ${dayAgo})::int as crm_24h,
+        (select count(*) from app.crm_activity where created_at >= ${dayAgoIso}::timestamptz)::int as crm_24h,
         (select count(*) from app.crm_activity)::int as crm_total
     `),
     db
