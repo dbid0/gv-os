@@ -85,7 +85,12 @@ export interface FinanceSheetData {
 export async function fetchFinanceSheet(): Promise<FinanceSheetData> {
   const cred = await loadCredential();
   const token = await accessToken(cred);
-  const params = new URLSearchParams({ valueRenderOption: "UNFORMATTED_VALUE" });
+  const params = new URLSearchParams({
+    valueRenderOption: "UNFORMATTED_VALUE",
+    // Without this, date cells arrive as spreadsheet serial numbers (46195)
+    // instead of the displayed date string the parser expects.
+    dateTimeRenderOption: "FORMATTED_STRING",
+  });
   params.append("ranges", RAW_RANGE);
   params.append("ranges", COMPUTED_RANGE);
   const res = await fetch(
