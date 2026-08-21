@@ -392,6 +392,45 @@ export const teamMembers = appSchema.table(
 );
 
 /**
+ * A connected external tool: Close, Calendly, Kit, Stripe, an MCP server…
+ *
+ * The credential is stored ONLY as AES-256-GCM ciphertext (see
+ * src/lib/crypto/secretbox.ts); `secret_hint` ("…a1b2") is all the UI ever
+ * gets back. `client_id` scopes a connection to one client — per-client
+ * credential isolation is a standing rule — and null = the agency's own
+ * connection. Sync jobs record health on `last_sync_*` so the Integrations
+ * page can show what's live and what's stale.
+ */
+export const integrations = appSchema.table(
+  "integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Catalog value from src/lib/integrations/providers.ts. */
+    provider: text("provider").notNull(),
+    /** Human label: "Grid Close account", "Vault Kit". */
+    label: text("label").notNull(),
+    /** Null = agency-wide; set = this client's own connection. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** Sealed credential (v1.<iv>.<tag>.<ct>). Null once revoked. */
+    secretBox: text("secret_box"),
+    /** Displayable tail of the secret. Never the secret itself. */
+    secretHint: text("secret_hint"),
+    /** Non-secret provider settings (account ids, list ids, base URLs). */
+    config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    /** connected · error · revoked */
+    status: text("status").notNull().default("connected"),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    lastSyncNote: text("last_sync_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("integrations_provider_idx").on(table.provider),
+    index("integrations_client_idx").on(table.clientId),
+  ],
+);
+
+/**
  * The action list: the daily/weekly/monthly task board the whole team runs on.
  *
  * A `client_id` of null means the item belongs to the AGENCY scope (Daniel +
@@ -498,3 +537,5 @@ export type ActionItem = typeof actionItems.$inferSelect;
 export type NewActionItem = typeof actionItems.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
+export type Integration = typeof integrations.$inferSelect;
+export type NewIntegration = typeof integrations.$inferInsert;

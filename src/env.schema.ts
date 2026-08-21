@@ -39,6 +39,15 @@ export const serverEnvSchema = z.object({
    * container in CI where the distinction does not exist.
    */
   MIGRATION_DATABASE_URL: postgresUrl("MIGRATION_DATABASE_URL").optional(),
+
+  /**
+   * Master key for sealed integration credentials (AES-256-GCM), 32 bytes as
+   * base64. Optional so builds and test runs don't require it; connecting an
+   * integration without it fails with a clear error instead. Generate with
+   * `openssl rand -base64 32`. Rotating it re-seals every stored credential —
+   * that tooling lands with the first sync job.
+   */
+  CREDENTIALS_KEY: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
