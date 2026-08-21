@@ -4,7 +4,7 @@ import { ClipboardList, Plus } from "lucide-react";
 
 import { SalesTabs } from "@/components/sales/sales-tabs";
 import { PageHeader } from "@/components/shell/page-header";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +27,15 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
         status={<StatusPill tone="live">Live</StatusPill>}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled className="gap-2">
+            <Link
+              href="/sales/eod/submit"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
               <ClipboardList className="size-3.5" /> Submit EOD
-            </Button>
+            </Link>
             <Link
               href="/sales/deals/new"
               className={cn(buttonVariants({ size: "sm" }), "gap-2")}

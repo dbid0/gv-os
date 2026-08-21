@@ -181,6 +181,32 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
   };
 }
 
+/** A rep shaped for the Submit-EOD picker. */
+export interface EodRepRow {
+  id: string;
+  name: string;
+  role: string;
+  clientId: string;
+  teamName: string | null;
+}
+
+/** Active reps, with their team, for the Submit-EOD form's picker. */
+export async function listEodReps(): Promise<EodRepRow[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: reps.id,
+      name: reps.name,
+      role: reps.role,
+      clientId: reps.clientId,
+      teamName: clients.name,
+    })
+    .from(reps)
+    .leftJoin(clients, eq(reps.clientId, clients.id))
+    .where(eq(reps.status, "active"))
+    .orderBy(clients.name, reps.name);
+}
+
 /** An EOD template shaped for the Templates screen. */
 export interface EodTemplateRow {
   id: string;
