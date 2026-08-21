@@ -80,6 +80,7 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
                   day: "numeric",
                   hour: "numeric",
                   minute: "2-digit",
+                  timeZone: "America/Chicago",
                 })}`
               : "Never synced — sync job lands with this provider's module"}
           </span>

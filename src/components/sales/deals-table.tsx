@@ -29,7 +29,11 @@ const selectClass =
 
 const fmtDate = (iso: string | null) =>
   iso
-    ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? new Date(iso).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        timeZone: "America/Chicago",
+      })
     : "—";
 
 export function DealsTable({ rows }: { rows: DealRow[] }) {

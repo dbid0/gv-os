@@ -53,6 +53,7 @@ const fmtWhen = (d: Date) =>
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "America/Chicago",
   });
 
 export function EmailOverview({ accounts }: { accounts: KitOverviewRow[] }) {
