@@ -6,21 +6,36 @@ import {
   BarChart3,
   ChevronRight,
   CircleDollarSign,
+  ClipboardCheck,
   FileText,
   Percent,
   PhoneCall,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
-import { Kpi, Metric } from "@/components/ui/metric";
+import { Kpi, Metric, Money } from "@/components/ui/metric";
 import { Panel, Row, Rows } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
 import { StatusDot, StatusPill } from "@/components/ui/status";
 import { fadeUp, stagger } from "@/lib/motion";
+import type { Cents } from "@/lib/money";
 import { roster } from "@/lib/roster";
+
+export interface DashboardStats {
+  cash: Cents;
+  revenue: Cents;
+  deals: number;
+  closeRatePct: number | null;
+  compliance: {
+    submitted: number;
+    total: number;
+    missing: string[];
+    label: string | null;
+  };
+}
 
 /**
  * The dashboard, before there is anything to put on it.
@@ -57,9 +72,22 @@ const next = [
   { label: "Operations", detail: "Tasks, EODs, and the calendar" },
 ];
 
-export function EmptyDashboard() {
+export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
   const reduceMotion = useReducedMotion();
   const [view, setView] = useState("sales");
+
+  const kpiValue = (label: string): ReactNode => {
+    if (!stats) return undefined;
+    if (label === "Cash collected") return <Money amount={stats.cash} />;
+    if (label === "Revenue") return <Money amount={stats.revenue} />;
+    if (label === "Deals closed") return stats.deals.toLocaleString();
+    return stats.closeRatePct == null ? "—" : `${stats.closeRatePct}%`;
+  };
+
+  const compliancePct =
+    stats && stats.compliance.total
+      ? Math.round((stats.compliance.submitted / stats.compliance.total) * 100)
+      : 0;
 
   return (
     <motion.div
@@ -71,7 +99,11 @@ export function EmptyDashboard() {
       <PageHeader
         title="The foundation is"
         highlight="live."
-        description="Modules get designed before they get built, so nothing here shows a number until the data behind it is real."
+        description={
+          stats
+            ? "Live across every active client — cash, deals, and EOD compliance, reconciled to the ledger."
+            : "Modules get designed before they get built, so nothing here shows a number until the data behind it is real."
+        }
         status={<StatusPill tone="live">All systems green</StatusPill>}
       />
 
@@ -97,9 +129,36 @@ export function EmptyDashboard() {
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {headline.map((k) => (
-              <Kpi key={k.label} label={k.label} icon={k.icon} tone={k.tone} pending />
+              <Kpi
+                key={k.label}
+                label={k.label}
+                icon={k.icon}
+                tone={k.tone}
+                value={kpiValue(k.label)}
+                pending={!stats}
+              />
             ))}
           </div>
+
+          {stats && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-4 text-xs">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                <ClipboardCheck className="text-brand size-3.5" /> EOD compliance
+                {stats.compliance.label && (
+                  <span className="text-faint">({stats.compliance.label})</span>
+                )}
+              </span>
+              <span className="font-medium">{compliancePct}%</span>
+              <span className="text-faint">
+                {stats.compliance.submitted}/{stats.compliance.total} filed
+              </span>
+              {stats.compliance.missing.length > 0 && (
+                <span className="text-faint">
+                  · Missing: {stats.compliance.missing.join(", ")}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-2 border-t pt-4">
             {roster.map((client) => (
