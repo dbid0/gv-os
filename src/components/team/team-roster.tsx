@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { useToast } from "@/components/ui/toast";
 import type { TeamMemberRow } from "@/lib/team";
 import { TEAM_ROLES, roleLabel, roleRank, type TeamRole } from "@/lib/team-roles";
 import { cn } from "@/lib/utils";
@@ -94,6 +95,7 @@ export function TeamRoster({
   teams: TeamOption[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, start] = useTransition();
   const [name, setName] = useState("");
   const [role, setRole] = useState<TeamRole>("copywriter");
@@ -118,15 +120,24 @@ export function TeamRoster({
   function add() {
     if (name.trim() === "") return;
     start(async () => {
-      await createTeamMember({
-        name,
-        role,
-        email: email || "",
-        clientId: scope || null,
-      });
-      setName("");
-      setEmail("");
-      router.refresh();
+      try {
+        await createTeamMember({
+          name,
+          role,
+          email: email || "",
+          clientId: scope || null,
+        });
+        toast({ tone: "success", title: `${name.trim()} added to the roster` });
+        setName("");
+        setEmail("");
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: "Couldn't add the member",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
     });
   }
 

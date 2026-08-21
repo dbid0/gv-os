@@ -8,11 +8,13 @@ import { syncKitNow } from "@/app/(app)/email/actions";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { useToast } from "@/components/ui/toast";
 import type { KitOverviewRow } from "@/lib/email/queries";
 import { cn } from "@/lib/utils";
 
 export function KitSyncButton() {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +26,11 @@ export function KitSyncButton() {
           setError(null);
           start(async () => {
             try {
-              await syncKitNow();
+              const out = await syncKitNow();
+              toast({
+                tone: "success",
+                title: `${out.connections} Kit ${out.connections === 1 ? "account" : "accounts"} synced`,
+              });
               router.refresh();
             } catch (e) {
               setError(e instanceof Error ? e.message : "Sync failed.");
