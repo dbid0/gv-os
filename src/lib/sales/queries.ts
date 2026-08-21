@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -180,6 +180,65 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
     dealsClosed: dealRows.length,
     teamCount: teams.length,
   };
+}
+
+/** EOD compliance for the most recent submission day. */
+export interface EodCompliance {
+  asOf: Date | null;
+  submitted: number;
+  total: number;
+  missing: string[];
+}
+
+/**
+ * Who filed their EOD on the latest day anyone did. RepVision's compliance
+ * widget: a submitted/total count plus the names still missing, so a manager
+ * sees the gap at a glance. Purely derived from submitted reports.
+ */
+export async function getEodCompliance(): Promise<EodCompliance> {
+  const db = getDb();
+  const activeReps = await db
+    .select({ id: reps.id, name: reps.name })
+    .from(reps)
+    .where(eq(reps.status, "active"));
+  const total = activeReps.length;
+
+  const [latest] = await db
+    .select({ d: sql<string | null>`max(${activityReports.reportDate})` })
+    .from(activityReports)
+    .where(eq(activityReports.kind, "eod"));
+  if (!latest?.d) {
+    return { asOf: null, submitted: 0, total, missing: activeReps.map((r) => r.name) };
+  }
+
+  const asOf = new Date(latest.d);
+  const dayStart = new Date(asOf);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(asOf);
+  dayEnd.setUTCHours(23, 59, 59, 999);
+
+  const submittedRows = await db
+    .select({ repId: activityReports.repId })
+    .from(activityReports)
+    .where(
+      and(
+        eq(activityReports.kind, "eod"),
+        gte(activityReports.reportDate, dayStart),
+        lte(activityReports.reportDate, dayEnd),
+      ),
+    );
+  const submittedSet = new Set(submittedRows.map((r) => r.repId));
+  const missing = activeReps.filter((r) => !submittedSet.has(r.id)).map((r) => r.name);
+  return { asOf, submitted: total - missing.length, total, missing };
+}
+
+/** Overall close rate = deals closed ÷ total shows, from real activity + deals. */
+export async function getCloseRatePct(): Promise<number | null> {
+  const rows = await getLeaderboard();
+  const shows = rows.reduce((n, r) => n + r.shows, 0);
+  const deals = rows.reduce((n, r) => n + r.dealsClosed, 0);
+  if (!shows) return null;
+  return Math.round((deals / shows) * 100);
 }
 
 /** One rep's ranked line: EOD activity summed, plus deals and cash from real rows. */
