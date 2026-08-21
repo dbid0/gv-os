@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { ListChecks, Mail, Plus } from "lucide-react";
+import { ChevronRight, ListChecks, Mail, Plus } from "lucide-react";
 
 import { createTeamMember, setTeamMemberStatus } from "@/app/(app)/team/actions";
 import { PageHeader } from "@/components/shell/page-header";
@@ -66,6 +67,13 @@ function MemberRow({ member }: { member: TeamMemberRow }) {
         <ListChecks className="size-3.5" />
         {member.openActions} open
       </span>
+
+      <Link
+        href={`/team/${member.id}`}
+        className="text-brand hover:text-foreground inline-flex items-center gap-0.5 rounded-md border px-2 py-1 text-[11px] transition-colors"
+      >
+        View board <ChevronRight className="size-3" />
+      </Link>
 
       <button
         disabled={pending}
