@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
+import { pullCalendlyBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
 import { pullStripeEvents } from "@/lib/payments/capture";
@@ -30,6 +31,7 @@ async function runAll() {
   const out: Record<string, unknown> = {};
   for (const [name, fn] of [
     ["close", pullCloseActivity],
+    ["bookings", pullCalendlyBookings],
     ["kit", pullKitSnapshots],
     ["stripe", pullStripeEvents],
   ] as const) {

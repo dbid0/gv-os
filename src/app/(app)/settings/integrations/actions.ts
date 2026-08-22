@@ -47,10 +47,13 @@ export async function connectIntegration(raw: z.input<typeof connectInput>) {
   const input = connectInput.parse(raw);
   const key = requireKey();
   const db = getDb();
-  // Payments providers get a capability-URL webhook token at connect time —
-  // the address IS the credential the processor posts to.
-  const isPayments = providerByValue(input.provider)?.group === "Payments";
-  const config = isPayments ? { webhook_token: randomBytes(24).toString("hex") } : {};
+  // Payments and Bookings providers get a capability-URL webhook token at
+  // connect time — the address IS the credential the source posts to.
+  const group = providerByValue(input.provider)?.group;
+  const config =
+    group === "Payments" || group === "Bookings"
+      ? { webhook_token: randomBytes(24).toString("hex") }
+      : {};
   const [row] = await db
     .insert(integrations)
     .values({
