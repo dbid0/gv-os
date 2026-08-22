@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
 
+import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { PageHeader } from "@/components/shell/page-header";
 import { TeamConfig } from "@/components/sales/team-config";
 import { Panel } from "@/components/ui/panel";
@@ -10,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
 import { bucketByDay } from "@/lib/charts";
+import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { getClientReport } from "@/lib/clients/report";
 import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
@@ -70,9 +72,10 @@ export default async function ClientPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const [team, report] = await Promise.all([
+  const [team, report, drive] = await Promise.all([
     getTeamBySlug(slug),
     getClientReport(slug, client.name),
+    getClientDriveAssets(slug),
   ]);
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
@@ -223,6 +226,8 @@ export default async function ClientPage({
           </Panel>
         </div>
       </div>
+
+      <DriveAssetsPanel slug={slug} drive={drive} />
 
       {team && <TeamConfig team={team} />}
     </div>

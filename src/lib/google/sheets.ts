@@ -57,6 +57,15 @@ async function loadCredential(): Promise<GoogleCredential> {
   return cred as GoogleCredential;
 }
 
+/**
+ * A fresh access token from the sealed agency Google credential. Shared by
+ * every Google surface (Sheets mirror, Drive assets); the plaintext
+ * credential never leaves this module.
+ */
+export async function googleAccessToken(): Promise<string> {
+  return accessToken(await loadCredential());
+}
+
 async function accessToken(cred: GoogleCredential): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

@@ -45,6 +45,9 @@ export const clients = appSchema.table(
     status: text("status").notNull().default("active"),
     /** Where a row came from, so imported records are always identifiable. */
     externalRef: text("external_ref"),
+    /** The client's Google Drive root folder — assets panel reads it live
+     * through the sealed agency credential. Null until set on the client page. */
+    driveFolderId: text("drive_folder_id"),
 
     /**
      * Team commission defaults, by role, in basis points. Applied to a deal
