@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { TopClock } from "@/components/shell/top-clock";
+import { WorkspaceNav } from "@/components/workspace/workspace-nav";
 import { clientBySlug, clientInitial } from "@/lib/roster";
 
 /**
@@ -61,6 +62,9 @@ export default async function WorkspaceLayout({
           <TopClock />
         </div>
       </header>
+      <div className="border-b px-4 py-2 md:px-6">
+        <WorkspaceNav slug={slug} />
+      </div>
       <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       <TabKeepWarm />
     </div>
