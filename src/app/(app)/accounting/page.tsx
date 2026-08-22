@@ -33,6 +33,12 @@ const SECTIONS = [
     detail: "Revenue and cash per client, same backlog",
   },
   {
+    label: "Rev share",
+    href: "/accounting/revshare",
+    icon: Wallet,
+    detail: "The auto-line: client cash after fees × locked rate",
+  },
+  {
     label: "Sheet reconciliation",
     href: "/accounting/reconciliation",
     icon: Scale,

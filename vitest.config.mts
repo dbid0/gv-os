@@ -80,6 +80,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Rev-share: what clients owe GV — the core of the business model.
+        "src/lib/revshare/engine.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // v2 transactions backlog: every dollar becomes one of these rows.
         "src/lib/transactions/engine.ts": {
           statements: 100,
