@@ -4,6 +4,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, integrations } from "@/db/schema/app";
+import { providerByValue } from "@/lib/integrations/providers";
 
 /** A connection shaped for the Integrations page. NEVER carries the secret. */
 export interface IntegrationRow {
@@ -42,9 +43,11 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
 
   return rows.map(({ config, ...row }) => {
     const token = (config as { webhook_token?: string }).webhook_token;
+    const group = providerByValue(row.provider)?.group;
+    const lane = group === "Bookings" ? "bookings" : "payments";
     return {
       ...row,
-      webhookPath: token ? `/api/webhooks/payments/${token}` : null,
+      webhookPath: token ? `/api/webhooks/${lane}/${token}` : null,
     };
   });
 }

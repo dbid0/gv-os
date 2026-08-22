@@ -30,8 +30,10 @@ const PUBLIC_PATHS = [
   "/api/sync/close",
   "/api/sync/kit",
   "/api/sync/all-pulls",
+  "/api/sync/bookings",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
+  "/api/webhooks/bookings",
   // Discord bot's task API — its own BOT_API_TOKEN bearer.
   "/api/bot/tasks",
 ];

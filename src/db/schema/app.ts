@@ -514,6 +514,41 @@ export const crmActivity = appSchema.table(
 );
 
 /**
+ * Captured bookings — calls scheduled through Calendly, iClosed, or anything
+ * that can push a webhook. Same staging discipline as payments/CRM capture:
+ * idempotent on (provider, external_id), scope inherited from the connection,
+ * raw kept. Speed-to-lead measurement joins these against applications later.
+ */
+export const bookings = appSchema.table(
+  "bookings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    provider: text("provider").notNull(),
+    /** The scheduler's own event/booking id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    /** Scope inherited from the connection. Null = agency. */
+    clientId: uuid("client_id").references(() => clients.id),
+    eventType: text("event_type"),
+    inviteeName: text("invitee_name"),
+    inviteeEmail: text("invitee_email"),
+    /** booked · canceled · unknown */
+    status: text("status").notNull().default("booked"),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    bookedAt: timestamp("booked_at", { withTimezone: true }),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("bookings_provider_external_key").on(table.provider, table.externalId),
+    index("bookings_client_idx").on(table.clientId),
+    index("bookings_starts_idx").on(table.startsAt),
+  ],
+);
+
+/**
  * Kit (email) account snapshots — one row per sync per connection. Email
  * stats are STATE, not events, so the capture is a periodic snapshot; the
  * Email section charts growth by comparing snapshots over time. Raw sequence
