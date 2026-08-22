@@ -80,6 +80,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Payout math: what actually leaves the account each month.
+        "src/lib/payouts/math.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Rev-share: what clients owe GV — the core of the business model.
         "src/lib/revshare/engine.ts": {
           statements: 100,
