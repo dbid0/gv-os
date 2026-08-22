@@ -80,6 +80,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // AR + money calendar: what is owed and when.
+        "src/lib/transactions/ar.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Payout math: what actually leaves the account each month.
         "src/lib/payouts/math.ts": {
           statements: 100,

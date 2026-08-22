@@ -45,6 +45,12 @@ const SECTIONS = [
     detail: "Month by month, Pending to Paid — the 50/50 lives here",
   },
   {
+    label: "AR & money calendar",
+    href: "/accounting/ar",
+    icon: Scale,
+    detail: "What is owed to GV and what is planned to leave",
+  },
+  {
     label: "Sheet reconciliation",
     href: "/accounting/reconciliation",
     icon: Scale,
