@@ -102,8 +102,10 @@ export function MorningGlance({ glance }: { glance: Glance }) {
           </div>
           <p className="text-faint text-xs">
             <Plug className="mr-1 inline size-3" />
-            {glance.captures.paymentsTotal} payments · {glance.captures.crmTotal} CRM
-            activities · {glance.captures.kitAccounts} Kit accounts captured
+            {glance.captures.apps30d} applications (30d) · {glance.captures.signedDocs}{" "}
+            signed agreements · {glance.captures.paymentsTotal} payments ·{" "}
+            {glance.captures.crmTotal} CRM activities · {glance.captures.kitAccounts}{" "}
+            Kit accounts
             {glance.captures.payments24h + glance.captures.crm24h > 0 && (
               <> ({glance.captures.payments24h + glance.captures.crm24h} in 24h)</>
             )}

@@ -45,6 +45,8 @@ export interface MorningGlance {
     crm24h: number;
     crmTotal: number;
     kitAccounts: number;
+    apps30d: number;
+    signedDocs: number;
   };
 }
 
@@ -77,6 +79,8 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       pay_total: number;
       crm_24h: number;
       crm_total: number;
+      apps_30d: number;
+      signed_docs: number;
     }>(sql`
       select
         (select created_at from app.sheet_sync_runs order by created_at desc limit 1) as last_run_at,
@@ -87,7 +91,9 @@ export async function getMorningGlance(): Promise<MorningGlance> {
         (select count(*) from app.payment_events where created_at >= ${dayAgoIso}::timestamptz)::int as pay_24h,
         (select count(*) from app.payment_events)::int as pay_total,
         (select count(*) from app.crm_activity where created_at >= ${dayAgoIso}::timestamptz)::int as crm_24h,
-        (select count(*) from app.crm_activity)::int as crm_total
+        (select count(*) from app.crm_activity)::int as crm_total,
+        (select count(*) from app.applications where submitted_at >= ${dayAgoIso}::timestamptz - interval '29 days')::int as apps_30d,
+        (select count(*) from app.signed_docs)::int as signed_docs
     `),
     db
       .select({ name: teamMembers.name, open: count() })
@@ -141,6 +147,8 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       crm24h: scalars?.crm_24h ?? 0,
       crmTotal: scalars?.crm_total ?? 0,
       kitAccounts: kitAccounts.length,
+      apps30d: scalars?.apps_30d ?? 0,
+      signedDocs: scalars?.signed_docs ?? 0,
     },
   };
 }
