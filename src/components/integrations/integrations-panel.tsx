@@ -21,6 +21,7 @@ import {
   PROVIDERS,
   providerByValue,
 } from "@/lib/integrations/providers";
+import { isFailureNote } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
 
 interface TeamOption {
@@ -84,6 +85,16 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
                 })}`
               : "Never synced — sync job lands with this provider's module"}
           </span>
+          {row.lastSyncNote && (
+            <span
+              className={cn(
+                "truncate",
+                isFailureNote(row.lastSyncNote) && "text-warning font-medium",
+              )}
+            >
+              {row.lastSyncNote}
+            </span>
+          )}
         </p>
       </div>
 

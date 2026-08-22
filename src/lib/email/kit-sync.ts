@@ -11,6 +11,7 @@ import {
   parseKitSequences,
   parseKitTagCount,
 } from "@/lib/email/kit-parse";
+import { failureNote } from "@/lib/integrations/sync-note";
 
 /**
  * Kit account snapshot pull — one snapshot per connected `kit` integration
@@ -29,7 +30,7 @@ async function kitGet(apiKey: string, path: string): Promise<unknown> {
 }
 
 export async function pullKitSnapshots(): Promise<
-  { integrationId: string; sequences: number; tags: number }[]
+  { integrationId: string; sequences?: number; tags?: number; error?: string }[]
 > {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
@@ -51,38 +52,49 @@ export async function pullKitSnapshots(): Promise<
 
   const results = [];
   for (const conn of connections) {
-    const apiKey = open(conn.secretBox as string, key);
-    const [account, sequencesBody, tagsBody] = await Promise.all([
-      kitGet(apiKey, "/account"),
-      kitGet(apiKey, "/sequences?per_page=500"),
-      kitGet(apiKey, "/tags?per_page=500"),
-    ]);
-    const parsedAccount = parseKitAccount(account);
-    const sequences = parseKitSequences(sequencesBody);
-    const tagCount = parseKitTagCount(tagsBody);
+    try {
+      const apiKey = open(conn.secretBox as string, key);
+      const [account, sequencesBody, tagsBody] = await Promise.all([
+        kitGet(apiKey, "/account"),
+        kitGet(apiKey, "/sequences?per_page=500"),
+        kitGet(apiKey, "/tags?per_page=500"),
+      ]);
+      const parsedAccount = parseKitAccount(account);
+      const sequences = parseKitSequences(sequencesBody);
+      const tagCount = parseKitTagCount(tagsBody);
 
-    await db.insert(kitSnapshots).values({
-      integrationId: conn.id,
-      clientId: conn.clientId,
-      accountName: parsedAccount.name,
-      plan: parsedAccount.plan,
-      sequenceCount: sequences.length,
-      tagCount,
-      sequences,
-    });
-    await db
-      .update(integrations)
-      .set({
-        lastSyncAt: new Date(),
-        lastSyncNote: `${sequences.length} sequences, ${tagCount} tags${parsedAccount.plan ? ` (${parsedAccount.plan})` : ""}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(integrations.id, conn.id));
-    results.push({
-      integrationId: conn.id,
-      sequences: sequences.length,
-      tags: tagCount,
-    });
+      await db.insert(kitSnapshots).values({
+        integrationId: conn.id,
+        clientId: conn.clientId,
+        accountName: parsedAccount.name,
+        plan: parsedAccount.plan,
+        sequenceCount: sequences.length,
+        tagCount,
+        sequences,
+      });
+      await db
+        .update(integrations)
+        .set({
+          lastSyncAt: new Date(),
+          lastSyncNote: `${sequences.length} sequences, ${tagCount} tags${parsedAccount.plan ? ` (${parsedAccount.plan})` : ""}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, conn.id));
+      results.push({
+        integrationId: conn.id,
+        sequences: sequences.length,
+        tags: tagCount,
+      });
+    } catch (err) {
+      // One dead credential must not starve the other accounts or fail the
+      // route. lastSyncAt stays untouched — it always means last SUCCESS.
+      const note = failureNote(err);
+      await db
+        .update(integrations)
+        .set({ lastSyncNote: note, updatedAt: new Date() })
+        .where(eq(integrations.id, conn.id));
+      results.push({ integrationId: conn.id, error: note });
+    }
   }
   return results;
 }

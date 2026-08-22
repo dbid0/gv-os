@@ -11,6 +11,7 @@ import {
   normalizeGenericBooking,
   type NormalizedBooking,
 } from "@/lib/bookings/normalize";
+import { failureNote } from "@/lib/integrations/sync-note";
 
 /**
  * Bookings capture: Calendly pulls + a per-connection webhook for schedulers
@@ -68,7 +69,7 @@ async function storeBooking(
 
 /** Pull the last 30 days of scheduled events for every Calendly connection. */
 export async function pullCalendlyBookings(): Promise<
-  { integrationId: string; fetched: number; captured: number }[]
+  { integrationId: string; fetched?: number; captured?: number; error?: string }[]
 > {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
@@ -94,48 +95,59 @@ export async function pullCalendlyBookings(): Promise<
   const results = [];
 
   for (const conn of connections) {
-    const token = open(conn.secretBox as string, key);
-    const me = await calendlyGet(token, "https://api.calendly.com/users/me");
-    const orgUri = (me.resource as Payload | undefined)?.current_organization;
-    if (typeof orgUri !== "string") {
-      throw new Error("Calendly /users/me returned no organization URI.");
-    }
-    let fetched = 0;
-    let captured = 0;
-    let url =
-      `https://api.calendly.com/scheduled_events?organization=${encodeURIComponent(orgUri)}` +
-      `&min_start_time=${encodeURIComponent(minStart)}&count=100`;
-    for (let page = 0; page < 5 && url; page += 1) {
-      const body = await calendlyGet(token, url);
-      const events = Array.isArray(body.collection)
-        ? (body.collection as Payload[])
-        : [];
-      fetched += events.length;
-      for (const event of events) {
-        const normalized = normalizeCalendlyEvent(event);
-        if (!normalized) continue;
-        if (
-          await storeBooking(
-            { id: conn.id, provider: "calendly", clientId: conn.clientId },
-            normalized,
-            event,
-          )
-        ) {
-          captured += 1;
-        }
+    try {
+      const token = open(conn.secretBox as string, key);
+      const me = await calendlyGet(token, "https://api.calendly.com/users/me");
+      const orgUri = (me.resource as Payload | undefined)?.current_organization;
+      if (typeof orgUri !== "string") {
+        throw new Error("Calendly /users/me returned no organization URI.");
       }
-      const pagination = body.pagination as Payload | undefined;
-      url = typeof pagination?.next_page === "string" ? pagination.next_page : "";
+      let fetched = 0;
+      let captured = 0;
+      let url =
+        `https://api.calendly.com/scheduled_events?organization=${encodeURIComponent(orgUri)}` +
+        `&min_start_time=${encodeURIComponent(minStart)}&count=100`;
+      for (let page = 0; page < 5 && url; page += 1) {
+        const body = await calendlyGet(token, url);
+        const events = Array.isArray(body.collection)
+          ? (body.collection as Payload[])
+          : [];
+        fetched += events.length;
+        for (const event of events) {
+          const normalized = normalizeCalendlyEvent(event);
+          if (!normalized) continue;
+          if (
+            await storeBooking(
+              { id: conn.id, provider: "calendly", clientId: conn.clientId },
+              normalized,
+              event,
+            )
+          ) {
+            captured += 1;
+          }
+        }
+        const pagination = body.pagination as Payload | undefined;
+        url = typeof pagination?.next_page === "string" ? pagination.next_page : "";
+      }
+      await db
+        .update(integrations)
+        .set({
+          lastSyncAt: new Date(),
+          lastSyncNote: `pulled ${fetched} events (30d), captured ${captured} new`,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, conn.id));
+      results.push({ integrationId: conn.id, fetched, captured });
+    } catch (err) {
+      // One dead credential must not starve the other accounts or fail the
+      // route. lastSyncAt stays untouched — it always means last SUCCESS.
+      const note = failureNote(err);
+      await db
+        .update(integrations)
+        .set({ lastSyncNote: note, updatedAt: new Date() })
+        .where(eq(integrations.id, conn.id));
+      results.push({ integrationId: conn.id, error: note });
     }
-    await db
-      .update(integrations)
-      .set({
-        lastSyncAt: new Date(),
-        lastSyncNote: `pulled ${fetched} events (30d), captured ${captured} new`,
-        updatedAt: new Date(),
-      })
-      .where(eq(integrations.id, conn.id));
-    results.push({ integrationId: conn.id, fetched, captured });
   }
   return results;
 }
