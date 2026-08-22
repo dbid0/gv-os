@@ -7,6 +7,7 @@ import {
   BarChart3,
   ClipboardList,
   FileText,
+  Inbox,
   LayoutDashboard,
   Receipt,
   Trophy,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "Overview", href: "/sales", icon: LayoutDashboard },
+  { label: "Applications", href: "/sales/applications", icon: Inbox },
   { label: "Deals", href: "/sales/deals", icon: Receipt },
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
