@@ -33,6 +33,7 @@ const PUBLIC_PATHS = [
   "/api/sync/all-pulls",
   "/api/sync/bookings",
   "/api/sync/docs",
+  "/api/sync/transactions-import",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
   "/api/webhooks/bookings",
