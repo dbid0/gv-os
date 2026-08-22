@@ -891,3 +891,27 @@ export const transactions = appSchema.table(
 
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+
+/**
+ * Rev-share rules (v2 §4): effective-dated, after processing fees. The rate
+ * that applies to a month is the newest rule effective on or before it —
+ * rates change by APPENDING a new rule, never editing history. Rep
+ * commissions are excluded from rev-share by design.
+ */
+export const revShareRules = appSchema.table(
+  "rev_share_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    rateBps: bigint("rate_bps", { mode: "number" }).notNull(),
+    /** yyyy-mm-dd — applies from this business day forward. */
+    effectiveFrom: text("effective_from").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("rev_share_rules_client_idx").on(table.clientId)],
+);
+
+export type RevShareRule = typeof revShareRules.$inferSelect;
