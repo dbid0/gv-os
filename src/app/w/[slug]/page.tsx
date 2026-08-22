@@ -131,6 +131,15 @@ export default async function WorkspacePage({
       )}
 
       <DriveAssetsPanel slug={slug} drive={drive} />
+
+      <Panel title="Emergency signals">
+        <p className="text-faint text-sm">
+          Unanswered DMs and leads uncalled past 20 minutes will surface here the moment
+          the notification engine (Phase 5) and this offer&apos;s ManyChat + Close
+          connections are live. Nothing is being monitored yet — this panel will say so
+          loudly when it is.
+        </p>
+      </Panel>
     </div>
   );
 }
