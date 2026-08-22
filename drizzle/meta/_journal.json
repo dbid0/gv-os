@@ -176,6 +176,13 @@
       "when": 1787437708446,
       "tag": "0024_agency_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787439930216,
+      "tag": "0025_notifications",
+      "breakpoints": true
     }
   ]
 }

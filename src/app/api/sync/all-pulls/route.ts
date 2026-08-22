@@ -6,6 +6,7 @@ import { pullCalendlyBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
+import { evaluateNotifications } from "@/lib/notifications/evaluate";
 import { pullStripeEvents } from "@/lib/payments/capture";
 
 export const runtime = "nodejs";
@@ -43,6 +44,12 @@ async function runAll() {
     } catch (e) {
       out[name] = { error: e instanceof Error ? e.message : "failed" };
     }
+  }
+  // After the pulls: evaluate notification rules on the fresh state.
+  try {
+    out.notifications = await evaluateNotifications();
+  } catch (e) {
+    out.notifications = { error: e instanceof Error ? e.message : "failed" };
   }
   return out;
 }
