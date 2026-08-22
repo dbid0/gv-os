@@ -15,9 +15,11 @@ import {
 import { getSettings } from "@/lib/settings";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
-  homeHeadline,
-  homeMonthRows,
+  homeRangeHeadline,
+  homeRangeRows,
   normalizeHomeMode,
+  normalizeHomeRange,
+  rangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -27,7 +29,12 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const user = await shellUser();
   const [
     overview,
@@ -48,11 +55,14 @@ export default async function DashboardPage() {
   ]);
 
   const mode = normalizeHomeMode(storedMode);
-  const month = dayKeyCT(new Date()).slice(0, 7);
-  const headline = homeHeadline(backlog, mode, month);
+  const range = normalizeHomeRange(
+    typeof params.range === "string" ? params.range : undefined,
+  );
+  const bounds = rangeBounds(range, dayKeyCT(new Date()));
+  const headline = homeRangeHeadline(backlog, mode, bounds);
 
-  // Sections: only who actually has money this month, in the current mode.
-  const monthRows = homeMonthRows(backlog, mode, month);
+  // Sections: only who actually has money in the range, in the current mode.
+  const monthRows = homeRangeRows(backlog, mode, bounds);
   const sections: HomeSection[] = clientLedger(
     monthRows,
     roster.map((c) => ({ slug: c.slug, name: c.name })),
@@ -66,16 +76,20 @@ export default async function DashboardPage() {
       revenueCents: l.revenueCents,
     }));
 
-  const monthLabel = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Chicago",
-  });
+  const monthLabel =
+    range === "month"
+      ? new Date().toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+          timeZone: "America/Chicago",
+        })
+      : bounds.label;
 
   return (
     <div className="space-y-6">
       <HomeHeadline
         mode={mode}
+        range={range}
         monthLabel={monthLabel}
         collectedCents={headline.collectedCents}
         revenueCents={headline.revenueCents}
