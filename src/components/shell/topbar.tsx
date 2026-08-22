@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { MobileNav } from "@/components/shell/mobile-nav";
+import { ViewAsMenu } from "@/components/shell/view-as";
 import { TopClock } from "@/components/shell/top-clock";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
@@ -76,6 +77,7 @@ export function Topbar({
           <span className="text-faint">this month</span>
         </span>
         <div className="flex items-center gap-1">
+          <ViewAsMenu />
           <Link
             href="/notifications"
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
