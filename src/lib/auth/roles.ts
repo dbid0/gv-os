@@ -23,11 +23,11 @@ export type RepKind = "setter" | "closer";
  * in code, not listed here.
  */
 const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
-  sales_manager: ["/dashboard", "/sales", "/profile"],
-  sales_rep: ["/dashboard", "/sales", "/profile"],
-  team_member: ["/dashboard", "/action-list", "/team", "/profile"],
+  sales_manager: ["/home/manager", "/dashboard", "/sales", "/profile"],
+  sales_rep: ["/home/manager", "/dashboard", "/sales", "/profile"],
+  team_member: ["/home/member", "/dashboard", "/action-list", "/team", "/profile"],
   // Clients live in their workspace; WHICH /w/[slug] they may open narrows
-  // to their own in Phase 6 when client identities exist.
+  // when client identities exist (per-client logins).
   client: ["/dashboard", "/profile", "/w"],
 };
 

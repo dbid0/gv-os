@@ -387,6 +387,11 @@ export const teamMembers = appSchema.table(
     clientId: uuid("client_id").references(() => clients.id),
     /** active | inactive. Inactive members keep history but leave the pickers. */
     status: text("status").notNull().default("active"),
+    /** Platform role (v2 §6): sales_manager · sales_rep · team_member.
+     * Null = not yet mapped; job title stays in `role`. */
+    roleKey: text("role_key"),
+    /** setter | closer — only meaningful when roleKey = sales_rep. */
+    repKind: text("rep_kind"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

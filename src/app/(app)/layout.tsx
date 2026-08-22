@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 
 import { CommandPalette } from "@/components/shell/command-palette";
+import { ViewAsBanner } from "@/components/shell/view-as";
 import { DealClosedToasts } from "@/components/shell/deal-closed-toasts";
 import { PageTransition } from "@/components/shell/page-transition";
 import { Sidebar } from "@/components/shell/sidebar";
@@ -18,11 +20,13 @@ import { shellUser } from "@/lib/auth/user";
  * this renders, so there is no loading state to design around.
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [user, monthCashCents, unreadCount] = await Promise.all([
+  const [user, monthCashCents, unreadCount, cookieStore] = await Promise.all([
     shellUser(),
     currentMonthCashCents(),
     unreadNotificationCount(),
+    cookies(),
   ]);
+  const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -34,6 +38,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <CommandPalette />
+      {previewRole && <ViewAsBanner role={previewRole} />}
       <DealClosedToasts />
       <TabKeepWarm />
     </div>

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
@@ -18,6 +19,9 @@ import {
   rangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+import { getDb } from "@/db/client";
+import { clients, offerSettings } from "@/db/schema/app";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +54,23 @@ export default async function WorkspacePage({
   const range = normalizeHomeRange(typeof sp.range === "string" ? sp.range : undefined);
   const bounds = rangeBounds(range, dayKeyCT(new Date()));
 
-  const [report, drive, { rows: backlog }] = await Promise.all([
+  const cookieStore = await cookies();
+  const portalView = cookieStore.get("gv-dev-role")?.value === "client";
+
+  const [report, drive, { rows: backlog }, visibility] = await Promise.all([
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
     listTransactions({}),
+    portalVisibility(slug),
   ]);
+  // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
+  // until the admin toggles it.
+  const show = (key: string, fallback: boolean) =>
+    !portalView || (visibility[key] ?? fallback);
+  const showCash = show("cash", false);
+  const showTarget = show("target", false);
+  const showApps = show("apps", true);
+  const showDrive = show("drive", true);
 
   // This client's income inside the range — attributed the same way the
   // client ledger does it (join first, sheet aliases second).
@@ -75,26 +91,28 @@ export default async function WorkspacePage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-            {bounds.label}
-          </p>
-          <p className="numeric text-2xl font-bold">
-            <Money amount={cents(rangeCash)} />{" "}
-            <span className="text-muted-foreground text-sm font-normal">
-              collected
-              {rangeRevenue > rangeCash && (
-                <>
-                  {" "}
-                  of <Money amount={cents(rangeRevenue)} /> booked
-                </>
-              )}
-            </span>
-          </p>
+      {showCash && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+              {bounds.label}
+            </p>
+            <p className="numeric text-2xl font-bold">
+              <Money amount={cents(rangeCash)} />{" "}
+              <span className="text-muted-foreground text-sm font-normal">
+                collected
+                {rangeRevenue > rangeCash && (
+                  <>
+                    {" "}
+                    of <Money amount={cents(rangeRevenue)} /> booked
+                  </>
+                )}
+              </span>
+            </p>
+          </div>
+          <RangePills active={range} basePath={`/w/${slug}`} />
         </div>
-        <RangePills active={range} basePath={`/w/${slug}`} />
-      </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
@@ -114,23 +132,25 @@ export default async function WorkspacePage({
         />
       </div>
 
-      <TargetPanel
-        slug={slug}
-        monthlyTargetCents={report.target.monthlyTargetCents}
-        mtdCashCents={report.target.mtdCashCents}
-        monthLabel={new Date().toLocaleDateString("en-US", {
-          month: "long",
-          timeZone: "America/Chicago",
-        })}
-      />
+      {showTarget && (
+        <TargetPanel
+          slug={slug}
+          monthlyTargetCents={report.target.monthlyTargetCents}
+          mtdCashCents={report.target.mtdCashCents}
+          monthLabel={new Date().toLocaleDateString("en-US", {
+            month: "long",
+            timeZone: "America/Chicago",
+          })}
+        />
+      )}
 
-      {report.apps30d > 0 && (
+      {showApps && report.apps30d > 0 && (
         <Panel title="Applications per day — last 30">
           <ColumnChart data={appsPerDay} color={chartColorForClient(client.name)} />
         </Panel>
       )}
 
-      <DriveAssetsPanel slug={slug} drive={drive} />
+      {showDrive && <DriveAssetsPanel slug={slug} drive={drive} />}
 
       <Panel title="Emergency signals">
         <p className="text-faint text-sm">
@@ -142,4 +162,19 @@ export default async function WorkspacePage({
       </Panel>
     </div>
   );
+}
+
+async function portalVisibility(slug: string): Promise<Record<string, boolean>> {
+  try {
+    const db = getDb();
+    const [row] = await db
+      .select({ visibility: offerSettings.visibility })
+      .from(offerSettings)
+      .innerJoin(clients, eq(offerSettings.clientId, clients.id))
+      .where(eq(clients.slug, slug))
+      .limit(1);
+    return row?.visibility ?? {};
+  } catch {
+    return {};
+  }
 }
