@@ -30,6 +30,8 @@ export interface DashboardStats {
   deals: number;
   closeRatePct: number | null;
   revenueGoalCents: number;
+  /** Captured funnel applications, last 30 days. Undefined = still pending. */
+  applications30d?: number;
   compliance: {
     submitted: number;
     total: number;
@@ -208,15 +210,27 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
         variants={stagger()}
         className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4"
       >
-        {tiles.map((tile) => (
-          <motion.div
-            key={tile.label}
-            variants={fadeUp}
-            className="bg-card hover-lift p-5"
-          >
-            <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
-          </motion.div>
-        ))}
+        {tiles.map((tile) => {
+          const live =
+            tile.label === "Applications" && stats?.applications30d !== undefined;
+          return (
+            <motion.div
+              key={tile.label}
+              variants={fadeUp}
+              className="bg-card hover-lift p-5"
+            >
+              {live ? (
+                <Metric
+                  label="Applications · 30d"
+                  value={String(stats.applications30d)}
+                  icon={tile.icon}
+                />
+              ) : (
+                <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
+              )}
+            </motion.div>
+          );
+        })}
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
