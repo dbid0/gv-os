@@ -73,6 +73,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The agency ledger chain: what the business actually keeps.
+        "src/lib/transactions/ledger.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // v2 transactions backlog: every dollar becomes one of these rows.
         "src/lib/transactions/engine.ts": {
           statements: 100,
