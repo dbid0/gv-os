@@ -13,6 +13,7 @@ import {
   sheetSyncRuns,
   teamMembers,
 } from "@/db/schema/app";
+import { isFailureNote } from "@/lib/integrations/sync-note";
 
 /**
  * The morning glance — one query pass that answers "what needs attention"
@@ -38,6 +39,8 @@ export interface MorningGlance {
     lastSyncAt: Date | null;
     lastSyncNote: string | null;
     stale: boolean;
+    /** The last pull recorded a failure note — a dead key, not just quiet. */
+    failing: boolean;
   }[];
   captures: {
     payments24h: number;
@@ -45,6 +48,7 @@ export interface MorningGlance {
     crm24h: number;
     crmTotal: number;
     kitAccounts: number;
+    kitSubscribers: number;
     apps30d: number;
     signedDocs: number;
   };
@@ -81,6 +85,7 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       crm_total: number;
       apps_30d: number;
       signed_docs: number;
+      kit_subscribers: number;
     }>(sql`
       select
         (select created_at from app.sheet_sync_runs order by created_at desc limit 1) as last_run_at,
@@ -93,7 +98,13 @@ export async function getMorningGlance(): Promise<MorningGlance> {
         (select count(*) from app.crm_activity where created_at >= ${dayAgoIso}::timestamptz)::int as crm_24h,
         (select count(*) from app.crm_activity)::int as crm_total,
         (select count(*) from app.applications where submitted_at >= ${dayAgoIso}::timestamptz - interval '29 days')::int as apps_30d,
-        (select count(*) from app.signed_docs)::int as signed_docs
+        (select count(*) from app.signed_docs)::int as signed_docs,
+        (select coalesce(sum(latest.subscriber_count), 0) from (
+          select distinct on (integration_id) subscriber_count
+          from app.kit_snapshots
+          where subscriber_count is not null
+          order by integration_id, taken_at desc
+        ) latest)::int as kit_subscribers
     `),
     db
       .select({ name: teamMembers.name, open: count() })
@@ -140,6 +151,7 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       stale:
         c.lastSyncAt !== null &&
         Date.now() - c.lastSyncAt.getTime() > STALE_AFTER_HOURS * 60 * 60 * 1000,
+      failing: isFailureNote(c.lastSyncNote),
     })),
     captures: {
       payments24h: scalars?.pay_24h ?? 0,
@@ -147,6 +159,7 @@ export async function getMorningGlance(): Promise<MorningGlance> {
       crm24h: scalars?.crm_24h ?? 0,
       crmTotal: scalars?.crm_total ?? 0,
       kitAccounts: kitAccounts.length,
+      kitSubscribers: scalars?.kit_subscribers ?? 0,
       apps30d: scalars?.apps_30d ?? 0,
       signedDocs: scalars?.signed_docs ?? 0,
     },
