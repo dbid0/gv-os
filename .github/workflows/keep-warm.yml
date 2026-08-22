@@ -6,6 +6,11 @@ name: keep-warm
 #
 # GitHub caps schedule granularity at 5 minutes and may delay runs under load;
 # that's fine — this only has to keep something warm, not be exact.
+#
+# continue-on-error: a warmer is not a monitor. A flaky run (slow page, runner
+# timeout) must never mark the workflow failed — failed scheduled runs email
+# the repo owner, and sync/drift health is alerted in-app (morning glance,
+# connection cards), not by email.
 
 on:
   schedule:
@@ -16,6 +21,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    continue-on-error: true
     steps:
       - name: Warm the function + DB pool
         run: |
