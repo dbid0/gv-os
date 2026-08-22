@@ -27,6 +27,7 @@ export async function listTransactions(filters: BacklogFilters) {
       occurredOn: transactions.occurredOn,
       direction: transactions.direction,
       layer: transactions.layer,
+      clientId: transactions.clientId,
       clientName: clients.name,
       dealType: transactions.dealType,
       description: transactions.description,
