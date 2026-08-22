@@ -633,6 +633,9 @@ export const kitSnapshots = appSchema.table(
     plan: text("plan"),
     sequenceCount: bigint("sequence_count", { mode: "number" }).notNull().default(0),
     tagCount: bigint("tag_count", { mode: "number" }).notNull().default(0),
+    /** Whole-list size at snapshot time. Null on rows captured before this
+     * column existed — never backfilled with a fake zero. */
+    subscriberCount: bigint("subscriber_count", { mode: "number" }),
     sequences: jsonb("sequences")
       .$type<{ id: number; name: string; hold?: boolean }[]>()
       .notNull()

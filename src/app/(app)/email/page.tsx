@@ -4,13 +4,21 @@ import { EmailOverview, KitSyncButton } from "@/components/email/email-overview"
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { latestKitOverview } from "@/lib/email/queries";
+import { latestPerDay, type DayBucket } from "@/lib/charts";
+import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
 
 export const metadata = { title: "Email - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
-  const accounts = await latestKitOverview();
+  const [accounts, growthSamples] = await Promise.all([
+    latestKitOverview(),
+    kitGrowthByConnection(),
+  ]);
+  const growth: Record<string, DayBucket[]> = {};
+  for (const [integrationId, samples] of growthSamples) {
+    growth[integrationId] = latestPerDay(samples);
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -37,7 +45,7 @@ export default async function EmailPage() {
           </p>
         </Panel>
       ) : (
-        <EmailOverview accounts={accounts} />
+        <EmailOverview accounts={accounts} growth={growth} />
       )}
     </div>
   );

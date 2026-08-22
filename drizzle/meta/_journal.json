@@ -120,6 +120,13 @@
       "when": 1787372867216,
       "tag": "0016_signed_docs_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787422060515,
+      "tag": "0017_kit_subscriber_count",
+      "breakpoints": true
     }
   ]
 }

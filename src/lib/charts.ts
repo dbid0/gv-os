@@ -81,3 +81,54 @@ export function bucketByDay(
   }
   return buckets;
 }
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** "yyyy-mm-dd" → "Aug 22", pure string math — no Date, no timezone risk. */
+function labelForDayKey(key: string): string {
+  const [, m, d] = key.split("-");
+  return `${MONTH_LABELS[Number(m) - 1] ?? "?"} ${Number(d)}`;
+}
+
+/**
+ * A level metric sampled over time (subscriber count, balance): keep the
+ * LAST sample per CT day, oldest-first. Days without samples are absent,
+ * not zero — a missing snapshot is not an empty list.
+ */
+export function latestPerDay(samples: { at: Date; value: number }[]): DayBucket[] {
+  const latest = new Map<string, { time: number; value: number }>();
+  for (const s of samples) {
+    const key = dayKeyCT(s.at);
+    const cur = latest.get(key);
+    if (!cur || s.at.getTime() >= cur.time) {
+      latest.set(key, { time: s.at.getTime(), value: s.value });
+    }
+  }
+  return [...latest.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, v]) => ({ date, label: labelForDayKey(date), value: v.value }));
+}
+
+/**
+ * Color follows the entity, never its position in a list: fixed client → hue
+ * from the validated trio. Unknown names take the first hue (agency default).
+ */
+export function chartColorForClient(name: string | null | undefined): string {
+  const n = (name ?? "").toLowerCase();
+  if (n.includes("vault")) return CHART_CATEGORICAL[1];
+  if (n.includes("racks")) return CHART_CATEGORICAL[2];
+  return CHART_CATEGORICAL[0];
+}

@@ -9,6 +9,7 @@ import { open } from "@/lib/crypto/secretbox";
 import {
   parseKitAccount,
   parseKitSequences,
+  parseKitSubscriberTotal,
   parseKitTagCount,
 } from "@/lib/email/kit-parse";
 import { failureNote } from "@/lib/integrations/sync-note";
@@ -30,7 +31,13 @@ async function kitGet(apiKey: string, path: string): Promise<unknown> {
 }
 
 export async function pullKitSnapshots(): Promise<
-  { integrationId: string; sequences?: number; tags?: number; error?: string }[]
+  {
+    integrationId: string;
+    sequences?: number;
+    tags?: number;
+    subscribers?: number | null;
+    error?: string;
+  }[]
 > {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
@@ -54,14 +61,16 @@ export async function pullKitSnapshots(): Promise<
   for (const conn of connections) {
     try {
       const apiKey = open(conn.secretBox as string, key);
-      const [account, sequencesBody, tagsBody] = await Promise.all([
+      const [account, sequencesBody, tagsBody, subscribersBody] = await Promise.all([
         kitGet(apiKey, "/account"),
         kitGet(apiKey, "/sequences?per_page=500"),
         kitGet(apiKey, "/tags?per_page=500"),
+        kitGet(apiKey, "/subscribers?per_page=1&include_total_count=true"),
       ]);
       const parsedAccount = parseKitAccount(account);
       const sequences = parseKitSequences(sequencesBody);
       const tagCount = parseKitTagCount(tagsBody);
+      const subscriberCount = parseKitSubscriberTotal(subscribersBody);
 
       await db.insert(kitSnapshots).values({
         integrationId: conn.id,
@@ -70,13 +79,14 @@ export async function pullKitSnapshots(): Promise<
         plan: parsedAccount.plan,
         sequenceCount: sequences.length,
         tagCount,
+        subscriberCount,
         sequences,
       });
       await db
         .update(integrations)
         .set({
           lastSyncAt: new Date(),
-          lastSyncNote: `${sequences.length} sequences, ${tagCount} tags${parsedAccount.plan ? ` (${parsedAccount.plan})` : ""}`,
+          lastSyncNote: `${subscriberCount === null ? "" : `${subscriberCount} subscribers, `}${sequences.length} sequences, ${tagCount} tags${parsedAccount.plan ? ` (${parsedAccount.plan})` : ""}`,
           updatedAt: new Date(),
         })
         .where(eq(integrations.id, conn.id));
@@ -84,6 +94,7 @@ export async function pullKitSnapshots(): Promise<
         integrationId: conn.id,
         sequences: sequences.length,
         tags: tagCount,
+        subscribers: subscriberCount,
       });
     } catch (err) {
       // One dead credential must not starve the other accounts or fail the

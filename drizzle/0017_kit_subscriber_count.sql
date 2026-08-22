@@ -1,0 +1,1 @@
+ALTER TABLE "app"."kit_snapshots" ADD COLUMN "subscriber_count" bigint;
