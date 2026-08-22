@@ -35,7 +35,7 @@ const CADENCES = [
 
 const COLUMNS = [
   { key: "not_started", label: "Not started", dot: "bg-faint" },
-  { key: "in_progress", label: "In progress", dot: "bg-brand" },
+  { key: "in_progress", label: "In progress", dot: "bg-warning" },
   { key: "completed", label: "Completed", dot: "bg-success" },
 ] as const;
 

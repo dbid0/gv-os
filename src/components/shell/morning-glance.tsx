@@ -35,7 +35,7 @@ export function MorningGlance({ glance }: { glance: Glance }) {
             <>
               <div className="flex items-center gap-2">
                 {glance.sheet.driftRowCount === 0 ? (
-                  <StatusPill tone="live">Sheet in agreement</StatusPill>
+                  <StatusPill tone="good">Sheet in agreement</StatusPill>
                 ) : (
                   <StatusPill tone="danger">
                     {glance.sheet.driftRowCount} rows drift · $
