@@ -430,3 +430,19 @@
     transform: scale(1.14);
   }
 }
+
+/* Deal-closed confetti (v2 §5) — pure CSS, fires once per toast. */
+@keyframes gv-confetti-fall {
+  0% {
+    transform: translateY(-8px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(64px) rotate(260deg);
+    opacity: 0;
+  }
+}
+.gv-confetti {
+  top: -4px;
+  animation: gv-confetti-fall 0.9s ease-in forwards;
+}

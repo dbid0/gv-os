@@ -1013,3 +1013,34 @@ export const notifications = appSchema.table(
 );
 
 export type Notification = typeof notifications.$inferSelect;
+
+/**
+ * Per-offer settings (v2 §2.9): alert times, celebration threshold, and
+ * client-visibility toggles. One row per client, created on first edit.
+ */
+export const offerSettings = appSchema.table(
+  "offer_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    timezone: text("timezone").notNull().default("America/Chicago"),
+    /** HH:MM 24h local to the offer's timezone. Null = alert off. */
+    eodAlertTime: text("eod_alert_time"),
+    bodAlertTime: text("bod_alert_time").default("12:00"),
+    /** Confetti only above this. Default $5k. */
+    confettiThresholdCents: bigint("confetti_threshold_cents", { mode: "number" })
+      .notNull()
+      .default(500_000),
+    /** Client-portal visibility toggles (Phase 6 reads these). */
+    visibility: jsonb("visibility")
+      .$type<Record<string, boolean>>()
+      .notNull()
+      .default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("offer_settings_client_key").on(table.clientId)],
+);
+
+export type OfferSettings = typeof offerSettings.$inferSelect;
