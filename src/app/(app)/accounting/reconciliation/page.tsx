@@ -7,7 +7,11 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { bucketByMonth } from "@/lib/charts";
-import { latestReconciliation, mirrorMonthly } from "@/lib/accounting/sheet-sync";
+import {
+  latestReconciliation,
+  mirrorMonthly,
+  mirrorOutstanding,
+} from "@/lib/accounting/sheet-sync";
 import { cents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +41,7 @@ const driftLabel = (cents: number) =>
 export default async function ReconciliationPage() {
   const { run, deals } = await latestReconciliation();
   const monthly = bucketByMonth(await mirrorMonthly());
+  const outstanding = await mirrorOutstanding();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -85,6 +90,36 @@ export default async function ReconciliationPage() {
           {monthly.length > 0 && (
             <Panel title="Net cash by month — reconciled">
               <ColumnChart data={monthly} unit="cents" />
+            </Panel>
+          )}
+
+          {outstanding.rows.length > 0 && (
+            <Panel
+              title={`Outstanding balances — $${(outstanding.totalArCents / 100).toLocaleString("en-US")} owed`}
+            >
+              <div className="space-y-2">
+                {outstanding.rows.map((r) => (
+                  <div
+                    key={`${r.client}-${r.dateClosed}-${r.arCents}`}
+                    className="bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{r.client}</p>
+                      <p className="text-faint text-[11px]">
+                        {r.dealType} · closed {r.dateClosed}
+                        {r.notes ? ` · ${r.notes.slice(0, 80)}` : ""}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      <Money amount={cents(r.cashCents)} /> of{" "}
+                      <Money amount={cents(r.revenueCents)} /> collected
+                    </span>
+                    <span className="text-warning text-sm font-semibold tabular-nums">
+                      <Money amount={cents(r.arCents)} /> due
+                    </span>
+                  </div>
+                ))}
+              </div>
             </Panel>
           )}
 

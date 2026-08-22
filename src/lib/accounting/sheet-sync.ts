@@ -152,3 +152,55 @@ export async function mirrorMonthly(): Promise<{ date: string; cents: number }[]
     cents: r.figures.ours.netCents ?? 0,
   }));
 }
+
+export interface OutstandingRow {
+  client: string;
+  dealType: string;
+  dateClosed: string;
+  revenueCents: number;
+  cashCents: number;
+  arCents: number;
+  notes: string | null;
+}
+
+/** Deals with money still owed, from the latest mirror run — largest first. */
+export async function mirrorOutstanding(): Promise<{
+  rows: OutstandingRow[];
+  totalArCents: number;
+}> {
+  const db = getDb();
+  const [run] = await db
+    .select({ id: sheetSyncRuns.id })
+    .from(sheetSyncRuns)
+    .orderBy(desc(sheetSyncRuns.createdAt))
+    .limit(1);
+  if (!run) return { rows: [], totalArCents: 0 };
+  const all = await db
+    .select({
+      client: sheetMirrorDeals.client,
+      dealType: sheetMirrorDeals.dealType,
+      dateClosed: sheetMirrorDeals.dateClosed,
+      revenueCents: sheetMirrorDeals.revenueCents,
+      cashCents: sheetMirrorDeals.cashCents,
+      figures: sheetMirrorDeals.figures,
+      notes: sheetMirrorDeals.notes,
+    })
+    .from(sheetMirrorDeals)
+    .where(eq(sheetMirrorDeals.runId, run.id));
+  const rows = all
+    .map((r) => ({
+      client: r.client,
+      dealType: r.dealType,
+      dateClosed: r.dateClosed,
+      revenueCents: r.revenueCents,
+      cashCents: r.cashCents,
+      arCents: r.figures.ours.arCents ?? 0,
+      notes: r.notes,
+    }))
+    .filter((r) => r.arCents > 0)
+    .sort((a, b) => b.arCents - a.arCents);
+  return {
+    rows,
+    totalArCents: rows.reduce((sum, r) => sum + r.arCents, 0),
+  };
+}
