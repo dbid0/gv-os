@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { MobileNav } from "@/components/shell/mobile-nav";
+import { TopClock } from "@/components/shell/top-clock";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
 import { allNavItems } from "@/components/shell/nav-config";
@@ -24,7 +25,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { env } from "@/env";
 
-export function Topbar({ user }: { user: ShellUser | null }) {
+const fmtMonthCash = (cents: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+
+export function Topbar({
+  user,
+  monthCashCents = 0,
+}: {
+  user: ShellUser | null;
+  monthCashCents?: number;
+}) {
   const pathname = usePathname();
   const current = allNavItems.find((item) => item.href === pathname);
 
@@ -48,9 +62,21 @@ export function Topbar({ user }: { user: ShellUser | null }) {
         </Badge>
       )}
 
-      <div className="ml-auto flex items-center gap-1">
-        <ThemeToggle />
-        <UserMenu user={user} />
+      <div className="ml-auto flex items-center gap-3">
+        <TopClock />
+        <span
+          className="hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs sm:flex"
+          title="Cash collected this month, from the reconciled sheet"
+        >
+          <span className="numeric text-success font-semibold">
+            {fmtMonthCash(monthCashCents)}
+          </span>
+          <span className="text-faint">this month</span>
+        </span>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <UserMenu user={user} />
+        </div>
       </div>
     </header>
   );

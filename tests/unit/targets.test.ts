@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { monthToDateCashCents, parseTargetDollars } from "@/lib/clients/targets";
+import {
+  monthCashAllCents,
+  monthToDateCashCents,
+  parseTargetDollars,
+} from "@/lib/clients/targets";
 
 // 8pm CT Aug 22 = 01:00 UTC Aug 23 — the CT month must win.
 const NOW = new Date("2026-08-23T01:00:00Z");
@@ -22,6 +26,19 @@ describe("monthToDateCashCents", () => {
   it("is zero for a client with no deals this month", () => {
     expect(monthToDateCashCents(ROWS, "racks-closes", NOW)).toBe(0);
     expect(monthToDateCashCents([], "the-grid", NOW)).toBe(0);
+  });
+});
+
+describe("monthCashAllCents", () => {
+  it("sums every row in the current CT month regardless of client", () => {
+    expect(monthCashAllCents(ROWS, NOW)).toBe(100_000 + 250_000 + 400_000 + 777_777);
+  });
+
+  it("is zero when nothing closed this month", () => {
+    expect(monthCashAllCents([], NOW)).toBe(0);
+    expect(monthCashAllCents([{ dateClosed: "2026-07-01", cashCents: 5 }], NOW)).toBe(
+      0,
+    );
   });
 });
 
