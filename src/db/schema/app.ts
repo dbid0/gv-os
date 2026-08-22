@@ -985,3 +985,31 @@ export const agencyExpenses = appSchema.table(
 );
 
 export type AgencyExpense = typeof agencyExpenses.$inferSelect;
+
+/**
+ * Notifications (v2 §5). Rules compute candidates from captured state; the
+ * unique dedupe key makes every rule idempotent — re-evaluating never
+ * duplicates an alert. readAt is the only mutable field.
+ */
+export const notifications = appSchema.table(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** sync_failure · integration_stale · sheet_drift · agreement_signed · agreement_missing · … */
+    kind: text("kind").notNull(),
+    /** info · warning · critical — semantic colors carry these. */
+    severity: text("severity").notNull().default("info"),
+    title: text("title").notNull(),
+    body: text("body"),
+    clientId: uuid("client_id").references(() => clients.id),
+    dedupeKey: text("dedupe_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("notifications_dedupe_key").on(table.dedupeKey),
+    index("notifications_read_idx").on(table.readAt),
+  ],
+);
+
+export type Notification = typeof notifications.$inferSelect;

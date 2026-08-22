@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { Bell, LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,9 +35,11 @@ const fmtMonthCash = (cents: number) =>
 export function Topbar({
   user,
   monthCashCents = 0,
+  unreadCount = 0,
 }: {
   user: ShellUser | null;
   monthCashCents?: number;
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
   const current = allNavItems.find((item) => item.href === pathname);
@@ -74,6 +76,18 @@ export function Topbar({
           <span className="text-faint">this month</span>
         </span>
         <div className="flex items-center gap-1">
+          <Link
+            href="/notifications"
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+            className="hover:bg-accent relative rounded-md p-2 transition-colors"
+          >
+            <Bell className="size-4" />
+            {unreadCount > 0 && (
+              <span className="bg-destructive absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full text-[9px] font-bold text-white tabular-nums">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
           <ThemeToggle />
           <UserMenu user={user} />
         </div>

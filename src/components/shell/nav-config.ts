@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   Building2,
   CalendarDays,
   Clapperboard,
@@ -52,6 +53,13 @@ export const navigation: NavGroup[] = [
         icon: LayoutDashboard,
         status: "ready",
         description: "What needs attention today",
+      },
+      {
+        label: "Notifications",
+        href: "/notifications",
+        icon: Bell,
+        status: "ready",
+        description: "Rule-driven alerts — failures, drift, signed agreements",
       },
     ],
   },
