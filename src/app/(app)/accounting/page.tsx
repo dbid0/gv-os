@@ -27,6 +27,12 @@ const SECTIONS = [
     detail: "Every dollar, one row — the source of truth",
   },
   {
+    label: "Client ledger",
+    href: "/accounting/clients",
+    icon: Receipt,
+    detail: "Revenue and cash per client, same backlog",
+  },
+  {
     label: "Sheet reconciliation",
     href: "/accounting/reconciliation",
     icon: Scale,
