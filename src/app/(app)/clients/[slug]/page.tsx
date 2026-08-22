@@ -7,6 +7,11 @@ import { TeamConfig } from "@/components/sales/team-config";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
+import { ColumnChart } from "@/components/ui/column-chart";
+import { Kpi, Money } from "@/components/ui/metric";
+import { bucketByDay } from "@/lib/charts";
+import { getClientReport } from "@/lib/clients/report";
+import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
 import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
@@ -65,7 +70,15 @@ export default async function ClientPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const team = await getTeamBySlug(slug);
+  const [team, report] = await Promise.all([
+    getTeamBySlug(slug),
+    getClientReport(slug, client.name),
+  ]);
+  const appsPerDay = bucketByDay(
+    report.apps.map((a) => a.submittedAt ?? a.createdAt),
+    30,
+    new Date(),
+  );
 
   const facts = [
     { label: "Owner", value: client.owner },
@@ -97,6 +110,38 @@ export default async function ClientPage({
           </Link>
         }
       />
+
+      {/* Reports: this client's slice of every captured stream. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
+        <Kpi
+          label="Net cash (reconciled)"
+          value={<Money amount={cents(report.mirror.netCents)} />}
+          tone="success"
+        />
+        <Kpi label="Deals on the sheet" value={String(report.mirror.deals)} />
+        <Kpi
+          label="Kit sequences"
+          value={
+            report.kit
+              ? `${report.kit.sequenceCount} · ${report.kit.tagCount} tags`
+              : "—"
+          }
+        />
+      </div>
+
+      {report.apps30d > 0 && (
+        <Panel title="Applications per day — last 30">
+          <ColumnChart data={appsPerDay} />
+        </Panel>
+      )}
+
+      <p className="text-faint text-xs">
+        Captured for this client: {report.captures.signedDocs} signed agreements ·{" "}
+        {report.captures.payments} payments · {report.captures.crm} CRM activities ·{" "}
+        {report.captures.bookings} bookings. Finance figures matched from the Master
+        Finance Sheet by name.
+      </p>
 
       {/* The client's colour as a single accent bar — data, not chrome. */}
       <div
