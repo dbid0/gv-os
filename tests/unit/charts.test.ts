@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bucketByDay, CHART_CATEGORICAL, dayKeyCT } from "@/lib/charts";
+import { bucketByDay, bucketByMonth, CHART_CATEGORICAL, dayKeyCT } from "@/lib/charts";
 
 const NOW = new Date("2026-08-21T20:00:00-05:00"); // evening CT
 
@@ -29,6 +29,20 @@ describe("bucketByDay", () => {
     expect(dayKeyCT(lateNight)).toBe("2026-08-21");
     const out = bucketByDay([lateNight], 2, NOW);
     expect(out.find((b) => b.date === "2026-08-21")?.value).toBe(1);
+  });
+});
+
+describe("bucketByMonth", () => {
+  it("sums cents per calendar month, oldest first, no zero-fill", () => {
+    const out = bucketByMonth([
+      { date: "2026-05-23", cents: 297_571 },
+      { date: "2026-07-01", cents: 300_000 },
+      { date: "2026-07-17", cents: 194_171 },
+      { date: "garbage", cents: 999 },
+    ]);
+    expect(out.map((b) => b.date)).toEqual(["2026-05", "2026-07"]);
+    expect(out[1].value).toBe(494_171);
+    expect(out[0].label).toMatch(/May/);
   });
 });
 

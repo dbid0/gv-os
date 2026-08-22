@@ -25,6 +25,32 @@ export function dayKeyCT(d: Date): string {
 }
 
 /**
+ * Bucket dated cent-amounts into calendar months, oldest first. Months with
+ * no rows are NOT zero-filled — a month before the business existed is not a
+ * zero, it's absence. Input dates are `yyyy-mm-dd` strings (the mirror's
+ * dateClosed), so no timezone arithmetic can shift a deal across months.
+ */
+export function bucketByMonth(rows: { date: string; cents: number }[]): DayBucket[] {
+  const sums = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.date.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(key)) continue;
+    sums.set(key, (sums.get(key) ?? 0) + row.cents);
+  }
+  return [...sums.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, cents]) => ({
+      date: month,
+      label: new Date(`${month}-15T12:00:00Z`).toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+        timeZone: "UTC",
+      }),
+      value: cents,
+    }));
+}
+
+/**
  * Bucket timestamps into the last `days` business days, zero-filled, oldest
  * first. `now` is a parameter so tests never depend on the wall clock.
  */

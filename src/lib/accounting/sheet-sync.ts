@@ -130,3 +130,25 @@ export async function latestReconciliation(): Promise<LatestReconciliation> {
 
   return { run, deals };
 }
+
+/** Net cash by calendar month from the latest mirror run — real, reconciled. */
+export async function mirrorMonthly(): Promise<{ date: string; cents: number }[]> {
+  const db = getDb();
+  const [run] = await db
+    .select({ id: sheetSyncRuns.id })
+    .from(sheetSyncRuns)
+    .orderBy(desc(sheetSyncRuns.createdAt))
+    .limit(1);
+  if (!run) return [];
+  const rows = await db
+    .select({
+      dateClosed: sheetMirrorDeals.dateClosed,
+      figures: sheetMirrorDeals.figures,
+    })
+    .from(sheetMirrorDeals)
+    .where(eq(sheetMirrorDeals.runId, run.id));
+  return rows.map((r) => ({
+    date: r.dateClosed,
+    cents: r.figures.ours.netCents ?? 0,
+  }));
+}
