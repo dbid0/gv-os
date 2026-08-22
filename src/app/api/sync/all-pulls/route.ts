@@ -4,6 +4,7 @@ import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { pullCalendlyBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
+import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
 import { pullStripeEvents } from "@/lib/payments/capture";
 
@@ -32,6 +33,8 @@ async function runAll() {
   for (const [name, fn] of [
     ["close", pullCloseActivity],
     ["bookings", pullCalendlyBookings],
+    ["pandadoc", pullPandaDocSigned],
+    ["typeform", pullTypeformApplications],
     ["kit", pullKitSnapshots],
     ["stripe", pullStripeEvents],
   ] as const) {
