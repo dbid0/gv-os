@@ -1,9 +1,9 @@
 import "server-only";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { sheetMirrorDeals, sheetSyncRuns } from "@/db/schema/app";
+import { integrations, sheetMirrorDeals, sheetSyncRuns } from "@/db/schema/app";
 import { reconcileSheet, type MirrorReport } from "@/lib/accounting/sheet-mirror";
 import { fetchFinanceSheet } from "@/lib/google/sheets";
 
@@ -58,6 +58,22 @@ export async function runFinanceSheetSync(): Promise<SyncSummary> {
       })),
     );
   }
+
+  // Stamp the vault connection so its card reflects reality — without this
+  // the google_sheets integration reads "never synced" while syncing daily.
+  await db
+    .update(integrations)
+    .set({
+      lastSyncAt: new Date(),
+      lastSyncNote: `${report.rowCount} deals, ${report.driftRowCount} drift rows ($${(report.totalAbsDriftCents / 100).toFixed(2)})`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(integrations.provider, "google_sheets"),
+        eq(integrations.status, "connected"),
+      ),
+    );
 
   return {
     runId: run.id,
