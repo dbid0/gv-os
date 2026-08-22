@@ -1,0 +1,1 @@
+ALTER TABLE "app"."clients" ADD COLUMN "drive_folder_id" text;
