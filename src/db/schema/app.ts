@@ -48,6 +48,9 @@ export const clients = appSchema.table(
     /** The client's Google Drive root folder — assets panel reads it live
      * through the sealed agency credential. Null until set on the client page. */
     driveFolderId: text("drive_folder_id"),
+    /** Monthly cash target in integer cents; actuals come from the sheet
+     * mirror. Null = no target set — the page shows an honest empty state. */
+    monthlyTargetCents: bigint("monthly_target_cents", { mode: "number" }),
 
     /**
      * Team commission defaults, by role, in basis points. Applied to a deal

@@ -1,0 +1,1 @@
+ALTER TABLE "app"."clients" ADD COLUMN "monthly_target_cents" bigint;

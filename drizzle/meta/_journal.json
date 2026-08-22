@@ -134,6 +134,13 @@
       "when": 1787422872421,
       "tag": "0018_client_drive_folder",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787424719410,
+      "tag": "0019_client_monthly_target",
+      "breakpoints": true
     }
   ]
 }
