@@ -16,7 +16,11 @@ export default async function SettingsPage() {
   const [settings, clientRows, offerRows] = await Promise.all([
     getSettings(),
     db
-      .select({ id: clients.id, name: clients.name })
+      .select({
+        id: clients.id,
+        name: clients.name,
+        monthlyTargetCents: clients.monthlyTargetCents,
+      })
       .from(clients)
       .where(eq(clients.status, "active")),
     db.select().from(offerSettings),
@@ -30,6 +34,8 @@ export default async function SettingsPage() {
       eodAlertTime: existing?.eodAlertTime ?? null,
       bodAlertTime: existing?.bodAlertTime ?? "12:00",
       confettiThresholdCents: existing?.confettiThresholdCents ?? 500_000,
+      monthlyGoalCents: c.monthlyTargetCents,
+      visibility: existing?.visibility ?? {},
     };
   });
 

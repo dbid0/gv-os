@@ -15,7 +15,16 @@ export interface OfferSettingsRow {
   eodAlertTime: string | null;
   bodAlertTime: string | null;
   confettiThresholdCents: number;
+  monthlyGoalCents: number | null;
+  visibility: Record<string, boolean>;
 }
+
+const VISIBILITY_KEYS = [
+  { key: "cash", label: "Cash", fallback: false },
+  { key: "target", label: "Target", fallback: false },
+  { key: "apps", label: "Apps", fallback: true },
+  { key: "drive", label: "Assets", fallback: true },
+] as const;
 
 function Row({ row }: { row: OfferSettingsRow }) {
   const router = useRouter();
@@ -25,6 +34,14 @@ function Row({ row }: { row: OfferSettingsRow }) {
   const [bod, setBod] = useState(row.bodAlertTime ?? "12:00");
   const [confetti, setConfetti] = useState(
     String(Math.round(row.confettiThresholdCents / 100)),
+  );
+  const [goal, setGoal] = useState(
+    row.monthlyGoalCents ? String(Math.round(row.monthlyGoalCents / 100)) : "",
+  );
+  const [vis, setVis] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      VISIBILITY_KEYS.map((v) => [v.key, row.visibility[v.key] ?? v.fallback]),
+    ),
   );
 
   return (
@@ -39,6 +56,13 @@ function Row({ row }: { row: OfferSettingsRow }) {
               eodAlertTime: eod || null,
               bodAlertTime: bod || null,
               confettiThresholdDollars: confetti,
+              monthlyGoalDollars: goal || 0,
+              visibility: {
+                cash: vis.cash ?? false,
+                target: vis.target ?? false,
+                apps: vis.apps ?? true,
+                drive: vis.drive ?? true,
+              },
             });
             toast({ tone: "success", title: `${row.clientName} settings saved` });
             router.refresh();
@@ -79,6 +103,31 @@ function Row({ row }: { row: OfferSettingsRow }) {
           className="h-8 w-28 text-xs"
         />
       </label>
+      <label className="text-faint flex flex-col gap-1 text-[11px]">
+        Monthly goal ($)
+        <Input
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          inputMode="numeric"
+          placeholder="none"
+          className="h-8 w-28 text-xs"
+        />
+      </label>
+      <fieldset className="text-faint flex flex-col gap-1 text-[11px]">
+        <legend>Client portal sees</legend>
+        <span className="flex gap-2 pt-1">
+          {VISIBILITY_KEYS.map((v) => (
+            <label key={v.key} className="flex items-center gap-1 text-[11px]">
+              <input
+                type="checkbox"
+                checked={vis[v.key] ?? v.fallback}
+                onChange={(e) => setVis({ ...vis, [v.key]: e.target.checked })}
+              />
+              {v.label}
+            </label>
+          ))}
+        </span>
+      </fieldset>
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Saving…" : "Save"}
       </Button>

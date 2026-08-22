@@ -5,7 +5,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { ProfileForm } from "@/components/settings/profile-form";
 import { shellUser } from "@/lib/auth/user";
+import { getPref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Profile - GV OS" };
@@ -13,6 +15,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const user = await shellUser();
+  const [displayName, discordHandle] = await Promise.all([
+    getPref<string>(user?.email ?? null, "display-name"),
+    getPref<string>(user?.email ?? null, "discord-handle"),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -50,6 +56,10 @@ export default async function ProfilePage() {
           </Link>
         </div>
       </Panel>
+      <ProfileForm
+        initialName={displayName ?? ""}
+        initialDiscord={discordHandle ?? ""}
+      />
     </div>
   );
 }
