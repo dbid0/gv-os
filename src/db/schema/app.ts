@@ -839,3 +839,55 @@ export const userPrefs = appSchema.table(
 );
 
 export type UserPref = typeof userPrefs.$inferSelect;
+
+/**
+ * v2 unified transactions backlog (spec §2.1) — THE source of truth for every
+ * dollar in or out, both layers. Every dashboard is a filtered read of this
+ * table; nothing is ever entered twice. Append-only (SQL triggers in the
+ * migration): corrections are reversing rows, never edits. `occurred_on` is
+ * the literal CT business day (yyyy-mm-dd) all bucketing keys off;
+ * `occurred_at` carries a precise timestamp when the source has one.
+ */
+export const transactions = appSchema.table(
+  "transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    occurredOn: text("occurred_on").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    /** in = money toward GV/client · out = money leaving. */
+    direction: text("direction").notNull(),
+    /** agency = GV's own book · client = an offer's book. */
+    layer: text("layer").notNull(),
+    clientId: uuid("client_id").references(() => clients.id),
+    /** Setup · DWY Build · DFY Build · Retainer · Rev-Share · Client Handoff · Other. */
+    dealType: text("deal_type"),
+    offer: text("offer"),
+    description: text("description"),
+    paymentMethod: text("payment_method"),
+    revenueCents: bigint("revenue_cents", { mode: "number" }).notNull().default(0),
+    cashCents: bigint("cash_cents", { mode: "number" }).notNull().default(0),
+    processorFeeCents: bigint("processor_fee_cents", { mode: "number" })
+      .notNull()
+      .default(0),
+    agreementSigned: boolean("agreement_signed"),
+    leadEmail: text("lead_email"),
+    /** True = money not tied to a tracked sale (mutes the missing-form alert). */
+    external: boolean("external").notNull().default(false),
+    /** form · processor · manual · sheet. */
+    source: text("source").notNull(),
+    /** Replay-proof identity: processor event id, sheet content key, form id. */
+    idempotencyKey: text("idempotency_key").notNull(),
+    enteredBy: text("entered_by"),
+    notes: text("notes"),
+  },
+  (table) => [
+    uniqueIndex("transactions_idempotency_key").on(table.idempotencyKey),
+    index("transactions_layer_idx").on(table.layer),
+    index("transactions_client_idx").on(table.clientId),
+    index("transactions_occurred_on_idx").on(table.occurredOn),
+  ],
+);
+
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
