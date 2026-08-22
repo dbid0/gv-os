@@ -92,8 +92,9 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
         </AnimatePresence>
       </Link>
 
-      {/* Workspace switcher: which client the OS is operating "as". Jumps to
-          that client's command center; All clients = the roster overview. */}
+      {/* Workspace switcher (v2 §1): clicking a client ENTERS their branded
+          workspace (/w/slug — the whole app re-skins and re-scopes); All
+          clients stays the admin aggregate. */}
       {!collapsed && (
         <div className="px-3 pb-3">
           <DropdownMenu>
@@ -125,7 +126,7 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
               {roster.map((client) => (
                 <DropdownMenuItem
                   key={client.slug}
-                  render={<Link href={`/clients/${client.slug}`} />}
+                  render={<Link href={`/w/${client.slug}`} />}
                   className="gap-2"
                 >
                   <span

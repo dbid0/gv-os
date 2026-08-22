@@ -32,9 +32,10 @@ describe("canAccessRoute", () => {
     expect(canAccessRoute("team_member", "/sales")).toBe(false);
   });
 
-  it("clients see only the dashboard and profile", () => {
+  it("clients get the dashboard, profile, and their workspace lane", () => {
     expect(canAccessRoute("client", "/dashboard")).toBe(true);
     expect(canAccessRoute("client", "/profile")).toBe(true);
+    expect(canAccessRoute("client", "/w/the-vault")).toBe(true);
     expect(canAccessRoute("client", "/sales")).toBe(false);
     expect(canAccessRoute("client", "/email")).toBe(false);
   });
