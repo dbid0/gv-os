@@ -19,6 +19,17 @@ export function monthToDateCashCents(
     .reduce((sum, r) => sum + r.cashCents, 0);
 }
 
+/** All-in cash collected in the current CT month, every client and layer. */
+export function monthCashAllCents(
+  rows: { dateClosed: string; cashCents: number }[],
+  now: Date,
+): number {
+  const month = dayKeyCT(now).slice(0, 7);
+  return rows
+    .filter((r) => r.dateClosed.trim().slice(0, 7) === month)
+    .reduce((sum, r) => sum + r.cashCents, 0);
+}
+
 /**
  * Target input → integer cents. Empty clears (null); junk or absurd values
  * are "invalid" so the caller can refuse loudly instead of saving garbage.

@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { integrations, sheetMirrorDeals, sheetSyncRuns } from "@/db/schema/app";
 import { reconcileSheet, type MirrorReport } from "@/lib/accounting/sheet-mirror";
+import { monthCashAllCents } from "@/lib/clients/targets";
 import { fetchFinanceSheet } from "@/lib/google/sheets";
 
 /**
@@ -219,4 +220,31 @@ export async function mirrorOutstanding(): Promise<{
     rows,
     totalArCents: rows.reduce((sum, r) => sum + r.arCents, 0),
   };
+}
+
+/**
+ * All-in cash collected this CT month, from the latest mirror run — the
+ * evergreen top-bar figure. Fail-soft to 0: the shell must render even if
+ * the mirror is empty or the read fails.
+ */
+export async function currentMonthCashCents(): Promise<number> {
+  try {
+    const db = getDb();
+    const [run] = await db
+      .select({ id: sheetSyncRuns.id })
+      .from(sheetSyncRuns)
+      .orderBy(desc(sheetSyncRuns.createdAt))
+      .limit(1);
+    if (!run) return 0;
+    const rows = await db
+      .select({
+        dateClosed: sheetMirrorDeals.dateClosed,
+        cashCents: sheetMirrorDeals.cashCents,
+      })
+      .from(sheetMirrorDeals)
+      .where(eq(sheetMirrorDeals.runId, run.id));
+    return monthCashAllCents(rows, new Date());
+  } catch {
+    return 0;
+  }
 }

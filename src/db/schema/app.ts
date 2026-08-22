@@ -819,3 +819,23 @@ export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
 export type PaymentEvent = typeof paymentEvents.$inferSelect;
 export type NewPaymentEvent = typeof paymentEvents.$inferInsert;
+
+/**
+ * Per-user persisted UI preferences (v2 Phase 0): homepage big-number mode,
+ * saved filters — anything that should survive a sign-out. Keyed by email
+ * because that IS the identity under magic-link auth. Values are jsonb so a
+ * pref can be a string, a flag, or a small object without a migration.
+ */
+export const userPrefs = appSchema.table(
+  "user_prefs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userEmail: text("user_email").notNull(),
+    key: text("key").notNull(),
+    value: jsonb("value").$type<unknown>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("user_prefs_user_key").on(table.userEmail, table.key)],
+);
+
+export type UserPref = typeof userPrefs.$inferSelect;
