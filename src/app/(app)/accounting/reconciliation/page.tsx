@@ -52,7 +52,7 @@ export default async function ReconciliationPage() {
         description="The Master Finance Sheet stays the system of record. Every sync pulls each deal, recomputes the whole chain — fee, net, Daniel, Gus, AR — with the penny-exact engine, and diffs against the sheet's own figures. Zero drift is the pass."
         status={
           run ? (
-            <StatusPill tone={run.driftRowCount === 0 ? "live" : "danger"}>
+            <StatusPill tone={run.driftRowCount === 0 ? "good" : "danger"}>
               {run.driftRowCount === 0
                 ? "In agreement"
                 : `${run.driftRowCount} ${run.driftRowCount === 1 ? "row drifts" : "rows drift"}`}

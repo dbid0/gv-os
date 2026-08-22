@@ -11,9 +11,22 @@ import { cn } from "@/lib/utils";
  * which is the GV pattern: attention is a scarce resource.
  */
 
-export type StatusTone = "live" | "active" | "pending" | "muted" | "danger";
+export type StatusTone =
+  "live" | "active" | "pending" | "muted" | "danger" | "good" | "progress";
 
 const tones: Record<StatusTone, { dot: string; text: string; ring: string }> = {
+  // v2 semantic colors (spec §0): green = good/closed, yellow = in-progress,
+  // red = bad. These THREE carry meaning app-wide — never repurpose them.
+  good: {
+    dot: "bg-success",
+    text: "text-success",
+    ring: "border-success/35 bg-success/10",
+  },
+  progress: {
+    dot: "bg-warning",
+    text: "text-warning",
+    ring: "border-warning/35 bg-warning/10",
+  },
   live: {
     dot: "dot-brand",
     text: "text-brand",

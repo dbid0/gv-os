@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isAllowed } from "@/lib/auth/allowlist";
+import { canAccessRoute, ROLE_HOME, ROLES, type Role } from "@/lib/auth/roles";
 
 /**
  * Session refresh and route protection, on every request.
@@ -45,7 +46,26 @@ function isPublic(pathname: string) {
   );
 }
 
+/**
+ * v2 route guard (spec §0/§6). Today every allowlisted user is an admin, so
+ * the guard is a live rail with nothing to stop yet — per-member roles land
+ * in Phase 6. The `gv-dev-role` cookie previews a NARROWER role (it can only
+ * restrict, never widen: admin passes every check), works even while the
+ * login wall is down, and is the seed of "View as".
+ */
+function previewRole(request: NextRequest): Role | null {
+  const v = request.cookies.get("gv-dev-role")?.value ?? "";
+  return (ROLES as readonly string[]).includes(v) ? (v as Role) : null;
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  const preview = previewRole(request);
+  if (preview && !isPublic(pathname) && !canAccessRoute(preview, pathname)) {
+    return NextResponse.redirect(new URL(ROLE_HOME, request.url));
+  }
+
   // Build phase: the app is internal and unpublished, so the whole thing is
   // open — no login wall. Set DISABLE_AUTH back to unset/false to restore the
   // gate before any real launch. This is the ONE switch; nothing else changes.
@@ -79,8 +99,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
 
   // A signed-in user has no reason to sit on the login page.
   if (user && isAllowed(user.email) && pathname === "/login") {
