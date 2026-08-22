@@ -25,6 +25,7 @@ const fmtWhen = (d: Date | null) =>
 
 export function MorningGlance({ glance }: { glance: Glance }) {
   const staleCount = glance.integrations.filter((i) => i.stale).length;
+  const failingCount = glance.integrations.filter((i) => i.failing).length;
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -91,13 +92,17 @@ export function MorningGlance({ glance }: { glance: Glance }) {
       <Panel title="Integrations">
         <Link href="/settings/integrations" className="block space-y-2">
           <div className="flex items-center gap-2">
-            {staleCount === 0 ? (
+            {failingCount > 0 ? (
+              <StatusPill tone="danger">
+                {failingCount} failing{staleCount > 0 && ` · ${staleCount} stale`}
+              </StatusPill>
+            ) : staleCount > 0 ? (
+              <StatusPill tone="danger">{staleCount} stale</StatusPill>
+            ) : (
               <StatusPill tone={glance.integrations.length ? "live" : "muted"}>
                 {glance.integrations.length} connected
                 {glance.integrations.length > 0 && " · all fresh"}
               </StatusPill>
-            ) : (
-              <StatusPill tone="danger">{staleCount} stale</StatusPill>
             )}
           </div>
           <p className="text-faint text-xs">
@@ -106,6 +111,12 @@ export function MorningGlance({ glance }: { glance: Glance }) {
             signed agreements · {glance.captures.paymentsTotal} payments ·{" "}
             {glance.captures.crmTotal} CRM activities · {glance.captures.kitAccounts}{" "}
             Kit accounts
+            {glance.captures.kitSubscribers > 0 && (
+              <>
+                {" "}
+                · {glance.captures.kitSubscribers.toLocaleString("en-US")} subscribers
+              </>
+            )}
             {glance.captures.payments24h + glance.captures.crm24h > 0 && (
               <> ({glance.captures.payments24h + glance.captures.crm24h} in 24h)</>
             )}
@@ -122,7 +133,9 @@ export function MorningGlance({ glance }: { glance: Glance }) {
                 className="text-faint inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]"
                 title={i.lastSyncNote ?? undefined}
               >
-                {i.stale ? (
+                {i.failing ? (
+                  <TriangleAlert className="text-destructive size-3" />
+                ) : i.stale ? (
                   <TriangleAlert className="text-warning size-3" />
                 ) : (
                   <CircleCheck className="text-success size-3" />
@@ -132,6 +145,9 @@ export function MorningGlance({ glance }: { glance: Glance }) {
                   <span className="text-muted-foreground">· {i.clientName}</span>
                 )}
                 <span>· {fmtWhen(i.lastSyncAt)}</span>
+                {i.failing && (
+                  <span className="text-destructive font-medium">· sync failing</span>
+                )}
               </span>
             ))}
           </div>
