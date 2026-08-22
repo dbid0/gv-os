@@ -83,3 +83,76 @@ describe("agencyLedger", () => {
     expect(byMethod).toEqual([]);
   });
 });
+
+import { clientLedger, type ClientLedgerInputRow } from "@/lib/transactions/ledger";
+import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
+
+const ROSTER = [
+  { slug: "the-grid", name: "The Grid" },
+  { slug: "the-vault", name: "The Vault" },
+  { slug: "racks-closes", name: "Racks Closes" },
+];
+
+const crow = (o: Partial<ClientLedgerInputRow>): ClientLedgerInputRow => ({
+  direction: "in",
+  layer: "agency",
+  dealType: "Setup",
+  paymentMethod: "Wire",
+  revenueCents: 0,
+  cashCents: 0,
+  processorFeeCents: 0,
+  clientName: null,
+  description: null,
+  ...o,
+});
+
+describe("clientLedger", () => {
+  it("attributes by joined client_id first, then sheet aliases, else Unattributed", () => {
+    const lines = clientLedger(
+      [
+        crow({ clientName: "The Vault", cashCents: 100_000, revenueCents: 100_000 }),
+        crow({
+          description: "Kaden (AI)",
+          cashCents: 300_000,
+          revenueCents: 500_000,
+          processorFeeCents: 8_729,
+        }),
+        crow({ description: "Sean Casey", cashCents: 50_000, revenueCents: 50_000 }),
+      ],
+      ROSTER,
+      matchesSheetClient,
+    );
+    const grid = lines.find((l) => l.slug === "the-grid");
+    expect(grid).toMatchObject({
+      name: "The Grid",
+      cashCents: 300_000,
+      revenueCents: 500_000,
+      afterFeesCents: 291_271,
+    });
+    expect(lines.find((l) => l.slug === "the-vault")?.cashCents).toBe(100_000);
+    expect(lines.find((l) => l.slug === null)).toMatchObject({
+      name: "Unattributed",
+      cashCents: 50_000,
+    });
+  });
+
+  it("keeps a joined name not on the roster as its own line", () => {
+    const lines = clientLedger(
+      [crow({ clientName: "Old Client", cashCents: 7 })],
+      ROSTER,
+      matchesSheetClient,
+    );
+    expect(lines[0]).toMatchObject({ slug: null, name: "Old Client", cashCents: 7 });
+  });
+
+  it("ignores out-rows and returns empty for an empty backlog", () => {
+    expect(
+      clientLedger(
+        [crow({ direction: "out", cashCents: 999 })],
+        ROSTER,
+        matchesSheetClient,
+      ),
+    ).toEqual([]);
+    expect(clientLedger([], ROSTER, matchesSheetClient)).toEqual([]);
+  });
+});

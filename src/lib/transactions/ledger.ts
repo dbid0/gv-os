@@ -101,3 +101,71 @@ export function agencyLedger(rows: LedgerInputRow[]): AgencyLedger {
     byMethod: groupBy(inRows, (r) => r.paymentMethod?.trim() || "Unknown"),
   };
 }
+
+/**
+ * Client/offer ledger: revenue + cash per client, from the same backlog.
+ * Attribution is derived at READ time — a row belongs to a client if its
+ * client_id joined (processor rows) or its description matches the client's
+ * sheet aliases (sheet rows; the table is append-only, so attribution is
+ * computed, never stored). Rows matching nothing land in "Unattributed" —
+ * visible, never silently dropped.
+ */
+
+export interface ClientLedgerInputRow extends LedgerInputRow {
+  clientName: string | null;
+  description: string | null;
+}
+
+export interface ClientLedgerLine {
+  slug: string | null;
+  name: string;
+  count: number;
+  revenueCents: number;
+  cashCents: number;
+  processorFeeCents: number;
+  afterFeesCents: number;
+}
+
+export function clientLedger(
+  rows: ClientLedgerInputRow[],
+  roster: { slug: string; name: string }[],
+  matches: (slug: string, sheetClient: string) => boolean,
+): ClientLedgerLine[] {
+  const lines = new Map<string, ClientLedgerLine>();
+  const lineFor = (slug: string | null, name: string): ClientLedgerLine => {
+    // Slug-less lines key by name so an off-roster joined client never
+    // merges into the Unattributed bucket.
+    const key = slug ?? `name:${name}`;
+    const existing = lines.get(key);
+    if (existing) return existing;
+    const fresh: ClientLedgerLine = {
+      slug,
+      name,
+      count: 0,
+      revenueCents: 0,
+      cashCents: 0,
+      processorFeeCents: 0,
+      afterFeesCents: 0,
+    };
+    lines.set(key, fresh);
+    return fresh;
+  };
+
+  for (const r of rows.filter((x) => x.direction === "in")) {
+    let target: ClientLedgerLine | null = null;
+    if (r.clientName) {
+      const known = roster.find((c) => c.name === r.clientName);
+      target = lineFor(known?.slug ?? null, r.clientName);
+    } else if (r.description) {
+      const matched = roster.find((c) => matches(c.slug, r.description as string));
+      if (matched) target = lineFor(matched.slug, matched.name);
+    }
+    if (!target) target = lineFor(null, "Unattributed");
+    target.count += 1;
+    target.revenueCents += r.revenueCents;
+    target.cashCents += r.cashCents;
+    target.processorFeeCents += r.processorFeeCents;
+    target.afterFeesCents += r.cashCents - r.processorFeeCents;
+  }
+  return [...lines.values()].sort((a, b) => b.cashCents - a.cashCents);
+}
