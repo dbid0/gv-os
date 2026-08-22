@@ -80,6 +80,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The homepage big number: the figure Daniel reads first every day.
+        "src/lib/transactions/homepage.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // AR + money calendar: what is owed and when.
         "src/lib/transactions/ar.ts": {
           statements: 100,

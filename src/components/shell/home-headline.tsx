@@ -1,0 +1,123 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useTransition } from "react";
+
+import { setHomeMode } from "@/app/(app)/dashboard/actions";
+import { HOME_MODES, type HomeMode } from "@/lib/transactions/homepage";
+import { cn } from "@/lib/utils";
+
+const fmtUsd = (c: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(c / 100);
+
+const MODE_LABELS: Record<HomeMode, string> = {
+  all: "All",
+  agency: "Agency",
+  clients: "Clients",
+};
+
+export interface HomeSection {
+  slug: string | null;
+  name: string;
+  cashCents: number;
+  revenueCents: number;
+}
+
+export function HomeHeadline({
+  mode,
+  monthLabel,
+  collectedCents,
+  revenueCents,
+  sections,
+}: {
+  mode: HomeMode;
+  monthLabel: string;
+  collectedCents: number;
+  revenueCents: number;
+  sections: HomeSection[];
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  return (
+    <section className="card-grad elev-card space-y-5 rounded-xl border p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+            Gross collected · {monthLabel}
+          </p>
+          <p className="numeric text-success mt-1 text-5xl font-bold tracking-tight">
+            {fmtUsd(collectedCents)}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {fmtUsd(revenueCents)} booked revenue
+            {revenueCents > collectedCents && (
+              <>
+                {" "}
+                ·{" "}
+                <span className="text-warning">
+                  {fmtUsd(revenueCents - collectedCents)} still due
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+
+        <div
+          className="flex gap-1 rounded-lg border p-1"
+          role="group"
+          aria-label="Scope"
+        >
+          {HOME_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  await setHomeMode(m);
+                  router.refresh();
+                })
+              }
+              className={cn(
+                "rounded-md px-3 py-1 text-xs transition-colors",
+                m === mode
+                  ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {sections.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sections.map((s) => (
+            <Link
+              key={s.slug ?? s.name}
+              href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
+              className="bg-card hover:border-brand/40 rounded-lg border p-3 transition-colors"
+            >
+              <p className="truncate text-sm font-medium">{s.name}</p>
+              <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
+                {fmtUsd(s.cashCents)}
+              </p>
+              {s.revenueCents > s.cashCents && (
+                <p className="text-faint text-[11px]">
+                  of {fmtUsd(s.revenueCents)} booked
+                </p>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
