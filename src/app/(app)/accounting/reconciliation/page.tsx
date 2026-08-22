@@ -6,6 +6,7 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { ColumnChart } from "@/components/ui/column-chart";
+import { agingTone, daysSinceClose } from "@/lib/accounting/aging";
 import { bucketByMonth } from "@/lib/charts";
 import {
   latestReconciliation,
@@ -96,29 +97,56 @@ export default async function ReconciliationPage() {
           {outstanding.rows.length > 0 && (
             <Panel
               title={`Outstanding balances — $${(outstanding.totalArCents / 100).toLocaleString("en-US")} owed`}
+              aside={(() => {
+                const oldest = Math.max(
+                  0,
+                  ...outstanding.rows.map(
+                    (r) => daysSinceClose(r.dateClosed, new Date()) ?? 0,
+                  ),
+                );
+                return oldest > 0 ? (
+                  <span className="text-faint text-xs">oldest {oldest} days</span>
+                ) : undefined;
+              })()}
             >
               <div className="space-y-2">
-                {outstanding.rows.map((r) => (
-                  <div
-                    key={`${r.client}-${r.dateClosed}-${r.arCents}`}
-                    className="bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.client}</p>
-                      <p className="text-faint text-[11px]">
-                        {r.dealType} · closed {r.dateClosed}
-                        {r.notes ? ` · ${r.notes.slice(0, 80)}` : ""}
-                      </p>
+                {outstanding.rows.map((r) => {
+                  const days = daysSinceClose(r.dateClosed, new Date());
+                  const tone = agingTone(days);
+                  return (
+                    <div
+                      key={`${r.client}-${r.dateClosed}-${r.arCents}`}
+                      className="bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.client}</p>
+                        <p className="text-faint text-[11px]">
+                          {r.dealType} · closed {r.dateClosed}
+                          {r.notes ? ` · ${r.notes.slice(0, 80)}` : ""}
+                        </p>
+                      </div>
+                      {days !== null && (
+                        <span
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-[11px] tabular-nums",
+                            tone === "overdue" && "text-destructive font-semibold",
+                            tone === "watch" && "text-warning font-medium",
+                            tone === "fresh" && "text-faint",
+                          )}
+                        >
+                          {days}d out
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        <Money amount={cents(r.cashCents)} /> of{" "}
+                        <Money amount={cents(r.revenueCents)} /> collected
+                      </span>
+                      <span className="text-warning text-sm font-semibold tabular-nums">
+                        <Money amount={cents(r.arCents)} /> due
+                      </span>
                     </div>
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      <Money amount={cents(r.cashCents)} /> of{" "}
-                      <Money amount={cents(r.revenueCents)} /> collected
-                    </span>
-                    <span className="text-warning text-sm font-semibold tabular-nums">
-                      <Money amount={cents(r.arCents)} /> due
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Panel>
           )}
