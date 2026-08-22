@@ -36,6 +36,20 @@ export function parseKitTagCount(body: unknown): number {
   return asArray(root.tags).length;
 }
 
+/**
+ * `GET /v4/subscribers?per_page=1&include_total_count=true` →
+ * `pagination.total_count`, the point-in-time size of the whole list. Null
+ * when the field is missing (older API shapes) — never a fake zero.
+ */
+export function parseKitSubscriberTotal(body: unknown): number | null {
+  const root = (body ?? {}) as Payload;
+  const pagination = (root.pagination ?? {}) as Payload;
+  const total = pagination.total_count;
+  return typeof total === "number" && Number.isFinite(total) && total >= 0
+    ? total
+    : null;
+}
+
 /** `GET /v4/account` → display name + plan, both optional. */
 export function parseKitAccount(body: unknown): {
   name: string | null;

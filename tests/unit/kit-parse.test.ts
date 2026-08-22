@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseKitAccount,
   parseKitSequences,
+  parseKitSubscriberTotal,
   parseKitTagCount,
 } from "@/lib/email/kit-parse";
 
@@ -50,5 +51,23 @@ describe("parseKitAccount", () => {
       plan: "free",
     });
     expect(parseKitAccount({})).toEqual({ name: null, plan: null });
+  });
+});
+
+describe("parseKitSubscriberTotal", () => {
+  it("reads pagination.total_count", () => {
+    expect(
+      parseKitSubscriberTotal({ subscribers: [], pagination: { total_count: 330 } }),
+    ).toBe(330);
+    expect(parseKitSubscriberTotal({ pagination: { total_count: 0 } })).toBe(0);
+  });
+
+  it("returns null — never a fake zero — when the count is missing or junk", () => {
+    expect(parseKitSubscriberTotal({})).toBeNull();
+    expect(parseKitSubscriberTotal(null)).toBeNull();
+    expect(parseKitSubscriberTotal({ pagination: {} })).toBeNull();
+    expect(parseKitSubscriberTotal({ pagination: { total_count: "330" } })).toBeNull();
+    expect(parseKitSubscriberTotal({ pagination: { total_count: -1 } })).toBeNull();
+    expect(parseKitSubscriberTotal({ pagination: { total_count: NaN } })).toBeNull();
   });
 });

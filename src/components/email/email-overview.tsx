@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Mail, RefreshCw, Tag } from "lucide-react";
+import { Mail, RefreshCw, Tag, Users } from "lucide-react";
 
 import { syncKitNow } from "@/app/(app)/email/actions";
 import { Button } from "@/components/ui/button";
+import { ColumnChart } from "@/components/ui/column-chart";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
+import { chartColorForClient, type DayBucket } from "@/lib/charts";
 import type { KitOverviewRow } from "@/lib/email/queries";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +58,14 @@ const fmtWhen = (d: Date) =>
     timeZone: "America/Chicago",
   });
 
-export function EmailOverview({ accounts }: { accounts: KitOverviewRow[] }) {
+export function EmailOverview({
+  accounts,
+  growth = {},
+}: {
+  accounts: KitOverviewRow[];
+  /** Subscriber count per CT day, keyed by connection — absent until capture began. */
+  growth?: Record<string, DayBucket[]>;
+}) {
   return (
     <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
       {accounts.map((a) => (
@@ -72,6 +81,15 @@ export function EmailOverview({ accounts }: { accounts: KitOverviewRow[] }) {
             </div>
 
             <div className="text-muted-foreground flex items-center gap-4 text-xs">
+              {a.subscriberCount !== null && (
+                <span className="inline-flex items-center gap-1">
+                  <Users className="size-3.5" />{" "}
+                  <span className="numeric">
+                    {a.subscriberCount.toLocaleString("en-US")}
+                  </span>{" "}
+                  subscribers
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
                 <Mail className="size-3.5" /> {a.sequenceCount} sequences
               </span>
@@ -79,6 +97,16 @@ export function EmailOverview({ accounts }: { accounts: KitOverviewRow[] }) {
                 <Tag className="size-3.5" /> {a.tagCount} tags
               </span>
             </div>
+
+            {(growth[a.integrationId]?.length ?? 0) >= 2 && (
+              <div className="border-t pt-3">
+                <p className="text-faint mb-2 text-[11px]">List growth — daily</p>
+                <ColumnChart
+                  data={growth[a.integrationId] as DayBucket[]}
+                  color={chartColorForClient(a.clientName)}
+                />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               {a.sequences.slice(0, 12).map((s) => (
