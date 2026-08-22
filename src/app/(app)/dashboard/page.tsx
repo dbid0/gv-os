@@ -33,6 +33,7 @@ export default async function DashboardPage() {
           deals: overview.dealsClosed,
           closeRatePct,
           revenueGoalCents: settings.monthlyRevenueGoalCents,
+          applications30d: glance.captures.apps30d,
           compliance: {
             submitted: compliance.submitted,
             total: compliance.total,
