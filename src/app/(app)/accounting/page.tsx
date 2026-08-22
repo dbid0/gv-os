@@ -39,6 +39,12 @@ const SECTIONS = [
     detail: "The auto-line: client cash after fees × locked rate",
   },
   {
+    label: "Payout tracker",
+    href: "/accounting/payouts",
+    icon: Wallet,
+    detail: "Month by month, Pending to Paid — the 50/50 lives here",
+  },
+  {
     label: "Sheet reconciliation",
     href: "/accounting/reconciliation",
     icon: Scale,

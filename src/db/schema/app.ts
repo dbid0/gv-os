@@ -915,3 +915,48 @@ export const revShareRules = appSchema.table(
 );
 
 export type RevShareRule = typeof revShareRules.$inferSelect;
+
+/**
+ * Payout tracker (v2 §4): month-scoped workflow state. The TRACKER is
+ * mutable (status flips Pending → Paid); the MONEY is not — marking paid
+ * writes the matching backlog transaction (idempotent on the payout id),
+ * and that row is the truth. 50/50 partner split lives here and only here.
+ */
+export const payouts = appSchema.table(
+  "payouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** yyyy-mm. */
+    month: text("month").notNull(),
+    /** partner · rep_share · retainer · processor · ad_spend · revshare_received · other. */
+    kind: text("kind").notNull(),
+    label: text("label").notNull(),
+    clientId: uuid("client_id").references(() => clients.id),
+    baseCents: bigint("base_cents", { mode: "number" }).notNull(),
+    /** pending · paid. One-way: corrections are reversing backlog rows. */
+    status: text("status").notNull().default("pending"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    transactionId: uuid("transaction_id").references(() => transactions.id),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("payouts_month_idx").on(table.month)],
+);
+
+/** Flexible line items on a payout (discounts, extras); deltas may be negative. */
+export const payoutAdjustments = appSchema.table(
+  "payout_adjustments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    payoutId: uuid("payout_id")
+      .notNull()
+      .references(() => payouts.id),
+    label: text("label").notNull(),
+    deltaCents: bigint("delta_cents", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("payout_adjustments_payout_idx").on(table.payoutId)],
+);
+
+export type Payout = typeof payouts.$inferSelect;
+export type PayoutAdjustment = typeof payoutAdjustments.$inferSelect;
