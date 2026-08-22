@@ -1,362 +1,176 @@
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Receipt,
-  Scale,
-} from "lucide-react";
+import { ArrowRight, Receipt, Scale, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
-import { ExportCsv } from "@/components/ui/export-csv";
-import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
+import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
-import {
-  getLedgerSummary,
-  getMonthlyFinance,
-  getPartnerPayouts,
-  getReceivables,
-  listLedgerEvents,
-} from "@/lib/accounting";
+import { listTransactions } from "@/lib/transactions/queries";
+import { agencyLedger } from "@/lib/transactions/ledger";
+import { cents } from "@/lib/money";
 
 export const metadata = { title: "Accounting - GV OS" };
 export const dynamic = "force-dynamic";
 
-const EVENT_LABEL: Record<string, string> = {
-  payment_received: "Payment",
-  processor_fee: "Processor fee",
-  payout: "Payout",
-  refund: "Refund",
-  adjustment: "Adjustment",
-};
+/**
+ * The agency ledger (v2 §4): GV's own book, read straight off the unified
+ * transactions backlog. The breakdown chain is the headline — total cash →
+ * after fees → after team → net — and every figure below it is the same
+ * rows grouped a different way.
+ */
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const SECTIONS = [
+  {
+    label: "Transactions backlog",
+    href: "/accounting/transactions",
+    icon: Receipt,
+    detail: "Every dollar, one row — the source of truth",
+  },
+  {
+    label: "Sheet reconciliation",
+    href: "/accounting/reconciliation",
+    icon: Scale,
+    detail: "Penny-exact diff against the Master Finance Sheet",
+  },
+  {
+    label: "Payments inbox",
+    href: "/accounting/payments",
+    icon: Wallet,
+    detail: "Captured processor events awaiting attribution",
+  },
+];
 
 export default async function AccountingPage() {
-  const [summary, months, receivables, partner, events] = await Promise.all([
-    getLedgerSummary(),
-    getMonthlyFinance(),
-    getReceivables(),
-    getPartnerPayouts(),
-    listLedgerEvents(100),
-  ]);
-
-  const ledgerCsv = events.map((e) => [
-    new Date(e.occurredAtISO).toLocaleDateString("en-US"),
-    EVENT_LABEL[e.eventType] ?? e.eventType,
-    e.teamName ?? "",
-    e.customerName ?? e.memo ?? e.source,
-    (e.amountCents / 100).toFixed(2),
-  ]);
+  const { rows } = await listTransactions({});
+  const ledger = agencyLedger(rows);
+  const { chain } = ledger;
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       <PageHeader
-        title="Accounting"
+        title="Agency"
         highlight="ledger."
-        description="Every dollar the system has recorded, derived from the append-only ledger — cash in, processor fees, and payouts, netted with no stored balance to drift."
+        description="GV's own book, derived live from the transactions backlog — nothing stored, nothing entered twice. The chain shows what the agency actually keeps."
         status={
-          <StatusPill tone={summary.eventCount ? "live" : "muted"}>
-            {summary.eventCount} {summary.eventCount === 1 ? "event" : "events"}
+          <StatusPill tone={rows.length ? "live" : "muted"}>
+            {rows.length} transactions
           </StatusPill>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/accounting/payments"
-              className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
-            >
-              <Receipt className="size-4" /> Payments
-            </Link>
-            <Link
-              href="/accounting/reconciliation"
-              className="text-brand hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors"
-            >
-              <Scale className="size-4" /> Sheet reconciliation
-            </Link>
-          </div>
         }
       />
 
-      <Panel title="Position">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi
-            label="Cash in"
-            icon={ArrowUpRight}
-            tone="brand"
-            value={<Money amount={summary.cashInCents} />}
-          />
-          <Kpi
-            label="Processor fees"
-            icon={Receipt}
-            tone="default"
-            value={<Money amount={summary.feesCents} />}
-          />
-          <Kpi
-            label="Payouts"
-            icon={ArrowDownRight}
-            tone="default"
-            value={<Money amount={summary.payoutsCents} />}
-          />
-          <Kpi
-            label="Net position"
-            icon={Scale}
-            tone="brand"
-            value={<Money amount={summary.netCents} />}
-          />
-        </div>
-      </Panel>
-
-      {months.length > 0 && (
-        <Panel
-          title="By month"
-          aside={<span className="text-faint text-xs">{months.length} months</span>}
-          padded={false}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
-                  <th className="px-4 py-2.5 font-medium">Month</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Cash in</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Fees</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Payouts</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {months.map((m) => (
-                  <tr
-                    key={m.month}
-                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
-                  >
-                    <td className="px-4 py-2.5 whitespace-nowrap">{m.label}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Money amount={m.cashInCents} />
-                    </td>
-                    <td className="text-muted-foreground px-4 py-2.5 text-right">
-                      <Money amount={m.feesCents} />
-                    </td>
-                    <td className="text-muted-foreground px-4 py-2.5 text-right">
-                      <Money amount={m.payoutsCents} />
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium">
-                      <Money amount={m.netCents} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      )}
-
-      <Panel
-        title="Accounts receivable"
-        aside={<span className="text-faint text-xs">{receivables.openCount} open</span>}
-      >
-        <div className="grid gap-6 sm:grid-cols-3">
-          <Kpi
-            label="Revenue"
-            tone="brand"
-            value={<Money amount={receivables.totalRevenueCents} />}
-          />
-          <Kpi
-            label="Collected"
-            tone="brand"
-            value={<Money amount={receivables.totalCashCents} />}
-          />
-          <Kpi
-            label="Outstanding (AR)"
-            value={<Money amount={receivables.totalArCents} />}
-          />
-        </div>
-
-        {receivables.rows.length === 0 ? (
-          <p className="text-muted-foreground mt-5 border-t pt-4 text-sm">
-            Everything agreed has been collected — no outstanding balances.
-          </p>
-        ) : (
-          <div className="mt-5 overflow-x-auto border-t pt-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
-                  <th className="px-4 py-2.5 font-medium">Customer</th>
-                  <th className="px-4 py-2.5 font-medium">Team</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Revenue</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Collected</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Balance due</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receivables.rows.map((r) => (
-                  <tr
-                    key={r.dealId}
-                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
-                  >
-                    <td className="px-4 py-2.5">{r.customerName ?? "—"}</td>
-                    <td className="text-muted-foreground px-4 py-2.5">
-                      {r.teamName ?? "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Money amount={r.revenueCents} />
-                    </td>
-                    <td className="text-muted-foreground px-4 py-2.5 text-right">
-                      <Money amount={r.cashCents} />
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium">
-                      <Money amount={r.balanceDueCents} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
-
-      {partner.rows.length > 0 && (
-        <Panel
-          title="Partner split"
-          aside={<span className="text-faint text-xs">Daniel / Gus · net cash</span>}
-        >
-          <div className="grid gap-6 sm:grid-cols-3">
-            <Kpi
-              label="Daniel"
-              tone="brand"
-              value={<Money amount={partner.danielCents} />}
-            />
-            <Kpi label="Gus" tone="brand" value={<Money amount={partner.gusCents} />} />
-            <Kpi label="Net cash" value={<Money amount={partner.netCents} />} />
-          </div>
-
-          {(!partner.hasRules || partner.unresolvedCount > 0) && (
-            <div className="text-warning mt-5 flex items-center gap-2 border-t pt-4 text-xs">
-              <AlertTriangle className="size-3.5 shrink-0" />
-              {!partner.hasRules
-                ? "No partner split rule defined yet — net cash can't be split until one exists."
-                : `${partner.unresolvedCount} deal${
-                    partner.unresolvedCount === 1 ? "" : "s"
-                  } have no applicable split rule.`}
-            </div>
-          )}
-
-          <div className="mt-5 overflow-x-auto border-t pt-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
-                  <th className="px-4 py-2.5 font-medium">Customer</th>
-                  <th className="px-4 py-2.5 font-medium">Team</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Net</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Daniel</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Gus</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partner.rows.map((r) => (
-                  <tr
-                    key={r.dealId}
-                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
-                  >
-                    <td className="px-4 py-2.5">{r.customerName ?? "—"}</td>
-                    <td className="text-muted-foreground px-4 py-2.5">
-                      {r.teamName ?? "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Money amount={r.netCents} />
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      {r.unresolved ? (
-                        <span className="text-warning text-xs">no rule</span>
-                      ) : (
-                        <>
-                          <Money amount={r.danielCents} />
-                          <span className="text-faint ml-1.5 text-xs">
-                            {r.danielPct}%
-                          </span>
-                        </>
-                      )}
-                    </td>
-                    <td className="text-muted-foreground px-4 py-2.5 text-right">
-                      {r.unresolved ? "—" : <Money amount={r.gusCents} />}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      )}
-
-      {events.length === 0 ? (
-        <Panel title="No ledger events yet">
-          <p className="text-muted-foreground text-sm">
-            Every payment, fee, and payout the app records shows here. Log a deal or
-            mark a rep paid and the entries appear — nothing is typed twice.
-          </p>
-        </Panel>
-      ) : (
-        <Panel
-          title="Ledger"
-          aside={
-            <div className="flex items-center gap-3">
-              <span className="text-faint text-xs">{events.length} recent</span>
-              <ExportCsv
-                filename="gv-os-ledger.csv"
-                headers={["Date", "Type", "Team", "Detail", "Amount"]}
-                rows={ledgerCsv}
-              />
-            </div>
+      {/* The breakdown chain. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi
+          label="Total cash collected"
+          value={<Money amount={cents(chain.totalCashCents)} />}
+          tone="brand"
+        />
+        <Kpi
+          label={`After fees (−${(chain.processorFeeCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`}
+          value={<Money amount={cents(chain.afterFeesCents)} />}
+        />
+        <Kpi
+          label={
+            chain.teamCents > 0
+              ? `After team (−${(chain.teamCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`
+              : "After team (no payouts yet)"
           }
-          padded={false}
-        >
-          <div className="overflow-x-auto">
+          value={<Money amount={cents(chain.afterTeamCents)} />}
+        />
+        <Kpi
+          label="Net"
+          value={<Money amount={cents(chain.netCents)} />}
+          tone="success"
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Income by deal type">
+          {ledger.byDealType.length === 0 ? (
+            <p className="text-faint py-6 text-center text-sm">No income rows yet.</p>
+          ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-faint border-b text-left text-[11px] tracking-wider uppercase">
-                  <th className="px-4 py-2.5 font-medium">Date</th>
-                  <th className="px-4 py-2.5 font-medium">Type</th>
-                  <th className="px-4 py-2.5 font-medium">Team</th>
-                  <th className="px-4 py-2.5 font-medium">Detail</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                <tr className="text-faint border-b text-left text-xs">
+                  <th className="py-2 pr-3 font-medium">Type</th>
+                  <th className="py-2 pr-3 text-right font-medium">Deals</th>
+                  <th className="py-2 pr-3 text-right font-medium">Revenue</th>
+                  <th className="py-2 text-right font-medium">Cash</th>
                 </tr>
               </thead>
               <tbody>
-                {events.map((e) => (
-                  <tr
-                    key={e.id}
-                    className="hover:bg-secondary/40 border-b transition-colors last:border-0"
-                  >
-                    <td className="text-muted-foreground px-4 py-2.5 whitespace-nowrap">
-                      {fmtDate(e.occurredAtISO)}
+                {ledger.byDealType.map((line) => (
+                  <tr key={line.key} className="border-b last:border-0">
+                    <td className="py-2 pr-3">{line.key}</td>
+                    <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                      {line.count}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className="bg-secondary rounded-full border px-2.5 py-0.5 text-xs">
-                        {EVENT_LABEL[e.eventType] ?? e.eventType}
-                      </span>
+                    <td className="numeric py-2 pr-3 text-right tabular-nums">
+                      <Money amount={cents(line.revenueCents)} />
                     </td>
-                    <td className="text-muted-foreground px-4 py-2.5 whitespace-nowrap">
-                      {e.teamName ?? "—"}
-                    </td>
-                    <td className="text-muted-foreground px-4 py-2.5">
-                      {e.customerName ?? e.memo ?? e.source}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Money amount={e.amountCents} signed />
+                    <td className="numeric py-2 text-right font-medium tabular-nums">
+                      <Money amount={cents(line.cashCents)} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          )}
         </Panel>
-      )}
+
+        <Panel title="Income by payment method">
+          {ledger.byMethod.length === 0 ? (
+            <p className="text-faint py-6 text-center text-sm">No income rows yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-xs">
+                  <th className="py-2 pr-3 font-medium">Method</th>
+                  <th className="py-2 pr-3 text-right font-medium">Deals</th>
+                  <th className="py-2 pr-3 text-right font-medium">Cash</th>
+                  <th className="py-2 text-right font-medium">Fees</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.byMethod.map((line) => (
+                  <tr key={line.key} className="border-b last:border-0">
+                    <td className="py-2 pr-3">{line.key}</td>
+                    <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                      {line.count}
+                    </td>
+                    <td className="numeric py-2 pr-3 text-right font-medium tabular-nums">
+                      <Money amount={cents(line.cashCents)} />
+                    </td>
+                    <td className="numeric text-muted-foreground py-2 text-right tabular-nums">
+                      <Money amount={cents(line.processorFeeCents)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Panel>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {SECTIONS.map((s) => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className="card-grad hover-lift hover:border-brand/40 flex items-start gap-3 rounded-lg border p-4"
+          >
+            <span className="border-brand/40 bg-brand-soft/50 text-brand grid size-9 shrink-0 place-items-center rounded-lg border">
+              <s.icon className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1 text-sm font-medium">
+                {s.label} <ArrowRight className="size-3" />
+              </span>
+              <span className="text-muted-foreground block text-xs">{s.detail}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
