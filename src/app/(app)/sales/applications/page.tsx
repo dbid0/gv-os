@@ -3,6 +3,8 @@ import { FileSignature, Inbox } from "lucide-react";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { ColumnChart } from "@/components/ui/column-chart";
+import { bucketByDay } from "@/lib/charts";
 import { funnelSummary, listApplications, listSignedDocs } from "@/lib/funnel/queries";
 
 export const metadata = { title: "Applications - GV OS" };
@@ -25,6 +27,11 @@ export default async function ApplicationsPage() {
     listApplications(),
     listSignedDocs(),
   ]);
+  const perDay = bucketByDay(
+    apps.map((a) => a.submittedAt ?? a.createdAt),
+    30,
+    new Date(),
+  );
 
   return (
     <div className="space-y-6">
@@ -51,6 +58,10 @@ export default async function ApplicationsPage() {
           ))}
         </div>
       )}
+
+      <Panel title="Applications per day — last 30">
+        <ColumnChart data={perDay} />
+      </Panel>
 
       <Panel title="Applications in">
         {apps.length === 0 ? (
