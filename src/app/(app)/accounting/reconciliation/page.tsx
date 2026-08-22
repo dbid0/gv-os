@@ -5,7 +5,9 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { latestReconciliation } from "@/lib/accounting/sheet-sync";
+import { ColumnChart } from "@/components/ui/column-chart";
+import { bucketByMonth } from "@/lib/charts";
+import { latestReconciliation, mirrorMonthly } from "@/lib/accounting/sheet-sync";
 import { cents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,7 @@ const fmtWhen = (d: Date) =>
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "America/Chicago",
   });
 
 const driftLabel = (cents: number) =>
@@ -33,6 +36,7 @@ const driftLabel = (cents: number) =>
 
 export default async function ReconciliationPage() {
   const { run, deals } = await latestReconciliation();
+  const monthly = bucketByMonth(await mirrorMonthly());
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -77,6 +81,12 @@ export default async function ReconciliationPage() {
             />
             <Kpi label="Last sync" value={fmtWhen(run.createdAt)} />
           </div>
+
+          {monthly.length > 0 && (
+            <Panel title="Net cash by month — reconciled">
+              <ColumnChart data={monthly} unit="cents" />
+            </Panel>
+          )}
 
           <Panel title="Deal-by-deal">
             <div className="overflow-x-auto">

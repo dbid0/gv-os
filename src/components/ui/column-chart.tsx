@@ -17,18 +17,29 @@ import { cn } from "@/lib/utils";
 const H = 160;
 const GRID_LINES = 3;
 
+const fmtCents = (cents: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+
 export function ColumnChart({
   data,
   color = CHART_CATEGORICAL[0],
+  unit = "count",
   className,
 }: {
   data: DayBucket[];
   color?: string;
+  /** "cents" renders values as whole dollars in labels and tooltips. */
+  unit?: "count" | "cents";
   className?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
   const peakIndex = data.findIndex((d) => d.value === max);
+  const fmt = (v: number) => (unit === "cents" ? fmtCents(v) : String(v));
 
   return (
     <div className={cn("relative", className)}>
@@ -55,7 +66,7 @@ export function ColumnChart({
             <button
               key={d.date}
               type="button"
-              aria-label={`${d.label}: ${d.value}`}
+              aria-label={`${d.label}: ${fmt(d.value)}`}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
               onFocus={() => setHover(i)}
@@ -70,7 +81,7 @@ export function ColumnChart({
                     active ? "text-foreground" : "text-faint",
                   )}
                 >
-                  {d.value}
+                  {fmt(d.value)}
                 </span>
               )}
               <span
@@ -85,7 +96,7 @@ export function ColumnChart({
               {active && (
                 <span className="bg-popover text-popover-foreground pointer-events-none absolute -top-9 z-10 rounded-md border px-2 py-1 text-[11px] whitespace-nowrap shadow-sm">
                   {d.label} ·{" "}
-                  <span className="font-medium tabular-nums">{d.value}</span>
+                  <span className="font-medium tabular-nums">{fmt(d.value)}</span>
                 </span>
               )}
             </button>
