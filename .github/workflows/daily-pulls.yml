@@ -19,7 +19,7 @@ jobs:
       - name: Pull Close, Kit, Stripe
         run: |
           fail=0
-          for path in close kit payments bookings; do
+          for path in close kit payments bookings docs; do
             out=$(curl -s -m 120 --retry 2 --retry-delay 10 -X POST \
               -H "Authorization: Bearer ${{ secrets.SYNC_SECRET }}" \
               "https://os.globalventures.app/api/sync/$path")

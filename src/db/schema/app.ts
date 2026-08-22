@@ -549,6 +549,72 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Captured signed documents — agreements PandaDoc reports as completed,
+ * polled per client connection. The signed-agreement notification stream and,
+ * later, the deal-attachment source. Same staging discipline as every capture.
+ */
+export const signedDocs = appSchema.table(
+  "signed_docs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    provider: text("provider").notNull().default("pandadoc"),
+    /** The e-sign platform's own document id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    clientId: uuid("client_id").references(() => clients.id),
+    name: text("name"),
+    docStatus: text("doc_status"),
+    recipientEmail: text("recipient_email"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("signed_docs_provider_external_key").on(
+      table.provider,
+      table.externalId,
+    ),
+    index("signed_docs_client_idx").on(table.clientId),
+  ],
+);
+
+/**
+ * Captured funnel applications — Typeform responses per client connection.
+ * Applications-in per offer, day over day; joins against bookings later for
+ * speed-to-lead. Answers stay in raw; only the join keys are lifted out.
+ */
+export const applications = appSchema.table(
+  "applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    provider: text("provider").notNull().default("typeform"),
+    /** The form platform's response id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    clientId: uuid("client_id").references(() => clients.id),
+    formId: text("form_id"),
+    formName: text("form_name"),
+    email: text("email"),
+    name: text("name"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("applications_provider_external_key").on(
+      table.provider,
+      table.externalId,
+    ),
+    index("applications_client_idx").on(table.clientId),
+    index("applications_submitted_idx").on(table.submittedAt),
+  ],
+);
+
+/**
  * Kit (email) account snapshots — one row per sync per connection. Email
  * stats are STATE, not events, so the capture is a periodic snapshot; the
  * Email section charts growth by comparing snapshots over time. Raw sequence
