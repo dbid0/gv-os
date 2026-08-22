@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { CommandPalette } from "@/components/shell/command-palette";
+import { DealClosedToasts } from "@/components/shell/deal-closed-toasts";
 import { PageTransition } from "@/components/shell/page-transition";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <CommandPalette />
+      <DealClosedToasts />
       <TabKeepWarm />
     </div>
   );
