@@ -15,6 +15,7 @@ import {
   signedDocs,
 } from "@/db/schema/app";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
+import { monthToDateCashCents } from "@/lib/clients/targets";
 
 /**
  * Everything one client's report page needs, in one pass. Capture tables join
@@ -35,6 +36,7 @@ export interface ClientReport {
   } | null;
   captures: { crm: number; payments: number; bookings: number; signedDocs: number };
   mirror: { deals: number; netCents: number; cashCents: number };
+  target: { monthlyTargetCents: number | null; mtdCashCents: number };
 }
 
 export async function getClientReport(
@@ -43,7 +45,7 @@ export async function getClientReport(
 ): Promise<ClientReport> {
   const db = getDb();
   const [row] = await db
-    .select({ id: clients.id })
+    .select({ id: clients.id, monthlyTargetCents: clients.monthlyTargetCents })
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
@@ -108,10 +110,12 @@ export async function getClientReport(
     .orderBy(desc(sheetSyncRuns.createdAt))
     .limit(1);
   let mirror = empty.mirror;
+  let mtdCashCents = 0;
   if (run) {
     const mirrorRows = await db
       .select({
         client: sheetMirrorDeals.client,
+        dateClosed: sheetMirrorDeals.dateClosed,
         cashCents: sheetMirrorDeals.cashCents,
         figures: sheetMirrorDeals.figures,
       })
@@ -123,6 +127,7 @@ export async function getClientReport(
       cashCents: mine.reduce((sum, r) => sum + r.cashCents, 0),
       netCents: mine.reduce((sum, r) => sum + (r.figures.ours.netCents ?? 0), 0),
     };
+    mtdCashCents = monthToDateCashCents(mirrorRows, slug, new Date());
   }
 
   void displayName;
@@ -138,5 +143,9 @@ export async function getClientReport(
       signedDocs: signed?.n ?? 0,
     },
     mirror,
+    target: {
+      monthlyTargetCents: row?.monthlyTargetCents ?? null,
+      mtdCashCents,
+    },
   };
 }
