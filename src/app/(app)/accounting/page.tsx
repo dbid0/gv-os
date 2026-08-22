@@ -51,6 +51,12 @@ const SECTIONS = [
     detail: "What is owed to GV and what is planned to leave",
   },
   {
+    label: "Expenses",
+    href: "/accounting/expenses",
+    icon: Receipt,
+    detail: "GV's own software, tools, and spend",
+  },
+  {
     label: "Sheet reconciliation",
     href: "/accounting/reconciliation",
     icon: Scale,

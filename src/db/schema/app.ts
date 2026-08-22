@@ -960,3 +960,28 @@ export const payoutAdjustments = appSchema.table(
 
 export type Payout = typeof payouts.$inferSelect;
 export type PayoutAdjustment = typeof payoutAdjustments.$inferSelect;
+
+/**
+ * Agency expense tracker (v2 §2.6): GV's own software/tools/spend. The row
+ * is metadata; the MONEY is the backlog out-row written on entry
+ * (idempotent on the expense id) — one source of truth, and the agency
+ * chain's "other out" leg picks it up automatically.
+ */
+export const agencyExpenses = appSchema.table(
+  "agency_expenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** yyyy-mm-dd the expense hit. */
+    occurredOn: text("occurred_on").notNull(),
+    label: text("label").notNull(),
+    /** software · tools · contractors · ads · other. */
+    category: text("category").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    transactionId: uuid("transaction_id").references(() => transactions.id),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("agency_expenses_occurred_idx").on(table.occurredOn)],
+);
+
+export type AgencyExpense = typeof agencyExpenses.$inferSelect;
