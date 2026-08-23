@@ -1,10 +1,8 @@
 import { EmptyDashboard } from "@/components/shell/empty-dashboard";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
-import { MorningGlance } from "@/components/shell/morning-glance";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import { getMorningGlance } from "@/lib/dashboard";
 import { getPref } from "@/lib/prefs";
 import { roster } from "@/lib/roster";
 import {
@@ -36,23 +34,15 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const user = await shellUser();
-  const [
-    overview,
-    compliance,
-    closeRatePct,
-    settings,
-    glance,
-    { rows: backlog },
-    storedMode,
-  ] = await Promise.all([
-    getSalesOverview(),
-    getEodCompliance(),
-    getCloseRatePct(),
-    getSettings(),
-    getMorningGlance(),
-    listTransactions({}),
-    getPref<string>(user?.email ?? null, "home-mode"),
-  ]);
+  const [overview, compliance, closeRatePct, settings, { rows: backlog }, storedMode] =
+    await Promise.all([
+      getSalesOverview(),
+      getEodCompliance(),
+      getCloseRatePct(),
+      getSettings(),
+      listTransactions({}),
+      getPref<string>(user?.email ?? null, "home-mode"),
+    ]);
 
   const mode = normalizeHomeMode(storedMode);
   const range = normalizeHomeRange(
@@ -95,7 +85,6 @@ export default async function DashboardPage({
         revenueCents={headline.revenueCents}
         sections={sections}
       />
-      <MorningGlance glance={glance} />
       <EmptyDashboard
         stats={{
           cash: overview.cashCollectedCents,
@@ -103,7 +92,6 @@ export default async function DashboardPage({
           deals: overview.dealsClosed,
           closeRatePct,
           revenueGoalCents: settings.monthlyRevenueGoalCents,
-          applications30d: glance.captures.apps30d,
           compliance: {
             submitted: compliance.submitted,
             total: compliance.total,
