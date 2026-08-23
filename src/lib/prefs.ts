@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { userPrefs } from "@/db/schema/app";
@@ -44,4 +44,22 @@ export async function setPref(
       target: [userPrefs.userEmail, userPrefs.key],
       set: { value, updatedAt: new Date() },
     });
+}
+
+/** Several prefs in one round trip — the shell reads these on every page. */
+export async function getPrefs(
+  userEmail: string | null | undefined,
+  keys: string[],
+): Promise<Record<string, unknown>> {
+  const db = getDb();
+  const rows = await db
+    .select({ key: userPrefs.key, value: userPrefs.value })
+    .from(userPrefs)
+    .where(
+      and(
+        eq(userPrefs.userEmail, userEmail ?? FALLBACK_IDENTITY),
+        inArray(userPrefs.key, keys),
+      ),
+    );
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }

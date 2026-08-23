@@ -20,3 +20,19 @@ export async function saveProfile(raw: unknown) {
   revalidatePath("/profile");
   return { ok: true };
 }
+
+const DATA_URL = /^data:image\/(jpeg|png|webp);base64,/;
+const MAX_AVATAR_BYTES = 200_000;
+
+/** Store the downscaled avatar. Small by construction; rejected if not. */
+export async function saveAvatar(dataUrl: unknown) {
+  const value = z.string().parse(dataUrl);
+  if (!DATA_URL.test(value)) throw new Error("Not an image.");
+  if (value.length > MAX_AVATAR_BYTES) {
+    throw new Error("That image is too large even after resizing.");
+  }
+  const user = await shellUser();
+  await setPref(user?.email ?? null, "avatar", value);
+  revalidatePath("/profile");
+  return { ok: true };
+}

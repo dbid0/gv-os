@@ -11,7 +11,7 @@ import { TopClock } from "@/components/shell/top-clock";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
 import { allNavItems } from "@/components/shell/nav-config";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsHydrated } from "@/lib/client-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,10 +37,12 @@ export function Topbar({
   user,
   monthCashCents = 0,
   unreadCount = 0,
+  avatarUrl = null,
 }: {
   user: ShellUser | null;
   monthCashCents?: number;
   unreadCount?: number;
+  avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
   const current = allNavItems.find((item) => item.href === pathname);
@@ -91,7 +93,7 @@ export function Topbar({
             )}
           </Link>
           <ThemeToggle />
-          <UserMenu user={user} />
+          <UserMenu user={user} avatarUrl={avatarUrl} />
         </div>
       </div>
     </header>
@@ -123,13 +125,20 @@ function ThemeToggle() {
   );
 }
 
-function UserMenu({ user }: { user: ShellUser | null }) {
+function UserMenu({
+  user,
+  avatarUrl,
+}: {
+  user: ShellUser | null;
+  avatarUrl: string | null;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={<Button variant="ghost" size="icon" aria-label="Account menu" />}
       >
         <Avatar className="size-7">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
           <AvatarFallback className="text-[11px]">
             {user?.initial ?? "?"}
           </AvatarFallback>

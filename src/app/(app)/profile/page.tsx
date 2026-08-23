@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { shellUser } from "@/lib/auth/user";
 import { getPref } from "@/lib/prefs";
@@ -15,9 +16,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const user = await shellUser();
-  const [displayName, discordHandle] = await Promise.all([
+  const [displayName, discordHandle, avatarUrl] = await Promise.all([
     getPref<string>(user?.email ?? null, "display-name"),
     getPref<string>(user?.email ?? null, "discord-handle"),
+    getPref<string>(user?.email ?? null, "avatar"),
   ]);
 
   return (
@@ -56,6 +58,7 @@ export default async function ProfilePage() {
           </Link>
         </div>
       </Panel>
+      <AvatarUpload avatarUrl={avatarUrl} initial={user?.initial ?? "?"} />
       <ProfileForm
         initialName={displayName ?? ""}
         initialDiscord={discordHandle ?? ""}

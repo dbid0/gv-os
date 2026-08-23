@@ -10,6 +10,7 @@ import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { Topbar } from "@/components/shell/topbar";
 import { currentMonthCashCents } from "@/lib/accounting/sheet-sync";
 import { unreadNotificationCount } from "@/lib/notifications/count";
+import { getPrefs } from "@/lib/prefs";
 import { shellUser } from "@/lib/auth/user";
 
 /**
@@ -20,12 +21,15 @@ import { shellUser } from "@/lib/auth/user";
  * this renders, so there is no loading state to design around.
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [user, monthCashCents, unreadCount, cookieStore] = await Promise.all([
-    shellUser(),
+  const user = await shellUser();
+  const [monthCashCents, unreadCount, cookieStore, prefs] = await Promise.all([
     currentMonthCashCents(),
     unreadNotificationCount(),
     cookies(),
+    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
   ]);
+  const avatarUrl =
+    typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
   const previewIsRole = (v: string | null): v is import("@/lib/auth/roles").Role =>
     v === "sales_manager" || v === "sales_rep" || v === "team_member" || v === "client";
@@ -37,7 +41,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         previewRole={previewIsRole(previewRole) ? previewRole : null}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={user} monthCashCents={monthCashCents} unreadCount={unreadCount} />
+        <Topbar
+          user={user}
+          monthCashCents={monthCashCents}
+          unreadCount={unreadCount}
+          avatarUrl={avatarUrl}
+        />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <PageTransition>{children}</PageTransition>
         </main>
