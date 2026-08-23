@@ -60,6 +60,18 @@ export const roster: RosterClient[] = [
     blurb:
       "High-ticket closing offer, already printing pre-GV; backend built and live.",
   },
+  {
+    slug: "the-visionary",
+    name: "The Visionary",
+    owner: "Tico",
+    offer: "Videography & creative — Miami Heat / Baller League videographer",
+    category: "Done-for-you",
+    accent: "#2C6BFF",
+    since: "Aug 2026",
+    revShare: "30% after fees",
+    blurb:
+      "Tico Visuals (63K IG) — the creative offer. Signed 8/23; backend build starting.",
+  },
 ];
 
 export function clientBySlug(slug: string): RosterClient | undefined {

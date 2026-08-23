@@ -11,6 +11,7 @@ const ALIASES: Record<string, string[]> = {
   "the-grid": ["kaden"],
   "the-vault": ["brady"],
   "racks-closes": ["aiden racks", "racks"],
+  "the-visionary": ["tico"],
 };
 
 export function matchesSheetClient(slug: string, sheetClient: string): boolean {
