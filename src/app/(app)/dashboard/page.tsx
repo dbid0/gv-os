@@ -13,6 +13,7 @@ import {
 import { getSettings } from "@/lib/settings";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
+  customBounds,
   homeRangeHeadline,
   homeRangeRows,
   normalizeHomeMode,
@@ -45,10 +46,14 @@ export default async function DashboardPage({
     ]);
 
   const mode = normalizeHomeMode(storedMode);
-  const range = normalizeHomeRange(
-    typeof params.range === "string" ? params.range : undefined,
-  );
-  const bounds = rangeBounds(range, dayKeyCT(new Date()));
+  const todayKey = dayKeyCT(new Date());
+  const custom =
+    params.range === "custom" ? customBounds(params.from, params.to) : null;
+  const range = custom
+    ? ("custom" as const)
+    : normalizeHomeRange(typeof params.range === "string" ? params.range : undefined);
+  const bounds =
+    custom ?? rangeBounds(range as Exclude<typeof range, "custom">, todayKey);
   const headline = homeRangeHeadline(backlog, mode, bounds);
 
   // Sections: only who actually has money in the range, in the current mode.
@@ -80,6 +85,9 @@ export default async function DashboardPage({
       <HomeHeadline
         mode={mode}
         range={range}
+        from={bounds.from}
+        to={bounds.to}
+        todayKey={todayKey}
         monthLabel={monthLabel}
         collectedCents={headline.collectedCents}
         revenueCents={headline.revenueCents}

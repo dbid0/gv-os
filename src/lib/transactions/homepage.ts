@@ -54,7 +54,15 @@ export function homeHeadline(
  * the mode stays persisted.
  */
 
-export const HOME_RANGES = ["7d", "30d", "month", "last-month", "ytd", "life"] as const;
+export const HOME_RANGES = [
+  "7d",
+  "30d",
+  "month",
+  "last-month",
+  "90d",
+  "ytd",
+  "life",
+] as const;
 export type HomeRange = (typeof HOME_RANGES)[number];
 
 export function normalizeHomeRange(value: unknown): HomeRange {
@@ -92,6 +100,8 @@ export function rangeBounds(range: HomeRange, todayKey: string): RangeBounds {
         label: "Last month",
       };
     }
+    case "90d":
+      return { from: shiftDayKey(todayKey, -89), to: todayKey, label: "Last 3 months" };
     case "ytd":
       return {
         from: `${todayKey.slice(0, 4)}-01-01`,
@@ -131,4 +141,14 @@ export function homeRangeHeadline(
     collectedCents: mine.reduce((s, r) => s + r.cashCents, 0),
     revenueCents: mine.reduce((s, r) => s + r.revenueCents, 0),
   };
+}
+
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A dragged custom range from the calendar — validated, ordered, labeled. */
+export function customBounds(from: unknown, to: unknown): RangeBounds | null {
+  if (typeof from !== "string" || typeof to !== "string") return null;
+  if (!DAY_KEY.test(from) || !DAY_KEY.test(to)) return null;
+  const [lo, hi] = from <= to ? [from, to] : [to, from];
+  return { from: lo, to: hi, label: "Custom range" };
 }

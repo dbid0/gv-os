@@ -119,3 +119,27 @@ describe("homeRangeRows + homeRangeHeadline", () => {
     expect(homeRangeHeadline(ROWS, "clients", life).collectedCents).toBe(40);
   });
 });
+
+import { customBounds } from "@/lib/transactions/homepage";
+
+describe("customBounds", () => {
+  it("validates, orders, and labels a dragged range", () => {
+    expect(customBounds("2026-08-01", "2026-08-15")).toEqual({
+      from: "2026-08-01",
+      to: "2026-08-15",
+      label: "Custom range",
+    });
+    expect(customBounds("2026-08-15", "2026-08-01")?.from).toBe("2026-08-01");
+    expect(customBounds("junk", "2026-08-01")).toBeNull();
+    expect(customBounds(undefined, undefined)).toBeNull();
+  });
+});
+
+describe("90d preset", () => {
+  it("covers the last 90 CT days inclusive", () => {
+    expect(rangeBounds("90d", "2026-08-22")).toMatchObject({
+      from: "2026-05-25",
+      to: "2026-08-22",
+    });
+  });
+});

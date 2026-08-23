@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { TargetPanel } from "@/components/clients/target-panel";
-import { RangePills } from "@/components/shell/home-headline";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -14,6 +14,7 @@ import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
 import {
+  customBounds,
   homeRangeRows,
   normalizeHomeRange,
   rangeBounds,
@@ -51,8 +52,13 @@ export default async function WorkspacePage({
   const client = clientBySlug(slug);
   if (!client) notFound();
   const sp = await searchParams;
-  const range = normalizeHomeRange(typeof sp.range === "string" ? sp.range : undefined);
-  const bounds = rangeBounds(range, dayKeyCT(new Date()));
+  const todayKey = dayKeyCT(new Date());
+  const custom = sp.range === "custom" ? customBounds(sp.from, sp.to) : null;
+  const range = custom
+    ? ("custom" as const)
+    : normalizeHomeRange(typeof sp.range === "string" ? sp.range : undefined);
+  const bounds =
+    custom ?? rangeBounds(range as Exclude<typeof range, "custom">, todayKey);
 
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
@@ -110,7 +116,13 @@ export default async function WorkspacePage({
               </span>
             </p>
           </div>
-          <RangePills active={range} basePath={`/w/${slug}`} />
+          <DateRangePicker
+            basePath={`/w/${slug}`}
+            activeRange={range}
+            from={bounds.from}
+            to={bounds.to}
+            todayKey={todayKey}
+          />
         </div>
       )}
 

@@ -461,3 +461,19 @@
 .gv-banner-in {
   animation: gv-banner-rise 0.25s ease-out;
 }
+
+/* Popover entrance (date picker & friends). */
+@keyframes gv-pop {
+  from {
+    transform: translateY(-4px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.gv-pop-in {
+  animation: gv-pop 0.16s ease-out;
+  transform-origin: top right;
+}

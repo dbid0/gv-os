@@ -5,12 +5,8 @@ import Link from "next/link";
 import { useTransition } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
-import {
-  HOME_MODES,
-  HOME_RANGES,
-  type HomeMode,
-  type HomeRange,
-} from "@/lib/transactions/homepage";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
 const fmtUsd = (c: number) =>
@@ -26,42 +22,6 @@ const MODE_LABELS: Record<HomeMode, string> = {
   clients: "Clients",
 };
 
-const RANGE_LABELS: Record<HomeRange, string> = {
-  "7d": "7d",
-  "30d": "30d",
-  month: "This month",
-  "last-month": "Last month",
-  ytd: "YTD",
-  life: "Lifetime",
-};
-
-export function RangePills({
-  active,
-  basePath,
-}: {
-  active: HomeRange;
-  basePath: string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1" role="group" aria-label="Date range">
-      {HOME_RANGES.map((r) => (
-        <Link
-          key={r}
-          href={r === "month" ? basePath : `${basePath}?range=${r}`}
-          className={cn(
-            "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
-            r === active
-              ? "border-brand/40 bg-brand-soft/60 text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {RANGE_LABELS[r]}
-        </Link>
-      ))}
-    </div>
-  );
-}
-
 export interface HomeSection {
   slug: string | null;
   name: string;
@@ -72,13 +32,19 @@ export interface HomeSection {
 export function HomeHeadline({
   mode,
   range,
+  from,
+  to,
+  todayKey,
   monthLabel,
   collectedCents,
   revenueCents,
   sections,
 }: {
   mode: HomeMode;
-  range: HomeRange;
+  range: HomeRange | "custom";
+  from: string | null;
+  to: string | null;
+  todayKey: string;
   monthLabel: string;
   collectedCents: number;
   revenueCents: number;
@@ -139,7 +105,13 @@ export function HomeHeadline({
               </button>
             ))}
           </div>
-          <RangePills active={range} basePath="/dashboard" />
+          <DateRangePicker
+            basePath="/dashboard"
+            activeRange={range}
+            from={from}
+            to={to}
+            todayKey={todayKey}
+          />
         </div>
       </div>
 
