@@ -9,6 +9,7 @@ import {
   FileText,
   Inbox,
   Receipt,
+  Target,
   Trophy,
   Users,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const tabs = [
   { label: "EOD Reports", href: "/sales/eod", icon: FileText },
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
+  { label: "Quotas", href: "/sales/quotas", icon: Target },
   { label: "Applications", href: "/sales/applications", icon: Inbox },
   { label: "Templates", href: "/sales/templates", icon: ClipboardList },
 ];
