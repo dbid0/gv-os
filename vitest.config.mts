@@ -52,6 +52,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Confirming a processor event appends money — same bar.
+        "src/lib/transactions/confirm.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Processor fees come straight out of collected cash, so same bar.
         "src/lib/fees.ts": {
           statements: 100,

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import { ConfirmQueueCell } from "@/components/accounting/confirm-queue-cell";
 import { cents } from "@/lib/money";
 import { listPaymentEvents } from "@/lib/payments/capture";
 
@@ -29,7 +30,7 @@ export default async function PaymentsPage() {
       <PageHeader
         title="Payment"
         highlight="capture."
-        description="Every processor event, caught once and kept forever — deduped on the processor's own transaction id, scoped to the client whose connection caught it. Capture is not the ledger: events post to the append-only ledger only when attributed to a deal."
+        description="Every processor event, caught once and kept forever — deduped on the processor's own transaction id, scoped to the client whose connection caught it. Capture is not the ledger: a captured event posts to the backlog only when you confirm it below."
         status={
           <StatusPill tone={events.length ? "live" : "muted"}>
             {events.length} captured
@@ -45,7 +46,9 @@ export default async function PaymentsPage() {
               Settings → Integrations
             </Link>
             , then either paste its webhook URL into the processor or let the scheduled
-            Stripe pull collect events. They appear here the moment the first one lands.
+            Stripe pull collect events. The confirm queue is built and waiting on
+            processor keys — events land here the moment one connects, and nothing is
+            invented in the meantime.
           </p>
         </Panel>
       ) : (
@@ -60,7 +63,8 @@ export default async function PaymentsPage() {
                   <th className="py-2 pr-3 font-medium">Payer</th>
                   <th className="py-2 pr-3 font-medium">Event</th>
                   <th className="py-2 pr-3 text-right font-medium">Amount</th>
-                  <th className="py-2 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 font-medium">Post</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,10 +94,17 @@ export default async function PaymentsPage() {
                     <td className="py-2 pr-3 text-right tabular-nums">
                       <Money amount={cents(e.amountCents)} />
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 pr-3">
                       <StatusPill tone={e.status === "posted" ? "live" : "pending"}>
                         {e.status}
                       </StatusPill>
+                    </td>
+                    <td className="py-2">
+                      {e.status === "captured" ? (
+                        <ConfirmQueueCell eventId={e.id} />
+                      ) : (
+                        <span className="text-faint text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
