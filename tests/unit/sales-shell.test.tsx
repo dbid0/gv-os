@@ -12,7 +12,14 @@ import { clearPersistedState } from "@/lib/client-state";
 
 // A mutable pathname so each test can place itself somewhere in the app.
 const nav = vi.hoisted(() => ({ pathname: "/sales" }));
-vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => nav.pathname,
+  useRouter: () => ({
+    push: () => {},
+    prefetch: () => {},
+    refresh: () => {},
+  }),
+}));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
 
 const USER: ShellUser = {

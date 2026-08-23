@@ -6,6 +6,7 @@ import { useTransition } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { useToast } from "@/components/ui/toast";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,7 @@ export function HomeHeadline({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   return (
     <section className="card-grad elev-card space-y-5 rounded-xl border p-6">
@@ -90,8 +92,15 @@ export function HomeHeadline({
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
-                    await setHomeMode(m);
-                    router.refresh();
+                    try {
+                      await setHomeMode(m);
+                      router.refresh();
+                    } catch (e) {
+                      toast({
+                        tone: "error",
+                        title: e instanceof Error ? e.message : "Action failed.",
+                      });
+                    }
                   })
                 }
                 className={cn(

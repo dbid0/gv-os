@@ -27,12 +27,20 @@ const selectClass =
 function MemberRow({ member }: { member: TeamMemberRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   const inactive = member.status !== "active";
 
   function toggle() {
     start(async () => {
-      await setTeamMemberStatus(member.id, inactive ? "active" : "inactive");
-      router.refresh();
+      try {
+        await setTeamMemberStatus(member.id, inactive ? "active" : "inactive");
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: e instanceof Error ? e.message : "Action failed.",
+        });
+      }
     });
   }
 

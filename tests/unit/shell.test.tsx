@@ -10,6 +10,11 @@ import { clearPersistedState } from "@/lib/client-state";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useRouter: () => ({
+    push: () => {},
+    prefetch: () => {},
+    refresh: () => {},
+  }),
 }));
 
 // Sign out is a Server Action; the shell only needs it to exist as a callable.

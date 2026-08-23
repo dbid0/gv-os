@@ -8,6 +8,7 @@ import { ArrowLeft, CalendarDays, Eye } from "lucide-react";
 import { setActionStatus } from "@/app/(app)/action-list/actions";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
+import { useToast } from "@/components/ui/toast";
 import { StatusPill } from "@/components/ui/status";
 import type { MemberActionRow } from "@/lib/team";
 import { roleLabel } from "@/lib/team-roles";
@@ -52,6 +53,7 @@ const fmtDate = (d: string | null) =>
 function ItemRow({ item }: { item: MemberActionRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   const due = fmtDate(item.dueDate);
 
   return (
@@ -88,8 +90,15 @@ function ItemRow({ item }: { item: MemberActionRow }) {
             disabled={pending || item.status === c.key}
             onClick={() =>
               start(async () => {
-                await setActionStatus(item.id, c.key);
-                router.refresh();
+                try {
+                  await setActionStatus(item.id, c.key);
+                  router.refresh();
+                } catch (e) {
+                  toast({
+                    tone: "error",
+                    title: e instanceof Error ? e.message : "Action failed.",
+                  });
+                }
               })
             }
             className={cn(

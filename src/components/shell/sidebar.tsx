@@ -3,7 +3,8 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import {
   ChevronRight,
   LifeBuoy,
@@ -43,6 +44,15 @@ export function Sidebar({
   logos?: Record<string, string>;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Warm the switcher's targets before the menu ever opens (punch-list 20):
+  // menu content only mounts on open, so Link's viewport prefetch never fires
+  // for these until it is too late to matter.
+  useEffect(() => {
+    router.prefetch("/clients");
+    for (const client of roster) router.prefetch(`/w/${client.slug}`);
+  }, [router]);
   // Preview shells (v2 §6): a role only sees nav it can actually open —
   // no dead links that bounce off the middleware.
   const visibleNavigation =

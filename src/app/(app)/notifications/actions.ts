@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, isNull } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
@@ -24,6 +24,19 @@ export async function markNotificationRead(id: string) {
     .update(notifications)
     .set({ readAt: new Date() })
     .where(eq(notifications.id, id));
+  revalidatePath("/notifications");
+  return { ok: true };
+}
+
+/** One click on a grouped stack of duplicates reads the whole stack. */
+export async function markNotificationsRead(ids: string[]) {
+  await requireUser();
+  const parsed = z.array(z.string().uuid()).min(1).max(200).parse(ids);
+  const db = getDb();
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(inArray(notifications.id, parsed));
   revalidatePath("/notifications");
   return { ok: true };
 }
