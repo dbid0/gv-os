@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTransition } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
+import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
@@ -40,6 +41,7 @@ export function HomeHeadline({
   collectedCents,
   revenueCents,
   sections,
+  series,
 }: {
   mode: HomeMode;
   range: HomeRange | "custom";
@@ -50,101 +52,110 @@ export function HomeHeadline({
   collectedCents: number;
   revenueCents: number;
   sections: HomeSection[];
+  series: { day: string; cents: number }[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const { toast } = useToast();
 
   return (
-    <section className="card-grad elev-card space-y-5 rounded-xl border p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-            Gross collected · {monthLabel}
-          </p>
-          <p className="numeric text-success mt-1 text-5xl font-bold tracking-tight">
-            {fmtUsd(collectedCents)}
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {fmtUsd(revenueCents)} booked revenue
-            {revenueCents > collectedCents && (
-              <>
-                {" "}
-                ·{" "}
-                <span className="text-warning">
-                  {fmtUsd(revenueCents - collectedCents)} still due
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <div
-            className="flex gap-1 rounded-lg border p-1"
-            role="group"
-            aria-label="Scope"
-          >
-            {HOME_MODES.map((m) => (
-              <button
-                key={m}
-                type="button"
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    try {
-                      await setHomeMode(m);
-                      router.refresh();
-                    } catch (e) {
-                      toast({
-                        tone: "error",
-                        title: e instanceof Error ? e.message : "Action failed.",
-                      });
-                    }
-                  })
-                }
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs transition-colors",
-                  m === mode
-                    ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {MODE_LABELS[m]}
-              </button>
-            ))}
-          </div>
-          <DateRangePicker
-            basePath="/dashboard"
-            activeRange={range}
-            from={from}
-            to={to}
-            todayKey={todayKey}
-          />
-        </div>
+    <section className="card-grad elev-card relative overflow-hidden rounded-xl border">
+      {/* The growth curve fills the card's lower half, the number sits on top —
+          the Whop revenue-hero pattern. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3">
+        <CollectedSparkline series={series} className="h-full w-full" />
       </div>
 
-      {sections.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {sections.map((s) => (
-            <Link
-              key={s.slug ?? s.name}
-              href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
-              className="bg-card hover:border-brand/40 rounded-lg border p-3 transition-colors"
-            >
-              <p className="truncate text-sm font-medium">{s.name}</p>
-              <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
-                {fmtUsd(s.cashCents)}
-              </p>
-              {s.revenueCents > s.cashCents && (
-                <p className="text-faint text-[11px]">
-                  of {fmtUsd(s.revenueCents)} booked
-                </p>
+      <div className="relative space-y-5 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+              Gross collected · {monthLabel}
+            </p>
+            <p className="numeric text-success mt-1 text-5xl font-bold tracking-tight">
+              {fmtUsd(collectedCents)}
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {fmtUsd(revenueCents)} booked revenue
+              {revenueCents > collectedCents && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <span className="text-warning">
+                    {fmtUsd(revenueCents - collectedCents)} still due
+                  </span>
+                </>
               )}
-            </Link>
-          ))}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            <div
+              className="flex gap-1 rounded-lg border p-1"
+              role="group"
+              aria-label="Scope"
+            >
+              {HOME_MODES.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      try {
+                        await setHomeMode(m);
+                        router.refresh();
+                      } catch (e) {
+                        toast({
+                          tone: "error",
+                          title: e instanceof Error ? e.message : "Action failed.",
+                        });
+                      }
+                    })
+                  }
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs transition-colors",
+                    m === mode
+                      ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {MODE_LABELS[m]}
+                </button>
+              ))}
+            </div>
+            <DateRangePicker
+              basePath="/dashboard"
+              activeRange={range}
+              from={from}
+              to={to}
+              todayKey={todayKey}
+            />
+          </div>
         </div>
-      )}
+
+        {sections.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {sections.map((s) => (
+              <Link
+                key={s.slug ?? s.name}
+                href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
+                className="bg-card hover:border-brand/40 rounded-lg border p-3 transition-colors"
+              >
+                <p className="truncate text-sm font-medium">{s.name}</p>
+                <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
+                  {fmtUsd(s.cashCents)}
+                </p>
+                {s.revenueCents > s.cashCents && (
+                  <p className="text-faint text-[11px]">
+                    of {fmtUsd(s.revenueCents)} booked
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

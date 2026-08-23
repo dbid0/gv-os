@@ -64,6 +64,7 @@ describe("homeMonthRows + homeHeadline", () => {
 import {
   homeRangeHeadline,
   homeRangeRows,
+  homeRangeSeries,
   normalizeHomeRange,
   rangeBounds,
 } from "@/lib/transactions/homepage";
@@ -189,5 +190,26 @@ describe("whop presets", () => {
     expect(rangeBounds("qtd", "2026-08-23")).toMatchObject({ from: "2026-07-01" });
     expect(rangeBounds("qtd", "2026-02-10")).toMatchObject({ from: "2026-01-01" });
     expect(rangeBounds("qtd", "2026-11-01")).toMatchObject({ from: "2026-10-01" });
+  });
+});
+
+describe("homeRangeSeries", () => {
+  it("buckets collected cash by day, summed and sorted ascending", () => {
+    const life = homeRangeSeries(ROWS, "all", rangeBounds("life", TODAY));
+    expect(life).toEqual([
+      { day: "2026-07-31", cents: 999_999 },
+      { day: "2026-08-10", cents: 140 }, // 100 agency + 40 client, same day
+    ]);
+  });
+
+  it("respects the mode filter and excludes outflows", () => {
+    const clients = homeRangeSeries(ROWS, "clients", rangeBounds("life", TODAY));
+    expect(clients).toEqual([{ day: "2026-08-10", cents: 40 }]);
+  });
+
+  it("honors the range bounds and returns empty when nothing lands", () => {
+    const month = homeRangeSeries(ROWS, "all", rangeBounds("month", TODAY));
+    expect(month).toEqual([{ day: "2026-08-10", cents: 140 }]);
+    expect(homeRangeSeries(ROWS, "all", rangeBounds("today", TODAY))).toEqual([]);
   });
 });
