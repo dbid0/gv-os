@@ -8,7 +8,6 @@ import {
   ClipboardList,
   FileText,
   Inbox,
-  LayoutDashboard,
   Receipt,
   Trophy,
   Users,
@@ -27,14 +26,13 @@ import { cn } from "@/lib/utils";
  */
 
 const tabs = [
-  { label: "Overview", href: "/sales", icon: LayoutDashboard },
-  { label: "Applications", href: "/sales/applications", icon: Inbox },
+  { label: "Teams", href: "/sales", icon: Users },
   { label: "Deals", href: "/sales/deals", icon: Receipt },
+  { label: "EOD Reports", href: "/sales/eod", icon: FileText },
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
-  { label: "EOD Reports", href: "/sales/eod", icon: FileText },
+  { label: "Applications", href: "/sales/applications", icon: Inbox },
   { label: "Templates", href: "/sales/templates", icon: ClipboardList },
-  { label: "Teams", href: "/sales/teams", icon: Users },
 ];
 
 export function SalesTabs() {

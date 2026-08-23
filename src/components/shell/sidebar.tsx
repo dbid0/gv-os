@@ -182,6 +182,16 @@ export function Sidebar({
                   <span className="text-faint text-[10px]">{client.owner}</span>
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                render={<Link href="/sales/teams/new" />}
+                className="text-brand gap-2"
+              >
+                <span className="border-brand/40 bg-brand-soft/50 grid size-6 place-items-center rounded-md border">
+                  <Plus className="size-3.5" />
+                </span>
+                Add new team
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

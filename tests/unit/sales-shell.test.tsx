@@ -65,7 +65,7 @@ describe("SalesTabs", () => {
   it("offers the four RepVision views", () => {
     nav.pathname = "/sales";
     render(<SalesTabs />);
-    ["Overview", "Deals", "Commissions", "Leaderboard"].forEach((label) => {
+    ["Teams", "Deals", "Commissions", "Leaderboard"].forEach((label) => {
       expect(
         screen.getByRole("tab", { name: new RegExp(label, "i") }),
       ).toBeInTheDocument();
@@ -79,17 +79,17 @@ describe("SalesTabs", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: /overview/i })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: /teams/i })).toHaveAttribute(
       "aria-selected",
       "false",
     );
   });
 
-  it("does not treat Overview as active when on a sub-view", () => {
-    // Overview is /sales exactly; being on /sales/deals must not light it up.
+  it("does not treat Teams as active when on a sub-view", () => {
+    // Teams is /sales exactly; being on /sales/deals must not light it up.
     nav.pathname = "/sales/deals";
     render(<SalesTabs />);
-    expect(screen.getByRole("tab", { name: /overview/i })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: /teams/i })).toHaveAttribute(
       "aria-selected",
       "false",
     );
