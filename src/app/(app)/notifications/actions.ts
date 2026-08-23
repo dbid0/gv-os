@@ -6,12 +6,13 @@ import { z } from "zod";
 
 import { getDb } from "@/db/client";
 import { notifications } from "@/db/schema/app";
+import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 
 async function requireUser() {
-  // Build phase: auth is off (see middleware DISABLE_AUTH).
-  if (process.env.DISABLE_AUTH === "true") return;
+  // Dev/preview bypass only — never passes in production.
+  if (devAuthBypass()) return;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) throw new Error("Not authorized.");
 }

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { canAccessRoute, ROLE_HOME, ROLES, type Role } from "@/lib/auth/roles";
 
@@ -86,10 +87,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(home, request.url));
   }
 
-  // Build phase: the app is internal and unpublished, so the whole thing is
-  // open — no login wall. Set DISABLE_AUTH back to unset/false to restore the
-  // gate before any real launch. This is the ONE switch; nothing else changes.
-  if (process.env.DISABLE_AUTH === "true") {
+  // Dev/preview only: devAuthBypass() is hard-fenced to never pass on the
+  // production deployment (see src/lib/auth/dev-bypass.ts for the documented
+  // verification path). In prod the login wall below always stands.
+  if (devAuthBypass()) {
     return NextResponse.next({ request });
   }
 

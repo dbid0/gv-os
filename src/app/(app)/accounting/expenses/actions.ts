@@ -7,12 +7,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { agencyExpenses, transactions } from "@/db/schema/app";
 import { EXPENSE_CATEGORIES } from "@/lib/accounting/expense-categories";
+import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 
 async function requireUser() {
-  // Build phase: auth is off (see middleware DISABLE_AUTH).
-  if (process.env.DISABLE_AUTH === "true") return;
+  // Dev/preview bypass only — never passes in production.
+  if (devAuthBypass()) return;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) throw new Error("Not authorized.");
 }
