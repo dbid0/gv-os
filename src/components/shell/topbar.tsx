@@ -1,14 +1,16 @@
 "use client";
 
-import { Bell, LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { MobileNav } from "@/components/shell/mobile-nav";
+import { NotificationBell } from "@/components/shell/notification-bell";
 import { ViewAsMenu } from "@/components/shell/view-as";
 import { TopClock } from "@/components/shell/top-clock";
 import { signOut } from "@/lib/auth/actions";
+import type { BellNotification } from "@/lib/notifications/count";
 import type { ShellUser } from "@/lib/auth/user";
 import { allNavItems } from "@/components/shell/nav-config";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,11 +39,13 @@ export function Topbar({
   user,
   monthCashCents = 0,
   unreadCount = 0,
+  notifications = [],
   avatarUrl = null,
 }: {
   user: ShellUser | null;
   monthCashCents?: number;
   unreadCount?: number;
+  notifications?: BellNotification[];
   avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
@@ -92,18 +96,7 @@ export function Topbar({
         </span>
         <div className="flex items-center gap-1">
           <ViewAsMenu />
-          <Link
-            href="/notifications"
-            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-            className="hover:bg-accent relative rounded-md p-2 transition-colors"
-          >
-            <Bell className="size-4" />
-            {unreadCount > 0 && (
-              <span className="bg-destructive absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full text-[9px] font-bold text-white tabular-nums">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </Link>
+          <NotificationBell unreadCount={unreadCount} preview={notifications} />
           <ThemeToggle />
           <UserMenu user={user} avatarUrl={avatarUrl} />
         </div>

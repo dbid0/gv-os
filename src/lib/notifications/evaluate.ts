@@ -5,7 +5,6 @@ import { desc } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import {
   clients,
-  integrations,
   notifications,
   offerSettings,
   sheetSyncRuns,
@@ -13,13 +12,7 @@ import {
 } from "@/db/schema/app";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import {
-  bodRule,
-  driftRule,
-  signedDocRule,
-  stalenessRule,
-  syncFailureRule,
-} from "@/lib/notifications/rules";
+import { bodRule, driftRule, signedDocRule } from "@/lib/notifications/rules";
 import { roster } from "@/lib/roster";
 import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
 import { clientLedger } from "@/lib/transactions/ledger";
@@ -35,19 +28,8 @@ export async function evaluateNotifications(): Promise<{
 }> {
   const db = getDb();
   const now = new Date();
-  const [connections, [latestRun], docs, clientRows, settingsRows, { rows: backlog }] =
+  const [[latestRun], docs, clientRows, settingsRows, { rows: backlog }] =
     await Promise.all([
-      db
-        .select({
-          id: integrations.id,
-          provider: integrations.provider,
-          label: integrations.label,
-          clientId: integrations.clientId,
-          lastSyncAt: integrations.lastSyncAt,
-          lastSyncNote: integrations.lastSyncNote,
-          status: integrations.status,
-        })
-        .from(integrations),
       db
         .select({
           id: sheetSyncRuns.id,
@@ -110,10 +92,10 @@ export async function evaluateNotifications(): Promise<{
     ];
   });
 
-  const connected = connections.filter((c) => c.status === "connected");
+  // Sync-failure + staleness alerts are OFF until integrations carry real
+  // traffic (Daniel: the placeholder "Kit sync failing" note is meaningless
+  // noise). Re-enable both — with human-readable copy — once real keys land.
   const candidates = [
-    ...syncFailureRule(connected),
-    ...stalenessRule(connected, now, todayKey),
     ...driftRule(latestRun ?? null),
     ...signedDocRule(docs),
     ...bodRule(bodOffers, now, todayKey),

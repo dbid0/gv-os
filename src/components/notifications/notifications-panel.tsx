@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Check, CheckCheck } from "lucide-react";
+import { ArrowUpRight, Check, CheckCheck } from "lucide-react";
 
 import {
   markAllNotificationsRead,
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill, type StatusTone } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
+import { notificationHref } from "@/lib/notifications/links";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_TONE: Record<string, StatusTone> = {
@@ -27,6 +29,7 @@ export interface NotificationRow {
   title: string;
   body: string | null;
   clientName: string | null;
+  clientSlug: string | null;
   createdAt: string;
   read: boolean;
 }
@@ -93,22 +96,28 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
         <StatusPill tone={SEVERITY_TONE[r.severity] ?? "muted"}>
           {r.severity}
         </StatusPill>
-        <div className="min-w-0 flex-1">
+        <Link
+          href={notificationHref(r.kind, r.clientSlug)}
+          className="group min-w-0 flex-1"
+        >
           <p
             className={cn(
               "flex items-center gap-2 truncate text-sm",
               !r.read && "font-medium",
             )}
           >
-            {r.title}
+            <span className="group-hover:text-brand truncate transition-colors">
+              {r.title}
+            </span>
             {group.length > 1 && (
               <span className="bg-secondary text-muted-foreground rounded-full px-1.5 text-[10px] font-medium">
                 ×{group.length}
               </span>
             )}
+            <ArrowUpRight className="text-faint size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
           </p>
           {r.body && <p className="text-faint truncate text-[11px]">{r.body}</p>}
-        </div>
+        </Link>
         {r.clientName && (
           <span className="text-muted-foreground rounded-full border px-1.5 text-[11px]">
             {r.clientName}
@@ -185,9 +194,9 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
 
       <Panel title="Rules waiting on data">
         <p className="text-faint text-sm">
-          Live now: sync failures, integration staleness, sheet drift, signed
-          agreements, and the daily BOD digest (per-offer alert times, 12:00 CT
-          default). Speed-to-lead breaches arm with Close + bookings data;
+          Live now: sheet drift, signed agreements, and the daily BOD digest (per-offer
+          alert times, 12:00 CT default). Sync-health alerts arm once integrations carry
+          real traffic; speed-to-lead breaches arm with Close + bookings data;
           payment-without-a-sale-form arms with processor events. Each starts firing the
           moment its source connects.
         </p>

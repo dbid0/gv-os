@@ -9,7 +9,10 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { Topbar } from "@/components/shell/topbar";
 import { currentMonthCashCents } from "@/lib/accounting/sheet-sync";
-import { unreadNotificationCount } from "@/lib/notifications/count";
+import {
+  recentNotifications,
+  unreadNotificationCount,
+} from "@/lib/notifications/count";
 import { getPrefs } from "@/lib/prefs";
 import { clientLogos } from "@/lib/clients/logos";
 import { shellUser } from "@/lib/auth/user";
@@ -23,13 +26,15 @@ import { shellUser } from "@/lib/auth/user";
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await shellUser();
-  const [monthCashCents, unreadCount, cookieStore, prefs, logos] = await Promise.all([
-    currentMonthCashCents(),
-    unreadNotificationCount(),
-    cookies(),
-    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
-    clientLogos(),
-  ]);
+  const [monthCashCents, unreadCount, notifications, cookieStore, prefs, logos] =
+    await Promise.all([
+      currentMonthCashCents(),
+      unreadNotificationCount(),
+      recentNotifications(),
+      cookies(),
+      getPrefs(user?.email ?? null, ["avatar", "display-name"]),
+      clientLogos(),
+    ]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
@@ -47,6 +52,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           user={user}
           monthCashCents={monthCashCents}
           unreadCount={unreadCount}
+          notifications={notifications}
           avatarUrl={avatarUrl}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

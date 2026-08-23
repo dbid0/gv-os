@@ -24,6 +24,7 @@ export default async function NotificationsPage() {
       title: notifications.title,
       body: notifications.body,
       clientName: clients.name,
+      clientSlug: clients.slug,
       createdAt: notifications.createdAt,
       readAt: notifications.readAt,
     })
@@ -39,6 +40,7 @@ export default async function NotificationsPage() {
     title: r.title,
     body: r.body,
     clientName: r.clientName,
+    clientSlug: r.clientSlug,
     createdAt: r.createdAt.toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -55,7 +57,7 @@ export default async function NotificationsPage() {
       <PageHeader
         title="Needs"
         highlight="attention."
-        description="Rules run on every sync cycle over everything captured — failures, staleness, money drift, signed agreements — and each alert exists exactly once."
+        description="Rules run on every sync cycle over everything captured — money drift, signed agreements, the daily digest — and each alert exists exactly once. Click any alert to jump to the spot that resolves it."
         status={
           <StatusPill tone={unread > 0 ? "progress" : "good"}>
             {unread > 0 ? `${unread} unread` : "All clear"}
