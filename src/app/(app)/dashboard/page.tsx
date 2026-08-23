@@ -25,6 +25,7 @@ import {
   customBounds,
   homeRangeHeadline,
   homeRangeRows,
+  homeRangeSeries,
   normalizeHomeMode,
   normalizeHomeRange,
   rangeBounds,
@@ -88,6 +89,7 @@ export default async function DashboardPage({
   const bounds =
     custom ?? rangeBounds(range as Exclude<typeof range, "custom">, todayKey);
   const headline = homeRangeHeadline(backlog, mode, bounds);
+  const series = homeRangeSeries(backlog, mode, bounds);
 
   // Sections: only who actually has money in the range, in the current mode.
   const monthRows = homeRangeRows(backlog, mode, bounds);
@@ -129,6 +131,7 @@ export default async function DashboardPage({
         collectedCents={headline.collectedCents}
         revenueCents={headline.revenueCents}
         sections={sections}
+        series={series}
       />
       <DashboardCards
         active={cards}

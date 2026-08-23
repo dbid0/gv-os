@@ -195,6 +195,25 @@ export function homeRangeRows<T extends HomeRow>(
   );
 }
 
+/**
+ * Daily collected buckets across the range, sorted ascending — the series the
+ * dashboard hero chart draws (cumulated client-side into a growth curve).
+ * Only days with income appear; an empty range yields an empty series.
+ */
+export function homeRangeSeries<T extends HomeRow>(
+  rows: T[],
+  mode: HomeMode,
+  bounds: RangeBounds,
+): { day: string; cents: number }[] {
+  const byDay = new Map<string, number>();
+  for (const r of homeRangeRows(rows, mode, bounds)) {
+    byDay.set(r.occurredOn, (byDay.get(r.occurredOn) ?? 0) + r.cashCents);
+  }
+  return [...byDay.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([day, cents]) => ({ day, cents }));
+}
+
 export function homeRangeHeadline(
   rows: HomeRow[],
   mode: HomeMode,
