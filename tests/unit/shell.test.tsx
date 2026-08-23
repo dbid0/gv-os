@@ -130,6 +130,8 @@ describe("EmptyDashboard", () => {
     expect(tile).not.toBeNull();
     // Presence, not visibility: motion renders the entry variant at opacity 0
     // and jsdom never runs the animation to completion.
-    expect(within(tile as HTMLElement).getByText(/accounting/i)).toBeInTheDocument();
+    expect(
+      within(tile as HTMLElement).getByText(/client-layer cash/i),
+    ).toBeInTheDocument();
   });
 });

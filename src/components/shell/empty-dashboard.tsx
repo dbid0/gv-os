@@ -7,19 +7,15 @@ import {
   ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
-  FileText,
   Percent,
   PhoneCall,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
-import { PageHeader } from "@/components/shell/page-header";
 import { Kpi, Metric, Money } from "@/components/ui/metric";
-import { Panel, Row, Rows } from "@/components/ui/panel";
-import { Segmented } from "@/components/ui/segmented";
-import { StatusDot, StatusPill } from "@/components/ui/status";
+import { Panel } from "@/components/ui/panel";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { Cents } from "@/lib/money";
 import { roster } from "@/lib/roster";
@@ -30,8 +26,6 @@ export interface DashboardStats {
   deals: number;
   closeRatePct: number | null;
   revenueGoalCents: number;
-  /** Captured funnel applications, last 30 days. Undefined = still pending. */
-  applications30d?: number;
   compliance: {
     submitted: number;
     total: number;
@@ -41,11 +35,9 @@ export interface DashboardStats {
 }
 
 /**
- * The dashboard, before there is anything to put on it.
- *
- * Deliberately NOT filled with invented metrics. Fake numbers on a money screen
- * are how a demo becomes a belief. Every figure shows an em dash and names the
- * module it is waiting on, so the empty state doubles as the build checklist.
+ * The admin sales summary under the headline. Honest by design: a figure
+ * with no real data behind it shows a dash and names what it waits on —
+ * calls booked and reps light up as bookings and Close connect.
  */
 
 const headline = [
@@ -56,28 +48,13 @@ const headline = [
 ];
 
 const tiles = [
-  { label: "Applications", waiting: "Sales", icon: FileText },
-  { label: "Calls booked", waiting: "Sales", icon: PhoneCall },
-  { label: "Active reps", waiting: "Operations", icon: Users },
-  { label: "Rev share owed", waiting: "Accounting", icon: CircleDollarSign },
-];
-
-const foundation = [
-  { label: "Database", detail: "Postgres, migrated, prod and staging separated" },
-  { label: "Money math", detail: "Integer cents, penny-exact splits, 100% covered" },
-  { label: "Pipeline", detail: "Typecheck, lint, tests, and build on every commit" },
-  { label: "Deploys", detail: "Production on main, a preview per pull request" },
-];
-
-const next = [
-  { label: "Sales", detail: "VSL to application to setter to closer" },
-  { label: "Accounting", detail: "Append-only ledger, reconciled to the sheet" },
-  { label: "Operations", detail: "Tasks, EODs, and the calendar" },
+  { label: "Calls booked", waiting: "Bookings connect", icon: PhoneCall },
+  { label: "Active reps", waiting: "Close connects", icon: Users },
+  { label: "Rev share owed", waiting: "Client-layer cash", icon: CircleDollarSign },
 ];
 
 export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
   const reduceMotion = useReducedMotion();
-  const [view, setView] = useState("sales");
 
   const kpiValue = (label: string): ReactNode => {
     if (!stats) return undefined;
@@ -99,36 +76,12 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
       variants={stagger()}
       className="mx-auto w-full max-w-7xl space-y-6"
     >
-      <PageHeader
-        title="The foundation is"
-        highlight="live."
-        description={
-          stats
-            ? "Live across every active client — cash, deals, and EOD compliance, reconciled to the ledger."
-            : "Modules get designed before they get built, so nothing here shows a number until the data behind it is real."
-        }
-        status={<StatusPill tone="live">All systems green</StatusPill>}
-      />
-
-      <motion.div variants={fadeUp}>
-        <Segmented
-          ariaLabel="Dashboard view"
-          value={view}
-          onChange={setView}
-          segments={[
-            { value: "sales", label: "Sales", icon: BarChart3 },
-            { value: "money", label: "Money", icon: CircleDollarSign },
-            { value: "team", label: "Team", icon: Users },
-          ]}
-        />
-      </motion.div>
-
-      {/* Headline figures, grouped in one panel so they read as a single
-          summary rather than four unrelated widgets. */}
       <motion.div variants={fadeUp}>
         <Panel
-          title="All clients"
-          aside={<span className="text-faint text-xs">3 active</span>}
+          title="Sales engine"
+          aside={
+            <span className="text-faint text-xs">{roster.length} active clients</span>
+          }
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {headline.map((k) => (
@@ -143,7 +96,7 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
             ))}
           </div>
 
-          {stats && (
+          {stats && stats.compliance.total > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-4 text-xs">
               <span className="text-muted-foreground inline-flex items-center gap-1.5">
                 <ClipboardCheck className="text-brand size-3.5" /> EOD compliance
@@ -190,7 +143,7 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
             {roster.map((client) => (
               <Link
                 key={client.slug}
-                href={`/clients/${client.slug}`}
+                href={`/w/${client.slug}`}
                 className="group border-border-strong bg-secondary/50 hover:border-brand/40 hover:bg-brand-soft/40 text-muted-foreground hover:text-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors"
               >
                 <span
@@ -208,76 +161,18 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
 
       <motion.div
         variants={stagger()}
-        className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4"
+        className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-3"
       >
-        {tiles.map((tile) => {
-          const live =
-            tile.label === "Applications" && stats?.applications30d !== undefined;
-          return (
-            <motion.div
-              key={tile.label}
-              variants={fadeUp}
-              className="bg-card hover-lift p-5"
-            >
-              {live ? (
-                <Metric
-                  label="Applications · 30d"
-                  value={String(stats.applications30d)}
-                  icon={tile.icon}
-                />
-              ) : (
-                <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
-              )}
-            </motion.div>
-          );
-        })}
+        {tiles.map((tile) => (
+          <motion.div
+            key={tile.label}
+            variants={fadeUp}
+            className="bg-card hover-lift p-5"
+          >
+            <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
+          </motion.div>
+        ))}
       </motion.div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <motion.div variants={fadeUp}>
-          <Panel
-            title="What is already standing"
-            aside={<StatusPill tone="live">Verified</StatusPill>}
-            padded={false}
-          >
-            <Rows>
-              {foundation.map((item) => (
-                <Row key={item.label}>
-                  <StatusDot tone="live" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm">{item.label}</span>
-                    <span className="text-muted-foreground block text-xs">
-                      {item.detail}
-                    </span>
-                  </span>
-                </Row>
-              ))}
-            </Rows>
-          </Panel>
-        </motion.div>
-
-        <motion.div variants={fadeUp}>
-          <Panel
-            title="What comes next"
-            aside={<StatusPill tone="pending">Not started</StatusPill>}
-            padded={false}
-          >
-            <Rows>
-              {next.map((item) => (
-                <Row key={item.label}>
-                  <StatusDot tone="muted" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm">{item.label}</span>
-                    <span className="text-muted-foreground block text-xs">
-                      {item.detail}
-                    </span>
-                  </span>
-                </Row>
-              ))}
-            </Rows>
-          </Panel>
-        </motion.div>
-      </div>
     </motion.div>
   );
 }
