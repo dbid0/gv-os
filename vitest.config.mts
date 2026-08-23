@@ -161,6 +161,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Quota pacing decides if a rep or team reads red or green against
+        // target. Pure math, held to the same bar as the rest of Sales logic.
+        "src/lib/sales/quota-pacing.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },

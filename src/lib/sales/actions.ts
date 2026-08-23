@@ -11,6 +11,7 @@ import {
   commissionSplits,
   deals,
   eodTemplates,
+  quotas,
   reps,
 } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
@@ -24,6 +25,7 @@ import {
   getCommissionRollup,
   getPaidRepIds,
 } from "@/lib/sales/queries";
+import { QUOTA_METRIC_KEYS, quotaMetric } from "@/lib/sales/quota-pacing";
 import { percentToBps } from "@/lib/splits";
 
 /**
@@ -522,6 +524,80 @@ export async function updateTeamDefaults(raw: z.input<typeof teamDefaultsInput>)
   revalidatePath("/sales/commissions");
   revalidatePath("/sales");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------- Quotas
+
+const quotaInput = z.object({
+  scope: z.enum(["rep", "team"]),
+  clientId: z.string().uuid(),
+  repId: z.string().uuid().optional(),
+  metric: z.string().refine((k) => QUOTA_METRIC_KEYS.includes(k), "Unknown metric."),
+  /** Dollars for a money metric, a whole count otherwise — parsed by metric. */
+  target: z.string().min(1, "A quota needs a target."),
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Period must be a month (YYYY-MM)."),
+  notes: z.string().optional(),
+});
+
+/**
+ * Create a quota: a monthly target for one rep or one team, on one metric.
+ * A target is stored in the same units the metric measures — integer cents for
+ * money, a whole count otherwise — parsed at the boundary. A quota is pure
+ * configuration: it never writes a money row, it only gives the pacing engine a
+ * line to measure the real numbers against.
+ */
+export async function createQuota(raw: z.input<typeof quotaInput>) {
+  await requireUser();
+  const input = quotaInput.parse(raw);
+
+  if (input.scope === "rep" && !input.repId) {
+    throw new Error("Pick a rep for a rep quota.");
+  }
+
+  const metric = quotaMetric(input.metric);
+  if (!metric) throw new Error("Unknown metric.");
+
+  let targetAmount: number;
+  if (metric.unit === "money") {
+    targetAmount = fromDollars(input.target);
+  } else {
+    const n = Number(input.target.replaceAll(",", "").trim());
+    if (!Number.isInteger(n) || n < 0) {
+      throw new Error("Target must be a whole, non-negative number.");
+    }
+    targetAmount = n;
+  }
+
+  const db = getDb();
+
+  // A rep quota records the rep's own team as the authoritative client, so the
+  // team can never be picked inconsistently with the rep.
+  let clientId = input.clientId;
+  if (input.scope === "rep" && input.repId) {
+    const [rep] = await db
+      .select({ clientId: reps.clientId })
+      .from(reps)
+      .where(eq(reps.id, input.repId))
+      .limit(1);
+    if (!rep) throw new Error("Unknown rep.");
+    clientId = rep.clientId;
+  }
+
+  const [row] = await db
+    .insert(quotas)
+    .values({
+      scope: input.scope,
+      repId: input.scope === "rep" ? input.repId! : null,
+      clientId,
+      metric: input.metric,
+      targetAmount,
+      period: input.period,
+      notes: input.notes?.trim() || null,
+    })
+    .returning();
+
+  revalidatePath("/sales/quotas");
+  return { id: row.id };
 }
 
 /** Activate or deactivate a rep. Inactive reps drop off leaderboards and payouts. */

@@ -354,6 +354,47 @@ export const eodTemplates = appSchema.table(
 );
 
 /**
+ * A quota: a monthly target for one rep OR one team, on one metric.
+ *
+ * Quotas are CONFIGURATION — a goal to pace against, exactly like RepVision's
+ * per-rep and per-team quota assignment. They never hold money and never write a
+ * ledger event. The actual-so-far is DERIVED at read time from data that already
+ * exists (collected cash in the ledger, closed deals, EOD activity), so a quota
+ * can never drift from the numbers it is measured against.
+ *
+ * `targetAmount` is integer CENTS for a money metric (cash collected) and a
+ * whole count for everything else (deals, dials, shows). Never a float.
+ */
+export const quotas = appSchema.table(
+  "quotas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** rep | team — who the quota is assigned to. */
+    scope: text("scope").notNull(),
+    /** Set when scope = rep. Null for a team quota. */
+    repId: uuid("rep_id").references(() => reps.id),
+    /** The team (client brand). Always set — a rep quota also records the team. */
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** A key from the quota metric vocabulary: cash_collected · deals · dials … */
+    metric: text("metric").notNull(),
+    /** The target: integer CENTS for money, a whole count otherwise. */
+    targetAmount: bigint("target_amount", { mode: "number" }).notNull(),
+    /** The month this quota covers, as YYYY-MM. */
+    period: text("period").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("quotas_client_idx").on(table.clientId),
+    index("quotas_rep_idx").on(table.repId),
+    index("quotas_period_idx").on(table.period),
+  ],
+);
+
+/**
  * Org-level settings, as a single JSON row.
  *
  * A key/value blob rather than a wide column list, so a new preference (a goal,
@@ -787,6 +828,11 @@ export const activityReportsRelations = relations(activityReports, ({ one }) => 
     fields: [activityReports.clientId],
     references: [clients.id],
   }),
+}));
+
+export const quotasRelations = relations(quotas, ({ one }) => ({
+  team: one(clients, { fields: [quotas.clientId], references: [clients.id] }),
+  rep: one(reps, { fields: [quotas.repId], references: [reps.id] }),
 }));
 
 export const teamMembersRelations = relations(teamMembers, ({ one, many }) => ({
