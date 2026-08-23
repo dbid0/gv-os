@@ -19,6 +19,7 @@ import { Panel } from "@/components/ui/panel";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { Cents } from "@/lib/money";
 import { roster } from "@/lib/roster";
+import { useEntranceOnce } from "@/lib/client-state";
 
 export interface DashboardStats {
   cash: Cents;
@@ -55,6 +56,7 @@ const tiles = [
 
 export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
 
   const kpiValue = (label: string): ReactNode => {
     if (!stats) return undefined;
@@ -71,7 +73,7 @@ export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
 
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={stagger()}
       className="mx-auto w-full max-w-7xl space-y-6"
@@ -164,9 +166,10 @@ export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
 
 export function WatchTiles() {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={stagger()}
       className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-3"

@@ -6,6 +6,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { TableEmpty } from "@/components/ui/table";
 import { fadeUp } from "@/lib/motion";
+import { useEntranceOnce } from "@/lib/client-state";
 
 /**
  * A view that will be a table, before it has rows.
@@ -29,10 +30,11 @@ export function SectionScaffold({
   emptyDetail: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
 
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={fadeUp}
     >

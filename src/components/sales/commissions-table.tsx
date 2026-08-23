@@ -15,6 +15,7 @@ import { type Cents } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
 import { markAllPaid, markRepPaid } from "@/lib/sales/actions";
 import { cn } from "@/lib/utils";
+import { useEntranceOnce } from "@/lib/client-state";
 
 /** One rep's owed line, flattened and serialisable for the client. */
 export interface CommissionLine {
@@ -100,6 +101,7 @@ export function CommissionsTable({
   basis: "cash_collected" | "deal_revenue";
 }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
   const paidCount = lines.filter((l) => l.paid).length;
 
   const basisTab = (key: "cash_collected" | "deal_revenue", label: string) => (
@@ -179,7 +181,7 @@ export function CommissionsTable({
 
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={fadeUp}
       className="space-y-6"
