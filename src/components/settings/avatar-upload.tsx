@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
 import { Camera } from "lucide-react";
 
@@ -47,7 +46,6 @@ export function AvatarUpload({
   avatarUrl: string | null;
   initial: string;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +83,6 @@ export function AvatarUpload({
               const dataUrl = await toSquareDataUrl(file);
               await saveAvatar(dataUrl);
               toast({ tone: "success", title: "Profile picture updated" });
-              router.refresh();
             } catch (err) {
               toast({
                 tone: "error",

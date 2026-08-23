@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
 
 import { saveWorkspaceLogo } from "@/app/w/[slug]/logo-actions";
@@ -59,7 +58,6 @@ export function WorkspaceLogo({
   accent: string;
   editable: boolean;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -112,7 +110,6 @@ export function WorkspaceLogo({
               const dataUrl = await toLogoDataUrl(file);
               await saveWorkspaceLogo(slug, dataUrl);
               toast({ tone: "success", title: "Workspace logo updated" });
-              router.refresh();
             } catch (err) {
               toast({
                 tone: "error",

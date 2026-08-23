@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ExternalLink, FolderOpen } from "lucide-react";
 
@@ -29,7 +28,6 @@ function FolderForm({
   initial: string;
   onDone?: () => void;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [value, setValue] = useState(initial);
   const [pending, start] = useTransition();
@@ -44,7 +42,6 @@ function FolderForm({
             await saveDriveFolder(slug, value);
             toast({ tone: "success", title: "Drive folder linked" });
             onDone?.();
-            router.refresh();
           } catch (err) {
             toast({
               tone: "error",

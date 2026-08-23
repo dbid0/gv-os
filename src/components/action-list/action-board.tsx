@@ -51,7 +51,13 @@ const fmtDate = (d: string | null) =>
       })
     : null;
 
-function Card({ item }: { item: ActionItemRow }) {
+function Card({
+  item,
+  onStatus,
+}: {
+  item: ActionItemRow;
+  onStatus: (id: string, status: string) => void;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
@@ -110,8 +116,8 @@ function Card({ item }: { item: ActionItemRow }) {
         {COLUMNS.map((c) => (
           <button
             key={c.key}
-            disabled={pending || item.status === c.key}
-            onClick={() => act(() => setActionStatus(item.id, c.key))}
+            disabled={item.status === c.key}
+            onClick={() => onStatus(item.id, c.key)}
             className={cn(
               "flex-1 rounded-md border px-2 py-1 text-[11px] transition-colors",
               item.status === c.key
@@ -145,10 +151,37 @@ export function ActionBoard({
   const [assignee, setAssignee] = useState("");
   const [scope, setScope] = useState("");
 
+  // Optimistic status (P1-5): the card jumps columns on click; a failed
+  // save snaps it back with a toast.
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
   const forCadence = useMemo(
-    () => items.filter((i) => i.cadence === cadence),
-    [items, cadence],
+    () =>
+      items
+        .filter((i) => i.cadence === cadence)
+        .map((i) => (overrides[i.id] ? { ...i, status: overrides[i.id] } : i)),
+    [items, cadence, overrides],
   );
+
+  const onStatus = (id: string, status: string) => {
+    const prev = items.find((i) => i.id === id)?.status;
+    setOverrides((o) => ({ ...o, [id]: status }));
+    start(async () => {
+      try {
+        await setActionStatus(
+          id,
+          status as "not_started" | "in_progress" | "completed",
+        );
+        router.refresh();
+      } catch (e) {
+        setOverrides((o) => (prev ? { ...o, [id]: prev } : o));
+        toast({
+          tone: "error",
+          title: "Couldn't update the task",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
+    });
+  };
 
   function add() {
     if (title.trim() === "") return;
@@ -272,7 +305,9 @@ export function ActionBoard({
                     Nothing here
                   </p>
                 ) : (
-                  cards.map((item) => <Card key={item.id} item={item} />)
+                  cards.map((item) => (
+                    <Card key={item.id} item={item} onStatus={onStatus} />
+                  ))
                 )}
               </div>
             </div>
