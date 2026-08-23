@@ -1,7 +1,6 @@
 /** The admin dashboard card catalog (v2, Whop-style editable dashboard). */
 export const DASHBOARD_CARD_IDS = [
   "sales-engine",
-  "watch-tiles",
   "ar-owed",
   "pending-payouts",
   "kit-subscribers",
@@ -16,10 +15,6 @@ export const DASHBOARD_CARD_META: Record<
     title: "Sales engine",
     detail: "Cash, revenue, deals, close rate, EOD compliance",
   },
-  "watch-tiles": {
-    title: "Watch tiles",
-    detail: "Calls booked · active reps · rev share owed",
-  },
   "ar-owed": { title: "Owed to GV", detail: "Open receivables with aging" },
   "pending-payouts": {
     title: "Pending payouts",
@@ -31,10 +26,7 @@ export const DASHBOARD_CARD_META: Record<
   },
 };
 
-export const DEFAULT_DASHBOARD_CARDS: DashboardCardId[] = [
-  "sales-engine",
-  "watch-tiles",
-];
+export const DEFAULT_DASHBOARD_CARDS: DashboardCardId[] = ["sales-engine"];
 
 export function normalizeDashboardCards(value: unknown): DashboardCardId[] {
   if (!Array.isArray(value)) return DEFAULT_DASHBOARD_CARDS;

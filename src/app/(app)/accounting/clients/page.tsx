@@ -33,7 +33,6 @@ export default async function ClientLedgerPage() {
       <PageHeader
         title="Client"
         highlight="ledger."
-        description="Revenue and cash per client, read straight off the transactions backlog. Sheet rows attribute by the tested name aliases; processor rows carry their client directly. Rep commissions live in each offer's sales module, not here."
         status={
           <StatusPill tone={attributed.length ? "live" : "muted"}>
             {attributed.length} clients with money

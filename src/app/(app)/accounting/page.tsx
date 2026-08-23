@@ -80,7 +80,6 @@ export default async function AccountingPage() {
       <PageHeader
         title="Agency"
         highlight="ledger."
-        description="GV's own book, derived live from the transactions backlog — nothing stored, nothing entered twice. The chain shows what the agency actually keeps."
         status={
           <StatusPill tone={rows.length ? "live" : "muted"}>
             {rows.length} transactions

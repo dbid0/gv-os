@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import { DashboardCards } from "@/components/shell/dashboard-cards";
-import { SalesEngineCard, WatchTiles } from "@/components/shell/empty-dashboard";
+import { SalesEngineCard } from "@/components/shell/empty-dashboard";
 import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
@@ -158,7 +158,6 @@ export default async function DashboardPage({
               }}
             />
           ),
-          "watch-tiles": <WatchTiles />,
           "ar-owed": (
             <Panel title="Owed to GV">
               <div className="flex items-baseline gap-3">
