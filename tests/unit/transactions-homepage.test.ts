@@ -102,6 +102,36 @@ describe("rangeBounds", () => {
       to: "2025-12-31",
     });
   });
+
+  it("computes the RepVision-parity presets", () => {
+    // 2026-08-26 is a Wednesday; the week runs back to Sunday the 23rd.
+    expect(rangeBounds("this-week", "2026-08-26")).toMatchObject({
+      from: "2026-08-23",
+      to: "2026-08-26",
+      label: "This week",
+    });
+    // Sunday itself is a one-day week (the day the week began).
+    expect(rangeBounds("this-week", "2026-08-23")).toMatchObject({
+      from: "2026-08-23",
+      to: "2026-08-23",
+    });
+    // From Q3, last quarter is all of Q2.
+    expect(rangeBounds("last-quarter", TODAY)).toMatchObject({
+      from: "2026-04-01",
+      to: "2026-06-30",
+      label: "Last quarter",
+    });
+    // From Q1, last quarter is Q4 of the prior year.
+    expect(rangeBounds("last-quarter", "2026-02-10")).toMatchObject({
+      from: "2025-10-01",
+      to: "2025-12-31",
+    });
+    expect(rangeBounds("last-year", TODAY)).toMatchObject({
+      from: "2025-01-01",
+      to: "2025-12-31",
+      label: "Last year",
+    });
+  });
 });
 
 describe("homeRangeRows + homeRangeHeadline", () => {
