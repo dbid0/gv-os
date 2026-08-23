@@ -11,9 +11,14 @@ export const dynamic = "force-dynamic";
  * Trigger the finance-sheet mirror sync.
  *
  * Two ways in: a signed-in allowlisted user (the button on the reconciliation
- * screen), or `Authorization: Bearer <SYNC_SECRET>` for the scheduled drift
- * job. Everything else is 401. The response is a summary only — no client
- * names, no dollar figures.
+ * screen), or `Authorization: Bearer <SYNC_SECRET>` for the scheduled job.
+ * Everything else is 401. The response is a summary only — no client names,
+ * no dollar figures.
+ *
+ * NOTE: the daily cron is intentionally OFF (removed from vercel.json) — the
+ * app runs on a clean money slate while the software is built out, and the
+ * numbers get re-synced deliberately via the in-app Sync button. Re-add the
+ * cron to vercel.json to resume automatic mirroring.
  */
 async function authorized(req: NextRequest): Promise<boolean> {
   const secret = process.env.SYNC_SECRET;
