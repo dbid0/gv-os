@@ -64,8 +64,26 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const preview = previewRole(request);
-  if (preview && !isPublic(pathname) && !canAccessRoute(preview, pathname)) {
-    return NextResponse.redirect(new URL(ROLE_HOME, request.url));
+  if (preview === "client" && !isPublic(pathname)) {
+    // A client sees exactly ONE workspace. Anything else — including the
+    // admin dashboard — lands on their own front door.
+    const slug = request.cookies.get("gv-dev-client")?.value ?? "";
+    const home = slug ? `/w/${slug}` : ROLE_HOME;
+    const allowed =
+      (slug && (pathname === `/w/${slug}` || pathname.startsWith(`/w/${slug}/`))) ||
+      pathname === "/profile" ||
+      pathname.startsWith("/profile/");
+    if (!allowed && pathname !== home) {
+      return NextResponse.redirect(new URL(home, request.url));
+    }
+  } else if (preview && !isPublic(pathname) && !canAccessRoute(preview, pathname)) {
+    const home =
+      preview === "sales_manager" || preview === "sales_rep"
+        ? "/home/manager"
+        : preview === "team_member"
+          ? "/home/member"
+          : ROLE_HOME;
+    return NextResponse.redirect(new URL(home, request.url));
   }
 
   // Build phase: the app is internal and unpublished, so the whole thing is

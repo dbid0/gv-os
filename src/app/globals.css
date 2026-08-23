@@ -446,3 +446,18 @@
   top: -4px;
   animation: gv-confetti-fall 0.9s ease-in forwards;
 }
+
+/* View-as banner entrance. */
+@keyframes gv-banner-rise {
+  from {
+    transform: translate(-50%, 16px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+.gv-banner-in {
+  animation: gv-banner-rise 0.25s ease-out;
+}

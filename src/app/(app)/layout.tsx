@@ -27,10 +27,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     cookies(),
   ]);
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
+  const previewIsRole = (v: string | null): v is import("@/lib/auth/roles").Role =>
+    v === "sales_manager" || v === "sales_rep" || v === "team_member" || v === "client";
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      <Sidebar user={user} />
+      <Sidebar
+        user={user}
+        previewRole={previewIsRole(previewRole) ? previewRole : null}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar user={user} monthCashCents={monthCashCents} unreadCount={unreadCount} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

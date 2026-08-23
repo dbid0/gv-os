@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { TopClock } from "@/components/shell/top-clock";
+import { ViewAsBanner } from "@/components/shell/view-as";
 import { WorkspaceNav } from "@/components/workspace/workspace-nav";
 import { clientBySlug, clientInitial } from "@/lib/roster";
 
@@ -27,6 +29,9 @@ export default async function WorkspaceLayout({
   const { slug } = await params;
   const client = clientBySlug(slug);
   if (!client) notFound();
+  const cookieStore = await cookies();
+  const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
+  const clientPreview = previewRole === "client";
 
   const skin = {
     "--brand": client.accent,
@@ -36,12 +41,14 @@ export default async function WorkspaceLayout({
   return (
     <div style={skin} className="flex h-dvh flex-col overflow-hidden">
       <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
-        <Link
-          href="/dashboard"
-          className="text-muted-foreground hover:text-foreground flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors"
-        >
-          <ArrowLeft className="size-3.5" /> Admin
-        </Link>
+        {!clientPreview && (
+          <Link
+            href="/dashboard"
+            className="text-muted-foreground hover:text-foreground flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors"
+          >
+            <ArrowLeft className="size-3.5" /> Admin
+          </Link>
+        )}
         <span
           className="grid size-8 shrink-0 place-items-center rounded-md border text-xs font-bold"
           style={{
@@ -67,6 +74,7 @@ export default async function WorkspaceLayout({
       </div>
       <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       <TabKeepWarm />
+      {previewRole && <ViewAsBanner role={previewRole} clientName={client.name} />}
     </div>
   );
 }

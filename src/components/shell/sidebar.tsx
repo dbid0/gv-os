@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { navigation, type NavItem } from "@/components/shell/nav-config";
+import { canAccessRoute, type Role } from "@/lib/auth/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,8 +33,25 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "gvos.sidebar.collapsed";
 
-export function Sidebar({ user }: { user: ShellUser | null }) {
+export function Sidebar({
+  user,
+  previewRole = null,
+}: {
+  user: ShellUser | null;
+  previewRole?: Role | null;
+}) {
   const pathname = usePathname();
+  // Preview shells (v2 §6): a role only sees nav it can actually open —
+  // no dead links that bounce off the middleware.
+  const visibleNavigation =
+    previewRole && previewRole !== "admin"
+      ? navigation
+          .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => canAccessRoute(previewRole, item.href)),
+          }))
+          .filter((group) => group.items.length > 0)
+      : navigation;
   const activeClient =
     roster.find((c) => pathname.startsWith(`/clients/${c.slug}`)) ?? null;
   const reduceMotion = useReducedMotion();
@@ -149,7 +167,7 @@ export function Sidebar({ user }: { user: ShellUser | null }) {
       )}
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-2">
-        {navigation.map((group) => (
+        {visibleNavigation.map((group) => (
           <div key={group.label}>
             <AnimatePresence initial={false}>
               {!collapsed && (
