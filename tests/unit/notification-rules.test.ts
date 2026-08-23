@@ -109,3 +109,20 @@ describe("bodRule", () => {
     expect(a).toBe(b);
   });
 });
+
+import { notificationHref } from "@/lib/notifications/links";
+
+describe("notificationHref", () => {
+  it("routes each kind to the spot that resolves it", () => {
+    expect(notificationHref("sync_failure", null)).toBe("/settings/integrations");
+    expect(notificationHref("integration_stale", "brady")).toBe(
+      "/settings/integrations",
+    );
+    expect(notificationHref("sheet_drift", null)).toBe("/accounting");
+    expect(notificationHref("agreement_signed", "brady")).toBe("/w/brady");
+    expect(notificationHref("agreement_signed", null)).toBe("/clients");
+    expect(notificationHref("bod_digest", "the-grid")).toBe("/w/the-grid");
+    expect(notificationHref("bod_digest", null)).toBe("/dashboard");
+    expect(notificationHref("unknown_kind", null)).toBe("/notifications");
+  });
+});
