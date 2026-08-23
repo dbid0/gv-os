@@ -65,6 +65,10 @@ export const HOME_RANGES = [
   "month",
   "qtd",
   "ytd",
+  // RepVision-parity presets.
+  "this-week",
+  "last-quarter",
+  "last-year",
   // Legacy keys kept valid for saved URLs.
   "30d",
   "last-month",
@@ -81,6 +85,19 @@ function shiftDayKey(key: string, byDays: number): string {
   const [y, m, d] = key.split("-").map(Number);
   const t = new Date(Date.UTC(y, m - 1, d, 12) + byDays * 86_400_000);
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(t.getUTCDate()).padStart(2, "0")}`;
+}
+
+/** Day of week for a day key, 0 = Sunday (matches the calendar grid). */
+function weekdayOf(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+}
+
+/** First day (yyyy-mm-01) of the quarter containing the given day key. */
+function quarterStart(key: string): string {
+  const month = Number(key.slice(5, 7));
+  const startMonth = String(Math.floor((month - 1) / 3) * 3 + 1).padStart(2, "0");
+  return `${key.slice(0, 4)}-${startMonth}-01`;
 }
 
 export interface RangeBounds {
@@ -117,6 +134,24 @@ export function rangeBounds(range: HomeRange, todayKey: string): RangeBounds {
         to: todayKey,
         label: "Quarter to date",
       };
+    }
+    case "this-week":
+      return {
+        from: shiftDayKey(todayKey, -weekdayOf(todayKey)),
+        to: todayKey,
+        label: "This week",
+      };
+    case "last-quarter": {
+      const lastQEnd = shiftDayKey(quarterStart(todayKey), -1);
+      return {
+        from: quarterStart(lastQEnd),
+        to: lastQEnd,
+        label: "Last quarter",
+      };
+    }
+    case "last-year": {
+      const y = Number(todayKey.slice(0, 4)) - 1;
+      return { from: `${y}-01-01`, to: `${y}-12-31`, label: "Last year" };
     }
     case "30d":
       return { from: shiftDayKey(todayKey, -29), to: todayKey, label: "Last 30 days" };
