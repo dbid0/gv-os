@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { count, eq, ne } from "drizzle-orm";
+import { asc, ne } from "drizzle-orm";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
-import { actionItems, teamMembers } from "@/db/schema/app";
+import { teamMembers } from "@/db/schema/app";
+import { roleLabel } from "@/lib/team-roles";
 
 export const metadata = { title: "Team Home - GV OS" };
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 /**
  * The Team Member home (v2 §6): your board, your day — no accounting.
  * Member identity binds when team logins exist; until then this is the
- * doorway to each member's own board.
+ * doorway to each member's own profile.
  */
 export default async function MemberHomePage() {
   const db = getDb();
@@ -21,12 +22,10 @@ export default async function MemberHomePage() {
       id: teamMembers.id,
       name: teamMembers.name,
       role: teamMembers.role,
-      open: count(actionItems.id),
     })
     .from(teamMembers)
-    .leftJoin(actionItems, eq(actionItems.assigneeId, teamMembers.id))
     .where(ne(teamMembers.status, "inactive"))
-    .groupBy(teamMembers.id, teamMembers.name, teamMembers.role);
+    .orderBy(asc(teamMembers.name));
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -38,7 +37,7 @@ export default async function MemberHomePage() {
       {members.length === 0 ? (
         <Panel title="No roster yet">
           <p className="text-faint py-8 text-center text-sm">
-            The roster lives under Team — once members are added, each gets a board
+            The roster lives under Team — once members are added, each gets a profile
             here.
           </p>
         </Panel>
@@ -51,9 +50,7 @@ export default async function MemberHomePage() {
               className="card-grad hover-lift hover:border-brand/40 rounded-lg border p-4"
             >
               <p className="text-sm font-medium">{m.name}</p>
-              <p className="text-muted-foreground text-xs">
-                {m.role} · {m.open} open {m.open === 1 ? "action" : "actions"}
-              </p>
+              <p className="text-muted-foreground text-xs">{roleLabel(m.role)}</p>
             </Link>
           ))}
         </div>

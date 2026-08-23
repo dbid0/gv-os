@@ -28,7 +28,6 @@ describe("canAccessRoute", () => {
     expect(canAccessRoute("sales_manager", "/notifications")).toBe(true);
     expect(canAccessRoute("sales_rep", "/sales/eod/submit")).toBe(true);
     expect(canAccessRoute("sales_rep", "/team")).toBe(false);
-    expect(canAccessRoute("team_member", "/action-list")).toBe(true);
     expect(canAccessRoute("team_member", "/team/some-member-id")).toBe(true);
     expect(canAccessRoute("team_member", "/sales")).toBe(false);
     // The admin dashboard is the ADMIN home — team roles have their own.

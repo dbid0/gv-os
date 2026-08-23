@@ -5,7 +5,6 @@ export const DASHBOARD_CARD_IDS = [
   "ar-owed",
   "pending-payouts",
   "kit-subscribers",
-  "open-actions",
 ] as const;
 export type DashboardCardId = (typeof DASHBOARD_CARD_IDS)[number];
 
@@ -30,7 +29,6 @@ export const DASHBOARD_CARD_META: Record<
     title: "Email lists",
     detail: "Total Kit subscribers across clients",
   },
-  "open-actions": { title: "Open actions", detail: "Team action list count" },
 };
 
 export const DEFAULT_DASHBOARD_CARDS: DashboardCardId[] = [
