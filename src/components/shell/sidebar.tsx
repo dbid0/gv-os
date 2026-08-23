@@ -36,9 +36,11 @@ const STORAGE_KEY = "gvos.sidebar.collapsed";
 export function Sidebar({
   user,
   previewRole = null,
+  logos = {},
 }: {
   user: ShellUser | null;
   previewRole?: Role | null;
+  logos?: Record<string, string>;
 }) {
   const pathname = usePathname();
   // Preview shells (v2 §6): a role only sees nav it can actually open —
@@ -147,16 +149,25 @@ export function Sidebar({
                   render={<Link href={`/w/${client.slug}`} />}
                   className="gap-2"
                 >
-                  <span
-                    className="grid size-6 place-items-center rounded-md border text-[10px] font-bold"
-                    style={{
-                      color: client.accent,
-                      borderColor: `${client.accent}55`,
-                      background: `${client.accent}14`,
-                    }}
-                  >
-                    {clientInitial(client.name)}
-                  </span>
+                  {logos[client.slug] ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- data URL
+                    <img
+                      src={logos[client.slug]}
+                      alt=""
+                      className="size-6 shrink-0 rounded-md border object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="grid size-6 place-items-center rounded-md border text-[10px] font-bold"
+                      style={{
+                        color: client.accent,
+                        borderColor: `${client.accent}55`,
+                        background: `${client.accent}14`,
+                      }}
+                    >
+                      {clientInitial(client.name)}
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1 truncate">{client.name}</span>
                   <span className="text-faint text-[10px]">{client.owner}</span>
                 </DropdownMenuItem>
