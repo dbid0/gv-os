@@ -109,3 +109,43 @@ export function signedDocRule(docs: SignedDocState[]): Candidate[] {
     dedupeKey: `signed:${d.externalId}`,
   }));
 }
+
+export interface BodOfferState {
+  clientId: string;
+  slug: string;
+  name: string;
+  /** HH:MM 24h in the offer's timezone. */
+  bodAlertTime: string;
+  timezone: string;
+  mtdCashCents: number;
+}
+
+/**
+ * The beginning-of-day check-in (v2 §2.9, default 12:00 CT). Fires once per
+ * offer per day, any evaluation at or after the alert time; the dedupe key
+ * carries the day so replays are free.
+ */
+export function bodRule(
+  offers: BodOfferState[],
+  now: Date,
+  todayKey: string,
+): Candidate[] {
+  return offers
+    .filter((o) => {
+      const local = new Intl.DateTimeFormat("en-US", {
+        hourCycle: "h23",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: o.timezone,
+      }).format(now);
+      return local >= o.bodAlertTime;
+    })
+    .map((o) => ({
+      kind: "bod_digest",
+      severity: "info" as const,
+      title: `BOD — ${o.name}: $${Math.round(o.mtdCashCents / 100).toLocaleString("en-US")} month to date`,
+      body: "Start-of-day check-in: review overnight applications, bookings, and yesterday's EODs.",
+      clientId: o.clientId,
+      dedupeKey: `bod:${o.slug}:${todayKey}`,
+    }));
+}

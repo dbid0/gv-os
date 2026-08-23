@@ -4,18 +4,26 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
+  clients,
   integrations,
   notifications,
+  offerSettings,
   sheetSyncRuns,
   signedDocs,
 } from "@/db/schema/app";
 import { dayKeyCT } from "@/lib/charts";
+import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import {
+  bodRule,
   driftRule,
   signedDocRule,
   stalenessRule,
   syncFailureRule,
 } from "@/lib/notifications/rules";
+import { roster } from "@/lib/roster";
+import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
+import { clientLedger } from "@/lib/transactions/ledger";
+import { listTransactions } from "@/lib/transactions/queries";
 
 /**
  * Gather state, run every rule, insert candidates idempotently. Safe to run
@@ -27,45 +35,88 @@ export async function evaluateNotifications(): Promise<{
 }> {
   const db = getDb();
   const now = new Date();
-  const [connections, [latestRun], docs] = await Promise.all([
-    db
-      .select({
-        id: integrations.id,
-        provider: integrations.provider,
-        label: integrations.label,
-        clientId: integrations.clientId,
-        lastSyncAt: integrations.lastSyncAt,
-        lastSyncNote: integrations.lastSyncNote,
-        status: integrations.status,
-      })
-      .from(integrations),
-    db
-      .select({
-        id: sheetSyncRuns.id,
-        driftRowCount: sheetSyncRuns.driftRowCount,
-        totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
-      })
-      .from(sheetSyncRuns)
-      .orderBy(desc(sheetSyncRuns.createdAt))
-      .limit(1),
-    db
-      .select({
-        externalId: signedDocs.externalId,
-        name: signedDocs.name,
-        clientId: signedDocs.clientId,
-        completedAt: signedDocs.completedAt,
-      })
-      .from(signedDocs)
-      .orderBy(desc(signedDocs.createdAt))
-      .limit(100),
-  ]);
+  const [connections, [latestRun], docs, clientRows, settingsRows, { rows: backlog }] =
+    await Promise.all([
+      db
+        .select({
+          id: integrations.id,
+          provider: integrations.provider,
+          label: integrations.label,
+          clientId: integrations.clientId,
+          lastSyncAt: integrations.lastSyncAt,
+          lastSyncNote: integrations.lastSyncNote,
+          status: integrations.status,
+        })
+        .from(integrations),
+      db
+        .select({
+          id: sheetSyncRuns.id,
+          driftRowCount: sheetSyncRuns.driftRowCount,
+          totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
+        })
+        .from(sheetSyncRuns)
+        .orderBy(desc(sheetSyncRuns.createdAt))
+        .limit(1),
+      db
+        .select({
+          externalId: signedDocs.externalId,
+          name: signedDocs.name,
+          clientId: signedDocs.clientId,
+          completedAt: signedDocs.completedAt,
+        })
+        .from(signedDocs)
+        .orderBy(desc(signedDocs.createdAt))
+        .limit(100),
+      db
+        .select({ id: clients.id, slug: clients.slug, name: clients.name })
+        .from(clients),
+      db
+        .select({
+          clientId: offerSettings.clientId,
+          bodAlertTime: offerSettings.bodAlertTime,
+          timezone: offerSettings.timezone,
+        })
+        .from(offerSettings),
+      listTransactions({}),
+    ]);
+
+  // BOD digests: every active offer, schema defaults standing in for offers
+  // with no settings row yet (v2 defaults: 12:00 America/Chicago). A null
+  // alert time on a saved row means the alert is off.
+  const todayKey = dayKeyCT(now);
+  const settingsByClient = new Map(settingsRows.map((r) => [r.clientId, r]));
+  const mtdBySlug = new Map(
+    clientLedger(
+      homeRangeRows(backlog, "clients", rangeBounds("month", todayKey)),
+      roster.map((c) => ({ slug: c.slug, name: c.name })),
+      matchesSheetClient,
+    ).map((line) => [line.slug, line.cashCents]),
+  );
+  const bodOffers = roster.flatMap((c) => {
+    const row = clientRows.find((r) => r.slug === c.slug);
+    if (!row) return [];
+    const saved = settingsByClient.get(row.id);
+    const bodAlertTime = saved ? saved.bodAlertTime : "12:00";
+    if (!bodAlertTime) return [];
+    return [
+      {
+        clientId: row.id,
+        slug: c.slug,
+        name: c.name,
+        bodAlertTime,
+        timezone: saved?.timezone ?? "America/Chicago",
+        mtdCashCents: mtdBySlug.get(c.slug) ?? 0,
+      },
+    ];
+  });
 
   const connected = connections.filter((c) => c.status === "connected");
   const candidates = [
     ...syncFailureRule(connected),
-    ...stalenessRule(connected, now, dayKeyCT(now)),
+    ...stalenessRule(connected, now, todayKey),
     ...driftRule(latestRun ?? null),
     ...signedDocRule(docs),
+    ...bodRule(bodOffers, now, todayKey),
   ];
 
   let created = 0;
