@@ -178,6 +178,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Gamification: streaks, personal bests, and the activity heatmap.
+        // Derived entirely from existing rows, no stored state — so the badges
+        // that shape rep behaviour ship as pure, fully covered math.
+        "src/lib/gamification/engine.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
