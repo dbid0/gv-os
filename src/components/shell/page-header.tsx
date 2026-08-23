@@ -23,7 +23,6 @@ export function PageHeader({
   description,
   status,
   actions,
-  textured = true,
   className,
 }: {
   title: string;
@@ -31,8 +30,6 @@ export function PageHeader({
   description?: string;
   status?: ReactNode;
   actions?: ReactNode;
-  /** Faint graph paper behind the header. On by default. */
-  textured?: boolean;
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
@@ -45,10 +42,6 @@ export function PageHeader({
       variants={fadeUp}
       className={cn("relative overflow-hidden rounded-xl", className)}
     >
-      {textured && (
-        <div className="grid-noise pointer-events-none absolute inset-0" aria-hidden />
-      )}
-
       <div className="relative flex flex-wrap items-start justify-between gap-4 py-2">
         <div className="min-w-0 space-y-3">
           {status}
@@ -56,7 +49,9 @@ export function PageHeader({
           <h1 className="text-2xl font-bold tracking-tight text-balance">
             {title}
             {highlight && <> </>}
-            {highlight && <span className="text-gradient-brand">{highlight}</span>}
+            {highlight && (
+              <span className="text-gradient-brand whitespace-nowrap">{highlight}</span>
+            )}
           </h1>
 
           {description && (

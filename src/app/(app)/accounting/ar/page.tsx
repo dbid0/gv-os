@@ -128,28 +128,30 @@ export default async function ArPage() {
 
       {calendar.length > 0 && (
         <Panel title="Money calendar — by month">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-faint border-b text-left text-xs">
-                <th className="py-2 pr-3 font-medium">Month</th>
-                <th className="py-2 pr-3 text-right font-medium">Owed in</th>
-                <th className="py-2 text-right font-medium">Planned out</th>
-              </tr>
-            </thead>
-            <tbody>
-              {calendar.map((m) => (
-                <tr key={m.month} className="border-b last:border-0">
-                  <td className="text-muted-foreground py-2 pr-3">{m.month}</td>
-                  <td className="numeric text-success py-2 pr-3 text-right font-medium tabular-nums">
-                    <Money amount={cents(m.owedInCents)} />
-                  </td>
-                  <td className="numeric text-destructive py-2 text-right tabular-nums">
-                    <Money amount={cents(m.plannedOutCents)} />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-xs">
+                  <th className="py-2 pr-3 font-medium">Month</th>
+                  <th className="py-2 pr-3 text-right font-medium">Owed in</th>
+                  <th className="py-2 text-right font-medium">Planned out</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {calendar.map((m) => (
+                  <tr key={m.month} className="border-b last:border-0">
+                    <td className="text-muted-foreground py-2 pr-3">{m.month}</td>
+                    <td className="numeric text-success py-2 pr-3 text-right font-medium tabular-nums">
+                      <Money amount={cents(m.owedInCents)} />
+                    </td>
+                    <td className="numeric text-destructive py-2 text-right tabular-nums">
+                      <Money amount={cents(m.plannedOutCents)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
 
