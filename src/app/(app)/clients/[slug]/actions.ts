@@ -36,6 +36,7 @@ export async function saveDriveFolder(slug: string, rawFolderId: string) {
     throw new Error("No client row for this slug yet — sync creates it.");
   }
   revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
   return { saved: true };
 }
 
@@ -56,5 +57,6 @@ export async function saveMonthlyTarget(slug: string, rawDollars: string) {
     throw new Error("No client row for this slug yet — sync creates it.");
   }
   revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
   return { saved: true };
 }

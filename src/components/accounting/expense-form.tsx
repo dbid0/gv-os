@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 
@@ -14,7 +13,6 @@ const selectClass =
   "border-input bg-transparent h-8 rounded-md border px-2 text-xs shadow-xs outline-none";
 
 export function ExpenseForm({ today }: { today: string }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [label, setLabel] = useState("");
@@ -38,7 +36,6 @@ export function ExpenseForm({ today }: { today: string }) {
             toast({ tone: "success", title: "Expense recorded — backlog row written" });
             setLabel("");
             setAmount("");
-            router.refresh();
           } catch (err) {
             toast({
               tone: "error",

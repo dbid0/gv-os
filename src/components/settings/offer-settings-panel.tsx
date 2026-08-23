@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { saveOfferSettings } from "@/app/(app)/settings/offer-actions";
@@ -27,7 +26,6 @@ const VISIBILITY_KEYS = [
 ] as const;
 
 function Row({ row }: { row: OfferSettingsRow }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [eod, setEod] = useState(row.eodAlertTime ?? "");
@@ -65,7 +63,6 @@ function Row({ row }: { row: OfferSettingsRow }) {
               },
             });
             toast({ tone: "success", title: `${row.clientName} settings saved` });
-            router.refresh();
           } catch (err) {
             toast({
               tone: "error",

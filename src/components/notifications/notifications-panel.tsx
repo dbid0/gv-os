@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Check, CheckCheck } from "lucide-react";
 
 import {
@@ -35,22 +35,32 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
+  // Optimistic reads (P1-5): the click moves the item instantly; the server
+  // catches up, and a failure rolls back with a toast.
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const unread = rows.filter((r) => !r.read);
-  const read = rows.filter((r) => r.read);
+  const unread = rows.filter((r) => !r.read && !readIds.has(r.id));
+  const read = rows.filter((r) => r.read || readIds.has(r.id));
 
-  const act = (fn: () => Promise<unknown>) =>
+  const act = (
+    fn: () => Promise<unknown>,
+    optimistic: () => void,
+    rollback: () => void,
+  ) => {
+    optimistic();
     start(async () => {
       try {
         await fn();
         router.refresh();
       } catch (e) {
+        rollback();
         toast({
           tone: "error",
           title: e instanceof Error ? e.message : "Action failed.",
         });
       }
     });
+  };
 
   const item = (r: NotificationRow) => (
     <div
@@ -75,7 +85,18 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
         <button
           type="button"
           disabled={pending}
-          onClick={() => act(() => markNotificationRead(r.id))}
+          onClick={() =>
+            act(
+              () => markNotificationRead(r.id),
+              () => setReadIds((ids) => new Set(ids).add(r.id)),
+              () =>
+                setReadIds((ids) => {
+                  const next = new Set(ids);
+                  next.delete(r.id);
+                  return next;
+                }),
+            )
+          }
           className="text-faint hover:text-foreground rounded-md border px-2 py-1 text-[11px] transition-colors"
           aria-label="Mark read"
         >
@@ -95,7 +116,13 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
               size="sm"
               variant="outline"
               disabled={pending}
-              onClick={() => act(() => markAllNotificationsRead())}
+              onClick={() =>
+                act(
+                  () => markAllNotificationsRead(),
+                  () => setReadIds(new Set(rows.map((r) => r.id))),
+                  () => setReadIds(new Set()),
+                )
+              }
               className="gap-1.5"
             >
               <CheckCheck className="size-3.5" /> Mark all read

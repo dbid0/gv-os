@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { saveProfile } from "@/app/(app)/profile/actions";
@@ -16,7 +15,6 @@ export function ProfileForm({
   initialName: string;
   initialDiscord: string;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [name, setName] = useState(initialName);
@@ -32,7 +30,6 @@ export function ProfileForm({
             try {
               await saveProfile({ displayName: name, discordHandle: discord });
               toast({ tone: "success", title: "Profile saved" });
-              router.refresh();
             } catch (err) {
               toast({
                 tone: "error",

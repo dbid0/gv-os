@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { saveMonthlyTarget } from "@/app/(app)/clients/[slug]/actions";
@@ -26,7 +25,6 @@ function TargetForm({
   initialCents: number | null;
   onDone?: () => void;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const [value, setValue] = useState(
     initialCents === null ? "" : String(Math.round(initialCents / 100)),
@@ -43,7 +41,6 @@ function TargetForm({
             await saveMonthlyTarget(slug, value);
             toast({ tone: "success", title: "Monthly target saved" });
             onDone?.();
-            router.refresh();
           } catch (err) {
             toast({
               tone: "error",
