@@ -167,7 +167,7 @@ export const PROVIDERS: Provider[] = [
     label: "Discord",
     group: "Comms",
     credential: "token",
-    feeds: "Agency server + action-list sync",
+    feeds: "Agency + client servers",
   },
 
   {

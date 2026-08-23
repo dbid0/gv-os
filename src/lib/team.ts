@@ -1,9 +1,9 @@
 import "server-only";
 
-import { asc, eq, ne, sql } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { actionItems, clients, teamMembers } from "@/db/schema/app";
+import { clients, teamMembers } from "@/db/schema/app";
 
 /** A roster row shaped for the team page. */
 export interface TeamMemberRow {
@@ -15,23 +15,11 @@ export interface TeamMemberRow {
   clientId: string | null;
   clientName: string | null;
   notes: string | null;
-  /** Assigned action items not yet completed — the member's live workload. */
-  openActions: number;
 }
 
-/** The full roster with each member's open-action workload. */
+/** The full roster, each member with their lane resolved. */
 export async function listTeamMembers(): Promise<TeamMemberRow[]> {
   const db = getDb();
-  const open = db
-    .select({
-      assigneeId: actionItems.assigneeId,
-      count: sql<number>`count(*)::int`.as("count"),
-    })
-    .from(actionItems)
-    .where(ne(actionItems.status, "completed"))
-    .groupBy(actionItems.assigneeId)
-    .as("open");
-
   return db
     .select({
       id: teamMembers.id,
@@ -42,11 +30,9 @@ export async function listTeamMembers(): Promise<TeamMemberRow[]> {
       clientId: teamMembers.clientId,
       clientName: clients.name,
       notes: teamMembers.notes,
-      openActions: sql<number>`coalesce(${open.count}, 0)`,
     })
     .from(teamMembers)
     .leftJoin(clients, eq(teamMembers.clientId, clients.id))
-    .leftJoin(open, eq(open.assigneeId, teamMembers.id))
     .orderBy(asc(teamMembers.name));
 }
 
@@ -80,35 +66,4 @@ export async function getTeamMember(id: string) {
     .where(eq(teamMembers.id, id))
     .limit(1);
   return member ?? null;
-}
-
-export interface MemberActionRow {
-  id: string;
-  title: string;
-  cadence: string;
-  status: string;
-  dueDate: string | null;
-  teamName: string | null;
-  notes: string | null;
-}
-
-/** A member's OWN slice of the action list — the heart of their view. */
-export async function listMemberActionItems(
-  memberId: string,
-): Promise<MemberActionRow[]> {
-  const db = getDb();
-  return db
-    .select({
-      id: actionItems.id,
-      title: actionItems.title,
-      cadence: actionItems.cadence,
-      status: actionItems.status,
-      dueDate: actionItems.dueDate,
-      teamName: clients.name,
-      notes: actionItems.notes,
-    })
-    .from(actionItems)
-    .leftJoin(clients, eq(actionItems.clientId, clients.id))
-    .where(eq(actionItems.assigneeId, memberId))
-    .orderBy(asc(actionItems.dueDate), asc(actionItems.createdAt));
 }

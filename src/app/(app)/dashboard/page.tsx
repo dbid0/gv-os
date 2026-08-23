@@ -64,7 +64,6 @@ export default async function DashboardPage({
     getDb().execute<{
       pending_payout_cents: number;
       kit_subscribers: number;
-      open_actions: number;
     }>(sql`
       select
         (coalesce((select sum(base_cents) from app.payouts where status = 'pending'), 0)
@@ -75,9 +74,7 @@ export default async function DashboardPage({
           select distinct on (integration_id) subscriber_count
           from app.kit_snapshots where subscriber_count is not null
           order by integration_id, taken_at desc
-        ) latest)::int as kit_subscribers,
-        (select count(*) from app.action_items where status <> 'completed')::int
-          as open_actions
+        ) latest)::int as kit_subscribers
     `),
   ]);
 
@@ -184,14 +181,6 @@ export default async function DashboardPage({
                 label="Kit subscribers across clients"
                 value={(scalars?.kit_subscribers ?? 0).toLocaleString("en-US")}
                 tone="brand"
-              />
-            </Panel>
-          ),
-          "open-actions": (
-            <Panel title="Open actions">
-              <Kpi
-                label="Team action list"
-                value={String(scalars?.open_actions ?? 0)}
               />
             </Panel>
           ),

@@ -41,7 +41,6 @@ export async function createTeamMember(raw: z.input<typeof createInput>) {
     })
     .returning();
   revalidatePath("/team");
-  revalidatePath("/action-list");
   return { id: member.id };
 }
 
@@ -55,6 +54,5 @@ export async function setTeamMemberStatus(id: string, status: string) {
     .set({ status: next, updatedAt: new Date() })
     .where(eq(teamMembers.id, memberId));
   revalidatePath("/team");
-  revalidatePath("/action-list");
   return { ok: true };
 }
