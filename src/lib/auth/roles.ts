@@ -23,12 +23,19 @@ export type RepKind = "setter" | "closer";
  * in code, not listed here.
  */
 const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
-  sales_manager: ["/home/manager", "/dashboard", "/sales", "/profile"],
-  sales_rep: ["/home/manager", "/dashboard", "/sales", "/profile"],
-  team_member: ["/home/member", "/dashboard", "/action-list", "/team", "/profile"],
-  // Clients live in their workspace; WHICH /w/[slug] they may open narrows
-  // when client identities exist (per-client logins).
-  client: ["/dashboard", "/profile", "/w"],
+  sales_manager: ["/home/manager", "/sales", "/notifications", "/profile", "/w"],
+  sales_rep: ["/home/manager", "/sales", "/notifications", "/profile"],
+  team_member: [
+    "/home/member",
+    "/action-list",
+    "/team",
+    "/notifications",
+    "/profile",
+    "/w",
+  ],
+  // Clients live in ONE workspace — the middleware pins them to their slug;
+  // these grants are the outer boundary.
+  client: ["/profile", "/w"],
 };
 
 /** Where a denied navigation lands: every role's safe home. */
