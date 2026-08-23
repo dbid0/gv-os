@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
@@ -57,6 +57,10 @@ export function HomeHeadline({
   const router = useRouter();
   const [pending, start] = useTransition();
   const { toast } = useToast();
+  // Optimistic scope: the highlight jumps on click; the numbers catch up when
+  // the server responds, so the toggle never feels like it's hanging.
+  const [optimisticMode, setOptimisticMode] = useState(mode);
+  const activeMode = pending ? optimisticMode : mode;
 
   return (
     <section className="card-grad elev-card relative rounded-xl border">
@@ -100,23 +104,24 @@ export function HomeHeadline({
                 <button
                   key={m}
                   type="button"
-                  disabled={pending}
-                  onClick={() =>
+                  onClick={() => {
+                    setOptimisticMode(m);
                     start(async () => {
                       try {
                         await setHomeMode(m);
                         router.refresh();
                       } catch (e) {
+                        setOptimisticMode(mode);
                         toast({
                           tone: "error",
                           title: e instanceof Error ? e.message : "Action failed.",
                         });
                       }
-                    })
-                  }
+                    });
+                  }}
                   className={cn(
                     "rounded-md px-3 py-1 text-xs transition-colors",
-                    m === mode
+                    m === activeMode
                       ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
                       : "text-muted-foreground hover:text-foreground",
                   )}
