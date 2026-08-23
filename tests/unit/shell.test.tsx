@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { navigation } from "@/components/shell/nav-config";
-import { SalesEngineCard, WatchTiles } from "@/components/shell/empty-dashboard";
+import { SalesEngineCard } from "@/components/shell/empty-dashboard";
 import { Sidebar } from "@/components/shell/sidebar";
 import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
@@ -117,27 +117,9 @@ describe("Sidebar", () => {
 
 describe("SalesEngineCard", () => {
   it("shows placeholders instead of invented numbers", () => {
-    const { container } = render(
-      <>
-        <SalesEngineCard />
-        <WatchTiles />
-      </>,
-    );
+    const { container } = render(<SalesEngineCard />);
 
     // Without stats every headline KPI is pending, and nothing states a figure.
     expect(container.textContent).not.toMatch(/\$\d/);
-  });
-
-  it("collapses waiting figures into one connect strip that names sources", () => {
-    render(
-      <>
-        <SalesEngineCard />
-        <WatchTiles />
-      </>,
-    );
-
-    expect(screen.getByText(/Waiting to connect/i)).toBeInTheDocument();
-    expect(screen.getByText("Rev share owed")).toBeInTheDocument();
-    expect(screen.getByText(/client-layer cash/i)).toBeInTheDocument();
   });
 });

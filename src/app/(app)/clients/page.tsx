@@ -15,7 +15,6 @@ export default function ClientsPage() {
       <PageHeader
         title="The"
         highlight="roster."
-        description="Every active done-for-you engagement. Open a client to reach their command center — sales, content, and the numbers, in one place."
         status={<StatusPill tone="live">{roster.length} active</StatusPill>}
       />
 

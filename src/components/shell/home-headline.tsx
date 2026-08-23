@@ -59,10 +59,11 @@ export function HomeHeadline({
   const { toast } = useToast();
 
   return (
-    <section className="card-grad elev-card relative overflow-hidden rounded-xl border">
+    <section className="card-grad elev-card relative rounded-xl border">
       {/* The growth curve fills the card's lower half, the number sits on top —
-          the Whop revenue-hero pattern. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3">
+          the Whop revenue-hero pattern. The clip lives on the CURVE only, not
+          the section, so the date picker's dropdown can overflow the card. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 overflow-hidden rounded-b-xl">
         <CollectedSparkline series={series} className="h-full w-full" />
       </div>
 

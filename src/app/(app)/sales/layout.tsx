@@ -23,7 +23,6 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
       <PageHeader
         title="Sales"
         highlight="command center"
-        description="Every closed deal, what each rep is owed, and how the team is pacing — one honest view of the revenue engine, reconciled to the ledger."
         status={<StatusPill tone="live">Live</StatusPill>}
         actions={
           <>

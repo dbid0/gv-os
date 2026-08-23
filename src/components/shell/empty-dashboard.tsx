@@ -8,7 +8,6 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   Percent,
-  PlugZap,
   TrendingUp,
 } from "lucide-react";
 import { type ReactNode } from "react";
@@ -45,12 +44,6 @@ const headline = [
   { label: "Revenue", icon: TrendingUp, tone: "brand" as const },
   { label: "Deals closed", icon: BarChart3, tone: "brand" as const },
   { label: "Close rate", icon: Percent, tone: "default" as const },
-];
-
-const tiles = [
-  { label: "Calls booked", waiting: "Bookings" },
-  { label: "Active reps", waiting: "Close CRM" },
-  { label: "Rev share owed", waiting: "Client-layer cash" },
 ];
 
 export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
@@ -159,31 +152,6 @@ export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
           </div>
         </Panel>
       </motion.div>
-    </motion.div>
-  );
-}
-
-export function WatchTiles() {
-  const reduceMotion = useReducedMotion();
-  const entrance = useEntranceOnce();
-  // One slim strip, not three empty tiles (punch-list 14): the figures that
-  // wait on a source name it and get out of the way.
-  return (
-    <motion.div
-      initial={reduceMotion || !entrance ? false : "hidden"}
-      animate="visible"
-      variants={fadeUp}
-      className="bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3"
-    >
-      <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium">
-        <PlugZap className="text-brand size-3.5" /> Waiting to connect
-      </span>
-      {tiles.map((tile) => (
-        <span key={tile.label} className="text-faint text-xs">
-          {tile.label} <span className="text-border-strong">·</span>{" "}
-          <span className="text-muted-foreground">{tile.waiting}</span>
-        </span>
-      ))}
     </motion.div>
   );
 }
