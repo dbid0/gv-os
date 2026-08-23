@@ -53,13 +53,6 @@ export const navigation: NavGroup[] = [
         status: "ready",
         description: "What needs attention today",
       },
-      {
-        label: "Notifications",
-        href: "/notifications",
-        icon: Bell,
-        status: "ready",
-        description: "Rule-driven alerts — failures, drift, signed agreements",
-      },
     ],
   },
   {
@@ -149,6 +142,15 @@ export const navigation: NavGroup[] = [
         icon: Plug,
         status: "ready",
         description: "Connected tools — keys sealed, per-client scoped",
+      },
+      // Notifications lives at the bottom — the top-right bell is the primary
+      // surface; this is the full-history fallback.
+      {
+        label: "Notifications",
+        href: "/notifications",
+        icon: Bell,
+        status: "ready",
+        description: "Rule-driven alerts — drift, signed agreements, the daily digest",
       },
     ],
   },
