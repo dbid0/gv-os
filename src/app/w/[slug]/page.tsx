@@ -99,23 +99,40 @@ export default async function WorkspacePage({
     <div className="mx-auto w-full max-w-7xl space-y-6">
       {showCash && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-              {bounds.label}
-            </p>
-            <p className="numeric text-2xl font-bold">
-              <Money amount={cents(rangeCash)} />{" "}
-              <span className="text-muted-foreground text-sm font-normal">
-                collected
-                {rangeRevenue > rangeCash && (
-                  <>
-                    {" "}
-                    of <Money amount={cents(rangeRevenue)} /> booked
-                  </>
-                )}
-              </span>
-            </p>
-          </div>
+          {/* One canonical story (P0-1): never a bare $0.00 sitting above a
+              non-zero figure — a quiet range falls back to the all-time
+              number with an explicit label. */}
+          {rangeCash === 0 && report.mirror.cashCents > 0 ? (
+            <div>
+              <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                Cash collected — all time
+              </p>
+              <p className="numeric text-2xl font-bold">
+                <Money amount={cents(report.mirror.cashCents)} />{" "}
+                <span className="text-muted-foreground text-sm font-normal">
+                  nothing collected in {bounds.label.toLowerCase()}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                Cash collected — {bounds.label}
+              </p>
+              <p className="numeric text-2xl font-bold">
+                <Money amount={cents(rangeCash)} />{" "}
+                <span className="text-muted-foreground text-sm font-normal">
+                  collected
+                  {rangeRevenue > rangeCash && (
+                    <>
+                      {" "}
+                      of <Money amount={cents(rangeRevenue)} /> booked
+                    </>
+                  )}
+                </span>
+              </p>
+            </div>
+          )}
           <DateRangePicker
             basePath={`/w/${slug}`}
             activeRange={range}
@@ -129,7 +146,7 @@ export default async function WorkspacePage({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
         <Kpi
-          label="Cash collected (offer)"
+          label="Cash collected — all time"
           value={<Money amount={cents(report.mirror.cashCents)} />}
           tone="success"
         />
