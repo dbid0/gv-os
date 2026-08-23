@@ -14,6 +14,7 @@ import {
   reps,
 } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
+import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { processorFee } from "@/lib/fees";
@@ -38,9 +39,8 @@ import { percentToBps } from "@/lib/splits";
  */
 
 async function requireUser() {
-  // Build phase: auth is off (see middleware DISABLE_AUTH), so the write
-  // actions must not gate either. Flip DISABLE_AUTH off to restore the check.
-  if (process.env.DISABLE_AUTH === "true") return null;
+  // Dev/preview bypass only — never passes in production.
+  if (devAuthBypass()) return null;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) {
     throw new Error("Not authorized.");

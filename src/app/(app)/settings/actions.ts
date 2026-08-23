@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getDb } from "@/db/client";
 import { settings } from "@/db/schema/app";
+import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { fromDollars } from "@/lib/money";
@@ -18,7 +19,7 @@ const input = z.object({
 });
 
 export async function updateSettings(raw: z.input<typeof input>) {
-  if (process.env.DISABLE_AUTH !== "true") {
+  if (!devAuthBypass()) {
     const user = await currentUser();
     if (!user?.email || !isAllowed(user.email)) throw new Error("Not authorized.");
   }
