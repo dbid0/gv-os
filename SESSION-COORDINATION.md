@@ -24,5 +24,11 @@ be without stepping on each other:**
   section (`src/app/(app)/sales/*`, `src/components/sales/*`), sidebar/topbar,
   notifications. **Please don't touch these on main until merged.**
 - **Quotas session** — building the Quotas feature (branch `feat/quotas`).
+- **Gamification session** — worktree `~/dev/gv-os-wt-gamify` (branch
+  `feat/gamification`). Owns: `src/lib/gamification/*`,
+  `src/components/gamification/*`, and the gamification additions to
+  `src/app/(app)/home/member/*` and `src/app/(app)/profile/page.tsx`. All math
+  is derived (no new tables); pure engine is 100% covered. Did NOT touch
+  dashboard, sales, shell, or notifications.
 
 If you need something in the other session's area, drop a note here.
