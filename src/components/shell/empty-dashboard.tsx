@@ -53,7 +53,7 @@ const tiles = [
   { label: "Rev share owed", waiting: "Client-layer cash", icon: CircleDollarSign },
 ];
 
-export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
+export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
   const reduceMotion = useReducedMotion();
 
   const kpiValue = (label: string): ReactNode => {
@@ -158,21 +158,28 @@ export function EmptyDashboard({ stats }: { stats?: DashboardStats }) {
           </div>
         </Panel>
       </motion.div>
+    </motion.div>
+  );
+}
 
-      <motion.div
-        variants={stagger()}
-        className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-3"
-      >
-        {tiles.map((tile) => (
-          <motion.div
-            key={tile.label}
-            variants={fadeUp}
-            className="bg-card hover-lift p-5"
-          >
-            <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
-          </motion.div>
-        ))}
-      </motion.div>
+export function WatchTiles() {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.div
+      initial={reduceMotion ? false : "hidden"}
+      animate="visible"
+      variants={stagger()}
+      className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-3"
+    >
+      {tiles.map((tile) => (
+        <motion.div
+          key={tile.label}
+          variants={fadeUp}
+          className="bg-card hover-lift p-5"
+        >
+          <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
+        </motion.div>
+      ))}
     </motion.div>
   );
 }
