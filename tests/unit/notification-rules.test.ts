@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bodRule,
   driftRule,
   signedDocRule,
   stalenessRule,
@@ -70,5 +71,41 @@ describe("signedDocRule", () => {
     expect(out).toHaveLength(2);
     expect(out[0].dedupeKey).toBe("signed:d1");
     expect(out[1].title).toBe("Agreement signed");
+  });
+});
+
+describe("bodRule", () => {
+  const offers = [
+    {
+      clientId: "c1",
+      slug: "the-grid",
+      name: "The Grid",
+      bodAlertTime: "12:00",
+      timezone: "America/Chicago",
+      mtdCashCents: 1_234_500,
+    },
+  ];
+  // 2026-08-23 17:30 UTC = 12:30 America/Chicago (CDT).
+  const afterNoonCT = new Date("2026-08-23T17:30:00Z");
+  // 2026-08-23 15:00 UTC = 10:00 America/Chicago.
+  const beforeNoonCT = new Date("2026-08-23T15:00:00Z");
+
+  it("fires once the offer's local time passes the alert time", () => {
+    const out = bodRule(offers, afterNoonCT, "2026-08-23");
+    expect(out).toHaveLength(1);
+    expect(out[0].title).toBe("BOD — The Grid: $12,345 month to date");
+    expect(out[0].dedupeKey).toBe("bod:the-grid:2026-08-23");
+    expect(out[0].severity).toBe("info");
+  });
+
+  it("stays silent before the alert time", () => {
+    expect(bodRule(offers, beforeNoonCT, "2026-08-23")).toHaveLength(0);
+  });
+
+  it("dedupe key pins to the day so it fires at most once daily", () => {
+    const a = bodRule(offers, afterNoonCT, "2026-08-23")[0].dedupeKey;
+    const later = new Date("2026-08-23T23:00:00Z");
+    const b = bodRule(offers, later, "2026-08-23")[0].dedupeKey;
+    expect(a).toBe(b);
   });
 });

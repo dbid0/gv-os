@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SalesOverview } from "@/components/sales/sales-overview";
+import type { Cents } from "@/lib/money";
 import { SalesTabs } from "@/components/sales/sales-tabs";
 import { SectionScaffold } from "@/components/sales/section-scaffold";
 import { navigation } from "@/components/shell/nav-config";
@@ -92,17 +93,27 @@ describe("SalesTabs", () => {
   });
 });
 
+const OVERVIEW_STATS = {
+  cashCents: 1_500_000 as Cents,
+  revenueCents: 6_240_000 as Cents,
+  deals: 19,
+  closeRatePct: null,
+};
+
 describe("SalesOverview", () => {
-  it("shows placeholders, never an invented dollar figure", () => {
-    const { container } = render(<SalesOverview />);
-    expect(screen.getAllByText(/waiting on:/i).length).toBeGreaterThan(0);
-    expect(container.textContent).not.toMatch(/\$\d/);
+  it("renders the real engine figures and no fabricated close rate", () => {
+    const { container } = render(<SalesOverview stats={OVERVIEW_STATS} />);
+    expect(container.textContent).toContain("$15,000");
+    expect(container.textContent).toContain("$62,400");
+    expect(container.textContent).toContain("19");
+    expect(container.textContent).toContain("—");
   });
 
-  it("names the pipeline that will fill the dashes", () => {
-    render(<SalesOverview />);
-    expect(screen.getByText(/Deal import/i)).toBeInTheDocument();
-    expect(screen.getByText(/Commission engine/i)).toBeInTheDocument();
+  it("collapses everything still waiting into one connect strip", () => {
+    render(<SalesOverview stats={OVERVIEW_STATS} />);
+    expect(screen.getByText(/Waiting to connect/i)).toBeInTheDocument();
+    expect(screen.getByText(/Show rate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Commission owed/i)).toBeInTheDocument();
   });
 });
 

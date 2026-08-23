@@ -119,15 +119,11 @@ describe("SalesEngineCard", () => {
       </>,
     );
 
-    // Every tile is waiting on a module, and none of them state a figure.
-    const waiting = screen.getAllByText(/waiting on:/i);
-    expect(waiting.length).toBeGreaterThan(0);
-
-    // No dollar amount should appear anywhere on an empty dashboard.
+    // Without stats every headline KPI is pending, and nothing states a figure.
     expect(container.textContent).not.toMatch(/\$\d/);
   });
 
-  it("names which module each tile depends on", () => {
+  it("collapses waiting figures into one connect strip that names sources", () => {
     render(
       <>
         <SalesEngineCard />
@@ -135,13 +131,8 @@ describe("SalesEngineCard", () => {
       </>,
     );
 
-    // Scope to the one tile, since several wait on the same module.
-    const tile = screen.getByText("Rev share owed").closest('[data-slot="metric"]');
-    expect(tile).not.toBeNull();
-    // Presence, not visibility: motion renders the entry variant at opacity 0
-    // and jsdom never runs the animation to completion.
-    expect(
-      within(tile as HTMLElement).getByText(/client-layer cash/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Waiting to connect/i)).toBeInTheDocument();
+    expect(screen.getByText("Rev share owed")).toBeInTheDocument();
+    expect(screen.getByText(/client-layer cash/i)).toBeInTheDocument();
   });
 });

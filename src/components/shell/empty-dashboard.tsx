@@ -8,13 +8,12 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   Percent,
-  PhoneCall,
+  PlugZap,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { Kpi, Metric, Money } from "@/components/ui/metric";
+import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { Cents } from "@/lib/money";
@@ -49,9 +48,9 @@ const headline = [
 ];
 
 const tiles = [
-  { label: "Calls booked", waiting: "Bookings connect", icon: PhoneCall },
-  { label: "Active reps", waiting: "Close connects", icon: Users },
-  { label: "Rev share owed", waiting: "Client-layer cash", icon: CircleDollarSign },
+  { label: "Calls booked", waiting: "Bookings" },
+  { label: "Active reps", waiting: "Close CRM" },
+  { label: "Rev share owed", waiting: "Client-layer cash" },
 ];
 
 export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
@@ -167,21 +166,23 @@ export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
 export function WatchTiles() {
   const reduceMotion = useReducedMotion();
   const entrance = useEntranceOnce();
+  // One slim strip, not three empty tiles (punch-list 14): the figures that
+  // wait on a source name it and get out of the way.
   return (
     <motion.div
       initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
-      variants={stagger()}
-      className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-3"
+      variants={fadeUp}
+      className="bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3"
     >
+      <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium">
+        <PlugZap className="text-brand size-3.5" /> Waiting to connect
+      </span>
       {tiles.map((tile) => (
-        <motion.div
-          key={tile.label}
-          variants={fadeUp}
-          className="bg-card hover-lift p-5"
-        >
-          <Metric label={tile.label} pending={tile.waiting} icon={tile.icon} />
-        </motion.div>
+        <span key={tile.label} className="text-faint text-xs">
+          {tile.label} <span className="text-border-strong">·</span>{" "}
+          <span className="text-muted-foreground">{tile.waiting}</span>
+        </span>
       ))}
     </motion.div>
   );
