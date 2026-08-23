@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { navigation } from "@/components/shell/nav-config";
-import { EmptyDashboard } from "@/components/shell/empty-dashboard";
+import { SalesEngineCard, WatchTiles } from "@/components/shell/empty-dashboard";
 import { Sidebar } from "@/components/shell/sidebar";
 import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
@@ -110,9 +110,14 @@ describe("Sidebar", () => {
   });
 });
 
-describe("EmptyDashboard", () => {
+describe("SalesEngineCard", () => {
   it("shows placeholders instead of invented numbers", () => {
-    const { container } = render(<EmptyDashboard />);
+    const { container } = render(
+      <>
+        <SalesEngineCard />
+        <WatchTiles />
+      </>,
+    );
 
     // Every tile is waiting on a module, and none of them state a figure.
     const waiting = screen.getAllByText(/waiting on:/i);
@@ -123,7 +128,12 @@ describe("EmptyDashboard", () => {
   });
 
   it("names which module each tile depends on", () => {
-    render(<EmptyDashboard />);
+    render(
+      <>
+        <SalesEngineCard />
+        <WatchTiles />
+      </>,
+    );
 
     // Scope to the one tile, since several wait on the same module.
     const tile = screen.getByText("Rev share owed").closest('[data-slot="metric"]');
