@@ -51,6 +51,9 @@ export const clients = appSchema.table(
     /** Monthly cash target in integer cents; actuals come from the sheet
      * mirror. Null = no target set — the page shows an honest empty state. */
     monthlyTargetCents: bigint("monthly_target_cents", { mode: "number" }),
+    /** Workspace logo as a small data URL — uploaded from the workspace
+     * header; renders in the switcher, headers, and home sections. */
+    logo: text("logo"),
 
     /**
      * Team commission defaults, by role, in basis points. Applied to a deal
