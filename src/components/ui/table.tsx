@@ -6,6 +6,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { fadeUp, stagger } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { useEntranceOnce } from "@/lib/client-state";
 
 /**
  * The table.
@@ -54,6 +55,7 @@ export function DataTable<T>({
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
   const [sort, setSort] = useState<SortState>(null);
 
   const sorted = useMemo(() => {
@@ -143,7 +145,7 @@ export function DataTable<T>({
         </thead>
 
         <motion.tbody
-          initial={reduceMotion ? false : "hidden"}
+          initial={reduceMotion || !entrance ? false : "hidden"}
           animate="visible"
           // Capped so a long table does not crawl in.
           variants={stagger(Math.min(0.03, 0.6 / Math.max(sorted.length, 1)))}

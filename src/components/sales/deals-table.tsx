@@ -9,6 +9,7 @@ import { StatusDot, type StatusTone } from "@/components/ui/status";
 import { DataTable, type Column } from "@/components/ui/table";
 import { type Cents, ZERO, cents, sum } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
+import { useEntranceOnce } from "@/lib/client-state";
 
 export interface DealRow {
   id: string;
@@ -38,6 +39,7 @@ const fmtDate = (iso: string | null) =>
 
 export function DealsTable({ rows }: { rows: DealRow[] }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
   const [source, setSource] = useState("all");
   const [type, setType] = useState("all");
 
@@ -114,7 +116,7 @@ export function DealsTable({ rows }: { rows: DealRow[] }) {
 
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={fadeUp}
       className="space-y-6"

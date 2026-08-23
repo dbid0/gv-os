@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 /**
  * Client-state helpers built on useSyncExternalStore.
@@ -107,4 +107,24 @@ export function usePersistedBoolean(
   );
 
   return [value, set];
+}
+
+const entranceStore = { entered: false };
+const entranceSubscribe = () => () => {};
+
+/**
+ * Play entrance motion once per app lifetime (P1-8): the first mounted
+ * page animates in; every navigation after renders settled. Server
+ * snapshot animates (safe default), the store flips after first mount.
+ */
+export function useEntranceOnce(): boolean {
+  const first = useSyncExternalStore(
+    entranceSubscribe,
+    () => !entranceStore.entered,
+    () => true,
+  );
+  useEffect(() => {
+    entranceStore.entered = true;
+  }, []);
+  return first;
 }

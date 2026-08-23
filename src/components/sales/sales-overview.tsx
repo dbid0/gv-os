@@ -16,6 +16,7 @@ import { Kpi, Metric } from "@/components/ui/metric";
 import { Panel, Row, Rows } from "@/components/ui/panel";
 import { StatusDot, StatusPill } from "@/components/ui/status";
 import { fadeUp, stagger } from "@/lib/motion";
+import { useEntranceOnce } from "@/lib/client-state";
 
 /**
  * The Sales overview.
@@ -66,10 +67,11 @@ const pipeline = [
 
 export function SalesOverview() {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
 
   return (
     <motion.div
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={stagger()}
       className="space-y-6"

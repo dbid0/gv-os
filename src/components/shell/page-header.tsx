@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { useEntranceOnce } from "@/lib/client-state";
 
 /**
  * The top of every page.
@@ -35,10 +36,11 @@ export function PageHeader({
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
 
   return (
     <motion.header
-      initial={reduceMotion ? false : "hidden"}
+      initial={reduceMotion || !entrance ? false : "hidden"}
       animate="visible"
       variants={fadeUp}
       className={cn("relative overflow-hidden rounded-xl", className)}
