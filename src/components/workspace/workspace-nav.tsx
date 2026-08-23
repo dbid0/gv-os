@@ -12,6 +12,7 @@ const SECTIONS = [
   { label: "Marketing", path: "/marketing" },
   { label: "Email", path: "/email" },
   { label: "CRM", path: "/crm" },
+  { label: "Onboarding", path: "/onboarding" },
 ] as const;
 
 export function WorkspaceNav({ slug }: { slug: string }) {
