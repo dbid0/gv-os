@@ -11,6 +11,7 @@ import { Topbar } from "@/components/shell/topbar";
 import { currentMonthCashCents } from "@/lib/accounting/sheet-sync";
 import { unreadNotificationCount } from "@/lib/notifications/count";
 import { getPrefs } from "@/lib/prefs";
+import { clientLogos } from "@/lib/clients/logos";
 import { shellUser } from "@/lib/auth/user";
 
 /**
@@ -22,11 +23,12 @@ import { shellUser } from "@/lib/auth/user";
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await shellUser();
-  const [monthCashCents, unreadCount, cookieStore, prefs] = await Promise.all([
+  const [monthCashCents, unreadCount, cookieStore, prefs, logos] = await Promise.all([
     currentMonthCashCents(),
     unreadNotificationCount(),
     cookies(),
     getPrefs(user?.email ?? null, ["avatar", "display-name"]),
+    clientLogos(),
   ]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;

@@ -8,6 +8,10 @@ import { ArrowLeft } from "lucide-react";
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { TopClock } from "@/components/shell/top-clock";
 import { ViewAsBanner } from "@/components/shell/view-as";
+import { WorkspaceLogo } from "@/components/workspace/workspace-logo";
+import { getDb } from "@/db/client";
+import { clients as clientsTable } from "@/db/schema/app";
+import { eq } from "drizzle-orm";
 import { WorkspaceNav } from "@/components/workspace/workspace-nav";
 import { clientBySlug, clientInitial } from "@/lib/roster";
 
@@ -32,6 +36,13 @@ export default async function WorkspaceLayout({
   const cookieStore = await cookies();
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
   const clientPreview = previewRole === "client";
+  const db = getDb();
+  const [row] = await db
+    .select({ logo: clientsTable.logo })
+    .from(clientsTable)
+    .where(eq(clientsTable.slug, slug))
+    .limit(1);
+  const logo = row?.logo ?? null;
 
   const skin = {
     "--brand": client.accent,
@@ -49,16 +60,13 @@ export default async function WorkspaceLayout({
             <ArrowLeft className="size-3.5" /> Admin
           </Link>
         )}
-        <span
-          className="grid size-8 shrink-0 place-items-center rounded-md border text-xs font-bold"
-          style={{
-            color: client.accent,
-            borderColor: `${client.accent}55`,
-            background: `${client.accent}14`,
-          }}
-        >
-          {clientInitial(client.name)}
-        </span>
+        <WorkspaceLogo
+          slug={slug}
+          logo={logo}
+          initial={clientInitial(client.name)}
+          accent={client.accent}
+          editable={!clientPreview}
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{client.name}</p>
           <p className="text-faint truncate text-[11px]">
