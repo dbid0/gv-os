@@ -5,6 +5,7 @@ import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -39,6 +40,7 @@ function num(s: string): number | null {
 function RepRow({ rep }: { rep: TeamConfigData["reps"][number] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   const active = rep.status === "active";
   return (
     <div className="bg-card flex items-center gap-4 px-5 py-3">
@@ -60,8 +62,15 @@ function RepRow({ rep }: { rep: TeamConfigData["reps"][number] }) {
         disabled={pending}
         onClick={() =>
           start(async () => {
-            await setRepActive(rep.id, !active);
-            router.refresh();
+            try {
+              await setRepActive(rep.id, !active);
+              router.refresh();
+            } catch (e) {
+              toast({
+                tone: "error",
+                title: e instanceof Error ? e.message : "Action failed.",
+              });
+            }
           })
         }
       >

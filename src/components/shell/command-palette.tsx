@@ -5,7 +5,10 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Building2 } from "lucide-react";
+
 import { allNavItems } from "@/components/shell/nav-config";
+import { roster } from "@/lib/roster";
 import { snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +44,16 @@ export function CommandPalette() {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const items = allNavItems.filter((item) => item.status === "ready");
+    // Client workspaces are destinations too — "grid" should land in The Grid.
+    const items = [
+      ...allNavItems.filter((item) => item.status === "ready"),
+      ...roster.map((c) => ({
+        label: c.name,
+        description: "Client workspace",
+        href: `/w/${c.slug}`,
+        icon: Building2,
+      })),
+    ];
     if (!q) return items;
     return items.filter(
       (item) =>

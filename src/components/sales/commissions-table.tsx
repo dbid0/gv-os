@@ -7,6 +7,7 @@ import { useTransition } from "react";
 import { AlertTriangle, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -49,6 +50,7 @@ const pct = (bps: number | null) =>
 function PayCell({ line }: { line: CommissionLine }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   if (line.paid) return <StatusPill tone="live">Paid</StatusPill>;
   if (line.totalOwedCents <= 0) return dash;
@@ -60,8 +62,15 @@ function PayCell({ line }: { line: CommissionLine }) {
       disabled={pending}
       onClick={() =>
         start(async () => {
-          await markRepPaid(line.repId);
-          router.refresh();
+          try {
+            await markRepPaid(line.repId);
+            router.refresh();
+          } catch (e) {
+            toast({
+              tone: "error",
+              title: e instanceof Error ? e.message : "Action failed.",
+            });
+          }
         })
       }
     >
@@ -73,6 +82,7 @@ function PayCell({ line }: { line: CommissionLine }) {
 function MarkAllButton() {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   return (
     <Button
       size="sm"
@@ -80,8 +90,15 @@ function MarkAllButton() {
       className="gap-1.5"
       onClick={() =>
         start(async () => {
-          await markAllPaid();
-          router.refresh();
+          try {
+            await markAllPaid();
+            router.refresh();
+          } catch (e) {
+            toast({
+              tone: "error",
+              title: e instanceof Error ? e.message : "Action failed.",
+            });
+          }
         })
       }
     >

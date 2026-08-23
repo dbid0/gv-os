@@ -49,13 +49,21 @@ const selectClass =
 function ConnectionCard({ row }: { row: ConnectionRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   const provider = providerByValue(row.provider);
   const revoked = row.status === "revoked";
 
   const act = (fn: () => Promise<unknown>) =>
     start(async () => {
-      await fn();
-      router.refresh();
+      try {
+        await fn();
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: e instanceof Error ? e.message : "Action failed.",
+        });
+      }
     });
 
   return (

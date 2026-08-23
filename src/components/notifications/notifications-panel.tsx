@@ -6,7 +6,7 @@ import { Check, CheckCheck } from "lucide-react";
 
 import {
   markAllNotificationsRead,
-  markNotificationRead,
+  markNotificationsRead,
 } from "@/app/(app)/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -42,6 +42,24 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
   const unread = rows.filter((r) => !r.read && !readIds.has(r.id));
   const read = rows.filter((r) => r.read || readIds.has(r.id));
 
+  // Duplicates collapse into one row with a stack count (punch-list 17), and
+  // severity pins critical above warning above info so the one real signal
+  // never drowns under seven copies of good news.
+  const SEVERITY_ORDER: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+  const groupOf = (list: NotificationRow[]) => {
+    const byKey = new Map<string, NotificationRow[]>();
+    for (const r of list) {
+      const key = `${r.kind}|${r.title}|${r.clientName ?? ""}`;
+      byKey.set(key, [...(byKey.get(key) ?? []), r]);
+    }
+    return [...byKey.values()].sort(
+      (a, b) =>
+        (SEVERITY_ORDER[a[0].severity] ?? 3) - (SEVERITY_ORDER[b[0].severity] ?? 3),
+    );
+  };
+  const unreadGroups = groupOf(unread);
+  const readGroups = groupOf(read.slice(0, 30));
+
   const act = (
     fn: () => Promise<unknown>,
     optimistic: () => void,
@@ -62,49 +80,71 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
     });
   };
 
-  const item = (r: NotificationRow) => (
-    <div
-      key={r.id}
-      className={cn(
-        "bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3",
-        !r.read && "border-brand/30",
-      )}
-    >
-      <StatusPill tone={SEVERITY_TONE[r.severity] ?? "muted"}>{r.severity}</StatusPill>
-      <div className="min-w-0 flex-1">
-        <p className={cn("truncate text-sm", !r.read && "font-medium")}>{r.title}</p>
-        {r.body && <p className="text-faint truncate text-[11px]">{r.body}</p>}
+  const item = (group: NotificationRow[]) => {
+    const r = group[0];
+    return (
+      <div
+        key={r.id}
+        className={cn(
+          "bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3",
+          !r.read && "border-brand/30",
+        )}
+      >
+        <StatusPill tone={SEVERITY_TONE[r.severity] ?? "muted"}>
+          {r.severity}
+        </StatusPill>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "flex items-center gap-2 truncate text-sm",
+              !r.read && "font-medium",
+            )}
+          >
+            {r.title}
+            {group.length > 1 && (
+              <span className="bg-secondary text-muted-foreground rounded-full px-1.5 text-[10px] font-medium">
+                ×{group.length}
+              </span>
+            )}
+          </p>
+          {r.body && <p className="text-faint truncate text-[11px]">{r.body}</p>}
+        </div>
+        {r.clientName && (
+          <span className="text-muted-foreground rounded-full border px-1.5 text-[11px]">
+            {r.clientName}
+          </span>
+        )}
+        <span className="text-faint text-[11px] whitespace-nowrap">{r.createdAt}</span>
+        {!r.read && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              act(
+                () => markNotificationsRead(group.map((g) => g.id)),
+                () =>
+                  setReadIds((ids) => {
+                    const next = new Set(ids);
+                    for (const g of group) next.add(g.id);
+                    return next;
+                  }),
+                () =>
+                  setReadIds((ids) => {
+                    const next = new Set(ids);
+                    for (const g of group) next.delete(g.id);
+                    return next;
+                  }),
+              )
+            }
+            className="text-faint hover:text-foreground rounded-md border px-2 py-1 text-[11px] transition-colors"
+            aria-label="Mark read"
+          >
+            <Check className="size-3" />
+          </button>
+        )}
       </div>
-      {r.clientName && (
-        <span className="text-muted-foreground rounded-full border px-1.5 text-[11px]">
-          {r.clientName}
-        </span>
-      )}
-      <span className="text-faint text-[11px] whitespace-nowrap">{r.createdAt}</span>
-      {!r.read && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() =>
-            act(
-              () => markNotificationRead(r.id),
-              () => setReadIds((ids) => new Set(ids).add(r.id)),
-              () =>
-                setReadIds((ids) => {
-                  const next = new Set(ids);
-                  next.delete(r.id);
-                  return next;
-                }),
-            )
-          }
-          className="text-faint hover:text-foreground rounded-md border px-2 py-1 text-[11px] transition-colors"
-          aria-label="Mark read"
-        >
-          <Check className="size-3" />
-        </button>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -133,21 +173,21 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
         {unread.length === 0 ? (
           <p className="text-faint py-6 text-center text-sm">All clear.</p>
         ) : (
-          <div className="space-y-2">{unread.map(item)}</div>
+          <div className="space-y-2">{unreadGroups.map(item)}</div>
         )}
       </Panel>
 
       {read.length > 0 && (
         <Panel title="Earlier">
-          <div className="space-y-2">{read.slice(0, 30).map(item)}</div>
+          <div className="space-y-2">{readGroups.map(item)}</div>
         </Panel>
       )}
 
       <Panel title="Rules waiting on data">
         <p className="text-faint text-sm">
-          Live now: sync failures, integration staleness, sheet drift, and signed
-          agreements. EOD/BOD misses arm with per-offer alert times (Phase 5 settings);
-          speed-to-lead breaches arm with Close + bookings data;
+          Live now: sync failures, integration staleness, sheet drift, signed
+          agreements, and the daily BOD digest (per-offer alert times, 12:00 CT
+          default). Speed-to-lead breaches arm with Close + bookings data;
           payment-without-a-sale-form arms with processor events. Each starts firing the
           moment its source connects.
         </p>
