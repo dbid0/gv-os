@@ -1098,3 +1098,68 @@ export const offerSettings = appSchema.table(
 );
 
 export type OfferSettings = typeof offerSettings.$inferSelect;
+
+/**
+ * A logged call or booking — RepVision's Call Library / Log Activity, as rows.
+ *
+ * A rep logs every call after it happens (or a setter logs a booking they set),
+ * tagging the outcome as a disposition. These are SELF-REPORTED activity, not
+ * money: nothing here ever writes a ledger event. The rows are queryable so they
+ * can feed rep activity metrics — the disposition→metric mapping and the
+ * aggregation live in the pure, fully covered src/lib/sales/call-activity.ts.
+ *
+ * `externalRef` is the stable key for a future Fathom auto-import: re-running an
+ * import updates rather than duplicating. That importer is a stub behind the
+ * go-live wall today — no row here is ever invented.
+ */
+export const activityLogs = appSchema.table(
+  "activity_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** call | booking — RepVision's "Log a Call" vs "Log a Booking". */
+    mode: text("mode").notNull().default("call"),
+    /** The team (client brand) this activity belongs to. */
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** The rep the activity is assigned to. Null = logged but unassigned. */
+    repId: uuid("rep_id").references(() => reps.id),
+    /** discovery | close | follow_up */
+    callType: text("call_type"),
+    /**
+     * The outcome tag: sale_closed · follow_up_booked · not_interested ·
+     * no_show · dq · wrong_number · bad_lead · rescheduled. Vocabulary and the
+     * metric mapping live in src/lib/sales/call-activity.ts.
+     */
+    disposition: text("disposition").notNull(),
+    /** The call recording (Fathom / Zoom / etc.). */
+    recordingUrl: text("recording_url"),
+    /** The lead URL / CRM link (Close, etc.). */
+    leadUrl: text("lead_url"),
+    customerName: text("customer_name"),
+    customerEmail: text("customer_email"),
+    notes: text("notes"),
+    /** When the call or booking actually happened. Defaults to now. */
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    /** manual | fathom — where the log came from. Fathom import is a stub. */
+    source: text("source").notNull().default("manual"),
+    /** Stable key for import idempotency (a Fathom recording id). */
+    externalRef: text("external_ref"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("activity_logs_client_idx").on(table.clientId),
+    index("activity_logs_rep_idx").on(table.repId),
+    index("activity_logs_disposition_idx").on(table.disposition),
+    index("activity_logs_occurred_at_idx").on(table.occurredAt),
+    uniqueIndex("activity_logs_external_ref_key").on(table.externalRef),
+  ],
+);
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  client: one(clients, { fields: [activityLogs.clientId], references: [clients.id] }),
+  rep: one(reps, { fields: [activityLogs.repId], references: [reps.id] }),
+}));

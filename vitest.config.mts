@@ -169,6 +169,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Call/activity logging: the disposition->metric mapping and the
+        // per-rep aggregation that feeds rep activity metrics. Pure math, held
+        // to the same bar as the rest of Sales logic.
+        "src/lib/sales/call-activity.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
