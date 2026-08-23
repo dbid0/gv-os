@@ -119,11 +119,14 @@ export default async function ClientPage({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
         <Kpi
-          label="Net cash (reconciled)"
-          value={<Money amount={cents(report.mirror.netCents)} />}
+          label="Cash collected — all time"
+          value={<Money amount={cents(report.mirror.cashCents)} />}
           tone="success"
         />
-        <Kpi label="Deals on the sheet" value={String(report.mirror.deals)} />
+        <Kpi
+          label="Net after fees — all time"
+          value={<Money amount={cents(report.mirror.netCents)} />}
+        />
         <Kpi
           label="Kit sequences"
           value={
