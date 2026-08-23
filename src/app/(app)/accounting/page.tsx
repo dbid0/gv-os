@@ -136,32 +136,34 @@ export default async function AccountingPage() {
           {ledger.byDealType.length === 0 ? (
             <p className="text-faint py-6 text-center text-sm">No income rows yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-xs">
-                  <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 text-right font-medium">Deals</th>
-                  <th className="py-2 pr-3 text-right font-medium">Revenue</th>
-                  <th className="py-2 text-right font-medium">Cash</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger.byDealType.map((line) => (
-                  <tr key={line.key} className="border-b last:border-0">
-                    <td className="py-2 pr-3">{line.key}</td>
-                    <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
-                      {line.count}
-                    </td>
-                    <td className="numeric py-2 pr-3 text-right tabular-nums">
-                      <Money amount={cents(line.revenueCents)} />
-                    </td>
-                    <td className="numeric py-2 text-right font-medium tabular-nums">
-                      <Money amount={cents(line.cashCents)} />
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-faint border-b text-left text-xs">
+                    <th className="py-2 pr-3 font-medium">Type</th>
+                    <th className="py-2 pr-3 text-right font-medium">Deals</th>
+                    <th className="py-2 pr-3 text-right font-medium">Revenue</th>
+                    <th className="py-2 text-right font-medium">Cash</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ledger.byDealType.map((line) => (
+                    <tr key={line.key} className="border-b last:border-0">
+                      <td className="py-2 pr-3">{line.key}</td>
+                      <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                        {line.count}
+                      </td>
+                      <td className="numeric py-2 pr-3 text-right tabular-nums">
+                        <Money amount={cents(line.revenueCents)} />
+                      </td>
+                      <td className="numeric py-2 text-right font-medium tabular-nums">
+                        <Money amount={cents(line.cashCents)} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Panel>
 
@@ -169,32 +171,34 @@ export default async function AccountingPage() {
           {ledger.byMethod.length === 0 ? (
             <p className="text-faint py-6 text-center text-sm">No income rows yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-xs">
-                  <th className="py-2 pr-3 font-medium">Method</th>
-                  <th className="py-2 pr-3 text-right font-medium">Deals</th>
-                  <th className="py-2 pr-3 text-right font-medium">Cash</th>
-                  <th className="py-2 text-right font-medium">Fees</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger.byMethod.map((line) => (
-                  <tr key={line.key} className="border-b last:border-0">
-                    <td className="py-2 pr-3">{line.key}</td>
-                    <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
-                      {line.count}
-                    </td>
-                    <td className="numeric py-2 pr-3 text-right font-medium tabular-nums">
-                      <Money amount={cents(line.cashCents)} />
-                    </td>
-                    <td className="numeric text-muted-foreground py-2 text-right tabular-nums">
-                      <Money amount={cents(line.processorFeeCents)} />
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-faint border-b text-left text-xs">
+                    <th className="py-2 pr-3 font-medium">Method</th>
+                    <th className="py-2 pr-3 text-right font-medium">Deals</th>
+                    <th className="py-2 pr-3 text-right font-medium">Cash</th>
+                    <th className="py-2 text-right font-medium">Fees</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ledger.byMethod.map((line) => (
+                    <tr key={line.key} className="border-b last:border-0">
+                      <td className="py-2 pr-3">{line.key}</td>
+                      <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                        {line.count}
+                      </td>
+                      <td className="numeric py-2 pr-3 text-right font-medium tabular-nums">
+                        <Money amount={cents(line.cashCents)} />
+                      </td>
+                      <td className="numeric text-muted-foreground py-2 text-right tabular-nums">
+                        <Money amount={cents(line.processorFeeCents)} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Panel>
       </div>

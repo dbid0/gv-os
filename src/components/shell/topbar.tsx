@@ -45,14 +45,26 @@ export function Topbar({
   avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
-  const current = allNavItems.find((item) => item.href === pathname);
+  // Longest-prefix match so sub-routes keep their section context; unknown
+  // paths prettify their last segment instead of a generic label.
+  const current = allNavItems
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const fallbackLabel = pathname
+    .split("/")
+    .filter(Boolean)
+    .pop()
+    ?.replace(/[-_]/g, " ")
+    .replace(/^\w/, (c) => c.toUpperCase());
 
   return (
     <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
       <MobileNav />
 
       <div className="min-w-0">
-        <h1 className="truncate text-sm font-medium">{current?.label ?? "GV OS"}</h1>
+        <h1 className="truncate text-sm font-medium">
+          {current?.label ?? fallbackLabel ?? "GV OS"}
+        </h1>
         {current && (
           <p className="text-muted-foreground truncate text-xs">
             {current.description}

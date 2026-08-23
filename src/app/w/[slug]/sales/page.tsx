@@ -83,36 +83,38 @@ export default async function WorkspaceSalesPage({
         </Panel>
       ) : (
         <Panel title="Recent applications">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-faint border-b text-left text-xs">
-                <th className="py-2 pr-3 font-medium">When</th>
-                <th className="py-2 pr-3 font-medium">Name</th>
-                <th className="py-2 pr-3 font-medium">Email</th>
-                <th className="py-2 font-medium">Form</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apps.slice(0, 30).map((a, i) => (
-                <tr key={`${a.email}-${i}`} className="border-b last:border-0">
-                  <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
-                    {(a.submittedAt ?? a.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      timeZone: "America/Chicago",
-                    })}
-                  </td>
-                  <td className="py-2 pr-3">{a.name ?? "—"}</td>
-                  <td className="text-muted-foreground max-w-56 truncate py-2 pr-3">
-                    {a.email ?? "—"}
-                  </td>
-                  <td className="text-faint max-w-48 truncate py-2 text-xs">
-                    {a.formName ?? "—"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-xs">
+                  <th className="py-2 pr-3 font-medium">When</th>
+                  <th className="py-2 pr-3 font-medium">Name</th>
+                  <th className="py-2 pr-3 font-medium">Email</th>
+                  <th className="py-2 font-medium">Form</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {apps.slice(0, 30).map((a, i) => (
+                  <tr key={`${a.email}-${i}`} className="border-b last:border-0">
+                    <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
+                      {(a.submittedAt ?? a.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        timeZone: "America/Chicago",
+                      })}
+                    </td>
+                    <td className="py-2 pr-3">{a.name ?? "—"}</td>
+                    <td className="text-muted-foreground max-w-56 truncate py-2 pr-3">
+                      {a.email ?? "—"}
+                    </td>
+                    <td className="text-faint max-w-48 truncate py-2 text-xs">
+                      {a.formName ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
     </div>

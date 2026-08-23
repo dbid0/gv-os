@@ -67,34 +67,36 @@ export default async function ExpensesPage() {
         </Panel>
       ) : (
         <Panel title="Recorded — newest first">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-faint border-b text-left text-xs">
-                <th className="py-2 pr-3 font-medium">Date</th>
-                <th className="py-2 pr-3 font-medium">Expense</th>
-                <th className="py-2 pr-3 font-medium">Category</th>
-                <th className="py-2 text-right font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
-                    {r.occurredOn}
-                  </td>
-                  <td className="py-2 pr-3">{r.label}</td>
-                  <td className="py-2 pr-3">
-                    <span className="text-muted-foreground rounded-full border px-1.5 text-[11px]">
-                      {r.category}
-                    </span>
-                  </td>
-                  <td className="numeric text-destructive py-2 text-right font-medium tabular-nums">
-                    <Money amount={cents(r.amountCents)} />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-left text-xs">
+                  <th className="py-2 pr-3 font-medium">Date</th>
+                  <th className="py-2 pr-3 font-medium">Expense</th>
+                  <th className="py-2 pr-3 font-medium">Category</th>
+                  <th className="py-2 text-right font-medium">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b last:border-0">
+                    <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
+                      {r.occurredOn}
+                    </td>
+                    <td className="py-2 pr-3">{r.label}</td>
+                    <td className="py-2 pr-3">
+                      <span className="text-muted-foreground rounded-full border px-1.5 text-[11px]">
+                        {r.category}
+                      </span>
+                    </td>
+                    <td className="numeric text-destructive py-2 text-right font-medium tabular-nums">
+                      <Money amount={cents(r.amountCents)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
     </div>
