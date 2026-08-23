@@ -88,31 +88,48 @@ export default async function AccountingPage() {
         }
       />
 
-      {/* The breakdown chain. */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          label="Total cash collected"
-          value={<Money amount={cents(chain.totalCashCents)} />}
-          tone="brand"
-        />
-        <Kpi
-          label={`After fees (−${(chain.processorFeeCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`}
-          value={<Money amount={cents(chain.afterFeesCents)} />}
-        />
-        <Kpi
-          label={
-            chain.teamCents > 0
-              ? `After team (−${(chain.teamCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`
-              : "After team (no payouts yet)"
-          }
-          value={<Money amount={cents(chain.afterTeamCents)} />}
-        />
-        <Kpi
-          label="Net"
-          value={<Money amount={cents(chain.netCents)} />}
-          tone="success"
-        />
-      </div>
+      {/* The breakdown chain — identical stages collapse (P0-3): three equal
+          numbers in a row read as a bug, so quiet stages merge until money
+          actually leaves. */}
+      {chain.teamCents === 0 && chain.otherOutCents === 0 ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Kpi
+            label="Total cash collected"
+            value={<Money amount={cents(chain.totalCashCents)} />}
+            tone="brand"
+          />
+          <Kpi
+            label="Processor fees"
+            value={<Money amount={cents(chain.processorFeeCents)} />}
+          />
+          <Kpi
+            label="Net after fees — nothing paid out yet"
+            value={<Money amount={cents(chain.netCents)} />}
+            tone="success"
+          />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Kpi
+            label="Total cash collected"
+            value={<Money amount={cents(chain.totalCashCents)} />}
+            tone="brand"
+          />
+          <Kpi
+            label={`After fees (−${(chain.processorFeeCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`}
+            value={<Money amount={cents(chain.afterFeesCents)} />}
+          />
+          <Kpi
+            label={`After team (−${(chain.teamCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`}
+            value={<Money amount={cents(chain.afterTeamCents)} />}
+          />
+          <Kpi
+            label="Net"
+            value={<Money amount={cents(chain.netCents)} />}
+            tone="success"
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Income by deal type">
