@@ -55,13 +55,19 @@ export function homeHeadline(
  */
 
 export const HOME_RANGES = [
+  "today",
+  "yesterday",
   "7d",
-  "30d",
-  "month",
-  "last-month",
+  "4w",
   "90d",
-  "ytd",
+  "12m",
   "life",
+  "month",
+  "qtd",
+  "ytd",
+  // Legacy keys kept valid for saved URLs.
+  "30d",
+  "last-month",
 ] as const;
 export type HomeRange = (typeof HOME_RANGES)[number];
 
@@ -87,8 +93,31 @@ export interface RangeBounds {
 export function rangeBounds(range: HomeRange, todayKey: string): RangeBounds {
   const month = todayKey.slice(0, 7);
   switch (range) {
+    case "today":
+      return { from: todayKey, to: todayKey, label: "Today" };
+    case "yesterday": {
+      const y = shiftDayKey(todayKey, -1);
+      return { from: y, to: y, label: "Yesterday" };
+    }
     case "7d":
       return { from: shiftDayKey(todayKey, -6), to: todayKey, label: "Last 7 days" };
+    case "4w":
+      return { from: shiftDayKey(todayKey, -27), to: todayKey, label: "Last 4 weeks" };
+    case "12m":
+      return {
+        from: shiftDayKey(todayKey, -364),
+        to: todayKey,
+        label: "Last 12 months",
+      };
+    case "qtd": {
+      const month = Number(todayKey.slice(5, 7));
+      const qStartMonth = String(Math.floor((month - 1) / 3) * 3 + 1).padStart(2, "0");
+      return {
+        from: `${todayKey.slice(0, 4)}-${qStartMonth}-01`,
+        to: todayKey,
+        label: "Quarter to date",
+      };
+    }
     case "30d":
       return { from: shiftDayKey(todayKey, -29), to: todayKey, label: "Last 30 days" };
     case "last-month": {
@@ -109,9 +138,9 @@ export function rangeBounds(range: HomeRange, todayKey: string): RangeBounds {
         label: "Year to date",
       };
     case "life":
-      return { from: null, to: null, label: "Lifetime" };
+      return { from: null, to: null, label: "All time" };
     default:
-      return { from: `${month}-01`, to: todayKey, label: "This month" };
+      return { from: `${month}-01`, to: todayKey, label: "Month to date" };
   }
 }
 

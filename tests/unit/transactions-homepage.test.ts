@@ -143,3 +143,21 @@ describe("90d preset", () => {
     });
   });
 });
+
+describe("whop presets", () => {
+  it("today/yesterday/4w/12m/qtd compute in CT day keys", () => {
+    expect(rangeBounds("today", "2026-08-23")).toMatchObject({
+      from: "2026-08-23",
+      to: "2026-08-23",
+    });
+    expect(rangeBounds("yesterday", "2026-08-23")).toMatchObject({
+      from: "2026-08-22",
+      to: "2026-08-22",
+    });
+    expect(rangeBounds("4w", "2026-08-23").from).toBe("2026-07-27");
+    expect(rangeBounds("12m", "2026-08-23").from).toBe("2025-08-24");
+    expect(rangeBounds("qtd", "2026-08-23")).toMatchObject({ from: "2026-07-01" });
+    expect(rangeBounds("qtd", "2026-02-10")).toMatchObject({ from: "2026-01-01" });
+    expect(rangeBounds("qtd", "2026-11-01")).toMatchObject({ from: "2026-10-01" });
+  });
+});
