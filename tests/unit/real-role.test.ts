@@ -158,9 +158,11 @@ describe("guardTarget — the route guard the middleware runs", () => {
 });
 
 describe("roleHome", () => {
-  it("sends sales roles to the manager home, team members to the member home", () => {
+  it("sends the manager to the Coach home, reps and team members to the member home", () => {
+    // Managers run the Coach board; reps (Wingman) and other team members land
+    // on the member board — the page is viewer-aware and renders the right one.
     expect(roleHome("sales_manager")).toBe("/home/manager");
-    expect(roleHome("sales_rep")).toBe("/home/manager");
+    expect(roleHome("sales_rep")).toBe("/home/member");
     expect(roleHome("team_member")).toBe("/home/member");
     expect(roleHome("admin")).toBe("/dashboard");
   });

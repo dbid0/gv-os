@@ -37,7 +37,7 @@ const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
     "/profile",
     "/w",
   ],
-  sales_rep: ["/home/manager", "/sales", "/assistant", "/notifications", "/profile"],
+  sales_rep: ["/home/member", "/sales", "/assistant", "/notifications", "/profile"],
   team_member: ["/home/member", "/team", "/notifications", "/profile", "/w"],
   // Clients live in ONE workspace — the middleware pins them to their slug;
   // these grants are the outer boundary.
@@ -102,8 +102,8 @@ export function effectiveRole(realRole: Role, preview: Role | null): Role {
 
 /** Every role's safe landing page when it is bounced off a route it can't open. */
 export function roleHome(role: Role): string {
-  if (role === "sales_manager" || role === "sales_rep") return "/home/manager";
-  if (role === "team_member") return "/home/member";
+  if (role === "sales_manager") return "/home/manager";
+  if (role === "sales_rep" || role === "team_member") return "/home/member";
   return ROLE_HOME;
 }
 
