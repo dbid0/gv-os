@@ -25,7 +25,6 @@ export default async function EmailPage() {
       <PageHeader
         title="The"
         highlight="email engine."
-        description="Every client's Kit account, pulled through the vault on the daily schedule — sequences, tags, and plan health in one place. Snapshots accumulate per sync, so growth becomes chartable over time."
         status={
           <StatusPill tone={accounts.length ? "live" : "muted"}>
             {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
