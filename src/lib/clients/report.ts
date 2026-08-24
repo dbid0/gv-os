@@ -35,7 +35,7 @@ export interface ClientReport {
     takenAt: Date;
   } | null;
   captures: { crm: number; payments: number; bookings: number; signedDocs: number };
-  mirror: { deals: number; netCents: number; cashCents: number };
+  mirror: { deals: number; netCents: number; cashCents: number; revenueCents: number };
   target: { monthlyTargetCents: number | null; mtdCashCents: number };
 }
 
@@ -59,7 +59,7 @@ export async function getClientReport(
     apps30d: 0,
     kit: null,
     captures: { crm: 0, payments: 0, bookings: 0, signedDocs: 0 },
-    mirror: { deals: 0, netCents: 0, cashCents: 0 },
+    mirror: { deals: 0, netCents: 0, cashCents: 0, revenueCents: 0 },
   };
 
   const [appRows, [kitRow], [crm], [pay], [book], [signed]] = clientId
@@ -117,6 +117,7 @@ export async function getClientReport(
         client: sheetMirrorDeals.client,
         dateClosed: sheetMirrorDeals.dateClosed,
         cashCents: sheetMirrorDeals.cashCents,
+        revenueCents: sheetMirrorDeals.revenueCents,
         figures: sheetMirrorDeals.figures,
       })
       .from(sheetMirrorDeals)
@@ -125,6 +126,7 @@ export async function getClientReport(
     mirror = {
       deals: mine.length,
       cashCents: mine.reduce((sum, r) => sum + r.cashCents, 0),
+      revenueCents: mine.reduce((sum, r) => sum + r.revenueCents, 0),
       netCents: mine.reduce((sum, r) => sum + (r.figures.ours.netCents ?? 0), 0),
     };
     mtdCashCents = monthToDateCashCents(mirrorRows, slug, new Date());
