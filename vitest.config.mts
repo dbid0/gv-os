@@ -194,6 +194,28 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Role home dashboards: the pure shaping behind the Coach (manager) and
+        // Wingman (rep) home pages, plus who-is-this identity resolution. Derived
+        // entirely from existing rows — no new tables — so the boards that
+        // greet a manager or rep on login ship as pure, fully covered logic.
+        "src/lib/home/identity.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/home/coach-model.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/home/wingman-model.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // AI assistant pure logic: role gating, the tool registry, free-text
         // routing, the deterministic quick-answers, and the stubbed provider.
         // Role gating decides what the assistant can touch (money tools stay
