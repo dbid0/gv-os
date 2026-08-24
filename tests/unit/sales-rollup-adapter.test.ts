@@ -197,6 +197,8 @@ describe("rollupFromRows", () => {
     );
     expect(rollup.reps[0].totalOwedCents).toBe(234_940); // $2,349.40
     expect(rollup.dealsMissingSplits).toBe(1);
+    // The team default pays it, so it is NOT uncommissioned.
+    expect(rollup.dealsUncommissioned).toBe(0);
   });
 
   it("computes the whole team's owed position from rows, to the cent", () => {
@@ -216,5 +218,8 @@ describe("rollupFromRows", () => {
     expect(rollup.totalOwedCents).toBe(233_000);
     // d3 is closed but carries no split — surfaced, not silently dropped.
     expect(rollup.dealsMissingSplits).toBe(1);
+    // With no team default here, d3 pays no rep at all — the real Grid case
+    // (blank sheet %s + no team default rate), so it is uncommissioned.
+    expect(rollup.dealsUncommissioned).toBe(1);
   });
 });

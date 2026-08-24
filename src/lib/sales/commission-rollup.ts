@@ -76,8 +76,18 @@ export interface CommissionRollup {
   reps: RepOwedLine[];
   teamCashCents: Cents;
   teamRevenueCents: Cents;
-  /** Closed deals carrying no split — money that would go uncommissioned. */
+  /**
+   * Closed deals carrying no EXPLICIT split. Includes deals paid by a team
+   * default (they still pay) — this is the "missing explicit split" warning.
+   */
   dealsMissingSplits: number;
+  /**
+   * Closed deals with NO paying split at all — no explicit split AND no team
+   * default to fall back on, so they commission $0 to everyone. A strict subset
+   * of dealsMissingSplits. This is the money-visible one: a deal that pays no
+   * rep is a rate that has not been set, not a deal that is handled.
+   */
+  dealsUncommissioned: number;
   totalOwedCents: Cents;
 }
 
@@ -122,12 +132,16 @@ export function rollupCommissions(
   }
 
   let dealsMissingSplits = 0;
+  let dealsUncommissioned = 0;
   for (const { deal, splits } of deals) {
     // Flagged when there is no EXPLICIT split — whether the deal is bare or only
     // carries a team-default split. A default split still pays (it accrues
     // below); the flag is the "N deals missing commission splits" warning.
     const hasExplicit = splits.some((s) => (s.source ?? "explicit") === "explicit");
     if (!hasExplicit) dealsMissingSplits += 1;
+    // No split at all — not even a synthesized team default — so this deal
+    // pays no rep a cent. The stricter, money-visible signal.
+    if (splits.length === 0) dealsUncommissioned += 1;
     for (const s of splits) {
       let acc = accruals.get(s.repId);
       if (!acc) {
@@ -168,6 +182,7 @@ export function rollupCommissions(
     teamCashCents: teamTotals.cashCollectedCents,
     teamRevenueCents: teamTotals.revenueCents,
     dealsMissingSplits,
+    dealsUncommissioned,
     totalOwedCents: sum(reps.map((r) => r.totalOwedCents)),
   };
 }
