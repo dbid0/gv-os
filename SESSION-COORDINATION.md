@@ -45,4 +45,17 @@ be without stepping on each other:**
   (daniel@/gus@) and any unmapped allowlisted email. Does NOT change the
   allowlist. **Please don't touch these on main until merged.**
 
+- **Role Home dashboards session** — worktree `~/dev/gv-os-wt-home` (branch
+  `feat/role-home`). Owns: `src/app/(app)/home/manager/*`,
+  `src/app/(app)/home/member/*`, `src/components/home/*`, and `src/lib/home/*`
+  (new). Builds the two role home dashboards on top of #154's real roles:
+  Coach (manager/admin, scoped to their offers) and Wingman (the signed-in
+  rep). Both pages are VIEWER-AWARE — they resolve identity from the Team
+  roster and render the right board for whoever the middleware delivers.
+  REUSES read-only (never rewrites): `quota-queries`, `gamification/*`,
+  `commission-rollup`, `call-queries`, sales `queries` (leaderboard/eod),
+  `team.ts` roster reads. New pure model logic is 100% covered. Preserves the
+  gamification momentum board for non-rep viewers on /home/member. Touches NO
+  money/ledger/split/payout module (imports read fns only) and NO auth/routing.
+
 If you need something in the other session's area, drop a note here.

@@ -11,6 +11,7 @@ import {
   reps,
   transactions,
 } from "@/db/schema/app";
+import { moneyEvents } from "@/db/schema/ledger";
 import { readSheetValues } from "@/lib/google/sheets";
 import { clientBySlug } from "@/lib/roster";
 import {
@@ -65,7 +66,41 @@ async function upsertDealAndSplits(
     })
     .onConflictDoNothing({ target: [deals.externalRef] })
     .returning({ id: deals.id, repId: deals.repId });
-  if (!deal) return; // already imported — splits exist too
+  if (!deal) return; // already imported — splits + money events exist too
+
+  // Deal-level money events (same shape as the Log-a-deal flow) so commissions,
+  // quotas, and the rep leaderboard derive from this deal exactly like a logged
+  // one. This is the money_events ledger; the transactions row above is the v2
+  // backlog. No view sums both, so a deal shows once in each — never doubled.
+  const occurredAt = new Date(`${m.occurredOn}T12:00:00Z`);
+  if (m.cashCents > 0) {
+    await db
+      .insert(moneyEvents)
+      .values({
+        occurredAt,
+        eventType: "payment_received",
+        amountCents: m.cashCents,
+        clientId,
+        dealId: deal.id,
+        source: "sheet.newDealImport",
+        idempotencyKey: `deal:${deal.id}:initial`,
+      })
+      .onConflictDoNothing({ target: [moneyEvents.idempotencyKey] });
+  }
+  if (m.processorFeeCents > 0) {
+    await db
+      .insert(moneyEvents)
+      .values({
+        occurredAt,
+        eventType: "processor_fee",
+        amountCents: -m.processorFeeCents,
+        clientId,
+        dealId: deal.id,
+        source: "sheet.newDealImport",
+        idempotencyKey: `deal:${deal.id}:fee`,
+      })
+      .onConflictDoNothing({ target: [moneyEvents.idempotencyKey] });
+  }
 
   const participants: { name: string; role: string; bps: number }[] = [];
   if (m.meta.closerName && m.meta.closerBps > 0) {

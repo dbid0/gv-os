@@ -19,7 +19,12 @@ export const dynamic = "force-dynamic";
  * time; unmatched rows show as their own line, never dropped.
  */
 export default async function ClientLedgerPage() {
-  const { rows } = await listTransactions({});
+  // The GROSS CLIENT side of the book (Daniel's two-tab model): only
+  // client-layer rows — the cash each offer collected. Agency-layer income
+  // (setup fees, rev-share GV earns FROM a client) lives on the Agency ledger,
+  // never here, so a client's gross is never inflated by GV's own cut. The
+  // Agency ledger enforces the mirror of this with its own layer filter.
+  const { rows } = await listTransactions({ layer: "client" });
   const lines = clientLedger(
     rows,
     roster.map((c) => ({ slug: c.slug, name: c.name })),
@@ -33,6 +38,7 @@ export default async function ClientLedgerPage() {
       <PageHeader
         title="Client"
         highlight="ledger."
+        description="The gross client side — cash each offer collected, per client. GV's own setup fees and rev-share sit on the Agency ledger, not here."
         status={
           <StatusPill tone={attributed.length ? "live" : "muted"}>
             {attributed.length} clients with money
