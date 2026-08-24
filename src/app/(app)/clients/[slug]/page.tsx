@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
-import { TargetPanel } from "@/components/clients/target-panel";
 import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
 import { PageHeader } from "@/components/shell/page-header";
 import { TeamConfig } from "@/components/sales/team-config";
@@ -147,16 +146,6 @@ export default async function ClientPage({
           }
         />
       </div>
-
-      <TargetPanel
-        slug={slug}
-        monthlyTargetCents={report.target.monthlyTargetCents}
-        mtdCashCents={report.target.mtdCashCents}
-        monthLabel={new Date().toLocaleDateString("en-US", {
-          month: "long",
-          timeZone: "America/Chicago",
-        })}
-      />
 
       {report.apps30d > 0 && (
         <Panel title="Applications per day — last 30">

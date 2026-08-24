@@ -51,24 +51,23 @@ export function AvatarUpload({
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex items-center gap-4">
+    <>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="group relative rounded-full transition-transform hover:scale-[1.04] active:scale-95"
+        disabled={pending}
+        className="group relative shrink-0 rounded-full transition-transform hover:scale-[1.04] active:scale-95"
         aria-label="Change profile picture"
+        title="Change profile picture"
       >
         <Avatar className="size-16">
           {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile picture" />}
           <AvatarFallback className="text-lg">{initial}</AvatarFallback>
         </Avatar>
-        <span className="bg-background/80 absolute inset-0 grid place-items-center rounded-full opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+        <span className="bg-background/70 absolute inset-0 grid place-items-center rounded-full opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
           <Camera className="size-5" />
         </span>
       </button>
-      <div className="text-faint text-xs">
-        {pending ? "Uploading…" : "Click the picture to change it."}
-      </div>
       <input
         ref={inputRef}
         type="file"
@@ -92,6 +91,6 @@ export function AvatarUpload({
           });
         }}
       />
-    </div>
+    </>
   );
 }
