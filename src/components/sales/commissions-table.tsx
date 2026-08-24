@@ -41,6 +41,7 @@ export interface CommissionSummary {
   skimCents: Cents;
   totalOwedCents: Cents;
   dealsMissingSplits: number;
+  dealsUncommissioned: number;
 }
 
 const dash = <span className="text-faint">—</span>;
@@ -229,12 +230,28 @@ export function CommissionsTable({
           />
         </div>
 
-        {summary.dealsMissingSplits > 0 && (
-          <div className="text-warning mt-5 flex items-center gap-2 border-t pt-4 text-xs">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            {summary.dealsMissingSplits} deal
-            {summary.dealsMissingSplits === 1 ? "" : "s"} with no commission split
-            {summary.dealsMissingSplits === 1 ? "" : "s"} — paid at the team default.
+        {(summary.dealsUncommissioned > 0 ||
+          summary.dealsMissingSplits - summary.dealsUncommissioned > 0) && (
+          <div className="mt-5 space-y-1.5 border-t pt-4 text-xs">
+            {summary.dealsUncommissioned > 0 && (
+              <div className="text-warning flex items-center gap-2">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                {summary.dealsUncommissioned} closed deal
+                {summary.dealsUncommissioned === 1 ? "" : "s"} with no commission rate —{" "}
+                <span className="font-medium">$0 to any rep</span>. Set the team&apos;s
+                default rate or add a split so these pay.
+              </div>
+            )}
+            {summary.dealsMissingSplits - summary.dealsUncommissioned > 0 && (
+              <div className="text-muted-foreground flex items-center gap-2">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                {summary.dealsMissingSplits - summary.dealsUncommissioned} deal
+                {summary.dealsMissingSplits - summary.dealsUncommissioned === 1
+                  ? ""
+                  : "s"}{" "}
+                with no explicit split — paid at the team default.
+              </div>
+            )}
           </div>
         )}
 

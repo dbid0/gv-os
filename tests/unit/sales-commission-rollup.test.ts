@@ -53,6 +53,8 @@ describe("rollupCommissions", () => {
 
   it("counts deals left without a split instead of dropping them", () => {
     expect(rollup.dealsMissingSplits).toBe(1);
+    // The bare deal pays no rep at all — it is the uncommissioned one too.
+    expect(rollup.dealsUncommissioned).toBe(1);
   });
 
   it("pays a closer the sum of their per-deal commissions", () => {
@@ -100,6 +102,8 @@ describe("rollupCommissions", () => {
     expect(rollup.reps[0].totalOwedCents).toBe(10_000);
     // ...but the deal is still counted as missing an explicit split.
     expect(rollup.dealsMissingSplits).toBe(1);
+    // A default split still PAYS, so this deal is not uncommissioned.
+    expect(rollup.dealsUncommissioned).toBe(0);
   });
 
   it("gives a rep who closed without a comp row their split anyway", () => {

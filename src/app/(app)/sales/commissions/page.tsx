@@ -89,6 +89,7 @@ export default async function SalesCommissionsPage({
         skimCents: sum(rollup.reps.map((r) => r.skimCents)),
         totalOwedCents: rollup.totalOwedCents,
         dealsMissingSplits: rollup.dealsMissingSplits,
+        dealsUncommissioned: rollup.dealsUncommissioned,
       }}
     />
   );
