@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
+import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
@@ -89,6 +90,27 @@ export default async function WorkspacePage({
   );
   const rangeCash = rangeRows.reduce((s, r) => s + r.cashCents, 0);
   const rangeRevenue = rangeRows.reduce((s, r) => s + r.revenueCents, 0);
+
+  // This offer's most recent money, attributed the same way — the workspace's
+  // own transaction feed, mirroring the admin dashboard.
+  const offerRecent = backlog
+    .filter(
+      (r) =>
+        (r.clientName !== null && r.clientName === client.name) ||
+        (r.clientName === null &&
+          r.description !== null &&
+          matchesSheetClient(slug, r.description)),
+    )
+    .slice(0, 8)
+    .map((r) => ({
+      id: r.id,
+      occurredOn: r.occurredOn,
+      direction: r.direction,
+      clientName: r.clientName,
+      dealType: r.dealType,
+      description: r.description,
+      cashCents: r.cashCents,
+    }));
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
@@ -192,6 +214,8 @@ export default async function WorkspacePage({
           <ColumnChart data={appsPerDay} color={chartColorForClient(client.name)} />
         </Panel>
       )}
+
+      {showCash && <RecentTransactions rows={offerRecent} />}
 
       {showDrive && <DriveAssetsPanel slug={slug} drive={drive} />}
 
