@@ -15,18 +15,20 @@ export default async function SalesDealsPage() {
         title="Deals"
         waitingOn="the first closed deal"
         columns={[
-          "Date",
-          "Customer",
-          "Rep",
-          "Team",
-          "Source",
-          "Type",
-          "Revenue",
+          "Deal date",
+          "Client",
+          "Closer",
+          "Setter",
+          "Program sold",
+          "Type of sale",
           "Cash collected",
+          "Revenue",
+          "Balance due",
+          "AR?",
           "Status",
         ]}
         emptyTitle="No deals yet"
-        emptyDetail="Closed deals appear here. Each row shows its rep, source, and cash collected — the revenue is the agreed value, the cash is summed from the ledger, never typed twice."
+        emptyDetail="Closed deals land here from each offer's new-deal form and its payment processor — closer and setter for the split, program sold, cash collected vs. revenue generated, and any balance in AR. Cash is summed from the ledger, never typed twice."
       />
     );
   }
