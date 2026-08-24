@@ -35,4 +35,14 @@ be without stepping on each other:**
   is derived (no new tables); pure engine is 100% covered. Did NOT touch
   dashboard, sales, shell, or notifications.
 
+- **Auth / roles session** — enforcing REAL per-user roles (branch
+  `feat/per-user-roles`, worktree `~/dev/gv-os-wt-roles`). Owns:
+  `src/middleware.ts`, `src/lib/auth/roles.ts`, `src/lib/auth/resolve-role.ts`
+  (new), `src/lib/ai/context.ts`, and the role-computation block in
+  `src/app/(app)/layout.tsx` (only the props fed to `<Sidebar/>` — does NOT edit
+  `src/components/shell/sidebar.tsx`). Resolves each signed-in user's platform
+  role from `team_members.role_key`; safe default = admin for owners
+  (daniel@/gus@) and any unmapped allowlisted email. Does NOT change the
+  allowlist. **Please don't touch these on main until merged.**
+
 If you need something in the other session's area, drop a note here.

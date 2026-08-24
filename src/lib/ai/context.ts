@@ -6,18 +6,22 @@ import { cookies } from "next/headers";
 import { getDb } from "@/db/client";
 import { clients, profiles, reps } from "@/db/schema/app";
 import { currentUser } from "@/lib/auth/server";
+import { resolveRealRole } from "@/lib/auth/resolve-role";
 import { type AiRole, isAiRole } from "@/lib/ai/roles";
 
 /**
  * Who the assistant is answering for, and at what scope.
  *
  * Scope reuses the app's EXISTING role model + View-as, not a parallel one:
- *   - The face role is the `gv-dev-role` preview cookie when it names an
- *     assistant role (restrict-only, exactly as the middleware treats it),
- *     otherwise `admin` — because every allowlisted user is an admin today.
+ *   - The face role is the user's REAL role (resolved from the Team roster by
+ *     `resolveRealRole`), narrowed by the `gv-dev-role` preview cookie exactly
+ *     as the middleware treats it: restrict-only, and only an admin may preview.
+ *     A non-admin real role ignores the cookie, so it can never widen scope.
  *   - A rep face binds to the rep linked to the signed-in profile (Team #140's
- *     rep-linked profiles). When previewing with no linked rep, it falls back
- *     to the first active rep so the demo shows real numbers, and says so.
+ *     rep-linked profiles). When PREVIEWING with no linked rep, it falls back
+ *     to the first active rep so the demo shows real numbers, and says so — a
+ *     real narrower role with no linked rep reads nothing rather than a
+ *     stranger's numbers.
  *   - A manager's `clientId` scopes team reads to their own offers when known.
  *
  * Read-only: this never writes, and it never widens a role.
@@ -88,21 +92,30 @@ function nameFromEmail(email: string | undefined): string {
 
 export async function resolveAiViewer(): Promise<AiViewer> {
   const [user, cookieStore] = await Promise.all([currentUser(), cookies()]);
-  const previewValue = cookieStore.get("gv-dev-role")?.value ?? null;
-  const previewing = isAiRole(previewValue);
-  const role: AiRole = isAiRole(previewValue) ? previewValue : "admin";
-
   const email = user?.email;
+
+  // The REAL role, then the restrict-only preview on top. Only an admin may
+  // wear another face; a non-admin ignores the cookie entirely. A role with no
+  // assistant face (team_member/client — route-guarded away from /assistant)
+  // degrades to the most restrictive face, never up to admin.
+  const realRole = await resolveRealRole(email);
+  const previewValue = cookieStore.get("gv-dev-role")?.value ?? null;
+  const previewFace: AiRole | null =
+    realRole === "admin" && isAiRole(previewValue) ? previewValue : null;
+  const previewing = previewFace !== null;
+  const role: AiRole = previewFace ?? (isAiRole(realRole) ? realRole : "sales_rep");
+
   const displayName =
     typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name
       ? user.user_metadata.full_name
       : nameFromEmail(email);
 
   // Resolve the rep this viewer reads "own" numbers as. A real linked rep wins;
-  // otherwise, for a rep/manager preview, fall back to a representative rep.
+  // otherwise fall back to a representative rep ONLY while previewing, so a real
+  // narrower role never sees a stranger's numbers.
   let linked = email ? await repForEmail(email) : null;
   let repIsFallback = false;
-  if (!linked && role !== "admin") {
+  if (!linked && role !== "admin" && previewing) {
     linked = await firstActiveRep();
     repIsFallback = linked !== null;
   }
