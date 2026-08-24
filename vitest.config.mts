@@ -52,6 +52,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The new-deal-form mapper appends money — same bar.
+        "src/lib/sheets/new-deal.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Confirming a processor event appends money — same bar.
         "src/lib/transactions/confirm.ts": {
           statements: 100,
