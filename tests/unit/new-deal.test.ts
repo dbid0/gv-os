@@ -129,3 +129,71 @@ describe("newDealToTransaction", () => {
     expect(out.reason).toContain("cash collected");
   });
 });
+
+import { parseNewDealsSheet } from "@/lib/sheets/new-deal";
+
+describe("parseNewDealsSheet", () => {
+  const header = [
+    "Timestamp",
+    "Deal Date",
+    "Client Name",
+    "Closer Name",
+    "Setter Name",
+    "Type of Sale",
+    "Program Sold",
+    "Status",
+    "Cash Collected",
+    "Revenue Generated",
+    "Balance Due",
+    "AR?",
+    "Processor",
+    "Processor Fee %",
+  ];
+
+  it("keys rows by header, trims, and drops blank-timestamp rows", () => {
+    const rows = parseNewDealsSheet([
+      header,
+      [
+        "2026-08-20T10:00:00Z",
+        "2026-08-20",
+        " Jane ",
+        "Aiden",
+        "Mia",
+        "PIF",
+        "Operation Room",
+        "Closed",
+        "5000",
+        "10000",
+        "5000",
+        "Yes",
+        "Stripe",
+        "2.9",
+      ],
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // trailing blank
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      timestamp: "2026-08-20T10:00:00Z",
+      clientName: "Jane",
+      closerName: "Aiden",
+      cashCollected: "5000",
+      processorFeePct: "2.9",
+    });
+  });
+
+  it("is robust to reordered and extra columns", () => {
+    const rows = parseNewDealsSheet([
+      ["Extra", "Cash Collected", "Timestamp", "Deal Date", "Notes col"],
+      ["x", "$1,000", "2026-08-21T09:00:00Z", "2026-08-21", "whatever"],
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].cashCollected).toBe("$1,000");
+    expect(rows[0].dealDate).toBe("2026-08-21");
+    expect(rows[0].clientName).toBe("");
+  });
+
+  it("returns [] for an empty or header-only sheet", () => {
+    expect(parseNewDealsSheet([])).toEqual([]);
+    expect(parseNewDealsSheet([header])).toEqual([]);
+  });
+});
