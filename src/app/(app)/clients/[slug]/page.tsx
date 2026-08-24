@@ -156,8 +156,8 @@ export default async function ClientPage({
       <p className="text-faint text-xs">
         Captured for this client: {report.captures.signedDocs} signed agreements ·{" "}
         {report.captures.payments} payments · {report.captures.crm} CRM activities ·{" "}
-        {report.captures.bookings} bookings. Finance figures matched from the Master
-        Finance Sheet by name.
+        {report.captures.bookings} bookings. Cash and deals flow from this offer&apos;s
+        payment processor and new-deal form once the feeds connect.
       </p>
 
       {/* The client's colour as a single accent bar — data, not chrome. */}
