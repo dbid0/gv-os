@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
-import { canAccessRoute, ROLE_HOME, ROLES, type Role } from "@/lib/auth/roles";
+import { effectiveRole, guardTarget, ROLES, type Role } from "@/lib/auth/roles";
+import { resolveRealRole } from "@/lib/auth/resolve-role";
 
 /**
  * Session refresh and route protection, on every request.
@@ -51,48 +52,43 @@ function isPublic(pathname: string) {
 }
 
 /**
- * v2 route guard (spec §0/§6). Today every allowlisted user is an admin, so
- * the guard is a live rail with nothing to stop yet — per-member roles land
- * in Phase 6. The `gv-dev-role` cookie previews a NARROWER role (it can only
- * restrict, never widen: admin passes every check), works even while the
- * login wall is down, and is the seed of "View as".
+ * The `gv-dev-role` cookie previews a NARROWER role (restrict-only — it can
+ * only ever take access away, never grant it, and only for an admin: see
+ * `effectiveRole`). It works even while the login wall is down, and is the
+ * "View as" layer sitting ON TOP of a user's real role.
  */
 function previewRole(request: NextRequest): Role | null {
   const v = request.cookies.get("gv-dev-role")?.value ?? "";
   return (ROLES as readonly string[]).includes(v) ? (v as Role) : null;
 }
 
+/**
+ * Apply the route guard for a resolved role, or return null to let the request
+ * through. Never guards a public path. The decision itself is the pure,
+ * test-shared `guardTarget`; this only turns its answer into a redirect.
+ */
+function guard(request: NextRequest, realRole: Role): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  if (isPublic(pathname)) return null;
+  const role = effectiveRole(realRole, previewRole(request));
+  const clientSlug = request.cookies.get("gv-dev-client")?.value ?? null;
+  const target = guardTarget(role, pathname, clientSlug);
+  if (target && target !== pathname) {
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const preview = previewRole(request);
-  if (preview === "client" && !isPublic(pathname)) {
-    // A client sees exactly ONE workspace. Anything else — including the
-    // admin dashboard — lands on their own front door.
-    const slug = request.cookies.get("gv-dev-client")?.value ?? "";
-    const home = slug ? `/w/${slug}` : ROLE_HOME;
-    const allowed =
-      (slug && (pathname === `/w/${slug}` || pathname.startsWith(`/w/${slug}/`))) ||
-      pathname === "/profile" ||
-      pathname.startsWith("/profile/");
-    if (!allowed && pathname !== home) {
-      return NextResponse.redirect(new URL(home, request.url));
-    }
-  } else if (preview && !isPublic(pathname) && !canAccessRoute(preview, pathname)) {
-    const home =
-      preview === "sales_manager" || preview === "sales_rep"
-        ? "/home/manager"
-        : preview === "team_member"
-          ? "/home/member"
-          : ROLE_HOME;
-    return NextResponse.redirect(new URL(home, request.url));
-  }
-
   // Dev/preview only: devAuthBypass() is hard-fenced to never pass on the
   // production deployment (see src/lib/auth/dev-bypass.ts for the documented
-  // verification path). In prod the login wall below always stands.
+  // verification path). In prod the login wall below always stands. With no
+  // session to resolve, the real role is admin and only the preview cookie can
+  // restrict what's shown — exactly the pre-login "View as" behavior.
   if (devAuthBypass()) {
-    return NextResponse.next({ request });
+    return guard(request, "admin") ?? NextResponse.next({ request });
   }
 
   let response = NextResponse.next({ request });
@@ -143,10 +139,27 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  // Real per-user role enforcement. The user is signed in AND allowlisted; now
+  // resolve their REAL role from the Team roster and 307 them off anything it
+  // can't open. resolveRealRole fails open to admin and the whole block is
+  // wrapped, so role logic can NEVER lock out a signed-in, allowlisted user —
+  // least of all daniel@/gus@, who are unmapped and so always resolve to admin.
+  try {
+    const realRole = await resolveRealRole(user.email);
+    const redirect = guard(request, realRole);
+    if (redirect) return redirect;
+  } catch {
+    // Never let role resolution break access for an authenticated owner.
+  }
+
   return response;
 }
 
 export const config = {
+  // Node.js runtime: the guard resolves the real role from Postgres (getDb uses
+  // the postgres-js driver, which needs Node sockets). Node middleware is stable
+  // in Next 15.5+; the app already runs its data routes on "nodejs".
+  runtime: "nodejs",
   matcher: [
     // Everything except Next internals and static files.
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",

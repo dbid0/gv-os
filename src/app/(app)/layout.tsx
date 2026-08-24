@@ -16,6 +16,8 @@ import {
 import { getPrefs } from "@/lib/prefs";
 import { clientLogos } from "@/lib/clients/logos";
 import { shellUser } from "@/lib/auth/user";
+import { effectiveRole, type Role } from "@/lib/auth/roles";
+import { resolveRealRole } from "@/lib/auth/resolve-role";
 
 /**
  * The authenticated application shell.
@@ -26,27 +28,41 @@ import { shellUser } from "@/lib/auth/user";
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await shellUser();
-  const [monthCashCents, unreadCount, notifications, cookieStore, prefs, logos] =
-    await Promise.all([
-      currentMonthCashCents(),
-      unreadNotificationCount(),
-      recentNotifications(),
-      cookies(),
-      getPrefs(user?.email ?? null, ["avatar", "display-name"]),
-      clientLogos(),
-    ]);
+  const [
+    monthCashCents,
+    unreadCount,
+    notifications,
+    cookieStore,
+    prefs,
+    logos,
+    realRole,
+  ] = await Promise.all([
+    currentMonthCashCents(),
+    unreadNotificationCount(),
+    recentNotifications(),
+    cookies(),
+    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
+    clientLogos(),
+    resolveRealRole(user?.email ?? null),
+  ]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
-  const previewIsRole = (v: string | null): v is import("@/lib/auth/roles").Role =>
+  const previewIsRole = (v: string | null): v is Role =>
     v === "sales_manager" || v === "sales_rep" || v === "team_member" || v === "client";
+  // The role the shell actually renders for: the user's REAL role, narrowed by
+  // an admin's restrict-only "View as" preview. A non-admin ignores the preview
+  // cookie, so it can never widen the nav. Admin -> full nav (Sidebar treats
+  // "admin" as no filter). The banner below still keys off the raw cookie, so it
+  // only shows while an admin is actively previewing.
+  const shownRole = effectiveRole(
+    realRole,
+    previewIsRole(previewRole) ? previewRole : null,
+  );
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      <Sidebar
-        user={user}
-        previewRole={previewIsRole(previewRole) ? previewRole : null}
-      />
+      <Sidebar user={user} previewRole={shownRole} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           user={user}
