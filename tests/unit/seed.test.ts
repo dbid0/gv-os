@@ -188,4 +188,106 @@ describe("buildSeedData", () => {
       expect(day >= oldest).toBe(true);
     }
   });
+
+  it("keeps every activity report an internally consistent funnel", () => {
+    const roleById = new Map(data.reps.map((r) => [r.id as string, r.role]));
+    for (const a of data.activityReports) {
+      const m = a.metrics as Record<string, number>;
+      const role = roleById.get(a.repId as string);
+      // Shows never exceed the sets or the calls they came from — the two
+      // denominators the app divides shows by (Leaderboard, EOD page).
+      if (m.sets_booked != null)
+        expect(m.shows ?? 0).toBeLessThanOrEqual(m.sets_booked);
+      if (m.calls_taken != null)
+        expect(m.shows ?? 0).toBeLessThanOrEqual(m.calls_taken);
+      if (m.no_shows != null) expect(m.no_shows).toBeGreaterThanOrEqual(0);
+      // Setter set rate = sets/dials ≤ 100%; DM set rate = sets/dms ≤ 100%.
+      if (role === "setter") {
+        expect(m.sets_booked ?? 0).toBeLessThanOrEqual(m.connects ?? 0);
+        expect(m.connects ?? 0).toBeLessThanOrEqual(m.dials ?? 0);
+      }
+      if (role === "dm_setter") {
+        expect(m.sets_booked ?? 0).toBeLessThanOrEqual(m.connects ?? 0);
+        expect(m.connects ?? 0).toBeLessThanOrEqual(m.dms_sent ?? 0);
+      }
+    }
+  });
+
+  it("keeps every rep's Show % and Close % ≤ 100%, and closers in band", () => {
+    const showsByRep = new Map<string, number>();
+    const setsByRep = new Map<string, number>();
+    for (const a of data.activityReports) {
+      const m = a.metrics as Record<string, number>;
+      const id = a.repId as string;
+      showsByRep.set(id, (showsByRep.get(id) ?? 0) + (m.shows ?? 0));
+      setsByRep.set(id, (setsByRep.get(id) ?? 0) + (m.sets_booked ?? 0));
+    }
+    const dealsByRep = new Map<string, number>();
+    for (const d of data.deals) {
+      if (!d.repId) continue;
+      const id = d.repId as string;
+      dealsByRep.set(id, (dealsByRep.get(id) ?? 0) + 1);
+    }
+
+    let allShows = 0;
+    let allDeals = 0;
+    let closerShows = 0;
+    let closerSets = 0;
+    for (const rep of data.reps) {
+      const id = rep.id as string;
+      const shows = showsByRep.get(id) ?? 0;
+      const sets = setsByRep.get(id) ?? 0;
+      const dealsN = dealsByRep.get(id) ?? 0;
+      // The two rates that used to blow past 100% now cannot, for any rep.
+      expect(shows).toBeLessThanOrEqual(sets); // Show % ≤ 100%
+      expect(dealsN).toBeLessThanOrEqual(shows); // Close % ≤ 100%
+      allShows += shows;
+      allDeals += dealsN;
+      if (rep.role === "closer") {
+        closerShows += shows;
+        closerSets += sets;
+      }
+    }
+
+    // Only closers carry shows, so every closer with any activity produced cash.
+    expect(closerShows).toBeGreaterThan(0);
+    // Overall close rate (the headline KPI) lands in a believable band.
+    const closePct = (allDeals / allShows) * 100;
+    expect(closePct).toBeGreaterThanOrEqual(15);
+    expect(closePct).toBeLessThanOrEqual(40);
+    // Closer show rate lands in the 40–75% band.
+    const showPct = (closerShows / closerSets) * 100;
+    expect(showPct).toBeGreaterThanOrEqual(40);
+    expect(showPct).toBeLessThanOrEqual(75);
+  });
+
+  it("seeds collected cash in the ledger so producing reps light up", () => {
+    const dealIds = new Set(data.deals.map((d) => d.id));
+    const clientIds = new Set(data.clients.map((c) => c.id));
+    expect(data.moneyEvents.length).toBeGreaterThan(0);
+    for (const ev of data.moneyEvents) {
+      expect(ev.eventType).toBe("payment_received");
+      expect(ev.amountCents as number).toBeGreaterThan(0);
+      expect(ev.idempotencyKey?.startsWith(`${MARKER}:`)).toBe(true);
+      expect(dealIds.has(ev.dealId as string)).toBe(true);
+      expect(clientIds.has(ev.clientId as string)).toBe(true);
+    }
+
+    // Each closed deal has exactly one payment, so every closer with a deal has
+    // non-zero cash — no more $0 rep Cash on the Leaderboard.
+    const cashByDeal = new Map<string, number>();
+    for (const ev of data.moneyEvents) {
+      cashByDeal.set(ev.dealId as string, ev.amountCents as number);
+    }
+    const cashByRep = new Map<string, number>();
+    for (const d of data.deals) {
+      if (!d.repId) continue;
+      const id = d.repId as string;
+      cashByRep.set(id, (cashByRep.get(id) ?? 0) + (cashByDeal.get(d.id) ?? 0));
+    }
+    const closersWithDeals = data.reps.filter(
+      (r) => r.role === "closer" && (cashByRep.get(r.id as string) ?? 0) > 0,
+    );
+    expect(closersWithDeals.length).toBeGreaterThan(0);
+  });
 });

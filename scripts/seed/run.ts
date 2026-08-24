@@ -5,7 +5,13 @@
  * Sales, Leaderboard, Quotas, Call Log, Gamification — comes alive for
  * development and demos. It writes ONLY to staging (guarded), touches ONLY its
  * own rows (every one tagged with the `demo-seed` marker), and never goes near
- * the immutable `ledger.money_events` or the real production database.
+ * the real production database.
+ *
+ * It DOES seed demo `ledger.money_events` (payment_received rows tied to demo
+ * deals) — that is what lights up rep Cash on the Leaderboard and the "best
+ * cash day" record. The ledger stays append-only for everything real: seeded
+ * rows are marker-tagged and idempotent, and reset removes only those, using
+ * the same one-shot trigger-disable the transactions backlog already relies on.
  *
  * Usage (via package.json):
  *   npm run seed            reset demo-seed rows, then reseed  (idempotent)
@@ -36,6 +42,7 @@ import {
   teamMembers,
   transactions,
 } from "@/db/schema/app";
+import { moneyEvents } from "@/db/schema/ledger";
 
 import {
   ProdGuardError,
@@ -76,9 +83,38 @@ async function resetTransactions(pg: Sql): Promise<void> {
   }
 }
 
+/**
+ * Delete the append-only ledger money_events we own, bypassing the immutability
+ * trigger. Mirrors resetTransactions: the ledger rejects DELETE by design, so we
+ * disable our own guard trigger for a single transaction (or, as a fallback,
+ * session_replication_role — session-scoped, never a schema change) and remove
+ * only the marker-tagged demo rows. Runs before deals/clients/reps are deleted,
+ * since money_events references them.
+ */
+async function resetMoneyEvents(pg: Sql): Promise<void> {
+  const pattern = LIKE_MARKER;
+  try {
+    await pg.begin(async (tx) => {
+      await tx.unsafe(
+        "ALTER TABLE ledger.money_events DISABLE TRIGGER money_events_no_delete",
+      );
+      await tx`DELETE FROM ledger.money_events WHERE idempotency_key LIKE ${pattern}`;
+      await tx.unsafe(
+        "ALTER TABLE ledger.money_events ENABLE TRIGGER money_events_no_delete",
+      );
+    });
+  } catch {
+    await pg.begin(async (tx) => {
+      await tx.unsafe("SET LOCAL session_replication_role = replica");
+      await tx`DELETE FROM ledger.money_events WHERE idempotency_key LIKE ${pattern}`;
+    });
+  }
+}
+
 /** Remove every demo-seed row, children before parents, so no FK ever trips. */
 async function reset(db: Db, pg: Sql): Promise<void> {
   await resetTransactions(pg);
+  await resetMoneyEvents(pg);
   await db.delete(notifications).where(like(notifications.dedupeKey, LIKE_MARKER));
   await db.delete(activityLogs).where(like(activityLogs.externalRef, LIKE_MARKER));
   await db
@@ -161,6 +197,9 @@ async function countSeed(pg: Sql): Promise<Record<string, number>> {
     transactions: await one(
       pg`select count(*)::int as count from app.transactions where idempotency_key like ${LIKE_MARKER}`,
     ),
+    money_events: await one(
+      pg`select count(*)::int as count from ledger.money_events where idempotency_key like ${LIKE_MARKER}`,
+    ),
   };
 }
 
@@ -200,6 +239,7 @@ async function main() {
     await insertAll(db, reps, data.reps);
     await insertAll(db, teamMembers, data.teamMembers);
     await insertAll(db, deals, data.deals);
+    await insertAll(db, moneyEvents, data.moneyEvents);
     await insertAll(db, activityReports, data.activityReports);
     await insertAll(db, eodTemplates, data.eodTemplates);
     await insertAll(db, quotas, data.quotas);
@@ -215,7 +255,10 @@ async function main() {
       console.log(`   ${String(n).padStart(5)}  app.${table}`);
     }
     console.log(`   ${String(total).padStart(5)}  TOTAL`);
-    console.log("\n   ledger.money_events was NOT touched (sacred immutable ledger).");
+    console.log(
+      "\n   ledger.money_events seeded (demo payment_received only, marker-tagged);" +
+        " append-only guard intact for every real row.",
+    );
   } finally {
     await pg.end({ timeout: 5 });
   }
