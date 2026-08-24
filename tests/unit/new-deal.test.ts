@@ -23,6 +23,8 @@ const base: NewDealRow = {
   ar: "Yes",
   processor: "Stripe",
   processorFeePct: "2.9",
+  closerPct: "20",
+  setterPct: "10",
 };
 
 const opts = { clientId: "client-1", sheetId: "sheetA", offer: "The Grid" };
@@ -69,8 +71,11 @@ describe("newDealToTransaction", () => {
       idempotencyKey: "offer-deal:sheetA:2026-08-20T14:03:11Z",
     });
     expect(out.row.meta).toEqual({
+      customerName: "Jane Doe",
       closerName: "Aiden",
       setterName: "Mia",
+      closerBps: 2000,
+      setterBps: 1000,
       balanceCents: 500_000,
       isAr: true,
       status: "Closed",
