@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canAccessRoute, ROLES } from "@/lib/auth/roles";
+import {
+  canAccessRoute,
+  guardTarget,
+  roleFromTeamRows,
+  roleHome,
+  ROLES,
+} from "@/lib/auth/roles";
 
 describe("canAccessRoute", () => {
   it("admin opens everything", () => {
@@ -58,5 +64,44 @@ describe("canAccessRoute", () => {
 
   it("ignores query strings", () => {
     expect(canAccessRoute("client", "/w/the-vault?range=life")).toBe(true);
+  });
+});
+
+describe("home routing contract", () => {
+  it("managers land on the Coach home; admins can reach it too", () => {
+    expect(roleHome("sales_manager")).toBe("/home/manager");
+    expect(canAccessRoute("sales_manager", "/home/manager")).toBe(true);
+    // Admin is all-access, so the Coach board is open to it as well.
+    expect(canAccessRoute("admin", "/home/manager")).toBe(true);
+  });
+
+  it("a sales rep (Wingman) lands on the member home, not the manager board", () => {
+    expect(roleHome("sales_rep")).toBe("/home/member");
+    expect(canAccessRoute("sales_rep", "/home/member")).toBe(true);
+    // The rep's own Wingman board lives under /home/member/<repId>.
+    expect(canAccessRoute("sales_rep", "/home/member/rep-123")).toBe(true);
+    // Reps no longer hold the manager board.
+    expect(canAccessRoute("sales_rep", "/home/manager")).toBe(false);
+  });
+
+  it("a team member also lands on the member home", () => {
+    expect(roleHome("team_member")).toBe("/home/member");
+    expect(canAccessRoute("team_member", "/home/member")).toBe(true);
+  });
+
+  it("a rep reaches its member home but is still 307'd off the money", () => {
+    expect(guardTarget("sales_rep", "/home/member")).toBeNull();
+    expect(guardTarget("sales_rep", "/accounting")).toBe("/home/member");
+    expect(guardTarget("sales_rep", "/accounting/payouts")).toBe("/home/member");
+    // A rep still keeps its sales sub-routes.
+    expect(guardTarget("sales_rep", "/sales/eod/submit")).toBeNull();
+  });
+
+  it("owners (daniel@/gus@) and any unmapped allowlisted email stay admin", () => {
+    // Owners never sit in team_members with a narrower role, so their lookup
+    // returns zero rows -> admin — full access, unchanged by this contract.
+    expect(roleFromTeamRows([])).toBe("admin");
+    expect(canAccessRoute("admin", "/accounting/payouts")).toBe(true);
+    expect(canAccessRoute("admin", "/settings/integrations")).toBe(true);
   });
 });
