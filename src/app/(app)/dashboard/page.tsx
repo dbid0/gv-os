@@ -65,6 +65,7 @@ export default async function DashboardPage({
     getDb().execute<{
       pending_payout_cents: number;
       kit_subscribers: number;
+      processor_fees_cents: number;
     }>(sql`
       select
         (coalesce((select sum(base_cents) from app.payouts where status = 'pending'), 0)
@@ -75,7 +76,9 @@ export default async function DashboardPage({
           select distinct on (integration_id) subscriber_count
           from app.kit_snapshots where subscriber_count is not null
           order by integration_id, taken_at desc
-        ) latest)::int as kit_subscribers
+        ) latest)::int as kit_subscribers,
+        (select coalesce(sum(processor_fee_cents), 0) from app.transactions)::int
+          as processor_fees_cents
     `),
   ]);
 
@@ -157,6 +160,40 @@ export default async function DashboardPage({
                 },
               }}
             />
+          ),
+          "total-revenue": (
+            <Panel title="Total revenue">
+              <Kpi
+                label="Booked across all offers"
+                value={<Money amount={cents(overview.revenueCents)} />}
+                tone="brand"
+              />
+            </Panel>
+          ),
+          "deals-closed": (
+            <Panel title="Deals closed">
+              <Kpi
+                label="Across all offers"
+                value={overview.dealsClosed.toLocaleString("en-US")}
+              />
+            </Panel>
+          ),
+          "close-rate": (
+            <Panel title="Close rate">
+              <Kpi
+                label="Closed vs. calls taken"
+                value={closeRatePct == null ? "—" : `${closeRatePct}%`}
+                tone="brand"
+              />
+            </Panel>
+          ),
+          "processor-fees": (
+            <Panel title="Processor fees">
+              <Kpi
+                label="Taken by processors"
+                value={<Money amount={cents(scalars?.processor_fees_cents ?? 0)} />}
+              />
+            </Panel>
           ),
           "ar-owed": (
             <Panel title="Owed to GV">
