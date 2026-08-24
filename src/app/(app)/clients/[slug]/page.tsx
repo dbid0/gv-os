@@ -4,6 +4,7 @@ import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
+import { TrackingSheetField } from "@/components/clients/tracking-sheet-field";
 import { PageHeader } from "@/components/shell/page-header";
 import { TeamConfig } from "@/components/sales/team-config";
 import { listIntegrations } from "@/lib/integrations/queries";
@@ -258,6 +259,7 @@ export default async function ClientPage({
               cash and drives rep commissions). Keys seal on save.
             </p>
           </div>
+          <TrackingSheetField slug={slug} sheetId={team.trackingSheetId} />
           <IntegrationsPanel
             connections={offerIntegrations}
             teams={[{ id: team.id, name: client.name }]}
