@@ -187,6 +187,52 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // AI assistant pure logic: role gating, the tool registry, free-text
+        // routing, the deterministic quick-answers, and the stubbed provider.
+        // Role gating decides what the assistant can touch (money tools stay
+        // admin-only), so it ships fully covered like the rest of the core.
+        "src/lib/ai/capabilities.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/roles.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/tools.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/starter-questions.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/quick-answers.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/router.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/ai/provider.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },
