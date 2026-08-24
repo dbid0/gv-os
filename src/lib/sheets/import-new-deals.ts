@@ -1,12 +1,97 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, transactions } from "@/db/schema/app";
+import { clients, commissionSplits, deals, reps, transactions } from "@/db/schema/app";
 import { readSheetValues } from "@/lib/google/sheets";
 import { clientBySlug } from "@/lib/roster";
-import { newDealToTransaction, parseNewDealsSheet } from "@/lib/sheets/new-deal";
+import {
+  newDealToTransaction,
+  parseNewDealsSheet,
+  type NewDealMapped,
+} from "@/lib/sheets/new-deal";
+
+type Db = ReturnType<typeof getDb>;
+
+/** Find a client's rep by name, or create one. Sales reps come from the sheet. */
+async function findOrCreateRep(
+  db: Db,
+  clientId: string,
+  name: string,
+  role: string,
+): Promise<string> {
+  const [existing] = await db
+    .select({ id: reps.id })
+    .from(reps)
+    .where(and(eq(reps.clientId, clientId), eq(reps.name, name)))
+    .limit(1);
+  if (existing) return existing.id;
+  const [created] = await db
+    .insert(reps)
+    .values({ clientId, name, role, status: "active" })
+    .returning({ id: reps.id });
+  return created.id;
+}
+
+/**
+ * Create the deal record + its commission splits for one mapped row. Idempotent
+ * on the deal's external_ref (= the transaction idempotency key), so re-running
+ * never doubles a deal or its splits.
+ */
+async function upsertDealAndSplits(
+  db: Db,
+  m: NewDealMapped,
+  clientId: string,
+): Promise<void> {
+  const [deal] = await db
+    .insert(deals)
+    .values({
+      clientId,
+      dealType: m.dealType,
+      offer: m.offer,
+      contractValueCents: m.revenueCents,
+      closedAt: new Date(`${m.occurredOn}T12:00:00Z`),
+      customerName: m.meta.customerName,
+      source: "sheet",
+      externalRef: m.idempotencyKey,
+    })
+    .onConflictDoNothing({ target: [deals.externalRef] })
+    .returning({ id: deals.id, repId: deals.repId });
+  if (!deal) return; // already imported — splits exist too
+
+  const participants: { name: string; role: string; bps: number }[] = [];
+  if (m.meta.closerName && m.meta.closerBps > 0) {
+    participants.push({
+      name: m.meta.closerName,
+      role: "closer",
+      bps: m.meta.closerBps,
+    });
+  }
+  if (m.meta.setterName && m.meta.setterBps > 0) {
+    participants.push({
+      name: m.meta.setterName,
+      role: "setter",
+      bps: m.meta.setterBps,
+    });
+  }
+
+  let closerRepId: string | null = null;
+  for (const p of participants) {
+    const repId = await findOrCreateRep(db, clientId, p.name, p.role);
+    if (p.role === "closer") closerRepId = repId;
+    await db.insert(commissionSplits).values({
+      dealId: deal.id,
+      repId,
+      role: p.role,
+      rateBps: p.bps,
+      basis: "cash_collected",
+    });
+  }
+  if (closerRepId) {
+    await db.update(deals).set({ repId: closerRepId }).where(eq(deals.id, deal.id));
+  }
+}
 
 /**
  * The new-deal importer (the second feed). Reads an offer's tracking sheet's
@@ -55,8 +140,8 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
       refused.push({ row: row.timestamp || "(no timestamp)", reason: mapped.reason });
       continue;
     }
-    // `meta` (closer/setter/AR) drives commissions in a later slice; the money
-    // row is everything else.
+    // The money row (transactions) is everything but meta; the deal record +
+    // commission splits derive from the full mapping.
     const { meta: _meta, ...txn } = mapped.row;
     void _meta;
     const res = await db
@@ -66,6 +151,8 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
       .returning({ id: transactions.id });
     if (res.length > 0) inserted += 1;
     else skipped += 1;
+
+    await upsertDealAndSplits(db, mapped.row, client.id);
   }
 
   return { read: rows.length, inserted, skipped, refused };

@@ -26,6 +26,8 @@ export interface NewDealRow {
   ar: string;
   processor: string;
   processorFeePct: string;
+  closerPct: string;
+  setterPct: string;
 }
 
 export interface NewDealMapped {
@@ -45,8 +47,11 @@ export interface NewDealMapped {
   idempotencyKey: string;
   /** Carried for the deal/commission record, not the money row. */
   meta: {
+    customerName: string | null;
     closerName: string | null;
     setterName: string | null;
+    closerBps: number;
+    setterBps: number;
     balanceCents: number;
     isAr: boolean;
     status: string;
@@ -76,6 +81,8 @@ const HEADER_MAP: Record<string, keyof NewDealRow> = {
   "ar?": "ar",
   processor: "processor",
   "processor fee %": "processorFeePct",
+  "closer %": "closerPct",
+  "setter %": "setterPct",
 };
 
 const emptyRow = (): NewDealRow => ({
@@ -93,6 +100,8 @@ const emptyRow = (): NewDealRow => ({
   ar: "",
   processor: "",
   processorFeePct: "",
+  closerPct: "",
+  setterPct: "",
 });
 
 /**
@@ -201,8 +210,13 @@ export function newDealToTransaction(
       source: "sheet",
       idempotencyKey: newDealIdempotencyKey(opts.sheetId, row.timestamp.trim()),
       meta: {
+        customerName: row.clientName.trim() || null,
         closerName: row.closerName.trim() || null,
         setterName: row.setterName.trim() || null,
+        // A bad commission % never kills the deal's money — it just means no
+        // rate for that participant until a human fixes it.
+        closerBps: parsePctBps(row.closerPct) ?? 0,
+        setterBps: parsePctBps(row.setterPct) ?? 0,
         balanceCents,
         isAr: AR_TRUE.has(row.ar.trim().toLowerCase()),
         status: row.status.trim() || "closed",
