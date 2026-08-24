@@ -1,9 +1,16 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, commissionSplits, deals, reps, transactions } from "@/db/schema/app";
+import {
+  clients,
+  commissionSplits,
+  deals,
+  integrations,
+  reps,
+  transactions,
+} from "@/db/schema/app";
 import { readSheetValues } from "@/lib/google/sheets";
 import { clientBySlug } from "@/lib/roster";
 import {
@@ -103,11 +110,17 @@ async function upsertDealAndSplits(
 
 const NEW_DEALS_RANGE = "'🤝 New Deals'!A1:AZ2000";
 
+const PROCESSOR_PROVIDERS = ["stripe", "whop", "fanbasis"];
+
 export interface ImportResult {
   read: number;
   inserted: number;
   skipped: number;
   refused: { row: string; reason: string }[];
+  /** Where this offer's money comes from — "processor" means the money rows
+   * are skipped here (the processor feed owns them) to avoid double-counting;
+   * deals + commissions still import. */
+  moneyFrom: "processor" | "new-deal";
 }
 
 export async function importNewDealsForOffer(slug: string): Promise<ImportResult> {
@@ -121,6 +134,22 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
   if (!client.sheet) {
     throw new Error(`No tracking sheet connected for "${slug}" — set one first.`);
   }
+
+  // Dedup between the two feeds (Daniel: never double-count). If a payment
+  // processor is connected for this offer, IT owns the money rows — so the
+  // new-deal form here contributes deals + commissions only, no money.
+  const [processor] = await db
+    .select({ id: integrations.id })
+    .from(integrations)
+    .where(
+      and(
+        eq(integrations.clientId, client.id),
+        eq(integrations.status, "connected"),
+        inArray(integrations.provider, PROCESSOR_PROVIDERS),
+      ),
+    )
+    .limit(1);
+  const processorOwnsMoney = Boolean(processor);
 
   const offer = clientBySlug(slug)?.offer ?? null;
   const values = await readSheetValues(client.sheet, NEW_DEALS_RANGE);
@@ -141,19 +170,28 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
       continue;
     }
     // The money row (transactions) is everything but meta; the deal record +
-    // commission splits derive from the full mapping.
+    // commission splits derive from the full mapping. When a processor owns
+    // the money, we skip the transaction and only record the deal/commissions.
     const { meta: _meta, ...txn } = mapped.row;
     void _meta;
-    const res = await db
-      .insert(transactions)
-      .values({ ...txn, enteredBy: "new-deal-import" })
-      .onConflictDoNothing({ target: [transactions.idempotencyKey] })
-      .returning({ id: transactions.id });
-    if (res.length > 0) inserted += 1;
-    else skipped += 1;
+    if (!processorOwnsMoney) {
+      const res = await db
+        .insert(transactions)
+        .values({ ...txn, enteredBy: "new-deal-import" })
+        .onConflictDoNothing({ target: [transactions.idempotencyKey] })
+        .returning({ id: transactions.id });
+      if (res.length > 0) inserted += 1;
+      else skipped += 1;
+    }
 
     await upsertDealAndSplits(db, mapped.row, client.id);
   }
 
-  return { read: rows.length, inserted, skipped, refused };
+  return {
+    read: rows.length,
+    inserted,
+    skipped,
+    refused,
+    moneyFrom: processorOwnsMoney ? "processor" : "new-deal",
+  };
 }

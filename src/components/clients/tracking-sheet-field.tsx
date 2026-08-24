@@ -52,8 +52,10 @@ export function TrackingSheetField({
       try {
         const r = await importOfferDeals(slug);
         const detail =
-          `${r.inserted} new · ${r.skipped} already in` +
-          (r.refused.length ? ` · ${r.refused.length} skipped` : "");
+          r.moneyFrom === "processor"
+            ? "deals + commissions imported · the connected processor owns the money"
+            : `${r.inserted} new · ${r.skipped} already logged` +
+              (r.refused.length ? ` · ${r.refused.length} need review` : "");
         toast({ tone: "success", title: `Imported ${r.read} deal rows`, detail });
         router.refresh();
       } catch (e) {
