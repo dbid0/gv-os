@@ -27,6 +27,7 @@ import type {
   Transaction,
 } from "@/db/schema/app";
 import { quotas } from "@/db/schema/app";
+import type { NewMoneyEvent } from "@/db/schema/ledger";
 
 import { Rng } from "./rng";
 
@@ -63,6 +64,7 @@ export interface SeedData {
   notifications: Partial<Notification>[];
   offerSettings: Partial<OfferSettings>[];
   transactions: Partial<Transaction>[];
+  moneyEvents: Partial<NewMoneyEvent>[];
 }
 
 // -------------------------------------------------------------- Date helpers
@@ -285,43 +287,83 @@ function fullName(rng: Rng, used: Set<string>): string {
   return name;
 }
 
-function metricsForRole(role: string, rng: Rng): Record<string, number> {
+/**
+ * One day's activity for a rep, as an INTERNALLY CONSISTENT funnel.
+ *
+ * Every count downstream is a rounded conversion of the count above it —
+ * dials → connects → sets → shows — and a conversion rate is always < 1. So on
+ * any single report, and therefore on any sum of reports, `shows ≤ sets_booked`,
+ * `shows ≤ calls_taken`, `sets_booked ≤ connects ≤ dials`, and `no_shows ≥ 0`
+ * hold by construction. That is what keeps every rate the app derives
+ * (Leaderboard Show %, the EOD page's show rate, the template set/close rates)
+ * at or below 100% for every role, and lands them in believable bands:
+ * show 45–72%, set rate a single-digit slice of dials.
+ *
+ * For a closer/manager the appointments on their calendar are the calls taken
+ * AND the sets that reached them, so `calls_taken === sets_booked === appts` —
+ * that is the fix for the old data, where closers logged many shows against
+ * near-zero sets and the Leaderboard read impossible 400–900% show rates.
+ *
+ * Setters and DM setters BOOK sets; the shows happen on a closer's calendar, so
+ * they carry no `shows` of their own — faithful to the model, and it keeps the
+ * headline close rate (deals ÷ shows) honest by not padding the denominator
+ * with shows no one attributed to a closer.
+ */
+function buildDayMetrics(role: string, rng: Rng): Record<string, number> {
+  const showRate = 0.45 + rng.next() * 0.27; // 45–72%
   switch (role) {
-    case "setter":
+    case "setter": {
+      const dials = rng.int(40, 95);
+      const connects = Math.round(dials * (0.25 + rng.next() * 0.17)); // 25–42%
+      const sets = Math.round(connects * (0.18 + rng.next() * 0.2)); // 18–38%
       return {
-        dials: rng.int(40, 95),
-        connects: rng.int(12, 32),
-        dms_sent: rng.int(20, 60),
-        sets_booked: rng.int(2, 9),
+        dials,
+        connects,
+        sets_booked: sets,
         follow_up_calls: rng.int(1, 5),
         cancelled_calls: rng.int(0, 2),
       };
-    case "dm_setter":
+    }
+    case "dm_setter": {
+      const dmsSent = rng.int(60, 150);
+      const connects = Math.round(dmsSent * (0.12 + rng.next() * 0.13)); // 12–25%
+      const sets = Math.round(connects * (0.2 + rng.next() * 0.18)); // 20–38%
       return {
-        dms_sent: rng.int(60, 150),
-        connects: rng.int(10, 28),
-        sets_booked: rng.int(2, 8),
+        dms_sent: dmsSent,
+        connects,
+        sets_booked: sets,
         dials: rng.int(0, 12),
         follow_up_calls: rng.int(1, 4),
       };
-    case "closer":
+    }
+    case "closer": {
+      const appts = rng.int(2, 4); // appointments on the calendar
+      const shows = Math.round(appts * showRate);
+      const dials = rng.int(5, 22);
       return {
-        calls_taken: rng.int(4, 13),
-        shows: rng.int(3, 11),
-        no_shows: rng.int(0, 4),
+        calls_taken: appts,
+        sets_booked: appts,
+        shows,
+        no_shows: appts - shows,
         follow_up_calls: rng.int(2, 8),
-        dials: rng.int(5, 22),
-        connects: rng.int(3, 11),
-        sets_booked: rng.int(0, 2),
-        cancelled_calls: rng.int(0, 2),
+        dials,
+        connects: Math.round(dials * (0.3 + rng.next() * 0.2)),
       };
-    default: // manager
+    }
+    default: {
+      // Manager: a lighter coaching-call load, still internally consistent.
+      const appts = rng.int(3, 8);
+      const shows = Math.round(appts * showRate);
+      const dials = rng.int(0, 10);
       return {
-        calls_taken: rng.int(2, 6),
-        shows: rng.int(1, 5),
-        dials: rng.int(0, 10),
-        connects: rng.int(0, 6),
+        calls_taken: appts,
+        sets_booked: appts,
+        shows,
+        no_shows: appts - shows,
+        dials,
+        connects: Math.round(dials * (0.3 + rng.next() * 0.2)),
       };
+    }
   }
 }
 
@@ -396,8 +438,6 @@ export function buildSeedData(rng: Rng): SeedData {
     list.push(rep);
     repsByClient.set(rep.clientId as string, list);
   }
-  const closersFor = (clientId: string) =>
-    (repsByClient.get(clientId) ?? []).filter((r) => r.role === "closer");
   const sellersFor = (clientId: string) =>
     (repsByClient.get(clientId) ?? []).filter(
       (r) => r.role === "closer" || r.role === "setter" || r.role === "dm_setter",
@@ -432,42 +472,29 @@ export function buildSeedData(rng: Rng): SeedData {
   pushMember("copywriter", "team_member", clients[0].id, null);
   pushMember("creative_director", "team_member", clients[1].id, null);
 
-  // ---- Deals (spread over ~90 days, closed by a rep) ----
-  const deals: WithId<NewDeal>[] = [];
-  const DEAL_COUNT = 72;
-  for (let i = 0; i < DEAL_COUNT; i += 1) {
-    const client = rng.pick(clients);
-    const closers = closersFor(client.id as string);
-    const sellers = sellersFor(client.id as string);
-    // Most deals are attributed to a closer; a few to another seller.
-    const rep =
-      closers.length && rng.chance(0.8) ? rng.pick(closers) : rng.pick(sellers);
-    const closedDay = shiftDay(ANCHOR_DAY, -rng.int(0, 89));
-    const recurrence = rng.chance(0.35) ? "recurring" : "one_time";
-    const contract = rng.pick(CONTRACT_TIERS_CENTS);
-    const signed = rng.chance(0.85);
-    const slug = CLIENT_SPECS.find((s) => s.name === client.name)!.slug;
-    const customer = rng.pick(CUSTOMER_COMPANIES);
-    deals.push({
-      id: rng.uuid(),
-      clientId: client.id,
-      dealType: rng.pick(DEAL_TYPES),
-      offer: rng.pick(OFFERS[slug]),
-      contractValueCents: contract,
-      closedAt: noonUtc(closedDay),
-      agreementSigned: signed ? "signed" : null,
-      notes: `${MARKER} deal`,
-      repId: rep?.id ?? null,
-      recurrence,
-      source: rng.pick(SOURCES),
-      leadSource: rng.pick(LEAD_SOURCES),
-      customerName: customer,
-      externalRef: `${MARKER}:deal:${i}`,
-    });
+  // Per-client spec lookup (clients were built from CLIENT_SPECS in order).
+  const specByClientId = new Map<string, ClientSpec>(
+    clients.map((c, i) => [c.id as string, CLIENT_SPECS[i]]),
+  );
+
+  // Each closer's personal close rate — the believable slice of their shows
+  // that becomes a closed deal, drawn once so their Close % is stable and in
+  // band (17–36%). Only closers carry shows, so only closers produce deals.
+  const closeRateByRep = new Map<string, number>();
+  for (const rep of reps) {
+    closeRateByRep.set(
+      rep.id as string,
+      rep.role === "closer" ? 0.17 + rng.next() * 0.19 : 0,
+    );
   }
 
   // ---- Activity reports (daily EOD for sellers, weekly EOW for managers) ----
+  // Built first so each rep's total shows is known before deals are derived
+  // from it, guaranteeing deals ≤ shows (Close % ≤ 100%) rep by rep.
   const activityReports: WithId<NewActivityReport>[] = [];
+  const showsByRep = new Map<string, number>();
+  const addShows = (repId: string, m: Record<string, number>) =>
+    showsByRep.set(repId, (showsByRep.get(repId) ?? 0) + (m.shows ?? 0));
   const ACTIVITY_DAYS = 42;
   for (const rep of reps) {
     const isManager = rep.role === "manager";
@@ -477,13 +504,15 @@ export function buildSeedData(rng: Rng): SeedData {
       if (isManager) {
         // Managers file an end-of-week report on Fridays.
         if (weekdayOf(day) !== 5) continue;
+        const metrics = buildDayMetrics(rep.role, rng);
+        addShows(rep.id as string, metrics);
         activityReports.push({
           id: rng.uuid(),
           repId: rep.id,
           clientId: rep.clientId,
           reportDate: noonUtc(day),
           kind: "eow",
-          metrics: metricsForRole(rep.role, rng),
+          metrics,
           notes: null,
           externalRef: `${MARKER}:ar:${rep.externalRef}:${day}`,
         });
@@ -491,17 +520,89 @@ export function buildSeedData(rng: Rng): SeedData {
       }
       // Sellers file daily, with the occasional miss (keeps compliance honest).
       if (!rng.chance(0.9)) continue;
+      const metrics = buildDayMetrics(rep.role, rng);
+      addShows(rep.id as string, metrics);
       activityReports.push({
         id: rng.uuid(),
         repId: rep.id,
         clientId: rep.clientId,
         reportDate: noonUtc(day),
         kind: "eod",
-        metrics: metricsForRole(rep.role, rng),
+        metrics,
         notes: rng.chance(0.15) ? `${MARKER}: solid day, pipeline building.` : null,
         externalRef: `${MARKER}:ar:${rep.externalRef}:${day}`,
       });
     }
+  }
+
+  // ---- Deals (derived from each rep's shows, so Close % lands in band) ----
+  const deals: WithId<NewDeal>[] = [];
+  let dealIndex = 0;
+  for (const rep of reps) {
+    const shows = showsByRep.get(rep.id as string) ?? 0;
+    const rate = closeRateByRep.get(rep.id as string) ?? 0;
+    let dealCount = Math.round(rate * shows);
+    // A producing closer always books at least one, so their cash lights up.
+    if (rep.role === "closer" && shows > 0) dealCount = Math.max(1, dealCount);
+    const spec = specByClientId.get(rep.clientId as string)!;
+    for (let n = 0; n < dealCount; n += 1) {
+      const closedDay = shiftDay(ANCHOR_DAY, -rng.int(0, ACTIVITY_DAYS - 1));
+      const recurrence = rng.chance(0.35) ? "recurring" : "one_time";
+      const contract = rng.pick(CONTRACT_TIERS_CENTS);
+      const signed = rng.chance(0.85);
+      const customer = rng.pick(CUSTOMER_COMPANIES);
+      deals.push({
+        id: rng.uuid(),
+        clientId: rep.clientId,
+        dealType: rng.pick(DEAL_TYPES),
+        offer: rng.pick(OFFERS[spec.slug]),
+        contractValueCents: contract,
+        closedAt: noonUtc(closedDay),
+        agreementSigned: signed ? "signed" : null,
+        notes: `${MARKER} deal`,
+        repId: rep.id,
+        recurrence,
+        source: rng.pick(SOURCES),
+        leadSource: rng.pick(LEAD_SOURCES),
+        customerName: customer,
+        externalRef: `${MARKER}:deal:${dealIndex}`,
+      });
+      dealIndex += 1;
+    }
+  }
+
+  // ---- Ledger money events (collected cash tied to each deal) ----
+  // These are what light up rep Cash on the Leaderboard and the gamification
+  // "best cash day": both read payment_received rows from the immutable ledger,
+  // joined to a rep through the deal. Deal-level payments carry no repId (per
+  // the schema); attribution flows deal → rep. STAGING-ONLY, marker-tagged,
+  // idempotent via the unique idempotency key, and cleared by the same
+  // trigger-disable reset the transactions backlog already uses.
+  const CASH_PROCESSORS = ["stripe", "fanbasis", "whop", "wire", "ach"] as const;
+  const moneyEvents: Partial<NewMoneyEvent>[] = [];
+  let moneyIndex = 0;
+  for (const deal of deals) {
+    const contract = deal.contractValueCents as number;
+    // Most deals fully collect; some sit on a deposit (leaves believable AR).
+    const cash = rng.chance(0.82)
+      ? contract
+      : Math.round(contract * rng.pick([0.5, 0.34, 0.25]));
+    moneyEvents.push({
+      id: rng.uuid(),
+      occurredAt: deal.closedAt as Date,
+      recordedAt: deal.closedAt as Date,
+      eventType: "payment_received",
+      amountCents: cash,
+      currency: "USD",
+      clientId: deal.clientId,
+      dealId: deal.id,
+      repId: null,
+      processor: rng.pick(CASH_PROCESSORS),
+      source: "import",
+      idempotencyKey: `${MARKER}:money:${moneyIndex}`,
+      memo: `${MARKER} payment`,
+    });
+    moneyIndex += 1;
   }
 
   // ---- EOD templates (one per client per role) ----
@@ -939,5 +1040,6 @@ export function buildSeedData(rng: Rng): SeedData {
     notifications,
     offerSettings,
     transactions,
+    moneyEvents,
   };
 }
