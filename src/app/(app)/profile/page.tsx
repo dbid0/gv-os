@@ -4,7 +4,6 @@ import { ArrowRight, Settings } from "lucide-react";
 import { ActivityHeatmap } from "@/components/gamification/activity-heatmap";
 import { PbCountBadge } from "@/components/gamification/personal-bests";
 import { StreakBadge } from "@/components/gamification/streak-badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -39,23 +38,20 @@ export default async function ProfilePage() {
       </div>
 
       <Panel title="Account">
-        <div className="flex items-center gap-4">
-          <Avatar className="size-12">
-            <AvatarFallback className="text-base">
-              {user?.initial ?? "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{user?.name ?? "Build mode"}</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <AvatarUpload avatarUrl={avatarUrl} initial={user?.initial ?? "?"} />
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-medium">{user?.name ?? "Build mode"}</p>
             <p className="text-muted-foreground truncate text-xs">
               {user?.email ?? "No session — auth is off during the build phase"}
             </p>
+            <p className="text-faint mt-0.5 text-[11px]">
+              Click the picture to change it
+            </p>
           </div>
-          <div className="ml-auto shrink-0">
-            <StatusPill tone={user ? "live" : "muted"}>
-              {user ? "Signed in" : "No session"}
-            </StatusPill>
-          </div>
+          <StatusPill tone={user ? "live" : "muted"}>
+            {user ? "Signed in" : "No session"}
+          </StatusPill>
         </div>
 
         <div className="mt-5 border-t pt-4">
@@ -101,7 +97,6 @@ export default async function ProfilePage() {
           </div>
         )}
       </Panel>
-      <AvatarUpload avatarUrl={avatarUrl} initial={user?.initial ?? "?"} />
       <ProfileForm
         initialName={displayName ?? ""}
         initialDiscord={discordHandle ?? ""}

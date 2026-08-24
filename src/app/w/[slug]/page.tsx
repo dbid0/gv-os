@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
-import { TargetPanel } from "@/components/clients/target-panel";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
@@ -74,7 +73,6 @@ export default async function WorkspacePage({
   const show = (key: string, fallback: boolean) =>
     !portalView || (visibility[key] ?? fallback);
   const showCash = show("cash", false);
-  const showTarget = show("target", false);
   const showApps = show("apps", true);
   const showDrive = show("drive", true);
 
@@ -155,18 +153,6 @@ export default async function WorkspacePage({
           value={<Money amount={cents(report.mirror.revenueCents)} />}
         />
       </div>
-
-      {showTarget && (
-        <TargetPanel
-          slug={slug}
-          monthlyTargetCents={report.target.monthlyTargetCents}
-          mtdCashCents={report.target.mtdCashCents}
-          monthLabel={new Date().toLocaleDateString("en-US", {
-            month: "long",
-            timeZone: "America/Chicago",
-          })}
-        />
-      )}
 
       {showApps && report.apps30d > 0 && (
         <Panel title="Applications per day — last 30">
