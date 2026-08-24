@@ -85,6 +85,36 @@ async function accessToken(cred: GoogleCredential): Promise<string> {
   return body.access_token;
 }
 
+/**
+ * Read one range of ANY sheet the agency credential can open, as strings.
+ * Money cells come back unformatted (5000, not "$5,000") and dates as the
+ * displayed string — both shapes the row parsers accept. Used by the per-offer
+ * new-deal importer.
+ */
+export async function readSheetValues(
+  sheetId: string,
+  range: string,
+): Promise<string[][]> {
+  const token = await googleAccessToken();
+  const params = new URLSearchParams({
+    valueRenderOption: "UNFORMATTED_VALUE",
+    dateTimeRenderOption: "FORMATTED_STRING",
+  });
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      sheetId,
+    )}/values/${encodeURIComponent(range)}?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Sheets read failed: ${res.status} ${await res.text()}`);
+  }
+  const body = (await res.json()) as { values?: (string | number)[][] };
+  return (body.values ?? []).map((row) =>
+    row.map((cell) => (cell == null ? "" : String(cell))),
+  );
+}
+
 export interface FinanceSheetData {
   rawRows: (string | number)[][];
   computedRows: (string | number)[][];

@@ -60,6 +60,63 @@ export function newDealIdempotencyKey(sheetId: string, timestamp: string): strin
   return `offer-deal:${sheetId}:${timestamp}`;
 }
 
+// Sheet header → NewDealRow field. Matched case-insensitively, trimmed.
+const HEADER_MAP: Record<string, keyof NewDealRow> = {
+  timestamp: "timestamp",
+  "deal date": "dealDate",
+  "client name": "clientName",
+  "closer name": "closerName",
+  "setter name": "setterName",
+  "type of sale": "typeOfSale",
+  "program sold": "programSold",
+  status: "status",
+  "cash collected": "cashCollected",
+  "revenue generated": "revenueGenerated",
+  "balance due": "balanceDue",
+  "ar?": "ar",
+  processor: "processor",
+  "processor fee %": "processorFeePct",
+};
+
+const emptyRow = (): NewDealRow => ({
+  timestamp: "",
+  dealDate: "",
+  clientName: "",
+  closerName: "",
+  setterName: "",
+  typeOfSale: "",
+  programSold: "",
+  status: "",
+  cashCollected: "",
+  revenueGenerated: "",
+  balanceDue: "",
+  ar: "",
+  processor: "",
+  processorFeePct: "",
+});
+
+/**
+ * Parse a `🤝 New Deals` tab (header row + data rows) into keyed rows. Columns
+ * are matched by header name, so a reordered or extra column can't shift the
+ * data. Rows with no timestamp (blank trailing rows) are dropped.
+ */
+export function parseNewDealsSheet(values: string[][]): NewDealRow[] {
+  if (values.length < 2) return [];
+  const header = values[0].map((h) => h.trim().toLowerCase());
+  const cols = header
+    .map((h, i) => ({ field: HEADER_MAP[h], i }))
+    .filter((c): c is { field: keyof NewDealRow; i: number } => Boolean(c.field));
+
+  return values
+    .slice(1)
+    .map((raw) => {
+      const row = emptyRow();
+      for (const { field, i } of cols) row[field] = (raw[i] ?? "").trim();
+      return row;
+    })
+    .filter((r) => r.timestamp !== "");
+}
+
 /** "$5,000.00" | "5000" | "" → integer cents. Blank = 0. */
 export function parseMoneyCents(raw: string): number | null {
   const cleaned = raw.replace(/[$,\s]/g, "").trim();
