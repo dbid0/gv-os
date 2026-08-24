@@ -10,12 +10,13 @@ import {
   crmActivity,
   kitSnapshots,
   paymentEvents,
-  sheetMirrorDeals,
-  sheetSyncRuns,
   signedDocs,
 } from "@/db/schema/app";
+import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import { monthToDateCashCents } from "@/lib/clients/targets";
+import { roster } from "@/lib/roster";
+import { clientLedger } from "@/lib/transactions/ledger";
+import { listTransactions } from "@/lib/transactions/queries";
 
 /**
  * Everything one client's report page needs, in one pass. Capture tables join
@@ -103,34 +104,34 @@ export async function getClientReport(
       ])
     : [[], [undefined], [undefined], [undefined], [undefined], [undefined]];
 
-  // Finance mirror: latest run, matched by name aliases.
-  const [run] = await db
-    .select({ id: sheetSyncRuns.id })
-    .from(sheetSyncRuns)
-    .orderBy(desc(sheetSyncRuns.createdAt))
-    .limit(1);
-  let mirror = empty.mirror;
-  let mtdCashCents = 0;
-  if (run) {
-    const mirrorRows = await db
-      .select({
-        client: sheetMirrorDeals.client,
-        dateClosed: sheetMirrorDeals.dateClosed,
-        cashCents: sheetMirrorDeals.cashCents,
-        revenueCents: sheetMirrorDeals.revenueCents,
-        figures: sheetMirrorDeals.figures,
-      })
-      .from(sheetMirrorDeals)
-      .where(eq(sheetMirrorDeals.runId, run.id));
-    const mine = mirrorRows.filter((r) => matchesSheetClient(slug, r.client));
-    mirror = {
-      deals: mine.length,
-      cashCents: mine.reduce((sum, r) => sum + r.cashCents, 0),
-      revenueCents: mine.reduce((sum, r) => sum + r.revenueCents, 0),
-      netCents: mine.reduce((sum, r) => sum + (r.figures.ours.netCents ?? 0), 0),
-    };
-    mtdCashCents = monthToDateCashCents(mirrorRows, slug, new Date());
-  }
+  // Money is derived from the unified transactions backlog — the single source
+  // of truth (v2 §4) — not the retired finance mirror. Client-layer rows only
+  // (this offer's own gross cash), attributed to the offer at read time by the
+  // same tested helper the client ledger uses, so the number here always agrees
+  // with /accounting/clients. "Net after fees" = cash minus processor fees. The
+  // new-deal importer and processor feeds write these rows, so imported deals
+  // appear the moment they land — no separate mirror to fall out of sync.
+  const { rows: clientRows } = await listTransactions({ layer: "client" });
+  const rosterLite = roster.map((c) => ({ slug: c.slug, name: c.name }));
+  const line = clientLedger(clientRows, rosterLite, matchesSheetClient).find(
+    (l) => l.slug === slug,
+  );
+  const mirror = line
+    ? {
+        deals: line.count,
+        cashCents: line.cashCents,
+        revenueCents: line.revenueCents,
+        netCents: line.afterFeesCents,
+      }
+    : empty.mirror;
+
+  // Month-to-date cash for the offer's target: the same attribution, narrowed
+  // to the current CT month.
+  const month = dayKeyCT(new Date()).slice(0, 7);
+  const monthRows = clientRows.filter((r) => r.occurredOn.slice(0, 7) === month);
+  const mtdCashCents =
+    clientLedger(monthRows, rosterLite, matchesSheetClient).find((l) => l.slug === slug)
+      ?.cashCents ?? 0;
 
   void displayName;
   return {
