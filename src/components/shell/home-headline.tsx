@@ -75,23 +75,31 @@ export function HomeHeadline({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-              Gross collected · {monthLabel}
+              {monthLabel}
             </p>
-            <p className="numeric text-success mt-1 text-5xl font-bold tracking-tight">
-              {fmtUsd(collectedCents)}
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {fmtUsd(revenueCents)} booked revenue
-              {revenueCents > collectedCents && (
-                <>
-                  {" "}
-                  ·{" "}
-                  <span className="text-warning">
-                    {fmtUsd(revenueCents - collectedCents)} still due
-                  </span>
-                </>
-              )}
-            </p>
+            <div className="mt-1 flex flex-wrap items-end gap-x-10 gap-y-3">
+              <div>
+                <p className="text-muted-foreground text-xs font-medium">
+                  Cash collected
+                </p>
+                <p className="numeric text-success mt-0.5 text-5xl font-bold tracking-tight">
+                  {fmtUsd(collectedCents)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs font-medium">
+                  Total revenue
+                </p>
+                <p className="numeric mt-0.5 text-4xl font-bold tracking-tight">
+                  {fmtUsd(revenueCents)}
+                </p>
+              </div>
+            </div>
+            {revenueCents > collectedCents && (
+              <p className="text-warning mt-2 text-sm">
+                {fmtUsd(revenueCents - collectedCents)} still due
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-2">
