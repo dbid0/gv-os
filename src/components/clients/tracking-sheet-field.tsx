@@ -2,9 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Check, Sheet } from "lucide-react";
+import { Check, DownloadCloud, Sheet } from "lucide-react";
 
-import { saveTrackingSheet } from "@/app/(app)/clients/[slug]/actions";
+import {
+  importOfferDeals,
+  saveTrackingSheet,
+} from "@/app/(app)/clients/[slug]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -25,6 +28,7 @@ export function TrackingSheetField({
   const { toast } = useToast();
   const [value, setValue] = useState(sheetId ?? "");
   const [pending, start] = useTransition();
+  const [importing, startImport] = useTransition();
 
   const save = () =>
     start(async () => {
@@ -39,6 +43,23 @@ export function TrackingSheetField({
         toast({
           tone: "error",
           title: e instanceof Error ? e.message : "Could not save.",
+        });
+      }
+    });
+
+  const runImport = () =>
+    startImport(async () => {
+      try {
+        const r = await importOfferDeals(slug);
+        const detail =
+          `${r.inserted} new · ${r.skipped} already in` +
+          (r.refused.length ? ` · ${r.refused.length} skipped` : "");
+        toast({ tone: "success", title: `Imported ${r.read} deal rows`, detail });
+        router.refresh();
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: e instanceof Error ? e.message : "Import failed.",
         });
       }
     });
@@ -65,6 +86,17 @@ export function TrackingSheetField({
       <Button onClick={save} disabled={pending} className="gap-1.5">
         <Check className="size-3.5" /> {sheetId ? "Update" : "Connect"}
       </Button>
+      {sheetId && (
+        <Button
+          variant="outline"
+          onClick={runImport}
+          disabled={importing}
+          className="gap-1.5"
+        >
+          <DownloadCloud className="size-3.5" />
+          {importing ? "Importing…" : "Import deals"}
+        </Button>
+      )}
     </div>
   );
 }

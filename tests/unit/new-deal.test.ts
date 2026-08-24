@@ -4,6 +4,7 @@ import {
   newDealIdempotencyKey,
   newDealToTransaction,
   parseMoneyCents,
+  toDayKey,
   type NewDealRow,
 } from "@/lib/sheets/new-deal";
 
@@ -195,5 +196,26 @@ describe("parseNewDealsSheet", () => {
   it("returns [] for an empty or header-only sheet", () => {
     expect(parseNewDealsSheet([])).toEqual([]);
     expect(parseNewDealsSheet([header])).toEqual([]);
+  });
+});
+
+describe("toDayKey", () => {
+  it("extracts yyyy-mm-dd from a date or datetime, else null", () => {
+    expect(toDayKey("2026-08-03")).toBe("2026-08-03");
+    expect(toDayKey("2026-08-03 16:53:39")).toBe("2026-08-03");
+    expect(toDayKey("  2026-08-03T10:00:00Z ")).toBe("2026-08-03");
+    expect(toDayKey("Aug 3 2026")).toBeNull();
+    expect(toDayKey("")).toBeNull();
+  });
+});
+
+describe("newDealToTransaction — datetime deal date", () => {
+  it("normalizes a datetime deal date to its day key", () => {
+    const out = newDealToTransaction(
+      { ...base, dealDate: "2026-08-03 16:53:39" },
+      opts,
+    );
+    if (!out.ok) throw new Error("unreachable");
+    expect(out.row.occurredOn).toBe("2026-08-03");
   });
 });

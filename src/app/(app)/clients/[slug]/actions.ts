@@ -41,6 +41,21 @@ export async function saveDriveFolder(slug: string, rawFolderId: string) {
   return { saved: true };
 }
 
+/**
+ * Manual trigger: import this offer's New Deals rows into the ledger. Money —
+ * idempotent (re-running is safe) and admin-gated. Returns a plain summary.
+ */
+export async function importOfferDeals(slug: string) {
+  await requireUser();
+  const { importNewDealsForOffer } = await import("@/lib/sheets/import-new-deals");
+  const result = await importNewDealsForOffer(slug);
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/accounting");
+  return result;
+}
+
 const SHEET_ID = /^[A-Za-z0-9_-]{20,60}$/;
 
 /** Point this offer at its tracking sheet (the New Deals feed). Empty clears it. */
