@@ -135,6 +135,12 @@ function parsePctBps(raw: string): number | null {
 
 const AR_TRUE = new Set(["yes", "y", "true", "ar", "1"]);
 
+/** Extract the yyyy-mm-dd day key from a sheet date/datetime, or null. */
+export function toDayKey(raw: string): string | null {
+  const m = raw.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
+
 /**
  * Map one new-deal row to the transaction it appends. Anything that would
  * corrupt money — a non-numeric amount, a fee over the cash — refuses with a
@@ -170,14 +176,15 @@ export function newDealToTransaction(
   if (!row.timestamp.trim()) {
     return { ok: false, reason: "Row has no timestamp — cannot key it safely." };
   }
-  if (!row.dealDate.trim()) {
-    return { ok: false, reason: "Row has no deal date." };
+  const occurredOn = toDayKey(row.dealDate);
+  if (!occurredOn) {
+    return { ok: false, reason: `Unreadable deal date "${row.dealDate}".` };
   }
 
   return {
     ok: true,
     row: {
-      occurredOn: row.dealDate.trim(),
+      occurredOn,
       direction: "in",
       layer: "client",
       clientId: opts.clientId,
