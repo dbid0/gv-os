@@ -9,6 +9,7 @@ import { normalizeDashboardCards } from "@/lib/dashboard-cards";
 import { cents } from "@/lib/money";
 import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
+import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
@@ -109,6 +110,16 @@ export default async function DashboardPage({
       revenueCents: l.revenueCents,
     }));
 
+  const recentRows = backlog.slice(0, 8).map((r) => ({
+    id: r.id,
+    occurredOn: r.occurredOn,
+    direction: r.direction,
+    clientName: r.clientName,
+    dealType: r.dealType,
+    description: r.description,
+    cashCents: r.cashCents,
+  }));
+
   const cards = normalizeDashboardCards(storedCards);
   const arItems = partialDealAr(backlog);
   const arTotalCents = arItems.reduce((t, i) => t + i.arCents, 0);
@@ -161,6 +172,7 @@ export default async function DashboardPage({
               }}
             />
           ),
+          "recent-activity": <RecentTransactions rows={recentRows} />,
           "total-revenue": (
             <Panel title="Total revenue">
               <Kpi

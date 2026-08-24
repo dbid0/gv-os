@@ -1,6 +1,7 @@
 /** The admin dashboard card catalog (v2, Whop-style editable dashboard). */
 export const DASHBOARD_CARD_IDS = [
   "sales-engine",
+  "recent-activity",
   "total-revenue",
   "deals-closed",
   "close-rate",
@@ -18,6 +19,10 @@ export const DASHBOARD_CARD_META: Record<
   "sales-engine": {
     title: "Sales engine",
     detail: "Cash, revenue, deals, close rate, EOD compliance",
+  },
+  "recent-activity": {
+    title: "Recent transactions",
+    detail: "The latest money in, live as processors and forms report",
   },
   "total-revenue": {
     title: "Total revenue",
@@ -46,7 +51,10 @@ export const DASHBOARD_CARD_META: Record<
   },
 };
 
-export const DEFAULT_DASHBOARD_CARDS: DashboardCardId[] = ["sales-engine"];
+export const DEFAULT_DASHBOARD_CARDS: DashboardCardId[] = [
+  "sales-engine",
+  "recent-activity",
+];
 
 export function normalizeDashboardCards(value: unknown): DashboardCardId[] {
   if (!Array.isArray(value)) return DEFAULT_DASHBOARD_CARDS;

@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Full-bleed cards span the board; everything else tiles into the grid.
-const WIDE_CARDS = new Set<DashboardCardId>(["sales-engine"]);
+const WIDE_CARDS = new Set<DashboardCardId>(["sales-engine", "recent-activity"]);
 
 /**
  * The editable dashboard (Whop's Add-Charts pattern, Daniel's ask): every
