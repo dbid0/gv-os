@@ -35,6 +35,14 @@ describe("canAccessRoute", () => {
     expect(canAccessRoute("team_member", "/dashboard")).toBe(false);
   });
 
+  it("the AI assistant is open to sales roles and admin, closed to the rest", () => {
+    expect(canAccessRoute("admin", "/assistant")).toBe(true);
+    expect(canAccessRoute("sales_manager", "/assistant")).toBe(true);
+    expect(canAccessRoute("sales_rep", "/assistant")).toBe(true);
+    expect(canAccessRoute("team_member", "/assistant")).toBe(false);
+    expect(canAccessRoute("client", "/assistant")).toBe(false);
+  });
+
   it("clients get only their workspace lane and profile", () => {
     expect(canAccessRoute("client", "/dashboard")).toBe(false);
     expect(canAccessRoute("client", "/profile")).toBe(true);

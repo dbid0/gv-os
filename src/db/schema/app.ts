@@ -1172,3 +1172,49 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   client: one(clients, { fields: [activityLogs.clientId], references: [clients.id] }),
   rep: one(reps, { fields: [activityLogs.repId], references: [reps.id] }),
 }));
+
+/**
+ * The AI assistant transcript. One row per message — a user turn or the
+ * assistant's reply — so a conversation can be replayed and audited.
+ *
+ * Additive and append-only in spirit: rows are inserted, never mutated. It
+ * records the FACE the question was asked under (admin | sales_manager |
+ * sales_rep — the scope), which starter/tool question a turn resolved to, and,
+ * for assistant turns, the tools invoked plus their structured result payload.
+ * It never stores money — only references to what was read — so it sits safely
+ * in the mutable `app` schema alongside the rest of operational state.
+ */
+export const aiConversations = appSchema.table(
+  "ai_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Who was asking. Null when there is no signed-in profile (dev/preview). */
+    profileId: uuid("profile_id").references(() => profiles.id),
+    /** The assistant face / scope: admin | sales_manager | sales_rep. */
+    face: text("face").notNull(),
+    /** Message author: user | assistant. */
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    /** The starter/tool question this turn resolved to, when any. */
+    questionId: text("question_id"),
+    /** Tools the assistant invoked this turn: [{ toolId, capability }]. */
+    toolCalls: jsonb("tool_calls").$type<{ toolId: string; capability: string }[]>(),
+    /** The structured result payload the tools returned, for replay/audit. */
+    toolResults: jsonb("tool_results").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("ai_conversations_profile_idx").on(table.profileId, table.createdAt),
+    index("ai_conversations_face_idx").on(table.face),
+    index("ai_conversations_created_idx").on(table.createdAt),
+  ],
+);
+
+export type AiConversation = typeof aiConversations.$inferSelect;
+
+export const aiConversationsRelations = relations(aiConversations, ({ one }) => ({
+  profile: one(profiles, {
+    fields: [aiConversations.profileId],
+    references: [profiles.id],
+  }),
+}));
