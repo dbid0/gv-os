@@ -51,6 +51,8 @@ export function Sidebar({
   // for these until it is too late to matter.
   useEffect(() => {
     router.prefetch("/clients");
+    router.prefetch("/dashboard");
+    router.prefetch("/sales/teams/new");
     for (const client of roster) router.prefetch(`/w/${client.slug}`);
   }, [router]);
   // Preview shells (v2 §6): a role only sees nav it can actually open —
