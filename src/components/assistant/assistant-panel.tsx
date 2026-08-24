@@ -108,9 +108,27 @@ export function AssistantPanel({
       {/* Transcript */}
       <div className="max-h-[46vh] min-h-[8rem] overflow-y-auto px-5 py-4">
         {messages.length === 0 ? (
-          <div className="text-faint flex flex-col items-center gap-2 py-10 text-center text-sm">
-            <Sparkles className="size-5" />
-            <p>Tap a question below — I pull straight from your live numbers.</p>
+          <div className="flex flex-col gap-3 py-2">
+            <div className="text-faint flex items-center gap-2 text-sm">
+              <Sparkles className="size-4" />
+              <p>Tap a question — I pull straight from your live numbers.</p>
+            </div>
+            {starters.length > 0 && (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {starters.map((s) => (
+                  <button
+                    key={s.toolId}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => send({ toolId: s.toolId }, s.prompt)}
+                    className="hover:border-ring hover:bg-secondary focus-visible:border-ring focus-visible:ring-ring/50 flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <span>{s.prompt}</span>
+                    <Send className="text-faint size-3.5 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -126,11 +144,18 @@ export function AssistantPanel({
                   <div className="bg-secondary text-secondary-foreground max-w-[90%] space-y-1.5 rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm">
                     <p className="font-medium">{m.headline}</p>
                     {m.details.length > 0 && (
-                      <ul className="text-muted-foreground list-disc space-y-0.5 pl-4 text-[13px]">
-                        {m.details.map((d, i) => (
-                          <li key={i}>{d}</li>
-                        ))}
-                      </ul>
+                      <>
+                        <p className="text-muted-foreground text-[13px]">
+                          {m.details[0]}
+                        </p>
+                        {m.details.length > 1 && (
+                          <ul className="text-muted-foreground list-disc space-y-0.5 pl-4 text-[13px]">
+                            {m.details.slice(1).map((d, i) => (
+                              <li key={i}>{d}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -150,8 +175,8 @@ export function AssistantPanel({
         )}
       </div>
 
-      {/* Starters */}
-      {starters.length > 0 && (
+      {/* Starters — a quick re-ask row once the thread has started. */}
+      {starters.length > 0 && messages.length > 0 && (
         <div className="flex flex-wrap gap-2 border-t px-5 py-3">
           {starters.map((s) => (
             <Button

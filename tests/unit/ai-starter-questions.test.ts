@@ -15,19 +15,30 @@ describe("ai starter questions", () => {
 
   it("a rep only sees rep starters", () => {
     const ids = starterQuestionsForRole("sales_rep").map((s) => s.toolId);
-    expect(ids).toEqual(["rep.pacing", "rep.streak", "rep.earnings", "rep.quota_gap"]);
+    expect(ids).toEqual([
+      "rep.pacing",
+      "rep.streak",
+      "rep.conversion",
+      "rep.earnings",
+      "rep.quota_gap",
+      "rep.best_day",
+    ]);
+    // Every rep starter is genuinely a rep-scoped tool, never a team/admin one.
+    expect(ids.every((id) => id.startsWith("rep."))).toBe(true);
   });
 
   it("a manager sees rep + team starters but no admin starters", () => {
     const ids = starterQuestionsForRole("sales_manager").map((s) => s.toolId);
     expect(ids).toContain("rep.pacing");
     expect(ids).toContain("team.behind_pace");
+    expect(ids).toContain("team.standings");
     expect(ids.some((id) => id.startsWith("admin."))).toBe(false);
   });
 
   it("an admin sees the admin starters too", () => {
     const ids = starterQuestionsForRole("admin").map((s) => s.toolId);
     expect(ids).toContain("admin.net_month");
+    expect(ids).toContain("admin.client_trend");
     expect(ids).toContain("admin.payout_owed");
     // Resolved starters carry their tool.
     const net = starterQuestionsForRole("admin").find(
