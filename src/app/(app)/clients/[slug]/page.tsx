@@ -4,8 +4,10 @@ import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { TargetPanel } from "@/components/clients/target-panel";
+import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
 import { PageHeader } from "@/components/shell/page-header";
 import { TeamConfig } from "@/components/sales/team-config";
+import { listIntegrations } from "@/lib/integrations/queries";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
@@ -73,11 +75,20 @@ export default async function ClientPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const [team, report, drive] = await Promise.all([
+  const [team, report, drive, allIntegrations] = await Promise.all([
     getTeamBySlug(slug),
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
+    listIntegrations(),
   ]);
+  const offerIntegrations = team
+    ? allIntegrations
+        .filter((c) => c.clientId === team.id)
+        .map((c) => ({
+          ...c,
+          lastSyncAt: c.lastSyncAt ? c.lastSyncAt.toISOString() : null,
+        }))
+    : [];
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
@@ -244,6 +255,28 @@ export default async function ClientPage({
       <DriveAssetsPanel slug={slug} drive={drive} />
 
       {team && <TeamConfig team={team} />}
+
+      {/* Per-offer data feeds (Daniel's ask): connect this offer's payment
+          processor and its new-deal-forms sheet right here, scoped to this
+          client. These are the two feeds that will fund the numbers. */}
+      {team && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Data feeds</h2>
+            <p className="text-muted-foreground text-sm">
+              Connect {client.name}&apos;s feeds here — the payment processor (every
+              payment, to the cent) and the new-deal-forms sheet (validates revenue vs.
+              cash and drives rep commissions). Keys seal on save.
+            </p>
+          </div>
+          <IntegrationsPanel
+            connections={offerIntegrations}
+            teams={[{ id: team.id, name: client.name }]}
+            fixedClientId={team.id}
+            embedded
+          />
+        </section>
+      )}
     </div>
   );
 }
