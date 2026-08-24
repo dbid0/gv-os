@@ -30,15 +30,19 @@ export const STARTER_QUESTIONS: readonly StarterQuestion[] = [
   // Wingman (rep)
   { toolId: "rep.pacing", prompt: "How am I pacing?" },
   { toolId: "rep.streak", prompt: "What's my streak?" },
+  { toolId: "rep.conversion", prompt: "How's my close rate?" },
   { toolId: "rep.earnings", prompt: "What am I owed?" },
   { toolId: "rep.quota_gap", prompt: "What do I need to hit quota?" },
+  { toolId: "rep.best_day", prompt: "When do I perform best?" },
   // Coach (manager)
   { toolId: "team.behind_pace", prompt: "Who's behind pace?" },
   { toolId: "team.missed_eod", prompt: "Who missed EOD?" },
   { toolId: "team.close_rate", prompt: "What's our close rate?" },
+  { toolId: "team.standings", prompt: "Who's my top and bottom rep?" },
   { toolId: "team.momentum", prompt: "Who's on a streak?" },
   // Operator (admin)
   { toolId: "admin.net_month", prompt: "What did we net this month?" },
+  { toolId: "admin.client_trend", prompt: "Which clients are up or down?" },
   { toolId: "admin.whats_failing", prompt: "What's failing right now?" },
   { toolId: "admin.outstanding_ar", prompt: "Who owes us money?" },
   { toolId: "admin.payout_owed", prompt: "What do we owe the team?" },

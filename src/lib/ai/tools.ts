@@ -73,6 +73,22 @@ export const TOOL_REGISTRY: readonly Tool[] = [
     kind: "read",
     liveNow: true,
   },
+  {
+    id: "rep.conversion",
+    label: "My show & close rate",
+    description: "My show rate and close rate from logged calls.",
+    capability: "read.own",
+    kind: "read",
+    liveNow: true,
+  },
+  {
+    id: "rep.best_day",
+    label: "My best day",
+    description: "My strongest weekday and top personal record.",
+    capability: "read.own",
+    kind: "read",
+    liveNow: true,
+  },
   // ---- read.team (manager) ----
   {
     id: "team.behind_pace",
@@ -106,6 +122,14 @@ export const TOOL_REGISTRY: readonly Tool[] = [
     kind: "read",
     liveNow: true,
   },
+  {
+    id: "team.standings",
+    label: "Top & bottom rep",
+    description: "The team's top and bottom rep by collected cash.",
+    capability: "read.team",
+    kind: "read",
+    liveNow: true,
+  },
   // ---- read.all (admin) ----
   {
     id: "admin.net_month",
@@ -135,6 +159,14 @@ export const TOOL_REGISTRY: readonly Tool[] = [
     id: "admin.payout_owed",
     label: "Payout owed",
     description: "What each rep is owed in the current payout run.",
+    capability: "read.all",
+    kind: "read",
+    liveNow: true,
+  },
+  {
+    id: "admin.client_trend",
+    label: "Clients up or down",
+    description: "Which clients are up or down in net cash vs last month.",
     capability: "read.all",
     kind: "read",
     liveNow: true,

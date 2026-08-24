@@ -6,17 +6,23 @@ import {
   type QuickAnswer,
   type RepQuotaSnapshot,
   answerBehindPace,
+  answerClientTrend,
   answerCloseRate,
   answerMissedEod,
   answerMomentum,
   answerNetThisMonth,
   answerPayoutOwed,
+  answerRepBestDay,
+  answerRepConversion,
   answerRepEarnings,
   answerRepPacing,
   answerRepQuotaGap,
   answerRepStreak,
+  answerTeamStandings,
   answerWhatsFailing,
   answerWhoOwes,
+  bucketClientTrend,
+  usd,
 } from "@/lib/ai/quick-answers";
 import { getAiProvider } from "@/lib/ai/provider";
 import { matchToolId } from "@/lib/ai/router";
@@ -24,9 +30,15 @@ import { aiFace } from "@/lib/ai/roles";
 import { canRunTool, toolById } from "@/lib/ai/tools";
 // Existing read layers — imported READ-ONLY. Never modified here.
 import { getRepGamification, listRepMomentum } from "@/lib/gamification/queries";
-import { mirrorOutstanding, currentMonthCashCents } from "@/lib/accounting/sheet-sync";
+import {
+  latestReconciliation,
+  mirrorOutstanding,
+  currentMonthCashCents,
+} from "@/lib/accounting/sheet-sync";
 import { listIntegrations } from "@/lib/integrations/queries";
 import { isFailureNote } from "@/lib/integrations/sync-note";
+import { summarizeActivity } from "@/lib/sales/call-activity";
+import { listCallLogs } from "@/lib/sales/call-queries";
 import {
   getCommissionRollup,
   getEodCompliance,
@@ -59,6 +71,21 @@ function monthLabel(now: Date): string {
 
 function dayLabel(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM" for a date, in UTC so it matches the mirror's ISO close dates. */
+function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The first of the previous UTC month — safe across year boundaries. */
+function prevMonthDate(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+}
+
+/** Format a personal-best value for display, per its metric's unit. */
+function bestDisplay(format: string, value: number): string {
+  return format === "currency" ? usd(value) : Math.round(value).toLocaleString("en-US");
 }
 
 /** Flatten a rep-scoped quota row into the pure compute's shape. */
@@ -122,6 +149,36 @@ async function repAnswer(
     });
   }
 
+  if (toolId === "rep.conversion") {
+    const logs = await listCallLogs();
+    const mine = logs
+      .filter((l) => l.repId === viewer.repId)
+      .map((l) => ({ repId: l.repId, mode: l.mode, disposition: l.disposition }));
+    const stats = summarizeActivity(mine);
+    return answerRepConversion({
+      repName,
+      showRate: stats.showRate,
+      closeRate: stats.closeRate,
+      shows: stats.shows,
+      sales: stats.sales,
+      calls: stats.calls,
+      hasCalls: stats.logged > 0,
+    });
+  }
+
+  if (toolId === "rep.best_day") {
+    const view = await getRepGamification(viewer.repId);
+    const g = view?.gamification;
+    const top = g?.personalBests[0] ?? null;
+    return answerRepBestDay({
+      repName,
+      bestWeekdayLabel: g?.heatmap.bestWeekdayLabel ?? null,
+      topRecordLabel: top?.label ?? null,
+      topRecordDisplay: top ? bestDisplay(top.format, top.value) : null,
+      hasActivity: g?.hasActivity ?? false,
+    });
+  }
+
   // rep.pacing and rep.quota_gap both read the rep's active quota.
   const quotas = await listQuotasWithPacing(nowMs);
   const snapshot = pickRepQuota(quotas, viewer.repId);
@@ -178,6 +235,27 @@ async function teamAnswer(
     });
   }
 
+  if (toolId === "team.standings") {
+    const board = await getLeaderboard();
+    let scoped = board;
+    if (viewer.clientId) {
+      const clientReps = await listReps(viewer.clientId);
+      const ids = new Set(clientReps.map((r) => r.id));
+      scoped = board.filter((r) => ids.has(r.repId));
+    }
+    // The leaderboard is already ranked by cash, so first is top, last is bottom.
+    const toStanding = (r: (typeof scoped)[number]) => ({
+      name: r.name,
+      cashCents: r.cashCents,
+      deals: r.dealsClosed,
+    });
+    return answerTeamStandings({
+      top: scoped[0] ? toStanding(scoped[0]) : null,
+      bottom: scoped.length > 1 ? toStanding(scoped[scoped.length - 1]) : null,
+      activeCount: scoped.length,
+    });
+  }
+
   // team.momentum
   const momentum = await listRepMomentum();
   return answerMomentum(
@@ -210,6 +288,25 @@ async function adminAnswer(toolId: string, now: Date): Promise<QuickAnswer> {
     return answerWhoOwes({
       rows: rows.map((r) => ({ client: r.client, arCents: r.arCents })),
       totalArCents,
+    });
+  }
+
+  if (toolId === "admin.client_trend") {
+    const { deals } = await latestReconciliation();
+    const prev = prevMonthDate(now);
+    const rows = bucketClientTrend(
+      deals.map((d) => ({
+        client: d.client,
+        monthKey: d.dateClosed.slice(0, 7),
+        netCents: d.figures.ours.netCents ?? 0,
+      })),
+      monthKey(now),
+      monthKey(prev),
+    );
+    return answerClientTrend({
+      rows,
+      thisLabel: monthLabel(now),
+      lastLabel: monthLabel(prev),
     });
   }
 

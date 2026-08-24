@@ -140,6 +140,73 @@ export function answerRepEarnings(input: {
   };
 }
 
+/**
+ * A rep's show/close conversion, from disposition-tagged call logs. Rates are
+ * 0–1 fractions or null (null until a call resolves either way).
+ */
+export function answerRepConversion(input: {
+  repName: string;
+  showRate: number | null;
+  closeRate: number | null;
+  shows: number;
+  sales: number;
+  calls: number;
+  hasCalls: boolean;
+}): QuickAnswer {
+  const { repName, showRate, closeRate, shows, sales, calls, hasCalls } = input;
+  if (!hasCalls) {
+    return {
+      headline: `No calls logged yet, ${repName}.`,
+      details: ["Log calls and I'll track your show and close rate here."],
+    };
+  }
+  const details: string[] = [];
+  if (showRate !== null) details.push(`Show rate: ${pct(showRate)}.`);
+  if (closeRate !== null) {
+    details.push(
+      `Close rate: ${pct(closeRate)} — ${plural(sales, "sale")} from ${plural(shows, "show")}.`,
+    );
+  }
+  details.push(`${plural(calls, "call")} logged so far.`);
+
+  const headline =
+    closeRate !== null
+      ? `Your close rate is ${pct(closeRate)}, ${repName}.`
+      : showRate !== null
+        ? `Your show rate is ${pct(showRate)}, ${repName}.`
+        : `${plural(calls, "call")} logged, no outcomes resolved yet, ${repName}.`;
+  return { headline, details };
+}
+
+/**
+ * A rep's strongest weekday and top personal record. The record's display value
+ * is pre-formatted by the caller so this stays a pure string compute.
+ */
+export function answerRepBestDay(input: {
+  repName: string;
+  bestWeekdayLabel: string | null;
+  topRecordLabel: string | null;
+  topRecordDisplay: string | null;
+  hasActivity: boolean;
+}): QuickAnswer {
+  const { repName, bestWeekdayLabel, topRecordLabel, topRecordDisplay, hasActivity } =
+    input;
+  if (!hasActivity) {
+    return {
+      headline: `No activity logged yet, ${repName}.`,
+      details: ["Your best day and records show up once you get moving."],
+    };
+  }
+  const headline = bestWeekdayLabel
+    ? `${bestWeekdayLabel} is your strongest day, ${repName}.`
+    : `You're logging activity, ${repName}.`;
+  const details =
+    topRecordLabel && topRecordDisplay
+      ? [`${topRecordLabel}: ${topRecordDisplay}.`]
+      : ["Log more to set your first personal record."];
+  return { headline, details };
+}
+
 export function answerRepQuotaGap(input: {
   repName: string;
   quota: RepQuotaSnapshot | null;
@@ -285,6 +352,41 @@ export function answerMomentum(rows: MomentumRow[]): QuickAnswer {
   };
 }
 
+/** One end of the standings: a rep with their collected cash and deal count. */
+export interface StandingsRep {
+  name: string;
+  cashCents: number;
+  deals: number;
+}
+
+/**
+ * The team's top and bottom rep by collected cash. `bottom` is null when there
+ * is only one ranked rep, so the answer never pits a rep against themselves.
+ */
+export function answerTeamStandings(input: {
+  top: StandingsRep | null;
+  bottom: StandingsRep | null;
+  activeCount: number;
+}): QuickAnswer {
+  const { top, bottom, activeCount } = input;
+  if (activeCount === 0 || !top) {
+    return {
+      headline: "No active reps to rank yet.",
+      details: ["Reps appear here once they're on a team with activity."],
+    };
+  }
+  const details = [`${plural(top.deals, "deal")} closed by ${top.name}.`];
+  details.push(
+    bottom
+      ? `Bottom: ${bottom.name} at ${usd(bottom.cashCents)}.`
+      : "Only one rep on the board so far.",
+  );
+  return {
+    headline: `${top.name} leads with ${usd(top.cashCents)}.`,
+    details,
+  };
+}
+
 // ------------------------------------------------------------------ admin
 
 export function answerNetThisMonth(input: {
@@ -365,5 +467,83 @@ export function answerPayoutOwed(input: {
     details: owing
       .slice(0, MAX_LIST_LINES)
       .map((r) => `${r.name}: ${usd(r.owedCents)}.`),
+  };
+}
+
+/** One mirrored deal, flattened for the client month-over-month roll-up. */
+export interface ClientTrendDeal {
+  client: string;
+  /** The close month as "YYYY-MM". */
+  monthKey: string;
+  netCents: number;
+}
+
+/** A client's this-month vs last-month net, with the delta. */
+export interface ClientTrendRow {
+  client: string;
+  thisCents: number;
+  lastCents: number;
+  deltaCents: number;
+}
+
+/**
+ * Bucket mirrored deals into this-month vs last-month net per client, ranked by
+ * the size of the swing (biggest mover first, then biggest this month). Deals
+ * outside the two months are ignored. Pure — the month keys are passed in.
+ */
+export function bucketClientTrend(
+  deals: ClientTrendDeal[],
+  thisMonthKey: string,
+  lastMonthKey: string,
+): ClientTrendRow[] {
+  const acc = new Map<string, { thisCents: number; lastCents: number }>();
+  for (const d of deals) {
+    const isThis = d.monthKey === thisMonthKey;
+    const isLast = d.monthKey === lastMonthKey;
+    if (!isThis && !isLast) continue;
+    const cur = acc.get(d.client) ?? { thisCents: 0, lastCents: 0 };
+    if (isThis) cur.thisCents += d.netCents;
+    else cur.lastCents += d.netCents;
+    acc.set(d.client, cur);
+  }
+  return [...acc.entries()]
+    .map(([client, v]) => ({
+      client,
+      thisCents: v.thisCents,
+      lastCents: v.lastCents,
+      deltaCents: v.thisCents - v.lastCents,
+    }))
+    .sort(
+      (a, b) =>
+        Math.abs(b.deltaCents) - Math.abs(a.deltaCents) || b.thisCents - a.thisCents,
+    );
+}
+
+/** Which clients are up or down this month versus last. */
+export function answerClientTrend(input: {
+  rows: ClientTrendRow[];
+  thisLabel: string;
+  lastLabel: string;
+}): QuickAnswer {
+  const { rows, thisLabel, lastLabel } = input;
+  if (rows.length === 0) {
+    return {
+      headline: `No client cash to compare for ${thisLabel}.`,
+      details: [`Nothing recorded for ${thisLabel} or ${lastLabel} yet.`],
+    };
+  }
+  const up = rows.filter((r) => r.deltaCents > 0).length;
+  const down = rows.filter((r) => r.deltaCents < 0).length;
+  return {
+    headline: `${plural(up, "client")} up, ${down} down vs ${lastLabel}.`,
+    details: rows.slice(0, MAX_LIST_LINES).map((r) => {
+      const dir =
+        r.deltaCents > 0
+          ? `up ${usd(r.deltaCents)}`
+          : r.deltaCents < 0
+            ? `down ${usd(-r.deltaCents)}`
+            : "flat";
+      return `${r.client}: ${usd(r.thisCents)} this month (${dir}).`;
+    }),
   };
 }

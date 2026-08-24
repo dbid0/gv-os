@@ -31,6 +31,28 @@ const RULES: readonly Rule[] = [
     toolId: "rep.earnings",
     keywords: ["what am i owed", "my commission", "i earn", "owed to me"],
   },
+  {
+    toolId: "rep.best_day",
+    keywords: [
+      "best day",
+      "best weekday",
+      "my record",
+      "personal best",
+      "perform best",
+    ],
+  },
+  {
+    // First-person only, so a manager's "our close rate" still routes to the
+    // team answer instead of being hijacked by this rep-scoped one.
+    toolId: "rep.conversion",
+    keywords: [
+      "my close rate",
+      "my show rate",
+      "my conversion",
+      "am i converting",
+      "how am i converting",
+    ],
+  },
   { toolId: "rep.streak", keywords: ["my streak", "streak", "how many days"] },
   {
     toolId: "rep.quota_gap",
@@ -48,6 +70,18 @@ const RULES: readonly Rule[] = [
   {
     toolId: "team.behind_pace",
     keywords: ["behind pace", "who's behind", "whos behind", "behind"],
+  },
+  {
+    toolId: "team.standings",
+    keywords: [
+      "top rep",
+      "bottom rep",
+      "best rep",
+      "worst rep",
+      "top and bottom",
+      "standings",
+      "who's my top",
+    ],
   },
   { toolId: "team.close_rate", keywords: ["close rate", "closing rate", "close-rate"] },
   {
@@ -76,6 +110,18 @@ const RULES: readonly Rule[] = [
   {
     toolId: "admin.payout_owed",
     keywords: ["owe the team", "payout", "owe reps", "what do we owe"],
+  },
+  {
+    toolId: "admin.client_trend",
+    keywords: [
+      "clients up",
+      "clients down",
+      "up or down",
+      "client trend",
+      "which clients",
+      "vs last month",
+      "up vs last month",
+    ],
   },
 ];
 

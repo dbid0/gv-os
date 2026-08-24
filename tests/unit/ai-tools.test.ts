@@ -35,6 +35,8 @@ describe("ai tool registry", () => {
       "rep.streak",
       "rep.earnings",
       "rep.quota_gap",
+      "rep.conversion",
+      "rep.best_day",
       "activity.log_call",
       "activity.submit_eod",
     ]);
