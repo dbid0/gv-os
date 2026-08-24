@@ -143,21 +143,16 @@ export default async function WorkspacePage({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Kpi label="Deals" value={String(report.mirror.deals)} tone="brand" />
         <Kpi
-          label="Cash collected — all time"
+          label="Cash collected"
           value={<Money amount={cents(report.mirror.cashCents)} />}
           tone="success"
         />
-        <Kpi label="Deals" value={String(report.mirror.deals)} />
         <Kpi
-          label="Email engine"
-          value={
-            report.kit
-              ? `${report.kit.sequenceCount} seq · ${report.kit.tagCount} tags`
-              : "—"
-          }
+          label="Revenue generated"
+          value={<Money amount={cents(report.mirror.revenueCents)} />}
         />
       </div>
 
