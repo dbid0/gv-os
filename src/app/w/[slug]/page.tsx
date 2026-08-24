@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Siren } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
@@ -220,12 +220,13 @@ export default async function WorkspacePage({
       {showDrive && <DriveAssetsPanel slug={slug} drive={drive} />}
 
       <Panel title="Emergency signals">
-        <p className="text-faint text-sm">
-          Unanswered DMs and leads uncalled past 20 minutes will surface here the moment
-          the notification engine (Phase 5) and this offer&apos;s ManyChat + Close
-          connections are live. Nothing is being monitored yet — this panel will say so
-          loudly when it is.
-        </p>
+        <div className="text-faint flex flex-col items-center gap-2 py-6 text-center">
+          <Siren className="size-6 opacity-60" />
+          <p className="max-w-md text-sm">
+            Unanswered DMs and leads uncalled past 20 minutes surface here once this
+            offer&apos;s ManyChat + Close feeds connect. Nothing to flag yet.
+          </p>
+        </div>
       </Panel>
     </div>
   );

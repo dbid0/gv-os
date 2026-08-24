@@ -20,9 +20,13 @@ be without stepping on each other:**
 
 - **Sales / Dashboard session** — working in worktree `~/dev/gv-os-sales`
   (branch `feat/whop-dashboard` and successors). Owns: `src/app/(app)/dashboard/*`,
-  `src/components/shell/home-headline.tsx`, `dashboard-cards.tsx`, the Sales
-  section (`src/app/(app)/sales/*`, `src/components/sales/*`), sidebar/topbar,
-  notifications. **Please don't touch these on main until merged.**
+  `src/components/shell/*` (home-headline, dashboard-cards, recent-transactions,
+  sidebar/topbar), the Sales section (`src/app/(app)/sales/*`,
+  `src/components/sales/*`), the offer/client views (`src/app/w/[slug]/*`,
+  `src/app/(app)/clients/*`), settings/profile shells, notifications.
+  **Please don't touch these on main until merged.** NOT touching the Team
+  section (`src/app/(app)/team/*`, `src/components/team/*`) — another session
+  is building it (filters/roles).
 - **Quotas session** — building the Quotas feature (branch `feat/quotas`).
 - **Gamification session** — worktree `~/dev/gv-os-wt-gamify` (branch
   `feat/gamification`). Owns: `src/lib/gamification/*`,
