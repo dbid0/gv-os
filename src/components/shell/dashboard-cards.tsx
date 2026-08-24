@@ -1,17 +1,23 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 
 import { saveDashboardCards } from "@/app/(app)/dashboard/cards-actions";
 import { useToast } from "@/components/ui/toast";
+import { fadeUp, stagger } from "@/lib/motion";
+import { useEntranceOnce } from "@/lib/client-state";
 import {
   DASHBOARD_CARD_IDS,
   DASHBOARD_CARD_META,
   type DashboardCardId,
 } from "@/lib/dashboard-cards";
 import { cn } from "@/lib/utils";
+
+// Full-bleed cards span the board; everything else tiles into the grid.
+const WIDE_CARDS = new Set<DashboardCardId>(["sales-engine"]);
 
 /**
  * The editable dashboard (Whop's Add-Charts pattern, Daniel's ask): every
@@ -27,6 +33,8 @@ export function DashboardCards({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const reduceMotion = useReducedMotion();
+  const entrance = useEntranceOnce();
   const [pending, start] = useTransition();
   const [adding, setAdding] = useState(false);
   // Optimistic layout: the UI moves instantly, the pref catches up.
@@ -49,6 +57,23 @@ export function DashboardCards({
   };
 
   const available = DASHBOARD_CARD_IDS.filter((id) => !cards.includes(id));
+  const wide = cards.filter((id) => WIDE_CARDS.has(id) && slots[id]);
+  const tiles = cards.filter((id) => !WIDE_CARDS.has(id) && slots[id]);
+
+  const removable = (id: DashboardCardId, node: ReactNode, className?: string) => (
+    <div key={id} className={cn("group/card relative", className)}>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => persist(cards.filter((c) => c !== id))}
+        aria-label={`Remove ${DASHBOARD_CARD_META[id].title}`}
+        className="bg-card text-faint hover:text-destructive absolute -top-2 -right-2 z-10 grid size-6 place-items-center rounded-full border opacity-0 shadow-sm transition-all group-hover/card:opacity-100"
+      >
+        <X className="size-3" />
+      </button>
+      {node}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -99,24 +124,21 @@ export function DashboardCards({
         </div>
       </div>
 
-      {cards.map((id) =>
-        slots[id] ? (
-          <div key={id} className="group/card relative">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => persist(cards.filter((c) => c !== id))}
-              aria-label={`Remove ${DASHBOARD_CARD_META[id].title}`}
-              className={cn(
-                "bg-card text-faint hover:text-destructive absolute -top-2 -right-2 z-10 grid size-6 place-items-center rounded-full border opacity-0 shadow-sm transition-all",
-                "group-hover/card:opacity-100",
-              )}
-            >
-              <X className="size-3" />
-            </button>
-            {slots[id]}
-          </div>
-        ) : null,
+      {wide.map((id) => removable(id, slots[id]))}
+
+      {tiles.length > 0 && (
+        <motion.div
+          initial={reduceMotion || !entrance ? false : "hidden"}
+          animate="visible"
+          variants={stagger()}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+          {tiles.map((id) => (
+            <motion.div key={id} variants={fadeUp}>
+              {removable(id, slots[id], "hover-lift")}
+            </motion.div>
+          ))}
+        </motion.div>
       )}
     </div>
   );
