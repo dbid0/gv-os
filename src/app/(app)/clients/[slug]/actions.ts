@@ -41,6 +41,31 @@ export async function saveDriveFolder(slug: string, rawFolderId: string) {
   return { saved: true };
 }
 
+const SHEET_ID = /^[A-Za-z0-9_-]{20,60}$/;
+
+/** Point this offer at its tracking sheet (the New Deals feed). Empty clears it. */
+export async function saveTrackingSheet(slug: string, rawSheetId: string) {
+  await requireUser();
+  const sheetId = rawSheetId.trim();
+  if (sheetId && !SHEET_ID.test(sheetId)) {
+    throw new Error(
+      "That doesn't look like a Google Sheet id — copy it from the sheet's URL (the part after /d/).",
+    );
+  }
+  const db = getDb();
+  const updated = await db
+    .update(clients)
+    .set({ trackingSheetId: sheetId || null })
+    .where(eq(clients.slug, slug))
+    .returning({ id: clients.id });
+  if (updated.length === 0) {
+    throw new Error("No client row for this slug yet — sync creates it.");
+  }
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
+  return { saved: true };
+}
+
 /** Set the client's monthly cash target in dollars. Empty input clears it. */
 export async function saveMonthlyTarget(slug: string, rawDollars: string) {
   await requireUser();

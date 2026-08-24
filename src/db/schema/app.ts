@@ -54,6 +54,9 @@ export const clients = appSchema.table(
     /** Workspace logo as a small data URL — uploaded from the workspace
      * header; renders in the switcher, headers, and home sections. */
     logo: text("logo"),
+    /** This offer's tracking-sheet id — the Google Sheet whose `🤝 New Deals`
+     * tab feeds the new-deal importer. Null = not connected yet. */
+    trackingSheetId: text("tracking_sheet_id"),
 
     /**
      * Team commission defaults, by role, in basis points. Applied to a deal
