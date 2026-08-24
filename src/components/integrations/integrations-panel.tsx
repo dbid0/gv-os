@@ -158,9 +158,15 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
 export function IntegrationsPanel({
   connections,
   teams,
+  fixedClientId,
+  embedded = false,
 }: {
   connections: ConnectionRow[];
   teams: TeamOption[];
+  /** When set, every new connection pins to this client and the scope picker is hidden. */
+  fixedClientId?: string;
+  /** Drop the page header when rendered inside another page (e.g. an offer). */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -168,7 +174,7 @@ export function IntegrationsPanel({
   const [provider, setProvider] = useState(PROVIDERS[0].value);
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
-  const [scope, setScope] = useState("");
+  const [scope, setScope] = useState(fixedClientId ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const selected = providerByValue(provider);
@@ -202,17 +208,18 @@ export function IntegrationsPanel({
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeader
-        title="The"
-        highlight="integrations."
-        description="Every tool feeding GV OS, connected once. Credentials are sealed with AES-256-GCM before they touch the database — this page only ever sees the last four characters. Scope a connection to a client to keep their credentials in their lane."
-        status={
-          <StatusPill tone="live">
-            {connectedValues.size} of {PROVIDERS.length} connected
-          </StatusPill>
-        }
-      />
+    <div className={cn("space-y-6", !embedded && "mx-auto w-full max-w-7xl")}>
+      {!embedded && (
+        <PageHeader
+          title="The"
+          highlight="integrations."
+          status={
+            <StatusPill tone="live">
+              {connectedValues.size} of {PROVIDERS.length} connected
+            </StatusPill>
+          }
+        />
+      )}
 
       <Panel title="Connect a tool">
         <div className="space-y-3">
@@ -255,21 +262,23 @@ export function IntegrationsPanel({
                 autoComplete="off"
               />
             </label>
-            <label className="space-y-1.5">
-              <span className="text-muted-foreground text-xs font-medium">Scope</span>
-              <select
-                className={cn(selectClass, "w-40")}
-                value={scope}
-                onChange={(e) => setScope(e.target.value)}
-              >
-                <option value="">Agency</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!fixedClientId && (
+              <label className="space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">Scope</span>
+                <select
+                  className={cn(selectClass, "w-40")}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                >
+                  <option value="">Agency</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <Button
               onClick={connect}
               disabled={pending || label.trim() === "" || secret.trim() === ""}
