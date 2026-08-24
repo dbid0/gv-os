@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -95,6 +97,37 @@ export default async function WorkspacePage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
+      {/* Offer header — the client's world, branded to their accent. The
+          Manage link (admin-only) is the way to this offer's data feeds and
+          config; owners viewing their own portal never see it. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="grid size-10 shrink-0 place-items-center rounded-lg border text-sm font-bold"
+            style={{
+              color: client.accent,
+              borderColor: `${client.accent}55`,
+              background: `${client.accent}14`,
+            }}
+          >
+            {client.name.slice(0, 1)}
+          </span>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
+            <p className="text-muted-foreground text-xs">{client.offer}</p>
+          </div>
+        </div>
+        {!portalView && (
+          <Link
+            href={`/clients/${slug}`}
+            className="border-brand/40 text-brand hover:bg-brand-soft/50 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+          >
+            Manage &amp; data feeds <ArrowRight className="size-3.5" />
+          </Link>
+        )}
+      </div>
+
       {showCash && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* One canonical story (P0-1): never a bare $0.00 sitting above a
