@@ -431,11 +431,18 @@ export const teamMembers = appSchema.table(
     clientId: uuid("client_id").references(() => clients.id),
     /** active | inactive. Inactive members keep history but leave the pickers. */
     status: text("status").notNull().default("active"),
-    /** Platform role (v2 §6): sales_manager · sales_rep · team_member.
+    /** Platform role (v2 §6): admin · sales_manager · sales_rep · team_member.
      * Null = not yet mapped; job title stays in `role`. */
     roleKey: text("role_key"),
-    /** setter | closer — only meaningful when roleKey = sales_rep. */
+    /** setter | closer | dm_setter — only meaningful when roleKey = sales_rep. */
     repKind: text("rep_kind"),
+    /**
+     * The sales `reps` row this member IS, when they sell on a team. This is the
+     * backbone link: with it, a member's profile resolves their quotas, momentum
+     * (streak/PBs), and commission owed from the read layers that already key off
+     * reps. Null for non-sales members — their profile is the identity card only.
+     */
+    repId: uuid("rep_id").references(() => reps.id),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -443,6 +450,7 @@ export const teamMembers = appSchema.table(
   (table) => [
     index("team_members_client_idx").on(table.clientId),
     index("team_members_role_idx").on(table.role),
+    index("team_members_rep_idx").on(table.repId),
   ],
 );
 
@@ -837,6 +845,7 @@ export const quotasRelations = relations(quotas, ({ one }) => ({
 
 export const teamMembersRelations = relations(teamMembers, ({ one, many }) => ({
   client: one(clients, { fields: [teamMembers.clientId], references: [clients.id] }),
+  rep: one(reps, { fields: [teamMembers.repId], references: [reps.id] }),
   actionItems: many(actionItems),
 }));
 
