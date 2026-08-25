@@ -81,6 +81,33 @@ export async function saveTrackingSheet(slug: string, rawSheetId: string) {
   return { saved: true };
 }
 
+const CASH_AUTHORITY_VALUES = ["auto", "forms", "processors"] as const;
+
+/**
+ * Set which source owns this offer's cash — the Money Spine switch. `auto`
+ * derives it from whether a processor is connected; `forms`/`processors` pin
+ * it. Revalidates the reconciler so drift status updates immediately.
+ */
+export async function saveCashAuthority(slug: string, value: string) {
+  await requireUser();
+  if (!(CASH_AUTHORITY_VALUES as readonly string[]).includes(value)) {
+    throw new Error("Cash authority must be auto, forms, or processors.");
+  }
+  const db = getDb();
+  const updated = await db
+    .update(clients)
+    .set({ cashAuthority: value })
+    .where(eq(clients.slug, slug))
+    .returning({ id: clients.id });
+  if (updated.length === 0) {
+    throw new Error("No client row for this slug yet — sync creates it.");
+  }
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath("/accounting/reconciliation");
+  revalidatePath(`/w/${slug}`);
+  return { saved: true };
+}
+
 /** The roster card summary: a short line, capped so it stays a summary. */
 const SUMMARY_MAX = 64;
 
