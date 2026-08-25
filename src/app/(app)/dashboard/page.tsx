@@ -11,6 +11,7 @@ import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
+import { RevenueChart } from "@/components/ui/revenue-chart";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
@@ -163,6 +164,12 @@ export default async function DashboardPage({
         </div>
         <SalesMetricsGrid metrics={salesMetrics} />
       </section>
+
+      {/* Revenue over time — the RepVision chart panel: real $ and date axes,
+          gridlines, and a hover crosshair over the daily collected series. */}
+      <Panel title="Revenue over time">
+        <RevenueChart series={series} />
+      </Panel>
 
       <DashboardCards
         active={cards}
