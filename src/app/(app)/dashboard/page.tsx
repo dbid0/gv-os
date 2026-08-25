@@ -11,6 +11,8 @@ import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
+import { TeamsOverviewCard } from "@/components/shell/teams-overview-card";
+import { buildTeamsOverview } from "@/lib/teams-overview";
 import { ActivityHeatmap } from "@/components/ui/activity-heatmap";
 import { RevenueChart } from "@/components/ui/revenue-chart";
 import { buildActivityHeatmap } from "@/lib/activity-heatmap";
@@ -131,6 +133,19 @@ export default async function DashboardPage({
   const arItems = partialDealAr(backlog);
   const arTotalCents = arItems.reduce((t, i) => t + i.arCents, 0);
 
+  // The RepVision "All Teams Overview": headline figures + per-team cash, from
+  // client-layer money only (the offer cash), attributed the same way the
+  // client ledger does it — so the total equals the sum of the team chips.
+  const teamsOverview = buildTeamsOverview(
+    clientLedger(
+      backlog.filter((r) => r.layer === "client"),
+      roster.map((c) => ({ slug: c.slug, name: c.name })),
+      matchesSheetClient,
+    ),
+    overview.dealsClosed,
+    closeRatePct,
+  );
+
   const monthLabel =
     range === "month"
       ? new Date().toLocaleDateString("en-US", {
@@ -154,6 +169,10 @@ export default async function DashboardPage({
         sections={sections}
         series={series}
       />
+
+      {/* RepVision's "All Teams Overview": the four headline figures + a
+          per-team cash breakdown, folded from client-layer money. */}
+      <TeamsOverviewCard overview={teamsOverview} />
 
       {/* The RepVision-style KPI wall — every sales number at a glance, dense
           and scannable, above the customizable cards. */}
