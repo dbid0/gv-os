@@ -1095,6 +1095,41 @@ export const clientAdSpend = appSchema.table(
 export type ClientAdSpend = typeof clientAdSpend.$inferSelect;
 
 /**
+ * GV's OWN sales pipeline — the agency's prospects (creators it's selling into)
+ * from lead to signed. This is CRM/forecast, deliberately SEPARATE from the
+ * money ledger: no transactions, no rev-share rows come from here. A won deal
+ * becomes a real client through onboarding, not by a ledger side effect.
+ */
+export const pipelineProspects = appSchema.table(
+  "pipeline_prospects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    /** IG/social handle. */
+    handle: text("handle"),
+    niche: text("niche"),
+    followers: bigint("followers", { mode: "number" }),
+    /** lead · contacted · call_booked · proposal · won · lost. */
+    stage: text("stage").notNull().default("lead"),
+    /** Proposed setup fee, integer cents. */
+    setupFeeCents: bigint("setup_fee_cents", { mode: "number" }).notNull().default(0),
+    /** Proposed monthly rev-share rate, basis points. */
+    revShareBps: bigint("rev_share_bps", { mode: "number" }).notNull().default(0),
+    /** Estimated monthly offer revenue, integer cents (the rev-share base). */
+    estMonthlyRevCents: bigint("est_monthly_rev_cents", { mode: "number" })
+      .notNull()
+      .default(0),
+    note: text("note"),
+    ownerName: text("owner_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("pipeline_prospects_stage_idx").on(table.stage)],
+);
+
+export type PipelineProspect = typeof pipelineProspects.$inferSelect;
+
+/**
  * Notifications (v2 §5). Rules compute candidates from captured state; the
  * unique dedupe key makes every rule idempotent — re-evaluating never
  * duplicates an alert. readAt is the only mutable field.
