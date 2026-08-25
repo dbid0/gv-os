@@ -5,7 +5,16 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { payoutAdjustments, payouts, transactions } from "@/db/schema/app";
+import {
+  clients,
+  payoutAdjustments,
+  payouts,
+  revShareRules,
+  transactions,
+} from "@/db/schema/app";
+import { revShareLines } from "@/lib/revshare/engine";
+import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
+import { assembleRevShareRun } from "@/lib/payouts/run";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -45,6 +54,68 @@ export async function createPayout(raw: unknown) {
   });
   revalidatePath("/accounting/payouts");
   return { ok: true };
+}
+
+/**
+ * Generate this month's payout run: turn each client's computed rev-share into
+ * a pending `revshare_received` receivable. Idempotent — re-running never
+ * doubles a client's row. The 50/50 partner split + rep commissions layer on
+ * this in follow-ups.
+ */
+export async function generatePayoutRun(rawMonth?: string) {
+  await requireUser();
+  const month =
+    rawMonth && /^\d{4}-\d{2}$/.test(rawMonth)
+      ? rawMonth
+      : dayKeyCT(new Date()).slice(0, 7);
+
+  const db = getDb();
+  const [rules, rows, clientRows, existing] = await Promise.all([
+    db
+      .select({
+        clientId: revShareRules.clientId,
+        rateBps: revShareRules.rateBps,
+        effectiveFrom: revShareRules.effectiveFrom,
+        deductAdSpend: revShareRules.deductAdSpend,
+      })
+      .from(revShareRules),
+    db
+      .select({
+        clientId: transactions.clientId,
+        direction: transactions.direction,
+        layer: transactions.layer,
+        occurredOn: transactions.occurredOn,
+        cashCents: transactions.cashCents,
+        processorFeeCents: transactions.processorFeeCents,
+      })
+      .from(transactions)
+      .where(eq(transactions.layer, "client")),
+    db.select({ id: clients.id, name: clients.name }).from(clients),
+    db
+      .select({ clientId: payouts.clientId })
+      .from(payouts)
+      .where(and(eq(payouts.month, month), eq(payouts.kind, "revshare_received"))),
+  ]);
+
+  const nameFor = (id: string) => clientRows.find((c) => c.id === id)?.name ?? "Client";
+  const lines = revShareLines(rows, rules, await getAdSpendByMonth());
+  const owed = lines
+    .filter((l) => l.month === month)
+    .map((l) => ({
+      clientId: l.clientId,
+      clientName: nameFor(l.clientId),
+      revShareCents: l.revShareCents,
+    }));
+  const existingIds = new Set(
+    existing.map((e) => e.clientId).filter((x): x is string => Boolean(x)),
+  );
+
+  const drafts = assembleRevShareRun(month, owed, existingIds);
+  if (drafts.length > 0) {
+    await db.insert(payouts).values(drafts);
+  }
+  revalidatePath("/accounting/payouts");
+  return { created: drafts.length, month };
 }
 
 const adjustInput = z.object({
