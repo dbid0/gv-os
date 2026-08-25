@@ -70,22 +70,28 @@ export function HomeHeadline({
   const shownRevenue = useCountUp(revenueCents);
 
   return (
-    <section className="card-grad elev-glow relative overflow-hidden rounded-xl border">
-      {/* A faint brand wash in the top-right corner gives the hero depth without
-          fighting the number — pure chrome, behind everything. */}
+    <section className="card-grad elev-glow relative rounded-xl border">
+      {/* Decoration lives in its OWN clipped layer, matched to the card's
+          rounded shape — the corner wash and the growth curve. The section
+          itself is NOT clipped, so the date picker's dropdown can overflow the
+          card (an overflow-hidden section chops the calendar grid off). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full opacity-60 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(circle, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%)",
-        }}
-      />
-      {/* The growth curve fills the card's lower half, the number sits on top —
-          the Whop revenue-hero pattern. The clip lives on the CURVE only, not
-          the section, so the date picker's dropdown can overflow the card. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 overflow-hidden rounded-b-xl">
-        <CollectedSparkline series={series} className="h-full w-full" />
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
+      >
+        {/* A faint brand wash in the top-right corner gives the hero depth
+            without fighting the number. */}
+        <div
+          className="absolute -top-24 -right-16 h-64 w-64 rounded-full opacity-60 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%)",
+          }}
+        />
+        {/* The growth curve fills the card's lower half; the number sits on top. */}
+        <div className="absolute inset-x-0 bottom-0 h-2/3">
+          <CollectedSparkline series={series} className="h-full w-full" />
+        </div>
       </div>
 
       <div className="relative space-y-5 p-6">
