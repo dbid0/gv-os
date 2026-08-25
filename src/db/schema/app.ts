@@ -1067,6 +1067,31 @@ export const agencyExpenses = appSchema.table(
 export type AgencyExpense = typeof agencyExpenses.$inferSelect;
 
 /**
+ * Per-offer ad spend — the cost an offer's own ads carry, deducted from its
+ * cash-after-fees BEFORE a "X% after ad spend" rev-share is rated (Racks =
+ * 10% after ad spend). Append-only: a correction is a new (possibly negative)
+ * row, never an edit, so the rev-share basis is always replayable.
+ */
+export const clientAdSpend = appSchema.table(
+  "client_ad_spend",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** yyyy-mm-dd the spend is attributed to (bucketed by month for rev-share). */
+    occurredOn: text("occurred_on").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    note: text("note"),
+    enteredBy: text("entered_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("client_ad_spend_client_idx").on(table.clientId)],
+);
+
+export type ClientAdSpend = typeof clientAdSpend.$inferSelect;
+
+/**
  * Notifications (v2 §5). Rules compute candidates from captured state; the
  * unique dedupe key makes every rule idempotent — re-evaluating never
  * duplicates an alert. readAt is the only mutable field.

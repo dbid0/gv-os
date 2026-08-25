@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
+import { AdSpendField } from "@/components/clients/ad-spend-field";
 import { CashAuthorityField } from "@/components/clients/cash-authority-field";
 import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
 import { TrackingSheetField } from "@/components/clients/tracking-sheet-field";
@@ -18,6 +19,7 @@ import { Kpi } from "@/components/ui/metric";
 import { bucketByDay } from "@/lib/charts";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { getClientReport } from "@/lib/clients/report";
+import { listAdSpendForClient } from "@/lib/revshare/ad-spend-query";
 import { clientBySlug } from "@/lib/roster";
 import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
@@ -90,6 +92,9 @@ export default async function ClientPage({
           lastSyncAt: c.lastSyncAt ? c.lastSyncAt.toISOString() : null,
         }))
     : [];
+  const adSpend = team
+    ? await listAdSpendForClient(team.id)
+    : { entries: [], totalCents: 0 };
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
@@ -273,6 +278,11 @@ export default async function ClientPage({
                   ),
               )
               .map((c) => c.provider)}
+          />
+          <AdSpendField
+            slug={slug}
+            entries={adSpend.entries}
+            totalCents={adSpend.totalCents}
           />
           <IntegrationsPanel
             connections={offerIntegrations}
