@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 const CADENCE_TABS = [
   { key: "eod", label: "Daily (EOD)" },
-  { key: "eow", label: "End of Week" },
   { key: "bod", label: "Beginning of Day" },
 ];
 
