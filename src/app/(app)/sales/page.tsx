@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Gauge, Plus, Settings2, Users } from "lucide-react";
+import { ArrowRight, Gauge, GitBranch, Plus, Settings2, Users } from "lucide-react";
 
 import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
@@ -42,6 +42,12 @@ export default async function SalesPage() {
           with its own reps, EOD cadence, and commission structure.
         </p>
         <div className="flex items-center gap-2">
+          <Link
+            href="/sales/pipeline"
+            className="bg-secondary/60 hover:bg-secondary text-foreground inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+          >
+            <GitBranch className="size-4" /> Pipeline
+          </Link>
           <Link
             href="/sales/cockpit"
             className="bg-secondary/60 hover:bg-secondary text-foreground inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
