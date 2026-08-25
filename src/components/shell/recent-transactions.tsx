@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Inbox } from "lucide-react";
 import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { cents } from "@/lib/money";
+import { moneyTone } from "@/lib/money-tone";
 
 export interface RecentRow {
   id: string;
@@ -61,11 +62,7 @@ export function RecentTransactions({ rows }: { rows: RecentRow[] }) {
                   </td>
                   <td className="text-faint py-2 pr-3 text-xs">{r.dealType ?? "—"}</td>
                   <td className="py-2 text-right tabular-nums">
-                    <span
-                      className={
-                        r.direction === "out" ? "text-warning" : "text-success"
-                      }
-                    >
+                    <span className={moneyTone(r.direction).className}>
                       <span className="mr-1 inline-flex align-middle">
                         {r.direction === "out" ? (
                           <ArrowDownRight className="size-3.5" />

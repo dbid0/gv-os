@@ -6,7 +6,7 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { cents } from "@/lib/money";
-import { roster } from "@/lib/roster";
+import { clientBySlug, roster } from "@/lib/roster";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -93,16 +93,27 @@ export default async function ClientLedgerPage() {
                     className="border-b last:border-0"
                   >
                     <td className="py-2 pr-3">
-                      {l.slug ? (
-                        <Link
-                          href={`/clients/${l.slug}`}
-                          className="hover:text-brand font-medium transition-colors"
-                        >
-                          {l.name}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-foreground">{l.name}</span>
-                      )}
+                      <span className="flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full"
+                          style={{
+                            background:
+                              (l.slug && clientBySlug(l.slug)?.accent) ||
+                              "var(--border-strong)",
+                          }}
+                        />
+                        {l.slug ? (
+                          <Link
+                            href={`/clients/${l.slug}`}
+                            className="hover:text-brand font-medium transition-colors"
+                          >
+                            {l.name}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">{l.name}</span>
+                        )}
+                      </span>
                     </td>
                     <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
                       {l.count}

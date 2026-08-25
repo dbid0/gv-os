@@ -9,6 +9,7 @@ import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
 import { useCountUp } from "@/lib/client-state";
+import { clientBySlug } from "@/lib/roster";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
@@ -173,7 +174,17 @@ export function HomeHeadline({
                 href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
                 className="bg-card hover-lift hover:border-brand/40 rounded-lg border p-3"
               >
-                <p className="truncate text-sm font-medium">{s.name}</p>
+                <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full"
+                    style={{
+                      background:
+                        (s.slug && clientBySlug(s.slug)?.accent) || "var(--brand)",
+                    }}
+                  />
+                  {s.name}
+                </p>
                 <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
                   {fmtUsd(s.cashCents)}
                 </p>
