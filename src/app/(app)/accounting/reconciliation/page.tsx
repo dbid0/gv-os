@@ -1,6 +1,8 @@
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
+import { AgencyReconciler } from "@/components/accounting/agency-reconciler";
 import { SpineReconciler } from "@/components/accounting/spine-reconciler";
+import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
 import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
 import { SyncSheetButton } from "@/components/accounting/sync-sheet-button";
 import { PageHeader } from "@/components/shell/page-header";
@@ -46,13 +48,16 @@ export default async function ReconciliationPage() {
   const monthly = bucketByMonth(await mirrorMonthly());
   const outstanding = await mirrorOutstanding();
   const spine = await getSpineReconciliation();
+  const agency = await getAgencyReconciliation();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      {/* The Money Spine reconciler leads — the live "can't fail" check that
-          sources == ledger == rev-share basis. The sheet mirror follows as the
-          transition-period cross-check against the Master Finance Sheet. */}
+      {/* The Money Spine reconcilers lead — the live "can't fail" check that
+          sources == ledger == rev-share basis, on both the offer book and GV's
+          own agency book. The sheet mirror follows as the transition-period
+          cross-check against the Master Finance Sheet. */}
       <SpineReconciler report={spine} />
+      <AgencyReconciler report={agency} />
 
       <PageHeader
         title="Sheet"
