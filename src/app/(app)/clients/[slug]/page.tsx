@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
+import { CashAuthorityField } from "@/components/clients/cash-authority-field";
 import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
 import { TrackingSheetField } from "@/components/clients/tracking-sheet-field";
 import { PageHeader } from "@/components/shell/page-header";
@@ -260,6 +261,19 @@ export default async function ClientPage({
             </p>
           </div>
           <TrackingSheetField slug={slug} sheetId={team.trackingSheetId} />
+          <CashAuthorityField
+            slug={slug}
+            value={team.cashAuthority}
+            connectedProcessors={offerIntegrations
+              .filter(
+                (c) =>
+                  c.status === "connected" &&
+                  ["stripe", "whop", "fanbasis", "shopify", "commas"].includes(
+                    c.provider,
+                  ),
+              )
+              .map((c) => c.provider)}
+          />
           <IntegrationsPanel
             connections={offerIntegrations}
             teams={[{ id: team.id, name: client.name }]}

@@ -53,6 +53,7 @@ export interface TeamConfig {
   name: string;
   slug: string;
   summary: string | null;
+  cashAuthority: string;
   trackingSheetId: string | null;
   defaultCloserBps: number | null;
   defaultSetterBps: number | null;
@@ -90,6 +91,7 @@ export async function getTeamBySlug(slug: string): Promise<TeamConfig | null> {
     id: c.id,
     name: c.name,
     summary: c.summary,
+    cashAuthority: c.cashAuthority,
     trackingSheetId: c.trackingSheetId,
     slug: c.slug,
     defaultCloserBps: c.defaultCloserBps,
