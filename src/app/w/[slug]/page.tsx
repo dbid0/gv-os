@@ -156,11 +156,14 @@ export default async function WorkspacePage({
       </div>
 
       {showCash && (
-        <section className="card-grad elev-glow relative overflow-hidden rounded-xl border">
-          {/* The offer's growth curve behind the number — the same hero the
-              admin dashboard uses, in the client's own accent context. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 overflow-hidden rounded-b-xl">
-            <CollectedSparkline series={offerSeries} className="h-full w-full" />
+        <section className="card-grad elev-glow relative rounded-xl border">
+          {/* The offer's growth curve behind the number — clipped in its OWN
+              rounded layer, NOT on the section, so the date picker's dropdown
+              can overflow the card instead of being chopped off. */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+            <div className="absolute inset-x-0 bottom-0 h-2/3">
+              <CollectedSparkline series={offerSeries} className="h-full w-full" />
+            </div>
           </div>
           <div className="relative flex flex-wrap items-center justify-between gap-3 p-5">
             {/* One canonical story (P0-1): never a bare $0.00 sitting above a
