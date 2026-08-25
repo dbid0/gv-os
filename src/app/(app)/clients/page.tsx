@@ -5,6 +5,7 @@ import {
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status";
 import { clientLogos } from "@/lib/clients/logos";
+import { clientSummaries } from "@/lib/clients/summaries";
 import { clientInitial, roster } from "@/lib/roster";
 
 export const metadata = {
@@ -14,13 +15,13 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const logos = await clientLogos();
+  const [logos, summaries] = await Promise.all([clientLogos(), clientSummaries()]);
   const cards: ClientCard[] = roster.map((client) => ({
     slug: client.slug,
     name: client.name,
     owner: client.owner,
     category: client.category,
-    blurb: client.blurb,
+    summary: summaries[client.slug] ?? client.summary,
     since: client.since,
     accent: client.accent,
     initial: clientInitial(client.name),

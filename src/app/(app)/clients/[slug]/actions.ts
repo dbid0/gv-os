@@ -81,6 +81,35 @@ export async function saveTrackingSheet(slug: string, rawSheetId: string) {
   return { saved: true };
 }
 
+/** The roster card summary: a short line, capped so it stays a summary. */
+const SUMMARY_MAX = 64;
+
+/**
+ * Set this offer's short summary — the one line the Clients card reads (who the
+ * creator is comes from the card's owner line). Empty clears it back to the
+ * roster default. Capped so it can never grow into a paragraph again.
+ */
+export async function saveClientSummary(slug: string, rawSummary: string) {
+  await requireUser();
+  const summary = rawSummary.trim().replace(/\s+/g, " ");
+  if (summary.length > SUMMARY_MAX) {
+    throw new Error(`Keep it short — ${SUMMARY_MAX} characters or fewer.`);
+  }
+  const db = getDb();
+  const updated = await db
+    .update(clients)
+    .set({ summary: summary || null })
+    .where(eq(clients.slug, slug))
+    .returning({ id: clients.id });
+  if (updated.length === 0) {
+    throw new Error("No client row for this slug yet — sync creates it.");
+  }
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
+  return { saved: true };
+}
+
 /** Set the client's monthly cash target in dollars. Empty input clears it. */
 export async function saveMonthlyTarget(slug: string, rawDollars: string) {
   await requireUser();

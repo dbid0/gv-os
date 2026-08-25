@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
-import { ArrowRight, Camera, Settings2 } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { ArrowRight, Camera, Check, Pencil, Settings2, X } from "lucide-react";
 
+import { saveClientSummary } from "@/app/(app)/clients/[slug]/actions";
 import { saveWorkspaceLogo } from "@/app/w/[slug]/logo-actions";
 import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
@@ -50,7 +51,8 @@ export interface ClientCard {
   name: string;
   owner: string;
   category: string;
-  blurb: string;
+  /** The short 3–8 word offer summary (DB override ?? roster default). */
+  summary: string;
   since: string;
   accent: string;
   initial: string;
@@ -68,6 +70,30 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(client.summary);
+  const [saving, startSave] = useTransition();
+
+  const cancelEdit = () => {
+    setDraft(client.summary);
+    setEditing(false);
+  };
+
+  const saveSummary = () =>
+    startSave(async () => {
+      try {
+        await saveClientSummary(client.slug, draft);
+        setEditing(false);
+        toast({ tone: "success", title: `${client.name} summary updated` });
+        router.refresh();
+      } catch (err) {
+        toast({
+          tone: "error",
+          title: err instanceof Error ? err.message : "Could not save.",
+        });
+      }
+    });
 
   return (
     <div className="bg-card hover:border-brand/40 relative flex flex-col overflow-hidden rounded-xl border transition-colors">
@@ -147,9 +173,55 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
         <StatusPill tone="live">Active</StatusPill>
       </div>
 
-      <p className="text-muted-foreground line-clamp-2 px-4 text-sm leading-relaxed">
-        {client.blurb}
-      </p>
+      {/* The short offer summary — what the offer is, in a few words. Editable
+          in place: hover reveals the pencil, Enter saves, Esc cancels. */}
+      <div className="group/summary px-4">
+        {editing ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={draft}
+              maxLength={64}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveSummary();
+                if (e.key === "Escape") cancelEdit();
+              }}
+              placeholder="e.g. AI phone farm for agencies"
+              className="border-input bg-background focus-visible:border-brand min-w-0 flex-1 rounded-md border px-2 py-1 text-sm outline-none"
+            />
+            <button
+              type="button"
+              onClick={saveSummary}
+              disabled={saving}
+              aria-label="Save summary"
+              className="text-brand hover:bg-brand-soft/50 grid size-7 shrink-0 place-items-center rounded-md transition-colors"
+            >
+              <Check className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              aria-label="Cancel"
+              className="text-muted-foreground hover:bg-secondary grid size-7 shrink-0 place-items-center rounded-md transition-colors"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            title="Edit summary"
+            className="hover:bg-secondary/50 -mx-1 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors"
+          >
+            <span className="text-muted-foreground truncate text-sm">
+              {client.summary}
+            </span>
+            <Pencil className="text-faint size-3 shrink-0 opacity-0 transition-opacity group-hover/summary:opacity-100" />
+          </button>
+        )}
+      </div>
 
       <div className="mt-auto flex items-center gap-2 border-t p-3">
         <Link

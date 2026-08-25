@@ -54,6 +54,11 @@ export const clients = appSchema.table(
     /** Workspace logo as a small data URL — uploaded from the workspace
      * header; renders in the switcher, headers, and home sections. */
     logo: text("logo"),
+    /** A short 3–8 word summary of what the offer is — the one line the
+     * Clients roster card reads (who the creator is comes from the card's
+     * own owner line). Editable inline on the card; null falls back to a
+     * derived default so the card is never blank. */
+    summary: text("summary"),
     /** This offer's tracking-sheet id — the Google Sheet whose `🤝 New Deals`
      * tab feeds the new-deal importer. Null = not connected yet. */
     trackingSheetId: text("tracking_sheet_id"),

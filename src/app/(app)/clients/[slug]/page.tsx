@@ -107,7 +107,7 @@ export default async function ClientPage({
     <div className="mx-auto w-full max-w-7xl space-y-6">
       <PageHeader
         title={client.name}
-        description={client.blurb}
+        description={team?.summary ?? client.summary}
         status={
           <span className="flex flex-wrap items-center gap-2">
             <StatusPill tone="live">Active client</StatusPill>
