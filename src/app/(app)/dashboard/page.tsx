@@ -11,7 +11,9 @@ import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
+import { ActivityHeatmap } from "@/components/ui/activity-heatmap";
 import { RevenueChart } from "@/components/ui/revenue-chart";
+import { buildActivityHeatmap } from "@/lib/activity-heatmap";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
@@ -169,6 +171,20 @@ export default async function DashboardPage({
           gridlines, and a hover crosshair over the daily collected series. */}
       <Panel title="Revenue over time">
         <RevenueChart series={series} />
+      </Panel>
+
+      {/* Activity heatmap — the RepVision "Time Period Trends" grid: cash by
+          day across the last 13 weeks, darker where more landed. */}
+      <Panel title="Cash by day">
+        <ActivityHeatmap
+          model={buildActivityHeatmap(
+            backlog
+              .filter((r) => r.direction === "in")
+              .map((r) => ({ day: r.occurredOn, value: r.cashCents })),
+            todayKey,
+            13,
+          )}
+        />
       </Panel>
 
       <DashboardCards
