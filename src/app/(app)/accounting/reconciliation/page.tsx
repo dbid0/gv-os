@@ -1,5 +1,7 @@
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
+import { SpineReconciler } from "@/components/accounting/spine-reconciler";
+import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
 import { SyncSheetButton } from "@/components/accounting/sync-sheet-button";
 import { PageHeader } from "@/components/shell/page-header";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -43,9 +45,15 @@ export default async function ReconciliationPage() {
   const { run, deals } = await latestReconciliation();
   const monthly = bucketByMonth(await mirrorMonthly());
   const outstanding = await mirrorOutstanding();
+  const spine = await getSpineReconciliation();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
+      {/* The Money Spine reconciler leads — the live "can't fail" check that
+          sources == ledger == rev-share basis. The sheet mirror follows as the
+          transition-period cross-check against the Master Finance Sheet. */}
+      <SpineReconciler report={spine} />
+
       <PageHeader
         title="Sheet"
         highlight="reconciliation."
