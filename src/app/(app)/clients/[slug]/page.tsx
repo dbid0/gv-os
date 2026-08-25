@@ -12,11 +12,11 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
 import { ColumnChart } from "@/components/ui/column-chart";
-import { Kpi, Money } from "@/components/ui/metric";
+import { CountUpMoney } from "@/components/shell/count-up-money";
+import { Kpi } from "@/components/ui/metric";
 import { bucketByDay } from "@/lib/charts";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { getClientReport } from "@/lib/clients/report";
-import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
 import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
@@ -131,12 +131,12 @@ export default async function ClientPage({
         <Kpi label="Applications · 30d" value={String(report.apps30d)} tone="brand" />
         <Kpi
           label="Cash collected — all time"
-          value={<Money amount={cents(report.mirror.cashCents)} />}
+          value={<CountUpMoney cents={report.mirror.cashCents} />}
           tone="success"
         />
         <Kpi
           label="Net after fees — all time"
-          value={<Money amount={cents(report.mirror.netCents)} />}
+          value={<CountUpMoney cents={report.mirror.netCents} />}
         />
         <Kpi
           label="Kit sequences"
