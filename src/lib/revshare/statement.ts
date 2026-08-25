@@ -24,6 +24,10 @@ export interface RevShareStatement {
   grossCashCents: number;
   processorFeeCents: number;
   cashAfterFeesCents: number;
+  /** Ad spend deducted before the rate (0 unless an after-ad-spend offer). */
+  adSpendCents: number;
+  /** cashAfterFees − adSpend — what the rate applies to. */
+  basisCents: number;
   rateBps: number;
   revShareCents: number;
   dealCount: number;
@@ -79,6 +83,8 @@ export function buildRevShareStatement(
     grossCashCents,
     processorFeeCents,
     cashAfterFeesCents: line.cashAfterFeesCents,
+    adSpendCents: line.adSpendCents,
+    basisCents: line.basisCents,
     rateBps: line.rateBps,
     revShareCents: line.revShareCents,
     dealCount: mine.length,

@@ -10,6 +10,7 @@ import { agingTone, daysSinceClose } from "@/lib/accounting/aging";
 import { cents } from "@/lib/money";
 import { payoutTotalCents } from "@/lib/payouts/math";
 import { revShareLines } from "@/lib/revshare/engine";
+import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
 import {
   moneyCalendar,
   partialDealAr,
@@ -38,6 +39,7 @@ export default async function ArPage() {
           clientId: revShareRules.clientId,
           rateBps: revShareRules.rateBps,
           effectiveFrom: revShareRules.effectiveFrom,
+          deductAdSpend: revShareRules.deductAdSpend,
         })
         .from(revShareRules),
       db.select({ id: clients.id, name: clients.name }).from(clients),
@@ -67,6 +69,7 @@ export default async function ArPage() {
       processorFeeCents: r.processorFeeCents,
     })),
     rules,
+    await getAdSpendByMonth(),
   );
   const nameFor = (id: string) => clientRows.find((c) => c.id === id)?.name ?? "Client";
   const owedRevShare = revShareOwed(

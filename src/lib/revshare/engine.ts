@@ -12,6 +12,8 @@ export interface RevShareRuleInput {
   rateBps: number;
   /** yyyy-mm-dd, applies from this day forward. */
   effectiveFrom: string;
+  /** Rate applies to cash-after-fees MINUS that month's ad spend (Racks). */
+  deductAdSpend?: boolean;
 }
 
 export interface ClientCashRow {
@@ -40,7 +42,13 @@ export interface RevShareLine {
   clientId: string;
   /** yyyy-mm. */
   month: string;
+  /** Cash after processing fees — BEFORE any ad-spend deduction. */
   cashAfterFeesCents: number;
+  /** That month's ad spend deducted from the basis; 0 unless the offer's rule
+   * is "after ad spend". */
+  adSpendCents: number;
+  /** What the rate actually applies to: cashAfterFees − adSpend, floored at 0. */
+  basisCents: number;
   rateBps: number;
   revShareCents: number;
 }
@@ -49,11 +57,22 @@ export interface RevShareLine {
  * Monthly pending rev-share per client. Each row is rated by ITS day (a
  * mid-month rate change rates each side correctly), then summed by month.
  * Rounding happens per row, half-up — deterministic and replayable.
+ *
+ * `adSpendByMonth` (keyed `clientId:yyyy-mm`) is deducted from the month's
+ * basis for offers whose rule sets `deductAdSpend` (Racks = 10% after ad
+ * spend). Ad spend is inherently monthly, so for those offers the share is
+ * rated on the month's (after-fees − ad-spend) at the month's effective rate,
+ * rather than accumulated per row. `cashAfterFeesCents` is left untouched so
+ * the cash reconciler still proves ledger == after-fees.
  */
 export function revShareLines(
   rows: ClientCashRow[],
   rules: RevShareRuleInput[],
+  adSpendByMonth: ReadonlyMap<string, number> = new Map(),
 ): RevShareLine[] {
+  const deductClients = new Set(
+    rules.filter((r) => r.deductAdSpend).map((r) => r.clientId),
+  );
   const buckets = new Map<
     string,
     { clientId: string; month: string; afterFees: number; share: number; rate: number }
@@ -79,12 +98,23 @@ export function revShareLines(
     buckets.set(key, bucket);
   }
   return [...buckets.values()]
-    .map((b) => ({
-      clientId: b.clientId,
-      month: b.month,
-      cashAfterFeesCents: b.afterFees,
-      rateBps: b.rate,
-      revShareCents: b.share,
-    }))
+    .map((b) => {
+      const key = `${b.clientId}:${b.month}`;
+      const deducts = deductClients.has(b.clientId);
+      const adSpendCents = deducts ? (adSpendByMonth.get(key) ?? 0) : 0;
+      const basisCents = Math.max(0, b.afterFees - adSpendCents);
+      const revShareCents = deducts
+        ? Math.round((basisCents * b.rate) / 10_000)
+        : b.share;
+      return {
+        clientId: b.clientId,
+        month: b.month,
+        cashAfterFeesCents: b.afterFees,
+        adSpendCents,
+        basisCents,
+        rateBps: b.rate,
+        revShareCents,
+      };
+    })
     .sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0));
 }

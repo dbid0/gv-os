@@ -1,0 +1,1 @@
+ALTER TABLE "app"."rev_share_rules" ADD COLUMN "deduct_ad_spend" boolean DEFAULT false NOT NULL;

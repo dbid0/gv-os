@@ -10,6 +10,7 @@ import { getDb } from "@/db/client";
 import { clients, revShareRules, transactions } from "@/db/schema/app";
 import { cents } from "@/lib/money";
 import { revShareLines } from "@/lib/revshare/engine";
+import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
 import { buildRevShareStatement, formatMonth } from "@/lib/revshare/statement";
 
 export const metadata = { title: "Rev-share statement - GV OS" };
@@ -47,6 +48,7 @@ export default async function RevShareStatementPage({
             clientId: revShareRules.clientId,
             rateBps: revShareRules.rateBps,
             effectiveFrom: revShareRules.effectiveFrom,
+            deductAdSpend: revShareRules.deductAdSpend,
           })
           .from(revShareRules),
         db
@@ -63,8 +65,9 @@ export default async function RevShareStatementPage({
       ])
     : [[], []];
 
+  const adSpendByMonth = valid ? await getAdSpendByMonth() : new Map<string, number>();
   const line = valid
-    ? revShareLines(rows, rules).find(
+    ? revShareLines(rows, rules, adSpendByMonth).find(
         (l) => l.clientId === client!.id && l.month === month,
       )
     : undefined;
@@ -127,9 +130,21 @@ function Statement({
             −<Money amount={cents(s.processorFeeCents)} />
           </span>
         </Line>
-        <Line label="Cash after fees" strong>
+        <Line label="Cash after fees" strong={s.adSpendCents === 0}>
           <Money amount={cents(s.cashAfterFeesCents)} />
         </Line>
+        {s.adSpendCents > 0 && (
+          <>
+            <Line label="Ad spend" muted>
+              <span className="text-destructive">
+                −<Money amount={cents(s.adSpendCents)} />
+              </span>
+            </Line>
+            <Line label="Rev-share basis" strong>
+              <Money amount={cents(s.basisCents)} />
+            </Line>
+          </>
+        )}
         <Line label={`Rev-share rate`} muted>
           {(s.rateBps / 100).toFixed(0)}%
         </Line>

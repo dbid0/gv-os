@@ -20,6 +20,8 @@ describe("buildRevShareStatement", () => {
     clientId: "grid",
     month: "2026-08",
     cashAfterFeesCents: 970_000,
+    adSpendCents: 0,
+    basisCents: 970_000,
     rateBps: 2000,
     revShareCents: 194_000,
   };
