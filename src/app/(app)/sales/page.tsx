@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Plus, Settings2, Users } from "lucide-react";
+import { ArrowRight, Gauge, Plus, Settings2, Users } from "lucide-react";
 
 import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
@@ -41,12 +41,20 @@ export default async function SalesPage() {
           {teams.length} sales {teams.length === 1 ? "team" : "teams"} — each an offer
           with its own reps, EOD cadence, and commission structure.
         </p>
-        <Link
-          href="/sales/teams/new"
-          className="border-brand/40 text-brand hover:bg-brand-soft/50 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-        >
-          <Plus className="size-4" /> Add new team
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/sales/cockpit"
+            className="bg-secondary/60 hover:bg-secondary text-foreground inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+          >
+            <Gauge className="size-4" /> Cockpit
+          </Link>
+          <Link
+            href="/sales/teams/new"
+            className="border-brand/40 text-brand hover:bg-brand-soft/50 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+          >
+            <Plus className="size-4" /> Add new team
+          </Link>
+        </div>
       </div>
 
       {teams.length === 0 ? (
