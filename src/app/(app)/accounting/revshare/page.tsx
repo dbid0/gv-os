@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -38,10 +39,11 @@ export default async function RevSharePage() {
       })
       .from(transactions)
       .where(eq(transactions.layer, "client")),
-    db.select({ id: clients.id, name: clients.name }).from(clients),
+    db.select({ id: clients.id, name: clients.name, slug: clients.slug }).from(clients),
   ]);
 
   const nameFor = (id: string) => roster.find((c) => c.id === id)?.name ?? "Unknown";
+  const slugFor = (id: string) => roster.find((c) => c.id === id)?.slug ?? null;
   const lines = revShareLines(rows, rules);
   const pendingTotal = lines.reduce((s, l) => s + l.revShareCents, 0);
 
@@ -116,28 +118,44 @@ export default async function RevSharePage() {
                   <th className="py-2 pr-3 font-medium">Client</th>
                   <th className="py-2 pr-3 text-right font-medium">Cash after fees</th>
                   <th className="py-2 pr-3 text-right font-medium">Rate</th>
-                  <th className="py-2 text-right font-medium">GV rev-share</th>
+                  <th className="py-2 pr-3 text-right font-medium">GV rev-share</th>
+                  <th className="py-2 text-right font-medium">Statement</th>
                 </tr>
               </thead>
               <tbody>
-                {lines.map((l) => (
-                  <tr
-                    key={`${l.clientId}-${l.month}`}
-                    className="border-b last:border-0"
-                  >
-                    <td className="text-muted-foreground py-2 pr-3">{l.month}</td>
-                    <td className="py-2 pr-3 font-medium">{nameFor(l.clientId)}</td>
-                    <td className="numeric py-2 pr-3 text-right tabular-nums">
-                      <Money amount={cents(l.cashAfterFeesCents)} />
-                    </td>
-                    <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
-                      {(l.rateBps / 100).toFixed(0)}%
-                    </td>
-                    <td className="numeric py-2 text-right font-semibold tabular-nums">
-                      <Money amount={cents(l.revShareCents)} />
-                    </td>
-                  </tr>
-                ))}
+                {lines.map((l) => {
+                  const slug = slugFor(l.clientId);
+                  return (
+                    <tr
+                      key={`${l.clientId}-${l.month}`}
+                      className="border-b last:border-0"
+                    >
+                      <td className="text-muted-foreground py-2 pr-3">{l.month}</td>
+                      <td className="py-2 pr-3 font-medium">{nameFor(l.clientId)}</td>
+                      <td className="numeric py-2 pr-3 text-right tabular-nums">
+                        <Money amount={cents(l.cashAfterFeesCents)} />
+                      </td>
+                      <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                        {(l.rateBps / 100).toFixed(0)}%
+                      </td>
+                      <td className="numeric py-2 pr-3 text-right font-semibold tabular-nums">
+                        <Money amount={cents(l.revShareCents)} />
+                      </td>
+                      <td className="py-2 text-right">
+                        {slug ? (
+                          <Link
+                            href={`/accounting/revshare/statement?client=${slug}&month=${l.month}`}
+                            className="text-brand hover:underline"
+                          >
+                            View
+                          </Link>
+                        ) : (
+                          <span className="text-faint">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
