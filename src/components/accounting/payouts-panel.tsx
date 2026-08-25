@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCircle2, Plus } from "lucide-react";
+import { CheckCircle2, Plus, Wand2 } from "lucide-react";
 
 import {
   addAdjustment,
   createPayout,
+  generatePayoutRun,
   markPayoutPaid,
 } from "@/app/(app)/accounting/payouts/actions";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,25 @@ export function PayoutsPanel({ month, rows }: { month: string; rows: PayoutRow[]
 
   return (
     <div className="space-y-6">
-      <Panel title={`Add a payout — ${month}`}>
+      <Panel
+        title={`Add a payout — ${month}`}
+        aside={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            className="gap-1.5"
+            onClick={() =>
+              act(
+                () => generatePayoutRun(month),
+                `Generated the ${month} rev-share run`,
+              )
+            }
+          >
+            <Wand2 className="size-3.5" /> Generate {month} run
+          </Button>
+        }
+      >
         <form
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
