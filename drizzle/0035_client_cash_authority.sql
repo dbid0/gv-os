@@ -1,0 +1,1 @@
+ALTER TABLE "app"."clients" ADD COLUMN "cash_authority" text DEFAULT 'auto' NOT NULL;

@@ -14,6 +14,7 @@ import {
 import { moneyEvents } from "@/db/schema/ledger";
 import { readSheetValues } from "@/lib/google/sheets";
 import { clientBySlug } from "@/lib/roster";
+import { formOwnsCash, normalizeCashAuthority } from "@/lib/sources/cash-authority";
 import {
   newDealToTransaction,
   parseNewDealsSheet,
@@ -161,7 +162,11 @@ export interface ImportResult {
 export async function importNewDealsForOffer(slug: string): Promise<ImportResult> {
   const db = getDb();
   const [client] = await db
-    .select({ id: clients.id, sheet: clients.trackingSheetId })
+    .select({
+      id: clients.id,
+      sheet: clients.trackingSheetId,
+      cashAuthority: clients.cashAuthority,
+    })
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
@@ -170,9 +175,10 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
     throw new Error(`No tracking sheet connected for "${slug}" — set one first.`);
   }
 
-  // Dedup between the two feeds (Daniel: never double-count). If a payment
-  // processor is connected for this offer, IT owns the money rows — so the
-  // new-deal form here contributes deals + commissions only, no money.
+  // Dedup between the feeds (Daniel: never double-count) — the Money Spine cash
+  // authority (spec §3). Multiple processors on one offer all pool their cash;
+  // this only decides whether the FORM also contributes cash. `auto` derives it
+  // from whether any processor source is connected; `forms`/`processors` pin it.
   const [processor] = await db
     .select({ id: integrations.id })
     .from(integrations)
@@ -184,7 +190,10 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
       ),
     )
     .limit(1);
-  const processorOwnsMoney = Boolean(processor);
+  const processorOwnsMoney = !formOwnsCash(
+    normalizeCashAuthority(client.cashAuthority),
+    Boolean(processor),
+  );
 
   const offer = clientBySlug(slug)?.offer ?? null;
   const values = await readSheetValues(client.sheet, NEW_DEALS_RANGE);

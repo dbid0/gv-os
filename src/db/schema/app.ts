@@ -59,6 +59,15 @@ export const clients = appSchema.table(
      * own owner line). Editable inline on the card; null falls back to a
      * derived default so the card is never blank. */
     summary: text("summary"),
+    /**
+     * Which source owns this offer's CASH — the Money Spine anti-double-count
+     * switch (MONEY-SPINE-SPEC §3). `auto` (default) = processors own the cash
+     * when any processor source is connected, otherwise the new-deal form does;
+     * `forms` / `processors` pin it explicitly. Multiple processors on one offer
+     * all pool their cash regardless — this only decides whether the FORM also
+     * contributes cash, so a deal is never counted twice.
+     */
+    cashAuthority: text("cash_authority").notNull().default("auto"),
     /** This offer's tracking-sheet id — the Google Sheet whose `🤝 New Deals`
      * tab feeds the new-deal importer. Null = not connected yet. */
     trackingSheetId: text("tracking_sheet_id"),
