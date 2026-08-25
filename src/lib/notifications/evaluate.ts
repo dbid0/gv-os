@@ -1,12 +1,14 @@
 import "server-only";
 
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
+  activityReports,
   clients,
   notifications,
   offerSettings,
+  reps,
   sheetSyncRuns,
   signedDocs,
 } from "@/db/schema/app";
@@ -15,8 +17,10 @@ import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import {
   bodRule,
   driftRule,
+  repWellbeingRule,
   signedDocRule,
   spineDriftRule,
+  type RepWellbeingState,
   type SpineDriftRow,
 } from "@/lib/notifications/rules";
 import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
@@ -36,7 +40,7 @@ export async function evaluateNotifications(): Promise<{
 }> {
   const db = getDb();
   const now = new Date();
-  const [[latestRun], docs, clientRows, settingsRows, { rows: backlog }] =
+  const [[latestRun], docs, clientRows, settingsRows, { rows: backlog }, moodRows] =
     await Promise.all([
       db
         .select({
@@ -68,6 +72,23 @@ export async function evaluateNotifications(): Promise<{
         })
         .from(offerSettings),
       listTransactions({}),
+      // Recent EOD submissions with their self-reported check-in score, for the
+      // rep-wellbeing alert. Filtered to today in JS after the day key is known.
+      db
+        .select({
+          repId: activityReports.repId,
+          repName: reps.name,
+          clientId: activityReports.clientId,
+          teamName: clients.name,
+          reportDate: activityReports.reportDate,
+          metrics: activityReports.metrics,
+        })
+        .from(activityReports)
+        .leftJoin(reps, eq(activityReports.repId, reps.id))
+        .leftJoin(clients, eq(activityReports.clientId, clients.id))
+        .where(eq(activityReports.kind, "eod"))
+        .orderBy(desc(activityReports.createdAt))
+        .limit(200),
     ]);
 
   // BOD digests: every active offer, schema defaults standing in for offers
@@ -125,6 +146,19 @@ export async function evaluateNotifications(): Promise<{
       })),
   ];
 
+  // Rep wellbeing: any EOD filed today with a check-in score below 3 nudges
+  // the manager to reach out. One alert per rep per day (dedupe carries the day).
+  const wellbeingRows: RepWellbeingState[] = moodRows
+    .filter((r) => r.repId && dayKeyCT(new Date(r.reportDate)) === todayKey)
+    .map((r) => ({
+      repId: r.repId,
+      repName: r.repName ?? "A rep",
+      clientId: r.clientId,
+      teamName: r.teamName,
+      score: Number(r.metrics?.mood ?? 0),
+      dateKey: todayKey,
+    }));
+
   // Sync-failure + staleness alerts are OFF until integrations carry real
   // traffic (Daniel: the placeholder "Kit sync failing" note is meaningless
   // noise). Re-enable both — with human-readable copy — once real keys land.
@@ -133,6 +167,7 @@ export async function evaluateNotifications(): Promise<{
     ...spineDriftRule(driftRows),
     ...signedDocRule(docs),
     ...bodRule(bodOffers, now, todayKey),
+    ...repWellbeingRule(wellbeingRows),
   ];
 
   let created = 0;

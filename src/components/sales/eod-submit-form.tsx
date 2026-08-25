@@ -17,6 +17,7 @@ import { StatusPill } from "@/components/ui/status";
 import { submitEod } from "@/lib/sales/actions";
 import { ROLE_LABEL, baseFieldLabel } from "@/lib/sales/eod-fields";
 import type { EodRepRow, EodTemplateRow } from "@/lib/sales/queries";
+import { cn } from "@/lib/utils";
 
 const selectClass =
   "border-input bg-transparent h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -49,6 +50,7 @@ export function EodSubmitForm({
   const [repId, setRepId] = useState(reps[0]?.id ?? "");
   const [date, setDate] = useState(todayIso());
   const [dayOff, setDayOff] = useState(false);
+  const [mood, setMood] = useState<number | null>(null);
   const [nums, setNums] = useState<Record<string, string>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [cash, setCash] = useState("");
@@ -72,6 +74,7 @@ export function EodSubmitForm({
 
   function resetForRep(id: string) {
     setRepId(id);
+    setMood(null);
     setNums({});
     setTexts({});
     setCash("");
@@ -86,10 +89,15 @@ export function EodSubmitForm({
     if (!rep) return setErr("Pick a rep.");
 
     const metrics: Record<string, number> = {};
-    if (!dayOff && template) {
-      for (const key of template.baseFields) metrics[key] = Number(nums[key] || 0);
-      for (const f of template.customFields) {
-        if (f.type !== "text") metrics[f.key] = Number(nums[f.key] || 0);
+    if (!dayOff) {
+      // The wellbeing check-in is captured on every EOD, template or not — it's
+      // what drives the "check on this rep" alert when it comes in below 3.
+      if (mood != null) metrics.mood = mood;
+      if (template) {
+        for (const key of template.baseFields) metrics[key] = Number(nums[key] || 0);
+        for (const f of template.customFields) {
+          if (f.type !== "text") metrics[f.key] = Number(nums[f.key] || 0);
+        }
       }
     }
     // Text answers fold into notes so the numeric bundle stays clean.
@@ -173,6 +181,42 @@ export function EodSubmitForm({
             />
             Mark this a day off (no activity to report)
           </label>
+
+          {!dayOff && (
+            <div className="space-y-2 rounded-lg border p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground text-xs font-medium">
+                  How are you feeling today?
+                </span>
+                <span className="text-faint text-[11px]">1 = rough · 5 = great</span>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={mood === n}
+                    onClick={() => setMood(mood === n ? null : n)}
+                    className={cn(
+                      "press h-9 rounded-md border text-sm font-medium transition-colors",
+                      mood === n
+                        ? n < 3
+                          ? "border-warning/50 bg-warning/10 text-warning"
+                          : "border-brand/50 bg-brand-soft/60 text-brand"
+                        : "text-muted-foreground hover:bg-secondary/60",
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              {mood != null && mood < 3 && (
+                <p className="text-warning text-[11px]">
+                  Below 3 flags the sales manager to check in with this rep.
+                </p>
+              )}
+            </div>
+          )}
 
           {!dayOff && rep && !template && (
             <p className="text-faint rounded-md border border-dashed px-3 py-3 text-sm">

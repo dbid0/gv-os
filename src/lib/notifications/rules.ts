@@ -138,6 +138,41 @@ export function signedDocRule(docs: SignedDocState[]): Candidate[] {
   }));
 }
 
+export interface RepWellbeingState {
+  repId: string;
+  repName: string;
+  clientId: string | null;
+  teamName: string | null;
+  /** The self-reported check-in score for the day, 1–5. */
+  score: number;
+  /** Day key, so the alert dedupes to one per rep per day. */
+  dateKey: string;
+}
+
+/** Below this, a rep's daily check-in nudges their manager to reach out. */
+const WELLBEING_FLOOR = 3;
+
+/**
+ * A rep who rated how they're feeling below 3 on today's EOD (Daniel's ask:
+ * "if a rep puts below a three, notify the sales manager to check on them").
+ * A blank / zero score is not a low score — only a real 1 or 2 fires. One
+ * alert per rep per day.
+ */
+export function repWellbeingRule(reports: RepWellbeingState[]): Candidate[] {
+  return reports
+    .filter((r) => r.score >= 1 && r.score < WELLBEING_FLOOR)
+    .map((r) => ({
+      kind: "rep_wellbeing",
+      severity: "warning" as const,
+      title: `Check on ${r.repName} — low check-in today`,
+      body: `${r.repName}${
+        r.teamName ? ` (${r.teamName})` : ""
+      } rated how they're feeling ${r.score}/5 on today's EOD. Reach out.`,
+      clientId: r.clientId,
+      dedupeKey: `wellbeing:${r.repId}:${r.dateKey}`,
+    }));
+}
+
 export interface BodOfferState {
   clientId: string;
   slug: string;

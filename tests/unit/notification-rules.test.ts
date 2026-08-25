@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   bodRule,
   driftRule,
+  repWellbeingRule,
   signedDocRule,
   spineDriftRule,
   stalenessRule,
   syncFailureRule,
   type IntegrationState,
+  type RepWellbeingState,
   type SpineDriftRow,
 } from "@/lib/notifications/rules";
 
@@ -112,6 +114,49 @@ describe("bodRule", () => {
   });
 });
 
+describe("repWellbeingRule", () => {
+  const rep = (o: Partial<RepWellbeingState>): RepWellbeingState => ({
+    repId: "r1",
+    repName: "Jordan",
+    clientId: "g",
+    teamName: "The Grid",
+    score: 2,
+    dateKey: "2026-08-25",
+    ...o,
+  });
+
+  it("flags a score below 3 with a warning to the manager", () => {
+    const out = repWellbeingRule([rep({ score: 2 })]);
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warning");
+    expect(out[0].title).toBe("Check on Jordan — low check-in today");
+    expect(out[0].body).toContain("2/5");
+    expect(out[0].dedupeKey).toBe("wellbeing:r1:2026-08-25");
+  });
+
+  it("ignores a healthy score of 3 or higher", () => {
+    expect(repWellbeingRule([rep({ score: 3 })])).toHaveLength(0);
+    expect(repWellbeingRule([rep({ score: 5 })])).toHaveLength(0);
+  });
+
+  it("treats a blank / zero score as not-reported, not low", () => {
+    expect(repWellbeingRule([rep({ score: 0 })])).toHaveLength(0);
+  });
+
+  it("omits the team suffix when the rep has no team", () => {
+    const out = repWellbeingRule([rep({ teamName: null, score: 1 })]);
+    expect(out[0].body).toBe(
+      "Jordan rated how they're feeling 1/5 on today's EOD. Reach out.",
+    );
+  });
+
+  it("dedupes to one alert per rep per day", () => {
+    const out = repWellbeingRule([rep({ score: 1 }), rep({ score: 2 })]);
+    // Same rep + day → callers rely on the dedupe key collapsing these.
+    expect(out.every((c) => c.dedupeKey === "wellbeing:r1:2026-08-25")).toBe(true);
+  });
+});
+
 import { notificationHref } from "@/lib/notifications/links";
 
 describe("notificationHref", () => {
@@ -125,6 +170,7 @@ describe("notificationHref", () => {
     expect(notificationHref("agreement_signed", null)).toBe("/clients");
     expect(notificationHref("bod_digest", "the-grid")).toBe("/w/the-grid");
     expect(notificationHref("bod_digest", null)).toBe("/dashboard");
+    expect(notificationHref("rep_wellbeing", null)).toBe("/sales/eod");
     expect(notificationHref("unknown_kind", null)).toBe("/notifications");
   });
 });
