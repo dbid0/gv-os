@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients } from "@/db/schema/app";
+import { clientAdSpend, clients } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -78,6 +78,49 @@ export async function saveTrackingSheet(slug: string, rawSheetId: string) {
   }
   revalidatePath(`/clients/${slug}`);
   revalidatePath(`/w/${slug}`);
+  return { saved: true };
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Record an offer's ad spend for a day — the cost deducted from cash-after-fees
+ * before a "X% after ad spend" rev-share is rated. Append-only: a correction is
+ * a new (negative) row, never an edit. Revalidates rev-share + the reconciler.
+ */
+export async function addAdSpend(
+  slug: string,
+  occurredOn: string,
+  rawAmount: string,
+  note: string,
+) {
+  await requireUser();
+  if (!DAY.test(occurredOn)) throw new Error("Pick a date (yyyy-mm-dd).");
+  const cleaned = rawAmount.trim().replace(/[$,\s]/g, "");
+  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) {
+    throw new Error("Enter an amount in dollars — like 500 or 1,250.50.");
+  }
+  const amountCents = Math.round(Number(cleaned) * 100);
+  if (amountCents === 0) throw new Error("Amount can't be zero.");
+  if (Math.abs(amountCents) > 100_000_000) throw new Error("That amount looks wrong.");
+
+  const db = getDb();
+  const [client] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(eq(clients.slug, slug))
+    .limit(1);
+  if (!client) throw new Error("No client row for this slug yet — sync creates it.");
+
+  await db.insert(clientAdSpend).values({
+    clientId: client.id,
+    occurredOn,
+    amountCents,
+    note: note.trim() || null,
+  });
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath("/accounting/revshare");
+  revalidatePath("/accounting/reconciliation");
   return { saved: true };
 }
 

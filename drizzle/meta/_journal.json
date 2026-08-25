@@ -253,6 +253,13 @@
       "when": 1787672583746,
       "tag": "0035_client_cash_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787688217267,
+      "tag": "0036_client_ad_spend",
+      "breakpoints": true
     }
   ]
 }
