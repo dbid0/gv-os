@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Siren } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
+import { CollectedSparkline } from "@/components/shell/collected-sparkline";
+import { CountUpMoney } from "@/components/shell/count-up-money";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Panel } from "@/components/ui/panel";
@@ -18,6 +20,7 @@ import { clientBySlug } from "@/lib/roster";
 import {
   customBounds,
   homeRangeRows,
+  homeRangeSeries,
   normalizeHomeRange,
   rangeBounds,
 } from "@/lib/transactions/homepage";
@@ -90,6 +93,8 @@ export default async function WorkspacePage({
   );
   const rangeCash = rangeRows.reduce((s, r) => s + r.cashCents, 0);
   const rangeRevenue = rangeRows.reduce((s, r) => s + r.revenueCents, 0);
+  // The offer's own growth curve for the hero — same shape the dashboard uses.
+  const offerSeries = homeRangeSeries(rangeRows, "all", bounds);
 
   // This offer's most recent money, attributed the same way — the workspace's
   // own transaction feed, mirroring the admin dashboard.
@@ -151,63 +156,76 @@ export default async function WorkspacePage({
       </div>
 
       {showCash && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* One canonical story (P0-1): never a bare $0.00 sitting above a
-              non-zero figure — a quiet range falls back to the all-time
-              number with an explicit label. */}
-          {rangeCash === 0 && report.mirror.cashCents > 0 ? (
-            <div>
-              <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                Cash collected — all time
-              </p>
-              <p className="numeric text-2xl font-bold">
-                <Money amount={cents(report.mirror.cashCents)} />{" "}
-                <span className="text-muted-foreground text-sm font-normal">
-                  nothing collected in {bounds.label.toLowerCase()}
-                </span>
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                Cash collected — {bounds.label}
-              </p>
-              <p className="numeric text-2xl font-bold">
-                <Money amount={cents(rangeCash)} />{" "}
-                <span className="text-muted-foreground text-sm font-normal">
-                  collected
-                  {rangeRevenue > rangeCash && (
-                    <>
-                      {" "}
-                      of <Money amount={cents(rangeRevenue)} /> booked
-                    </>
-                  )}
-                </span>
-              </p>
-            </div>
-          )}
-          <DateRangePicker
-            basePath={`/w/${slug}`}
-            activeRange={range}
-            from={bounds.from}
-            to={bounds.to}
-            todayKey={todayKey}
+        <section className="card-grad elev-glow relative overflow-hidden rounded-xl border">
+          {/* The offer's growth curve behind the number — the same hero the
+              admin dashboard uses, in the client's own accent context. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 overflow-hidden rounded-b-xl">
+            <CollectedSparkline series={offerSeries} className="h-full w-full" />
+          </div>
+          <div className="relative flex flex-wrap items-center justify-between gap-3 p-5">
+            {/* One canonical story (P0-1): never a bare $0.00 sitting above a
+                non-zero figure — a quiet range falls back to the all-time
+                number with an explicit label. */}
+            {rangeCash === 0 && report.mirror.cashCents > 0 ? (
+              <div>
+                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Cash collected — all time
+                </p>
+                <p className="numeric text-success text-4xl font-bold tracking-tight">
+                  <CountUpMoney cents={report.mirror.cashCents} />{" "}
+                  <span className="text-muted-foreground text-sm font-normal">
+                    nothing collected in {bounds.label.toLowerCase()}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Cash collected — {bounds.label}
+                </p>
+                <p className="numeric text-success text-4xl font-bold tracking-tight">
+                  <CountUpMoney cents={rangeCash} />{" "}
+                  <span className="text-muted-foreground text-sm font-normal">
+                    collected
+                    {rangeRevenue > rangeCash && (
+                      <>
+                        {" "}
+                        of <Money amount={cents(rangeRevenue)} /> booked
+                      </>
+                    )}
+                  </span>
+                </p>
+              </div>
+            )}
+            <DateRangePicker
+              basePath={`/w/${slug}`}
+              activeRange={range}
+              from={bounds.from}
+              to={bounds.to}
+              todayKey={todayKey}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Money KPIs are behind the cash toggle too — a client viewing their own
+          portal never sees cash or revenue at a glance unless the admin turns
+          it on (the v2 §6 "money off by default" rule; previously this row
+          leaked both figures regardless of the toggle). */}
+      {showCash && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Kpi label="Deals" value={String(report.mirror.deals)} tone="brand" />
+          <Kpi
+            label="Cash collected"
+            value={<CountUpMoney cents={report.mirror.cashCents} />}
+            tone="success"
+          />
+          <Kpi
+            label="Revenue generated"
+            value={<CountUpMoney cents={report.mirror.revenueCents} />}
           />
         </div>
       )}
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Kpi label="Deals" value={String(report.mirror.deals)} tone="brand" />
-        <Kpi
-          label="Cash collected"
-          value={<Money amount={cents(report.mirror.cashCents)} />}
-          tone="success"
-        />
-        <Kpi
-          label="Revenue generated"
-          value={<Money amount={cents(report.mirror.revenueCents)} />}
-        />
-      </div>
 
       {showApps && report.apps30d > 0 && (
         <Panel title="Applications per day — last 30">
