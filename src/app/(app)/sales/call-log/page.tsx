@@ -36,6 +36,7 @@ export default async function SalesCallLogPage() {
     recordingUrl: l.recordingUrl,
     leadUrl: l.leadUrl,
     customerName: l.customerName ?? "—",
+    overview: l.notes ?? null,
     when: fmtWhen(l.occurredAt),
     occurredAtMs: l.occurredAt.getTime(),
   }));
