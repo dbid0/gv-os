@@ -431,6 +431,37 @@
   }
 }
 
+/* The dashboard growth curve drawing itself in on load (Whop feel). Paired with
+   pathLength="1" so the dash math is resolution-independent. Reduced-motion
+   zeroes the duration, leaving the finished line. */
+@keyframes gv-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.spark-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: gv-draw 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The soft halo breathing at the latest point of the curve — "this is live." */
+@keyframes gv-spark-halo {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.08;
+  }
+}
+.spark-halo {
+  animation: gv-spark-halo 2.4s ease-in-out infinite;
+}
+
 /* Deal-closed confetti (v2 §5) — pure CSS, fires once per toast. */
 @keyframes gv-confetti-fall {
   0% {
