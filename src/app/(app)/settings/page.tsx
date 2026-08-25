@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Plug, User } from "lucide-react";
 
+import { AgencyDiscordCard } from "@/components/settings/agency-discord-card";
 import {
   OfferSettingsPanel,
   type OfferSettingsRow,
@@ -79,6 +80,11 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <SectionLabel>Per-offer</SectionLabel>
         <OfferSettingsPanel rows={rows} />
+      </section>
+
+      <section className="space-y-3">
+        <SectionLabel>Agency sync</SectionLabel>
+        <AgencyDiscordCard />
       </section>
 
       <section className="space-y-3">
