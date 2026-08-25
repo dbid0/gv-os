@@ -52,6 +52,8 @@ export interface CallLogViewRow {
   recordingUrl: string | null;
   leadUrl: string | null;
   customerName: string;
+  /** A short overview of what happened on the call (the logged notes). */
+  overview: string | null;
   when: string;
   occurredAtMs: number;
 }
@@ -184,6 +186,21 @@ export function CallHistoryView({
           </StatusPill>
         );
       },
+    },
+    {
+      key: "overview",
+      header: "Overview",
+      render: (r) =>
+        r.overview ? (
+          <span
+            title={r.overview}
+            className="text-muted-foreground block max-w-[22rem] truncate"
+          >
+            {r.overview}
+          </span>
+        ) : (
+          <span className="text-faint">—</span>
+        ),
     },
     {
       key: "links",

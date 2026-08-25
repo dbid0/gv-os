@@ -13,6 +13,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { DataTable, type Column } from "@/components/ui/table";
 import { type Cents } from "@/lib/money";
+import { compactUsd } from "@/lib/revenue-chart";
 import { fadeUp } from "@/lib/motion";
 import { markAllPaid, markRepPaid } from "@/lib/sales/actions";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,18 @@ export function CommissionsTable({
   const entrance = useEntranceOnce();
   const paidCount = lines.filter((l) => l.paid).length;
 
+  // Per-offer split of what's owed this period — the cross-offer breakdown that
+  // leads every other Sales section, derived from the same rep lines.
+  const owedByOffer = new Map<string, { owed: number; reps: number }>();
+  for (const l of lines) {
+    const name = l.teamName || "—";
+    const cur = owedByOffer.get(name) ?? { owed: 0, reps: 0 };
+    cur.owed += l.totalOwedCents;
+    cur.reps += 1;
+    owedByOffer.set(name, cur);
+  }
+  const perOffer = [...owedByOffer.entries()].sort((a, b) => b[1].owed - a[1].owed);
+
   const basisTab = (key: "cash_collected" | "deal_revenue", label: string) => (
     <Link
       href={`/sales/commissions?basis=${key}`}
@@ -229,6 +242,25 @@ export function CommissionsTable({
             tone="brand"
           />
         </div>
+
+        {perOffer.length > 1 && (
+          <div className="mt-5 border-t pt-4">
+            <p className="text-faint mb-2 text-[11px] font-medium tracking-wider uppercase">
+              Owed by offer
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {perOffer.map(([name, v]) => (
+                <span
+                  key={name}
+                  className="text-muted-foreground rounded-full border px-2.5 py-1 text-xs"
+                >
+                  <span className="text-foreground font-medium">{name}</span> ·{" "}
+                  {compactUsd(v.owed)} · {v.reps} {v.reps === 1 ? "rep" : "reps"}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {(summary.dealsUncommissioned > 0 ||
           summary.dealsMissingSplits - summary.dealsUncommissioned > 0) && (
