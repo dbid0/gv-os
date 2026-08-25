@@ -10,11 +10,13 @@ import { cents } from "@/lib/money";
 import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
+import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
 import { roster } from "@/lib/roster";
+import { getSalesMetrics } from "@/lib/sales/metrics";
 import {
   getCloseRatePct,
   getEodCompliance,
@@ -54,6 +56,7 @@ export default async function DashboardPage({
     { rows: backlog },
     storedMode,
     storedCards,
+    salesMetrics,
     [scalars],
   ] = await Promise.all([
     getSalesOverview(),
@@ -63,6 +66,7 @@ export default async function DashboardPage({
     listTransactions({}),
     getPref<string>(user?.email ?? null, "home-mode"),
     getPref<unknown>(user?.email ?? null, "dashboard-cards"),
+    getSalesMetrics(),
     getDb().execute<{
       pending_payout_cents: number;
       kit_subscribers: number;
@@ -147,6 +151,19 @@ export default async function DashboardPage({
         sections={sections}
         series={series}
       />
+
+      {/* The RepVision-style KPI wall — every sales number at a glance, dense
+          and scannable, above the customizable cards. */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <h2 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+            Sales metrics
+          </h2>
+          <span className="bg-border h-px flex-1" />
+        </div>
+        <SalesMetricsGrid metrics={salesMetrics} />
+      </section>
+
       <DashboardCards
         active={cards}
         slots={{
