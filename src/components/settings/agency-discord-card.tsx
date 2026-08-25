@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { BarChart3, Send } from "lucide-react";
 
+import { ClipboardList } from "lucide-react";
+
 import {
+  postDigest,
   sendAgencySnapshot,
   sendDiscordTest,
 } from "@/app/(app)/settings/discord-actions";
@@ -21,6 +24,7 @@ export function AgencyDiscordCard() {
   const { toast } = useToast();
   const [testing, startTest] = useTransition();
   const [posting, startPost] = useTransition();
+  const [digesting, startDigest] = useTransition();
 
   const run = (
     fn: () => Promise<{ sent: boolean }>,
@@ -60,6 +64,15 @@ export function AgencyDiscordCard() {
           >
             <BarChart3 className="size-3.5" />
             {posting ? "Posting…" : "Post agency snapshot"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => run(postDigest, startDigest, "Huddle digest posted")}
+            disabled={digesting}
+            className="gap-1.5"
+          >
+            <ClipboardList className="size-3.5" />
+            {digesting ? "Posting…" : "Post huddle digest"}
           </Button>
           <Button
             variant="outline"
