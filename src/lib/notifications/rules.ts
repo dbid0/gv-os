@@ -85,6 +85,34 @@ export function driftRule(run: DriftRunState | null): Candidate[] {
   ];
 }
 
+export interface SpineDriftRow {
+  /** Offer slug or "agency" — the book that drifted. */
+  scope: string;
+  /** Display name of the offer or "Agency book". */
+  name: string;
+  month: string;
+  /** Non-zero = sources and ledger disagree by this much. */
+  cashDeltaCents: number;
+}
+
+/**
+ * Money Spine reconciler drift — the "can't fail unnoticed" alert. One critical
+ * notification per drifting offer-month; the delta is in the dedupe key, so a
+ * changed drift updates the alert and a reconciled book (no rows) clears it.
+ */
+export function spineDriftRule(rows: SpineDriftRow[]): Candidate[] {
+  return rows
+    .filter((r) => r.cashDeltaCents !== 0)
+    .map((r) => ({
+      kind: "spine_drift",
+      severity: "critical" as const,
+      title: `${r.name} ${r.month}: sources off by $${(Math.abs(r.cashDeltaCents) / 100).toFixed(2)}`,
+      body: "The Money Spine reconciler found sources not matching the ledger. Open Accounting → Reconciliation.",
+      clientId: null,
+      dedupeKey: `spine-drift:${r.scope}:${r.month}:${r.cashDeltaCents}`,
+    }));
+}
+
 export interface SignedDocState {
   externalId: string;
   name: string | null;

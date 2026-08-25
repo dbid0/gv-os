@@ -12,7 +12,15 @@ import {
 } from "@/db/schema/app";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import { bodRule, driftRule, signedDocRule } from "@/lib/notifications/rules";
+import {
+  bodRule,
+  driftRule,
+  signedDocRule,
+  spineDriftRule,
+  type SpineDriftRow,
+} from "@/lib/notifications/rules";
+import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
+import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
 import { roster } from "@/lib/roster";
 import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
 import { clientLedger } from "@/lib/transactions/ledger";
@@ -92,11 +100,37 @@ export async function evaluateNotifications(): Promise<{
     ];
   });
 
+  // Money Spine drift — the reconciler's "can't fail unnoticed" alert. Both
+  // the offer book and GV's own agency book.
+  const [spine, agency] = await Promise.all([
+    getSpineReconciliation(),
+    getAgencyReconciliation(),
+  ]);
+  const driftRows: SpineDriftRow[] = [
+    ...spine.rows
+      .filter((r) => r.status === "drift")
+      .map((r) => ({
+        scope: r.slug,
+        name: r.name,
+        month: r.month,
+        cashDeltaCents: r.cashDeltaCents,
+      })),
+    ...agency.rows
+      .filter((r) => r.status === "drift")
+      .map((r) => ({
+        scope: "agency",
+        name: "Agency book",
+        month: r.month,
+        cashDeltaCents: r.driftCents,
+      })),
+  ];
+
   // Sync-failure + staleness alerts are OFF until integrations carry real
   // traffic (Daniel: the placeholder "Kit sync failing" note is meaningless
   // noise). Re-enable both — with human-readable copy — once real keys land.
   const candidates = [
     ...driftRule(latestRun ?? null),
+    ...spineDriftRule(driftRows),
     ...signedDocRule(docs),
     ...bodRule(bodOffers, now, todayKey),
   ];

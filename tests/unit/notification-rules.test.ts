@@ -4,9 +4,11 @@ import {
   bodRule,
   driftRule,
   signedDocRule,
+  spineDriftRule,
   stalenessRule,
   syncFailureRule,
   type IntegrationState,
+  type SpineDriftRow,
 } from "@/lib/notifications/rules";
 
 const NOW = new Date("2026-08-22T12:00:00Z");
@@ -124,5 +126,32 @@ describe("notificationHref", () => {
     expect(notificationHref("bod_digest", "the-grid")).toBe("/w/the-grid");
     expect(notificationHref("bod_digest", null)).toBe("/dashboard");
     expect(notificationHref("unknown_kind", null)).toBe("/notifications");
+  });
+});
+
+describe("spineDriftRule", () => {
+  const rows: SpineDriftRow[] = [
+    { scope: "the-grid", name: "The Grid", month: "2026-08", cashDeltaCents: 50_000 },
+    { scope: "agency", name: "Agency book", month: "2026-08", cashDeltaCents: -12_500 },
+    { scope: "the-vault", name: "The Vault", month: "2026-08", cashDeltaCents: 0 },
+  ];
+
+  it("raises one critical alert per drifting book, with the exact delta", () => {
+    const out = spineDriftRule(rows);
+    expect(out).toHaveLength(2); // the zero-delta row is skipped
+    expect(out[0]).toMatchObject({
+      kind: "spine_drift",
+      severity: "critical",
+      title: "The Grid 2026-08: sources off by $500.00",
+      dedupeKey: "spine-drift:the-grid:2026-08:50000",
+    });
+    expect(out[1].title).toContain("$125.00"); // abs value of the agency delta
+  });
+
+  it("keys the alert by the delta so a changed drift re-fires and green clears it", () => {
+    expect(spineDriftRule([])).toEqual([]);
+    const a = spineDriftRule([rows[0]])[0].dedupeKey;
+    const b = spineDriftRule([{ ...rows[0], cashDeltaCents: 60_000 }])[0].dedupeKey;
+    expect(a).not.toBe(b);
   });
 });
