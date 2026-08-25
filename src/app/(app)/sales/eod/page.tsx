@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { SummaryStrip, type OfferBreakdown } from "@/components/sales/summary-strip";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { listActivityReports } from "@/lib/sales/queries";
+import { dayKeyCT } from "@/lib/charts";
+import { listActivityReports, listEodReps } from "@/lib/sales/queries";
 import { ROLE_LABEL } from "@/lib/sales/eod-fields";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +41,11 @@ export default async function EodReportsPage({
 }) {
   const { kind = "eod" } = await searchParams;
   const active = CADENCE_TABS.some((t) => t.key === kind) ? kind : "eod";
-  const rows = await listActivityReports(active);
+  const cadenceLabel = active === "bod" ? "BOD" : "EOD";
+  const [rows, eodReps] = await Promise.all([
+    listActivityReports(active),
+    listEodReps(),
+  ]);
 
   const totals: Record<string, number> = {};
   for (const r of rows) {
@@ -47,6 +53,39 @@ export default async function EodReportsPage({
     for (const c of COLS)
       totals[c.key] = (totals[c.key] ?? 0) + (r.metrics[c.key] ?? 0);
   }
+
+  // Today's submission compliance, per offer — Daniel's ask: "how many reps out
+  // of how many have submitted their EOD/BOD so far." The roster is every active
+  // rep; a report of any kind today (day-off included) counts as submitted.
+  const todayKey = dayKeyCT(new Date());
+  const submittedByTeam = new Map<string, Set<string>>();
+  for (const r of rows) {
+    if (dayKeyCT(new Date(r.reportDate)) !== todayKey) continue;
+    const team = r.teamName ?? "Unassigned";
+    const set = submittedByTeam.get(team) ?? new Set<string>();
+    if (r.repName) set.add(r.repName);
+    submittedByTeam.set(team, set);
+  }
+  const rosterByTeam = new Map<string, number>();
+  for (const rep of eodReps) {
+    const team = rep.teamName ?? "Unassigned";
+    rosterByTeam.set(team, (rosterByTeam.get(team) ?? 0) + 1);
+  }
+  const totalReps = eodReps.length;
+  const totalSubmitted = [...rosterByTeam.keys()].reduce(
+    (s, team) =>
+      s + Math.min(submittedByTeam.get(team)?.size ?? 0, rosterByTeam.get(team)!),
+    0,
+  );
+  const offersReporting = [...rosterByTeam.keys()].filter(
+    (team) => (submittedByTeam.get(team)?.size ?? 0) > 0,
+  ).length;
+  const complianceByOffer: OfferBreakdown[] = [...rosterByTeam.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([team, total]) => {
+      const got = Math.min(submittedByTeam.get(team)?.size ?? 0, total);
+      return { name: team, detail: `${got}/${total} in` };
+    });
 
   return (
     <div className="space-y-6">
@@ -75,6 +114,30 @@ export default async function EodReportsPage({
           ))}
         </div>
       </div>
+
+      {totalReps > 0 && (
+        <SummaryStrip
+          breakdownLabel={`${cadenceLabel} submitted today, by offer`}
+          stats={[
+            {
+              label: `${cadenceLabel}s in today`,
+              value: `${totalSubmitted} / ${totalReps}`,
+              tone: "brand",
+            },
+            {
+              label: "Offers reporting",
+              value: `${offersReporting} / ${rosterByTeam.size}`,
+            },
+            {
+              label: "Still outstanding",
+              value: String(Math.max(0, totalReps - totalSubmitted)),
+              tone: totalReps - totalSubmitted > 0 ? "warning" : "success",
+            },
+            { label: "Reports in range", value: String(rows.length) },
+          ]}
+          perOffer={complianceByOffer}
+        />
+      )}
 
       {rows.length === 0 ? (
         <Panel title="No reports yet">
