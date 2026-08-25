@@ -131,12 +131,31 @@ export function Sidebar({
         <div className="px-3 pb-3">
           <DropdownMenu>
             <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors">
-              <span
-                className="bg-card grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold"
-                style={activeClient ? { color: activeClient.accent } : undefined}
-              >
-                {activeClient ? clientInitial(activeClient.name) : "GV"}
-              </span>
+              {activeClient && logos[activeClient.slug] ? (
+                // eslint-disable-next-line @next/next/no-img-element -- data URL
+                <img
+                  src={logos[activeClient.slug]}
+                  alt=""
+                  className="size-8 shrink-0 rounded-md border object-cover"
+                />
+              ) : activeClient ? (
+                <span
+                  className="bg-card grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold"
+                  style={{ color: activeClient.accent }}
+                >
+                  {clientInitial(activeClient.name)}
+                </span>
+              ) : (
+                <span className="bg-card grid size-8 shrink-0 place-items-center rounded-md border">
+                  <Image
+                    src="/brand/gv-mark-white.png"
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="size-5 object-contain"
+                  />
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="text-muted-foreground block text-[10px] tracking-wider uppercase">
                   Workspace
@@ -149,8 +168,14 @@ export function Sidebar({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem render={<Link href="/clients" />} className="gap-2">
-                <span className="bg-card grid size-6 place-items-center rounded-md border text-[10px] font-semibold">
-                  GV
+                <span className="bg-card grid size-6 place-items-center rounded-md border">
+                  <Image
+                    src="/brand/gv-mark-white.png"
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="size-4 object-contain"
+                  />
                 </span>
                 All clients
               </DropdownMenuItem>
