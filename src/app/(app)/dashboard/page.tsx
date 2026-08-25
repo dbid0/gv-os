@@ -10,8 +10,10 @@ import { cents } from "@/lib/money";
 import { partialDealAr } from "@/lib/transactions/ar";
 import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
+import { RepTrendsPanel } from "@/components/shell/rep-trends-panel";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
 import { TeamsOverviewCard } from "@/components/shell/teams-overview-card";
+import { getRepTrends } from "@/lib/sales/rep-trends-query";
 import { buildTeamsOverview } from "@/lib/teams-overview";
 import { ActivityHeatmap } from "@/components/ui/activity-heatmap";
 import { RevenueChart } from "@/components/ui/revenue-chart";
@@ -53,6 +55,7 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const user = await shellUser();
+  const todayKey = dayKeyCT(new Date());
   const [
     overview,
     compliance,
@@ -62,6 +65,7 @@ export default async function DashboardPage({
     storedMode,
     storedCards,
     salesMetrics,
+    repTrends,
     [scalars],
   ] = await Promise.all([
     getSalesOverview(),
@@ -72,6 +76,7 @@ export default async function DashboardPage({
     getPref<string>(user?.email ?? null, "home-mode"),
     getPref<unknown>(user?.email ?? null, "dashboard-cards"),
     getSalesMetrics(),
+    getRepTrends(todayKey),
     getDb().execute<{
       pending_payout_cents: number;
       kit_subscribers: number;
@@ -93,7 +98,6 @@ export default async function DashboardPage({
   ]);
 
   const mode = normalizeHomeMode(storedMode);
-  const todayKey = dayKeyCT(new Date());
   const custom =
     params.range === "custom" ? customBounds(params.from, params.to) : null;
   const range = custom
@@ -205,6 +209,10 @@ export default async function DashboardPage({
           )}
         />
       </Panel>
+
+      {/* Rep Performance Trends — this window vs the last, per rep, week or
+          month, with up/down deltas (RepVision's WoW/MoM panel). */}
+      <RepTrendsPanel trends={repTrends} />
 
       <DashboardCards
         active={cards}
