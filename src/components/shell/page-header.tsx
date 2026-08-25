@@ -23,6 +23,7 @@ export function PageHeader({
   description,
   status,
   actions,
+  avatar,
   className,
 }: {
   title: string;
@@ -30,6 +31,8 @@ export function PageHeader({
   description?: string;
   status?: ReactNode;
   actions?: ReactNode;
+  /** An optional logo/mark rendered to the left of the heading. */
+  avatar?: ReactNode;
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
@@ -43,22 +46,27 @@ export function PageHeader({
       className={cn("relative overflow-hidden rounded-xl", className)}
     >
       <div className="relative flex flex-wrap items-start justify-between gap-4 py-2">
-        <div className="min-w-0 space-y-3">
-          {status}
+        <div className="flex min-w-0 items-start gap-3">
+          {avatar && <div className="shrink-0 pt-0.5">{avatar}</div>}
+          <div className="min-w-0 space-y-3">
+            {status}
 
-          <h1 className="text-2xl font-bold tracking-tight text-balance">
-            {title}
-            {highlight && <> </>}
-            {highlight && (
-              <span className="text-gradient-brand whitespace-nowrap">{highlight}</span>
+            <h1 className="text-2xl font-bold tracking-tight text-balance">
+              {title}
+              {highlight && <> </>}
+              {highlight && (
+                <span className="text-gradient-brand whitespace-nowrap">
+                  {highlight}
+                </span>
+              )}
+            </h1>
+
+            {description && (
+              <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+                {description}
+              </p>
             )}
-          </h1>
-
-          {description && (
-            <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-              {description}
-            </p>
-          )}
+          </div>
         </div>
 
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
