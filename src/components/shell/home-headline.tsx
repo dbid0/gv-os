@@ -8,6 +8,7 @@ import { setHomeMode } from "@/app/(app)/dashboard/actions";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
+import { useCountUp } from "@/lib/client-state";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
@@ -62,8 +63,23 @@ export function HomeHeadline({
   const [optimisticMode, setOptimisticMode] = useState(mode);
   const activeMode = pending ? optimisticMode : mode;
 
+  // The hero numbers count up — the money "landing" on load and easing to the
+  // new figure on a scope toggle.
+  const shownCollected = useCountUp(collectedCents);
+  const shownRevenue = useCountUp(revenueCents);
+
   return (
-    <section className="card-grad elev-card relative rounded-xl border">
+    <section className="card-grad elev-glow relative overflow-hidden rounded-xl border">
+      {/* A faint brand wash in the top-right corner gives the hero depth without
+          fighting the number — pure chrome, behind everything. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full opacity-60 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(circle, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%)",
+        }}
+      />
       {/* The growth curve fills the card's lower half, the number sits on top —
           the Whop revenue-hero pattern. The clip lives on the CURVE only, not
           the section, so the date picker's dropdown can overflow the card. */}
@@ -74,24 +90,25 @@ export function HomeHeadline({
       <div className="relative space-y-5 p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+            <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
+              <span className="dot-brand inline-block size-1.5 rounded-full" />
               {monthLabel}
             </p>
-            <div className="mt-1 flex flex-wrap items-end gap-x-10 gap-y-3">
+            <div className="mt-2 flex flex-wrap items-end gap-x-10 gap-y-3">
               <div>
                 <p className="text-muted-foreground text-xs font-medium">
                   Cash collected
                 </p>
-                <p className="numeric text-success mt-0.5 text-5xl font-bold tracking-tight">
-                  {fmtUsd(collectedCents)}
+                <p className="numeric text-success mt-0.5 text-5xl font-bold tracking-tight tabular-nums sm:text-6xl">
+                  {fmtUsd(shownCollected)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs font-medium">
                   Total revenue
                 </p>
-                <p className="numeric mt-0.5 text-4xl font-bold tracking-tight">
-                  {fmtUsd(revenueCents)}
+                <p className="numeric mt-0.5 text-4xl font-bold tracking-tight tabular-nums">
+                  {fmtUsd(shownRevenue)}
                 </p>
               </div>
             </div>
@@ -154,7 +171,7 @@ export function HomeHeadline({
               <Link
                 key={s.slug ?? s.name}
                 href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
-                className="bg-card hover:border-brand/40 rounded-lg border p-3 transition-colors"
+                className="bg-card hover-lift hover:border-brand/40 rounded-lg border p-3"
               >
                 <p className="truncate text-sm font-medium">{s.name}</p>
                 <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">

@@ -46,20 +46,33 @@ export function CollectedSparkline({
     >
       <defs>
         <linearGradient id="gv-collected-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.28" />
+          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.32" />
           <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
         </linearGradient>
+        {/* A soft glow so the line reads as a lit ridge, not a hairline. */}
+        <filter id="gv-collected-glow" x="-20%" y="-40%" width="140%" height="180%">
+          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
       <path d={area} fill="url(#gv-collected-fill)" />
       <polyline
         points={line}
         fill="none"
         stroke="var(--brand)"
-        strokeWidth="2"
+        strokeWidth="2.25"
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
+        pathLength={1}
+        filter="url(#gv-collected-glow)"
+        className="spark-draw"
       />
+      {/* Latest point: a breathing halo behind a solid dot. */}
+      <circle cx={lastX} cy={lastY} r="6" fill="var(--brand)" className="spark-halo" />
       <circle cx={lastX} cy={lastY} r="3.5" fill="var(--brand)" />
     </svg>
   );

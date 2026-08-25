@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /**
  * Client-state helpers built on useSyncExternalStore.
@@ -107,6 +107,47 @@ export function usePersistedBoolean(
   );
 
   return [value, set];
+}
+
+/**
+ * Count a number up to its target — the premium "the money is landing" feel on
+ * the dashboard hero. SSR and the first render show the real target (no
+ * hydration mismatch, correct with JS off); after mount it eases from the last
+ * shown value to the target, so a scope toggle animates to the new figure
+ * instead of snapping. Honors prefers-reduced-motion by jumping straight there.
+ */
+export function useCountUp(target: number, durationMs = 900): number {
+  const [value, setValue] = useState(target);
+  // First mount counts up from zero; later target changes ease from wherever we
+  // left off, never a jarring reset to zero.
+  const fromRef = useRef(0);
+
+  useEffect(() => {
+    const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (reduce || target === fromRef.current) {
+      setValue(target);
+      fromRef.current = target;
+      return;
+    }
+    const from = fromRef.current;
+    let raf = 0;
+    let start: number | null = null;
+    const step = (t: number) => {
+      if (start === null) start = t;
+      const p = Math.min(1, (t - start) / durationMs);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setValue(Math.round(from + (target - from) * eased));
+      if (p < 1) {
+        raf = requestAnimationFrame(step);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+
+  return value;
 }
 
 const entranceStore = { entered: false };
