@@ -267,7 +267,7 @@ const eodTemplateInput = z.object({
   clientId: z.string().uuid(),
   name: z.string().min(1, "A template needs a name."),
   role: z.enum(["closer", "setter", "dm_setter", "manager"]),
-  cadence: z.enum(["eod", "eow", "bod"]).default("eod"),
+  cadence: z.enum(["eod", "bod"]).default("eod"),
   baseFields: z.array(z.string()).default([]),
   customFields: z.array(customFieldInput).default([]),
   calcFields: z.array(calcFieldInput).default([]),
@@ -300,7 +300,7 @@ const submitEodInput = z.object({
   repId: z.string().uuid(),
   /** ISO date (YYYY-MM-DD) the report covers. */
   reportDate: z.string().min(1),
-  cadence: z.enum(["eod", "eow", "bod"]).default("eod"),
+  cadence: z.enum(["eod", "bod"]).default("eod"),
   dayOff: z.boolean().default(false),
   /** Numeric activity counts, keyed by base/custom field key. */
   metrics: z.record(z.string(), z.number()).default({}),

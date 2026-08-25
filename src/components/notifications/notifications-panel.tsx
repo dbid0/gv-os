@@ -63,6 +63,14 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
   const unreadGroups = groupOf(unread);
   const readGroups = groupOf(read.slice(0, 30));
 
+  // The summary strip (replaces the old "rules waiting on data" placeholder):
+  // the important part, up top — how many need action, and the single most
+  // pressing one. groupOf() already pins critical > warning > info first.
+  const unreadCritical = unread.filter((r) => r.severity === "critical").length;
+  const unreadWarning = unread.filter((r) => r.severity === "warning").length;
+  const topGroup = unreadGroups[0];
+  const top = topGroup?.[0];
+
   const act = (
     fn: () => Promise<unknown>,
     optimistic: () => void,
@@ -157,6 +165,56 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
 
   return (
     <div className="space-y-6">
+      {/* Summary of the important part — the one thing Daniel reads first. */}
+      <div
+        className={cn(
+          "rounded-xl border p-4",
+          unreadCritical > 0
+            ? "border-danger/30 bg-danger/5"
+            : unreadWarning > 0
+              ? "border-warning/30 bg-warning/5"
+              : "card-grad",
+        )}
+      >
+        {unread.length === 0 ? (
+          <p className="text-sm">
+            <span className="font-medium">You&apos;re all caught up.</span>{" "}
+            <span className="text-muted-foreground">
+              Nothing needs attention right now.
+            </span>
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="font-semibold">
+                {unread.length} {unread.length === 1 ? "alert" : "alerts"} need
+                attention
+              </span>
+              {unreadCritical > 0 && (
+                <StatusPill tone="danger">{unreadCritical} critical</StatusPill>
+              )}
+              {unreadWarning > 0 && (
+                <StatusPill tone="progress">{unreadWarning} warning</StatusPill>
+              )}
+            </p>
+            {top && (
+              <p className="text-muted-foreground truncate text-[13px]">
+                Most pressing:{" "}
+                <Link
+                  href={notificationHref(top.kind, top.clientSlug)}
+                  className="text-foreground hover:text-brand font-medium transition-colors"
+                >
+                  {top.title}
+                </Link>
+                {top.clientName && (
+                  <span className="text-faint"> · {top.clientName}</span>
+                )}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       <Panel
         title={`Unread — ${unread.length}`}
         aside={
@@ -191,16 +249,6 @@ export function NotificationsPanel({ rows }: { rows: NotificationRow[] }) {
           <div className="space-y-2">{readGroups.map(item)}</div>
         </Panel>
       )}
-
-      <Panel title="Rules waiting on data">
-        <p className="text-faint text-sm">
-          Live now: sheet drift, signed agreements, and the daily BOD digest (per-offer
-          alert times, 12:00 CT default). Sync-health alerts arm once integrations carry
-          real traffic; speed-to-lead breaches arm with Close + bookings data;
-          payment-without-a-sale-form arms with processor events. Each starts firing the
-          moment its source connects.
-        </p>
-      </Panel>
     </div>
   );
 }

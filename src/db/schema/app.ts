@@ -267,8 +267,8 @@ export const commissionSplits = appSchema.table(
 );
 
 /**
- * A rep's daily activity submission — the EOD, and its end-of-week and
- * beginning-of-day variants. These are SELF-REPORTED operational counts (dials,
+ * A rep's daily activity submission — the EOD and its beginning-of-day
+ * variant (GV runs no end-of-week form). These are SELF-REPORTED operational counts (dials,
  * shows, appointments set), not money. Any cash figure a rep types here is
  * their own number and stays inside `metrics`, deliberately walled off from the
  * ledger, which remains the only source of truth for money.
@@ -285,7 +285,7 @@ export const activityReports = appSchema.table(
       .references(() => clients.id),
     /** The day this report covers. */
     reportDate: timestamp("report_date", { withTimezone: true }).notNull(),
-    /** eod | eow | bod */
+    /** eod | bod */
     kind: text("kind").notNull().default("eod"),
     /** The activity bundle: { dials, contacts, appts_set, shows, pitched, … }. */
     metrics: jsonb("metrics").$type<Record<string, number>>().notNull().default({}),
@@ -327,7 +327,7 @@ export type EodCalcField = {
 
 /**
  * An EOD template: the fields a rep of a given role fills out on their daily
- * (or end-of-week / beginning-of-day) report. One per team + role + cadence.
+ * (or beginning-of-day) report. One per team + role + cadence.
  *
  * This ONE object drives three surfaces — the Submit-EOD form, the leaderboard
  * columns, and the dashboard metric tiles — so a field turned on here shows up
@@ -350,7 +350,7 @@ export const eodTemplates = appSchema.table(
       .references(() => clients.id),
     /** closer · setter · dm_setter · manager */
     role: text("role").notNull(),
-    /** eod · eow · bod */
+    /** eod · bod */
     cadence: text("cadence").notNull().default("eod"),
     name: text("name").notNull(),
     baseFields: jsonb("base_fields").$type<string[]>().notNull().default([]),

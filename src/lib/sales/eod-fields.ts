@@ -32,12 +32,13 @@ export function baseFieldLabel(key: string): string {
 export const EOD_ROLES = ["closer", "setter", "dm_setter", "manager"] as const;
 export type EodRole = (typeof EOD_ROLES)[number];
 
-export const EOD_CADENCES = ["eod", "eow", "bod"] as const;
+// GV runs only two cadences: the end-of-day report and the beginning-of-day
+// plan. There is no end-of-week form.
+export const EOD_CADENCES = ["eod", "bod"] as const;
 export type EodCadence = (typeof EOD_CADENCES)[number];
 
 export const CADENCE_LABEL: Record<string, string> = {
   eod: "Daily (EOD)",
-  eow: "End of Week",
   bod: "Beginning of Day",
 };
 

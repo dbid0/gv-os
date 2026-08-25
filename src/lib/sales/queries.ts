@@ -414,7 +414,7 @@ export interface EodReportRow {
   notes: string | null;
 }
 
-/** EOD/EOW/BOD submissions, newest first, for the reports history. */
+/** EOD/BOD submissions, newest first, for the reports history. */
 export async function listActivityReports(kind = "eod"): Promise<EodReportRow[]> {
   const db = getDb();
   return db
