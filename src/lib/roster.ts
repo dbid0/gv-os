@@ -20,7 +20,10 @@ export type RosterClient = {
   accent: string;
   since: string;
   revShare: string;
-  blurb: string;
+  /** A short 3–8 word summary of what the offer is — the default the Clients
+   * card reads. The DB `clients.summary` column overrides this when set (edited
+   * inline on the card), so this is only the fallback, never blank. */
+  summary: string;
 };
 
 export const roster: RosterClient[] = [
@@ -33,8 +36,7 @@ export const roster: RosterClient[] = [
     accent: "#4aa3ff",
     since: "Jul 2026",
     revShare: "20% of gross",
-    blurb:
-      "Multi-accounting infrastructure for agencies scaling Instagram at volume. Top priority.",
+    summary: "AI phone farm for agencies",
   },
   {
     slug: "the-vault",
@@ -45,8 +47,7 @@ export const roster: RosterClient[] = [
     accent: "#9b6bff",
     since: "Jul 2026",
     revShare: "TBD",
-    blurb:
-      "UGC offer with a live backend install; webinar and content engine in flight.",
+    summary: "Done-with-you UGC offer",
   },
   {
     slug: "racks-closes",
@@ -57,8 +58,7 @@ export const roster: RosterClient[] = [
     accent: "#2f6bff",
     since: "Jul 2026",
     revShare: "10% after ad spend",
-    blurb:
-      "High-ticket closing offer, already printing pre-GV; backend built and live.",
+    summary: "High-ticket closing & sales training",
   },
   {
     slug: "the-visionary",
@@ -69,8 +69,7 @@ export const roster: RosterClient[] = [
     accent: "#2C6BFF",
     since: "Aug 2026",
     revShare: "30% after fees",
-    blurb:
-      "Tico Visuals (63K IG) — the creative offer. Signed 8/23; backend build starting.",
+    summary: "Videography growth for creators",
   },
 ];
 
