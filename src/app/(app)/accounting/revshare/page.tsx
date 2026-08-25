@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { clients, revShareRules, transactions } from "@/db/schema/app";
 import { cents } from "@/lib/money";
 import { revShareLines } from "@/lib/revshare/engine";
+import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
 import { eq } from "drizzle-orm";
 
 export const metadata = { title: "Rev Share - GV OS" };
@@ -25,6 +26,7 @@ export default async function RevSharePage() {
         clientId: revShareRules.clientId,
         rateBps: revShareRules.rateBps,
         effectiveFrom: revShareRules.effectiveFrom,
+        deductAdSpend: revShareRules.deductAdSpend,
         note: revShareRules.note,
       })
       .from(revShareRules),
@@ -44,7 +46,8 @@ export default async function RevSharePage() {
 
   const nameFor = (id: string) => roster.find((c) => c.id === id)?.name ?? "Unknown";
   const slugFor = (id: string) => roster.find((c) => c.id === id)?.slug ?? null;
-  const lines = revShareLines(rows, rules);
+  const adSpendByMonth = await getAdSpendByMonth();
+  const lines = revShareLines(rows, rules, adSpendByMonth);
   const pendingTotal = lines.reduce((s, l) => s + l.revShareCents, 0);
 
   return (
@@ -134,6 +137,11 @@ export default async function RevSharePage() {
                       <td className="py-2 pr-3 font-medium">{nameFor(l.clientId)}</td>
                       <td className="numeric py-2 pr-3 text-right tabular-nums">
                         <Money amount={cents(l.cashAfterFeesCents)} />
+                        {l.adSpendCents > 0 && (
+                          <span className="text-destructive block text-[11px]">
+                            −<Money amount={cents(l.adSpendCents)} /> ad
+                          </span>
+                        )}
                       </td>
                       <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
                         {(l.rateBps / 100).toFixed(0)}%

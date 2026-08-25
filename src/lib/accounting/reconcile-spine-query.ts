@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { clients, integrations, paymentEvents, transactions } from "@/db/schema/app";
 import { dayKeyCT } from "@/lib/charts";
 import { revShareLines } from "@/lib/revshare/engine";
+import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
 import { revShareRules as revShareRulesTable } from "@/db/schema/app";
 import {
   normalizeCashAuthority,
@@ -52,6 +53,7 @@ export async function getSpineReconciliation(): Promise<ReconcileReport> {
         clientId: revShareRulesTable.clientId,
         rateBps: revShareRulesTable.rateBps,
         effectiveFrom: revShareRulesTable.effectiveFrom,
+        deductAdSpend: revShareRulesTable.deductAdSpend,
       })
       .from(revShareRulesTable),
     db
@@ -96,8 +98,11 @@ export async function getSpineReconciliation(): Promise<ReconcileReport> {
   }
 
   // Rev-share basis (cash after fees) per client+month, where a rule applies.
+  // cashAfterFeesCents is BEFORE ad spend, so it still equals ledger − fees and
+  // the cash check stays green; the ad-spend deduction only moves the share.
+  const adSpendByMonth = await getAdSpendByMonth();
   const basis = new Map<string, number>();
-  for (const l of revShareLines(ledgerRows, rules)) {
+  for (const l of revShareLines(ledgerRows, rules, adSpendByMonth)) {
     basis.set(`${l.clientId}:${l.month}`, l.cashAfterFeesCents);
   }
 

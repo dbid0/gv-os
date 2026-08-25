@@ -260,6 +260,13 @@
       "when": 1787688217267,
       "tag": "0036_client_ad_spend",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1787689060831,
+      "tag": "0037_revshare_deduct_ad_spend",
+      "breakpoints": true
     }
   ]
 }

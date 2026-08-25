@@ -988,6 +988,9 @@ export const revShareRules = appSchema.table(
     rateBps: bigint("rate_bps", { mode: "number" }).notNull(),
     /** yyyy-mm-dd — applies from this business day forward. */
     effectiveFrom: text("effective_from").notNull(),
+    /** When true, the rate applies to cash-after-fees MINUS that month's ad
+     * spend, not to cash-after-fees itself (Racks = 10% after ad spend). */
+    deductAdSpend: boolean("deduct_ad_spend").notNull().default(false),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
