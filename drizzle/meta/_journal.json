@@ -274,6 +274,20 @@
       "when": 1787690772878,
       "tag": "0038_pipeline_prospects",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1787775301747,
+      "tag": "0039_meeting_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1787775478672,
+      "tag": "0040_meeting_action_items",
+      "breakpoints": true
     }
   ]
 }

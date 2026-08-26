@@ -1,0 +1,1 @@
+ALTER TABLE "app"."meeting_notes" ADD COLUMN "action_items" jsonb DEFAULT '[]'::jsonb NOT NULL;
