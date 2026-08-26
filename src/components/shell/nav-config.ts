@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarDays,
   Clapperboard,
+  ClipboardList,
   LayoutDashboard,
   Mail,
   Megaphone,
@@ -124,6 +125,13 @@ export const navigation: NavGroup[] = [
         icon: Users,
         status: "ready",
         description: "The roster — roles, lanes, and each member's workload",
+      },
+      {
+        label: "Work",
+        href: "/team/work",
+        icon: ClipboardList,
+        status: "ready",
+        description: "Copywriting & delivery across every offer, by owner and status",
       },
       {
         label: "Calendar",
