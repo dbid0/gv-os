@@ -1,7 +1,6 @@
 import { desc } from "drizzle-orm";
 
 import { PipelineBoard } from "@/components/sales/pipeline-board";
-import { PageHeader } from "@/components/shell/page-header";
 import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
@@ -27,17 +26,19 @@ export default async function PipelinePage() {
   const forecast = pipelineForecast(rows);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeader
-        title="Pipeline"
-        highlight="."
-        description="GV's own sales — prospects from lead to signed, with the setup + rev-share each would add. Forecast, not the ledger."
-        status={
-          <StatusPill tone={forecast.openCount ? "live" : "muted"}>
-            {forecast.openCount} open · {forecast.wonCount} won
-          </StatusPill>
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-medium">Pipeline</h2>
+          <p className="text-muted-foreground text-xs">
+            GV&apos;s own sales — prospects from lead to signed, with the setup +
+            rev-share each would add. Forecast, not the ledger.
+          </p>
+        </div>
+        <StatusPill tone={forecast.openCount ? "live" : "muted"}>
+          {forecast.openCount} open · {forecast.wonCount} won
+        </StatusPill>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi

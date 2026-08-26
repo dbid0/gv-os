@@ -111,7 +111,7 @@ export function DriveAssetsPanel({
           {drive.assets.map((a) => (
             <a
               key={a.id}
-              href={a.webViewLink ?? "#"}
+              href={a.webViewLink ?? undefined}
               target="_blank"
               rel="noreferrer"
               className={cn(

@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   ChevronRight,
-  LifeBuoy,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -292,9 +291,6 @@ export function Sidebar({
 
         {!collapsed && (
           <div className="text-faint mt-3 flex items-center gap-4 text-xs">
-            <span className="hover:text-muted-foreground inline-flex cursor-not-allowed items-center gap-1.5">
-              <LifeBuoy className="size-3.5" /> Support
-            </span>
             <form action={signOut}>
               <button
                 type="submit"

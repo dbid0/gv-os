@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Rocket } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { Panel } from "@/components/ui/panel";
+import { TeamManager } from "@/components/sales/team-manager";
+import { listTeams } from "@/lib/sales/queries";
 
 export const metadata = { title: "New team — Onboarding - GV OS" };
+export const dynamic = "force-dynamic";
 
 /**
  * New-team onboarding (Daniel's ask): "Add new" opens the guided setup for a
@@ -45,7 +48,9 @@ const STAGES = [
   },
 ];
 
-export default function NewTeamOnboardingPage() {
+export default async function NewTeamOnboardingPage() {
+  const teams = await listTeams();
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -55,8 +60,8 @@ export default function NewTeamOnboardingPage() {
             <span className="text-gradient-brand whitespace-nowrap">sales team.</span>
           </h2>
           <p className="text-muted-foreground mt-1 max-w-xl text-sm">
-            The guided setup for a new offer. Nothing is created until you finish — this
-            is the map of what standing up a team involves.
+            The guided setup for a new offer. Create the team, then add its reps — the
+            stages below are the full picture of standing one up.
           </p>
         </div>
         <Link
@@ -86,16 +91,10 @@ export default function NewTeamOnboardingPage() {
         </div>
       </Panel>
 
-      <Panel title="Ready to build it out">
-        <p className="text-faint mb-4 text-sm">
-          The interactive team builder — create the workspace, add reps, and wire the
-          sheet in one flow — plugs in here. For now, teams are stood up through the
-          full onboarding, and this is its front door.
-        </p>
-        <span className="bg-secondary/60 text-muted-foreground inline-flex cursor-not-allowed items-center gap-2 rounded-lg px-4 py-2 text-sm">
-          <Rocket className="size-4" /> Start build (wiring up)
-        </span>
-      </Panel>
+      <div>
+        <h3 className="mb-3 text-sm font-medium">Build it now</h3>
+        <TeamManager teams={teams.map((t) => ({ id: t.id, name: t.name }))} />
+      </div>
     </div>
   );
 }
