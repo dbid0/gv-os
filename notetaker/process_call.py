@@ -165,12 +165,14 @@ def post_ingest(source_ref, transcript, summary, items, speakers):
         return None
 
 
-def post_discord(summary, items):
+def post_discord(summary, items, link=None):
     """Best-effort mirror of the action plan to Discord (optional)."""
     if not (BOT_TOKEN and TASKS_CHANNEL and summary):
         return
     date = datetime.datetime.now().strftime("%A %b %d, %Y")
     plan = f"**Action Plan — {date}**\n\n_{summary}_"
+    if link:
+        plan += f"\n📋 Full recap + transcript: {link}"
     for it in items:
         plan += f"\n\n**{it.get('person', '?')}**"
         for t in it.get("tasks", []):
@@ -195,8 +197,10 @@ def main(sdir):
         print("notetaker: transcript too short — nothing to post")
         return
     summary, items = distill(transcript)
-    post_ingest(source_ref, transcript, summary, items, speakers)
-    post_discord(summary, items)
+    res = post_ingest(source_ref, transcript, summary, items, speakers)
+    meeting_id = (res or {}).get("meetingId")
+    link = f"{GV_OS_URL}/team/meetings/{meeting_id}" if meeting_id else None
+    post_discord(summary, items, link)
     print("notetaker: done")
 
 

@@ -103,7 +103,8 @@ jobs:
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
           GV_OS_URL: https://os.globalventures.app
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          TASKS_CHANNEL_ID: ${{ vars.GV_TASKS_CHANNEL_ID || '' }}
+          # Post the finished notes back into the call's own chat.
+          TASKS_CHANNEL_ID: ${{ steps.rec.outputs.status_channel || vars.GV_TASKS_CHANNEL_ID || '' }}
           MEETING_TITLE: ${{ github.event.client_payload.title || github.event.inputs.title || 'Team call' }}
           MEETING_SOURCE: ${{ github.event.client_payload.source || 'agency_call' }}
           CLIENT_SLUG: ${{ github.event.client_payload.client_slug || github.event.inputs.client_slug || '' }}
