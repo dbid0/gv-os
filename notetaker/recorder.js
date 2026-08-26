@@ -145,6 +145,7 @@ function startSession(channel) {
           path.join(session.dir, "manifest.json"),
           JSON.stringify(session.manifest),
         );
+        log("capturing", session.manifest[userId]);
       }
       const out = path.join(session.dir, `u_${userId}_${Date.now()}.pcm`);
       const opus = receiver.subscribe(userId, {
