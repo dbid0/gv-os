@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Mail, RefreshCw, Tag, Users } from "lucide-react";
+import { ArrowUpRight, Mail, RefreshCw, Tag, Users } from "lucide-react";
 
 import { syncKitNow } from "@/app/(app)/email/actions";
 import { Button } from "@/components/ui/button";
 import { ColumnChart } from "@/components/ui/column-chart";
+import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
@@ -66,73 +68,136 @@ export function EmailOverview({
   /** Subscriber count per CT day, keyed by connection — absent until capture began. */
   growth?: Record<string, DayBucket[]>;
 }) {
+  // Cross-offer rollup — the clean overview that leads the section before the
+  // per-offer cards below (Daniel: "clean overview, then click per offer").
+  const totalSubs = accounts.reduce((s, a) => s + (a.subscriberCount ?? 0), 0);
+  const totalSeqs = accounts.reduce((s, a) => s + a.sequenceCount, 0);
+  const totalTags = accounts.reduce((s, a) => s + a.tagCount, 0);
+  const perOffer = [...accounts]
+    .sort((a, b) => (b.subscriberCount ?? 0) - (a.subscriberCount ?? 0))
+    .map((a) => ({
+      name: a.clientName ?? "Agency",
+      subs: a.subscriberCount,
+      seqs: a.sequenceCount,
+    }));
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-      {accounts.map((a) => (
-        <Panel key={a.integrationId} title={a.clientName ?? "Agency"}>
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="text-sm font-medium">{a.accountName ?? a.label}</span>
-              {a.plan && (
-                <span className="text-faint rounded-full border px-1.5 text-[11px]">
-                  {a.plan}
-                </span>
-              )}
-            </div>
-
-            <div className="text-muted-foreground flex items-center gap-4 text-xs">
-              {a.subscriberCount !== null && (
-                <span className="inline-flex items-center gap-1">
-                  <Users className="size-3.5" />{" "}
-                  <span className="numeric">
-                    {a.subscriberCount.toLocaleString("en-US")}
-                  </span>{" "}
-                  subscribers
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1">
-                <Mail className="size-3.5" /> {a.sequenceCount} sequences
+    <div className="space-y-6">
+      <section className="card-grad space-y-4 rounded-xl border p-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Kpi
+            label="Accounts"
+            value={String(accounts.length)}
+            icon={Mail}
+            tone="brand"
+          />
+          <Kpi
+            label="Subscribers"
+            value={totalSubs.toLocaleString("en-US")}
+            icon={Users}
+          />
+          <Kpi label="Sequences" value={totalSeqs.toLocaleString("en-US")} />
+          <Kpi label="Tags" value={totalTags.toLocaleString("en-US")} icon={Tag} />
+        </div>
+        <div className="border-t pt-3">
+          <p className="text-faint mb-2 text-[11px] font-medium tracking-wider uppercase">
+            By offer
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {perOffer.map((o) => (
+              <span
+                key={o.name}
+                className="text-muted-foreground rounded-full border px-2.5 py-1 text-xs"
+              >
+                <span className="text-foreground font-medium">{o.name}</span> ·{" "}
+                {o.subs === null ? "—" : o.subs.toLocaleString("en-US")} subs · {o.seqs}{" "}
+                seq
               </span>
-              <span className="inline-flex items-center gap-1">
-                <Tag className="size-3.5" /> {a.tagCount} tags
-              </span>
-            </div>
-
-            {(growth[a.integrationId]?.length ?? 0) >= 2 && (
-              <div className="border-t pt-3">
-                <p className="text-faint mb-2 text-[11px]">List growth — daily</p>
-                <ColumnChart
-                  data={growth[a.integrationId] as DayBucket[]}
-                  color={chartColorForClient(a.clientName)}
-                />
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              {a.sequences.slice(0, 12).map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between gap-2 text-sm"
-                >
-                  <span className={cn("truncate", s.hold && "text-faint")}>
-                    {s.name}
-                  </span>
-                  <StatusPill tone={s.hold ? "muted" : "live"}>
-                    {s.hold ? "Paused" : "Active"}
-                  </StatusPill>
-                </div>
-              ))}
-              {a.sequences.length > 12 && (
-                <p className="text-faint text-xs">+{a.sequences.length - 12} more</p>
-              )}
-            </div>
-
-            <p className="text-faint border-t pt-2 text-[11px]">
-              Last synced {fmtWhen(a.takenAt)}
-            </p>
+            ))}
           </div>
-        </Panel>
-      ))}
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {accounts.map((a) => (
+          <Link
+            key={a.integrationId}
+            href={`/email/${a.integrationId}`}
+            className="hover-lift block rounded-xl"
+          >
+            <Panel
+              title={a.clientName ?? "Agency"}
+              aside={<ArrowUpRight className="text-faint size-4" />}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-sm font-medium">
+                    {a.accountName ?? a.label}
+                  </span>
+                  {a.plan && (
+                    <span className="text-faint rounded-full border px-1.5 text-[11px]">
+                      {a.plan}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-muted-foreground flex items-center gap-4 text-xs">
+                  {a.subscriberCount !== null && (
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="size-3.5" />{" "}
+                      <span className="numeric">
+                        {a.subscriberCount.toLocaleString("en-US")}
+                      </span>{" "}
+                      subscribers
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <Mail className="size-3.5" /> {a.sequenceCount} sequences
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Tag className="size-3.5" /> {a.tagCount} tags
+                  </span>
+                </div>
+
+                {(growth[a.integrationId]?.length ?? 0) >= 2 && (
+                  <div className="border-t pt-3">
+                    <p className="text-faint mb-2 text-[11px]">List growth — daily</p>
+                    <ColumnChart
+                      data={growth[a.integrationId] as DayBucket[]}
+                      color={chartColorForClient(a.clientName)}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  {a.sequences.slice(0, 12).map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <span className={cn("truncate", s.hold && "text-faint")}>
+                        {s.name}
+                      </span>
+                      <StatusPill tone={s.hold ? "muted" : "live"}>
+                        {s.hold ? "Paused" : "Active"}
+                      </StatusPill>
+                    </div>
+                  ))}
+                  {a.sequences.length > 12 && (
+                    <p className="text-faint text-xs">
+                      +{a.sequences.length - 12} more
+                    </p>
+                  )}
+                </div>
+
+                <p className="text-faint border-t pt-2 text-[11px]">
+                  Last synced {fmtWhen(a.takenAt)}
+                </p>
+              </div>
+            </Panel>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
