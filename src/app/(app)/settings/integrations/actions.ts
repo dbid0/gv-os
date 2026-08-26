@@ -17,6 +17,7 @@ import {
   providerByValue,
   providerSupportsMethod,
 } from "@/lib/integrations/providers";
+import { syncProviderNow } from "@/lib/integrations/sync-on-connect";
 import { serverEnv } from "@/env.server";
 
 async function requireUser() {
@@ -97,6 +98,14 @@ export async function connectIntegration(raw: z.input<typeof connectInput>) {
       status: "connected",
     })
     .returning({ id: integrations.id, secretHint: integrations.secretHint });
+
+  // Pull the provider's data immediately (api_key connections only — a webhook
+  // has nothing to pull yet, and manual is off-platform). Fail-soft, so a bad
+  // key never breaks the connect; the scheduled job keeps it fresh after.
+  if (input.method === "api_key") {
+    await syncProviderNow(input.provider);
+  }
+
   revalidatePath("/settings/integrations");
   return row;
 }

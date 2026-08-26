@@ -13,7 +13,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
-import { StatusPill } from "@/components/ui/status";
+import { StatusPill, type StatusTone } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import {
   CREDENTIAL_LABELS,
@@ -21,10 +21,13 @@ import {
   METHOD_LABELS,
   PROVIDER_GROUPS,
   PROVIDERS,
+  SYNC_STATUS_LABEL,
   defaultMethod,
   methodsForProvider,
   providerByValue,
+  providerSyncStatus,
   type ConnectMethod,
+  type SyncStatus,
 } from "@/lib/integrations/providers";
 import { isFailureNote } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
@@ -53,11 +56,24 @@ interface ConnectionRow {
 const selectClass =
   "border-input bg-transparent h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
+const SYNC_TONE: Record<SyncStatus, StatusTone> = {
+  auto: "good",
+  webhook: "progress",
+  none: "muted",
+};
+/** What a not-yet-synced connection is waiting on, by how it flows. */
+const SYNC_PENDING_COPY: Record<SyncStatus, string> = {
+  auto: "Auto-syncing — first pull runs on connect",
+  webhook: "Paste the webhook URL above into the tool to start",
+  none: "No sync built yet — key stored",
+};
+
 function ConnectionCard({ row }: { row: ConnectionRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const { toast } = useToast();
   const provider = providerByValue(row.provider);
+  const syncStatus = providerSyncStatus(row.provider);
   const revoked = row.status === "revoked";
 
   const act = (fn: () => Promise<unknown>) =>
@@ -113,14 +129,14 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
           )}
           <span>
             {row.lastSyncAt
-              ? `Last sync ${new Date(row.lastSyncAt).toLocaleString("en-US", {
+              ? `Synced ${new Date(row.lastSyncAt).toLocaleString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
                   minute: "2-digit",
                   timeZone: "America/Chicago",
                 })}`
-              : "Never synced — sync job lands with this provider's module"}
+              : SYNC_PENDING_COPY[syncStatus]}
           </span>
           {row.lastSyncNote && (
             <span
@@ -134,6 +150,12 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
           )}
         </p>
       </div>
+
+      {!revoked && (
+        <StatusPill tone={SYNC_TONE[syncStatus]}>
+          {SYNC_STATUS_LABEL[syncStatus]}
+        </StatusPill>
+      )}
 
       {row.webhookPath && !revoked && (
         <button
@@ -243,13 +265,15 @@ export function IntegrationsPanel({
           tone: "success",
           title:
             method === "api_key"
-              ? "Sealed and connected"
+              ? selected && providerSyncStatus(selected.value) === "auto"
+                ? "Connected — pulling your data now"
+                : "Sealed and connected"
               : method === "webhook"
                 ? "Connected — copy the webhook URL below"
                 : "Marked connected",
           detail:
             method === "api_key"
-              ? "The key is encrypted — only its last 4 characters stay visible."
+              ? "The key is sealed, and it now syncs automatically — no button needed."
               : undefined,
         });
         setLabel("");
@@ -386,9 +410,18 @@ export function IntegrationsPanel({
             </Button>
           </div>
           {selected && (
-            <p className="text-faint text-xs">
-              <Plug className="mr-1 inline size-3" />
-              Feeds: {selected.feeds}
+            <p className="text-faint flex flex-wrap items-center gap-x-2 text-xs">
+              <span>
+                <Plug className="mr-1 inline size-3" />
+                Feeds: {selected.feeds}
+              </span>
+              <StatusPill tone={SYNC_TONE[providerSyncStatus(selected.value)]}>
+                {providerSyncStatus(selected.value) === "auto"
+                  ? "Syncs automatically"
+                  : providerSyncStatus(selected.value) === "webhook"
+                    ? "Pushes via webhook"
+                    : "No sync built yet"}
+              </StatusPill>
             </p>
           )}
           <p className="text-faint text-xs">{METHOD_HINTS[method]}</p>
