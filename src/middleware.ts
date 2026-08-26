@@ -45,6 +45,8 @@ const PUBLIC_PATHS = [
   "/api/bot/tasks",
   // Cloud notetaker (GitHub Action) posts call recaps; own SYNC_SECRET bearer.
   "/api/notetaker/ingest",
+  // Discord /record slash command; ed25519 signature IS the auth.
+  "/api/discord/interactions",
 ];
 
 function isPublic(pathname: string) {
