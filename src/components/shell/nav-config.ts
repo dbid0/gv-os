@@ -10,6 +10,7 @@ import {
   Plug,
   Receipt,
   Settings,
+  Sunrise,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -47,11 +48,18 @@ export const navigation: NavGroup[] = [
     label: "Overview",
     items: [
       {
+        label: "Daily brief",
+        href: "/brief",
+        icon: Sunrise,
+        status: "ready",
+        description: "What needs your attention this morning",
+      },
+      {
         label: "Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
         status: "ready",
-        description: "What needs attention today",
+        description: "The numbers at a glance",
       },
     ],
   },
