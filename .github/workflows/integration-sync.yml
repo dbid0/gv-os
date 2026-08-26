@@ -1,0 +1,43 @@
+name: integration-sync
+
+# Pulls every connected integration on a schedule, so "connected" means "syncing"
+# — no in-app "sync now" button, the data just keeps flowing. Runs in GitHub's
+# cloud whether or not any laptop is on, and calls the one idempotent all-pulls
+# endpoint that fans out to Close, Calendly, Typeform, PandaDoc, Kit and Stripe
+# (each fail-soft, so one bad key never blocks the others) and then re-evaluates
+# the notification rules on the fresh data.
+#
+# GitHub caps schedule granularity at 5 minutes and may delay runs under load;
+# 15 minutes is plenty for "always fresh" without hammering the processors.
+#
+# Setup (one time): add a repo secret `SYNC_SECRET` matching the app's
+# SYNC_SECRET env. Until it's set, this workflow skips cleanly instead of erroring.
+#
+# continue-on-error: a scheduler is not a monitor — a flaky run must never email
+# the repo owner. Sync health is surfaced in-app (the connection cards + the
+# morning brief), not here.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    continue-on-error: true
+    steps:
+      - name: Pull all connected integrations
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: |
+          if [ -z "$SYNC_SECRET" ]; then
+            echo "SYNC_SECRET repo secret not set — skipping (add it to enable auto-sync)."
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/pull.json -m 300 --retry 2 --retry-delay 10 --retry-all-errors \
+            -H "Authorization: Bearer $SYNC_SECRET" \
+            -w "%{http_code}" "https://os.globalventures.app/api/sync/all-pulls" || echo "ERR")
+          echo "all-pulls -> $code"
+          head -c 1000 /tmp/pull.json 2>/dev/null || true

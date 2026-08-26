@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { EmailOverview, KitSyncButton } from "@/components/email/email-overview";
+import { EmailOverview } from "@/components/email/email-overview";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -26,11 +26,15 @@ export default async function EmailPage() {
         title="The"
         highlight="email engine."
         status={
-          <StatusPill tone={accounts.length ? "live" : "muted"}>
-            {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
-          </StatusPill>
+          <span className="flex flex-wrap items-center gap-2">
+            <StatusPill tone={accounts.length ? "live" : "muted"}>
+              {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
+            </StatusPill>
+            {accounts.length > 0 && (
+              <span className="text-faint text-xs">Auto-syncing from Kit</span>
+            )}
+          </span>
         }
-        actions={<KitSyncButton />}
       />
 
       {accounts.length === 0 ? (
