@@ -10,12 +10,16 @@ Nothing runs on your Mac. Ever.
 
 ## How it runs
 
-- **The 9:00 AM agency call** — automatic, on a schedule (`notetaker.yml`). The
-  Action joins the call room at call time, records until the room empties, and
-  posts the notes. No one has to press anything.
-- **Ad-hoc client calls** — type **`/record`** in Discord. That hits the app's
-  `/api/discord/interactions` endpoint, which starts the same Action for
-  whatever call you're on.
+Type **`/join`** in Discord. The bot joins whatever call **you** are in, records
+until the room empties, and posts the notes + tasks. No schedule — it only ever
+records when you ask it to.
+
+`/join` → the app's `/api/discord/interactions` endpoint (Vercel) verifies the
+signature and fires a GitHub `repository_dispatch` → the Action boots, joins your
+call, records, then transcribes + posts. Expect ~1–2 min from `/join` to the bot
+appearing (the cloud has to spin up — the price of not paying for an always-on
+host). To stop it, just end the call; when the room empties it processes and
+posts.
 
 ## Pipeline
 
@@ -80,18 +84,17 @@ Developer Portal → your app → **Bot** → enable the **Server Members** and
 ### 4. Vercel env
 
 Add `DISCORD_PUBLIC_KEY`, `GH_DISPATCH_TOKEN`, and (optional) `GH_DISPATCH_REPO`
-to the Vercel project so the `/record` endpoint can verify signatures and
+to the Vercel project so the `/join` endpoint can verify signatures and
 dispatch. `SYNC_SECRET` is already there.
 
 ## Test it
 
-1. Add `DISCORD_BOT_TOKEN` + `CLAUDE_CODE_OAUTH_TOKEN` as repo secrets.
-2. Hop into the team voice channel.
-3. GitHub → **Actions → notetaker → Run workflow** (manual dispatch).
-4. Talk for ~30 seconds, then leave the channel.
-5. Watch it in **Team → Meetings** — the recap and tasks appear within a few
-   minutes of the room emptying.
+1. Join any voice channel in the GV server.
+2. Type **`/join`**.
+3. Wait ~1–2 min for the bot to appear, talk for ~30 seconds, then leave.
+4. Watch it in **Team → Meetings** — the recap and tasks appear a couple minutes
+   after the room empties.
 
-The recording pipeline can only be validated with a live call + the bot token,
-so this first run is the real test. Everything downstream of it — the ingest,
-the Meetings surface, the Work-board fan-out — is already verified end to end.
+No secrets to type — they're wired. This first live call is the real test of the
+voice capture; everything downstream (ingest → Meetings → Work board) is already
+verified end to end.

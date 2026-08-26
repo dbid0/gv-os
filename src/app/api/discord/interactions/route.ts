@@ -52,7 +52,7 @@ function optionValue(options: CommandOption[] | undefined, name: string): string
   return options?.find((o) => o.name === name)?.value?.toString() ?? "";
 }
 
-async function dispatchRecord(payload: Record<string, string>): Promise<boolean> {
+async function dispatchJoin(payload: Record<string, string>): Promise<boolean> {
   const token = process.env.GH_DISPATCH_TOKEN;
   const repo = process.env.GH_DISPATCH_REPO || "dbid0/gv-os";
   if (!token) return false;
@@ -66,7 +66,7 @@ async function dispatchRecord(payload: Record<string, string>): Promise<boolean>
         "User-Agent": "gv-os-notetaker",
       },
       body: JSON.stringify({
-        event_type: "notetaker-record",
+        event_type: "notetaker-join",
         client_payload: payload,
       }),
     });
@@ -95,7 +95,9 @@ export async function POST(req: NextRequest) {
   let body: {
     type: number;
     data?: { name?: string; options?: CommandOption[] };
+    guild_id?: string;
     channel_id?: string;
+    member?: { user?: { id?: string } };
   };
   try {
     body = JSON.parse(raw);
@@ -106,20 +108,20 @@ export async function POST(req: NextRequest) {
   // Discord's endpoint health check.
   if (body.type === PING) return NextResponse.json({ type: PONG });
 
-  if (body.type === APPLICATION_COMMAND && body.data?.name === "record") {
-    const title = optionValue(body.data.options, "title") || "Client call";
+  if (body.type === APPLICATION_COMMAND && body.data?.name === "join") {
+    const title = optionValue(body.data.options, "title") || "Team call";
     const clientSlug = optionValue(body.data.options, "client");
-    const started = await dispatchRecord({
+    const started = await dispatchJoin({
+      guild_id: body.guild_id ?? "",
+      // The caller's user id → the recorder joins whatever call THEY are in.
+      caller_id: body.member?.user?.id ?? "",
       title,
-      source: "client_call",
+      source: clientSlug ? "client_call" : "agency_call",
       client_slug: clientSlug,
-      // Record the channel the command was run from unless one was named.
-      voice_channel_id: optionValue(body.data.options, "channel"),
-      channel_id: body.channel_id ?? "",
     });
     return reply(
       started
-        ? "🎙️ Notetaker starting — I'll join the call, record it, and drop the notes + tasks into GV OS when it wraps."
+        ? "🎙️ On my way — joining your call now. I'll record it and drop the notes + tasks into GV OS when it wraps. (Takes a minute to spin up.)"
         : "⚠️ Couldn't start the notetaker (dispatch token not set). Ping Daniel.",
     );
   }

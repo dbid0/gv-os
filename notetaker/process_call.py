@@ -26,7 +26,7 @@ import urllib.request
 GV_OS_URL = os.environ.get("GV_OS_URL", "https://os.globalventures.app").rstrip("/")
 SYNC_SECRET = os.environ.get("SYNC_SECRET", "")
 SOURCE = os.environ.get("MEETING_SOURCE", "agency_call")
-TITLE = os.environ.get("MEETING_TITLE", "Agency call")
+TITLE = os.environ.get("MEETING_TITLE", "Team call")
 CLIENT_SLUG = os.environ.get("CLIENT_SLUG", "").strip()
 BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 TASKS_CHANNEL = os.environ.get("TASKS_CHANNEL_ID", "").strip()
