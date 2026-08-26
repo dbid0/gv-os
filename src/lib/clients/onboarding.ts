@@ -38,7 +38,7 @@ export function onboardingSteps(input: OnboardingInput): OnboardingStep[] {
         ? `${input.repCount} ${input.repCount === 1 ? "rep" : "reps"} on the roster`
         : "No reps yet — add closers and setters",
       done: input.repCount > 0,
-      href: "/team",
+      href: "#team",
     },
     {
       key: "templates",

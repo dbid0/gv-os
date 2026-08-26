@@ -44,38 +44,41 @@ export async function generateMetadata({
   return { title: client ? `${client.name} - GV OS` : "Client - GV OS" };
 }
 
-// Each client's command center: the modules that reach into their engagement.
-// Ready ones link out; the rest are honestly marked until they are built.
-const modules = [
-  {
-    label: "Sales",
-    href: "/sales",
-    icon: BarChart3,
-    detail: "Deals, commissions, leaderboard",
-    ready: true,
-  },
-  {
-    label: "Content",
-    href: "#",
-    icon: Clapperboard,
-    detail: "Reels, hooks, what converts",
-    ready: false,
-  },
-  {
-    label: "Accounting",
-    href: "#",
-    icon: Receipt,
-    detail: "Payments, fees, rev share",
-    ready: false,
-  },
-  {
-    label: "Team",
-    href: "#",
-    icon: Users,
-    detail: "Reps, EODs, scoreboards",
-    ready: false,
-  },
-];
+// Each client's command center — the modules that reach into their engagement,
+// scoped to THIS offer (never the agency-wide list). Ready ones link out; the
+// rest are honestly marked until they are built.
+function modulesFor(slug: string) {
+  return [
+    {
+      label: "Sales",
+      href: `/w/${slug}/sales`,
+      icon: BarChart3,
+      detail: "Deals, commissions, leaderboard",
+      ready: true,
+    },
+    {
+      label: "Team",
+      href: `/clients/${slug}#team`,
+      icon: Users,
+      detail: "Reps, commissions, EODs",
+      ready: true,
+    },
+    {
+      label: "Accounting",
+      href: `/w/${slug}`,
+      icon: Receipt,
+      detail: "Cash, revenue, agreements",
+      ready: true,
+    },
+    {
+      label: "Content",
+      href: "#",
+      icon: Clapperboard,
+      detail: "Reels, hooks, what converts",
+      ready: false,
+    },
+  ];
+}
 
 export default async function ClientPage({
   params,
@@ -111,6 +114,7 @@ export default async function ClientPage({
     new Date(),
   );
 
+  const modules = modulesFor(slug);
   const facts = [
     { label: "Owner", value: client.owner },
     { label: "Offer", value: client.offer },
@@ -237,7 +241,11 @@ export default async function ClientPage({
         <div className="lg:col-span-2">
           <Panel
             title="Command center"
-            aside={<span className="text-faint text-xs">1 live</span>}
+            aside={
+              <span className="text-faint text-xs">
+                {modules.filter((m) => m.ready).length} live
+              </span>
+            }
           >
             <div className="grid gap-3 sm:grid-cols-2">
               {modules.map((mod) => {
@@ -292,7 +300,11 @@ export default async function ClientPage({
 
       <DriveAssetsPanel slug={slug} drive={drive} />
 
-      {team && <TeamConfig team={team} />}
+      {team && (
+        <div id="team" className="scroll-mt-20">
+          <TeamConfig team={team} />
+        </div>
+      )}
 
       {/* Per-offer data feeds (Daniel's ask): connect this offer's payment
           processor and its new-deal-forms sheet right here, scoped to this

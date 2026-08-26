@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { MessagesSquare, PhoneCall, Timer, Users } from "lucide-react";
 
-import { PageHeader } from "@/components/shell/page-header";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -73,17 +72,19 @@ export default async function SalesCockpitPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeader
-        title="Sales"
-        highlight="cockpit."
-        description="The manager's funnel — set → show → close per rep, from submitted EODs and real deals. Sources light up as they connect."
-        status={
-          <StatusPill tone={funnel.reps.length ? "live" : "muted"}>
-            {funnel.reps.length} active {funnel.reps.length === 1 ? "rep" : "reps"}
-          </StatusPill>
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-medium">Cockpit</h2>
+          <p className="text-muted-foreground text-xs">
+            The manager&apos;s funnel — set → show → close per rep, from submitted EODs
+            and real deals. Sources light up as they connect.
+          </p>
+        </div>
+        <StatusPill tone={funnel.reps.length ? "live" : "muted"}>
+          {funnel.reps.length} active {funnel.reps.length === 1 ? "rep" : "reps"}
+        </StatusPill>
+      </div>
 
       {/* The funnel headline: three stages with the conversion between them. */}
       <Panel title="Team funnel">

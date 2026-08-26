@@ -74,7 +74,9 @@ export function AccountingTabs() {
       {!onClients && (
         <div className="flex flex-wrap items-center gap-1.5">
           {detail.map((d) => {
-            const active = pathname === d.href;
+            // Match sub-routes too (e.g. /accounting/revshare/statement keeps the
+            // Rev-share chip lit), without over-matching a sibling.
+            const active = pathname === d.href || pathname.startsWith(`${d.href}/`);
             return (
               <Link
                 key={d.href}

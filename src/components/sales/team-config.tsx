@@ -2,18 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { Check } from "lucide-react";
+import { Check, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { setRepActive, updateTeamDefaults } from "@/lib/sales/actions";
+import { createRep, setRepActive, updateTeamDefaults } from "@/lib/sales/actions";
 import { ROLE_LABEL } from "@/lib/sales/eod-fields";
 import type { TeamConfig as TeamConfigData } from "@/lib/sales/queries";
+import { cn } from "@/lib/utils";
 
 const bpsToPct = (bps: number | null) => (bps == null ? "" : String(bps / 100));
+
+const selectClass =
+  "border-input bg-transparent h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
+type RepRole = "closer" | "setter" | "dm_setter" | "manager";
 
 function Field({
   label,
@@ -95,6 +101,30 @@ export function TeamConfig({ team }: { team: TeamConfigData }) {
   const [feeFlat, setFeeFlat] = useState(
     team.processorFeeFlatCents ? String(team.processorFeeFlatCents / 100) : "",
   );
+
+  const { toast } = useToast();
+  const [repName, setRepName] = useState("");
+  const [repRole, setRepRole] = useState<RepRole>("closer");
+  const [addingRep, startAddRep] = useTransition();
+
+  function addRep(e: FormEvent) {
+    e.preventDefault();
+    const name = repName.trim();
+    if (!name) return;
+    startAddRep(async () => {
+      try {
+        await createRep({ clientId: team.id, name, role: repRole });
+        setRepName("");
+        toast({ tone: "success", title: `Added ${name}` });
+        router.refresh();
+      } catch (error) {
+        toast({
+          tone: "error",
+          title: error instanceof Error ? error.message : "Could not add the rep.",
+        });
+      }
+    });
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -241,7 +271,9 @@ export function TeamConfig({ team }: { team: TeamConfigData }) {
         padded={false}
       >
         {team.reps.length === 0 ? (
-          <p className="text-muted-foreground p-5 text-sm">No reps on this team yet.</p>
+          <p className="text-muted-foreground px-5 pt-5 text-sm">
+            No reps on this team yet — add the first below.
+          </p>
         ) : (
           <div className="bg-border flex flex-col gap-px">
             {team.reps.map((rep) => (
@@ -249,6 +281,36 @@ export function TeamConfig({ team }: { team: TeamConfigData }) {
             ))}
           </div>
         )}
+        {/* Add a rep straight onto this team — writes to the reps table the
+            leaderboard, EODs, and commissions all read. */}
+        <form onSubmit={addRep} className="flex flex-wrap items-end gap-2 border-t p-4">
+          <label className="min-w-[9rem] flex-1 space-y-1.5">
+            <span className="text-muted-foreground text-xs font-medium">Add a rep</span>
+            <Input
+              value={repName}
+              onChange={(e) => setRepName(e.target.value)}
+              placeholder="Rep name"
+            />
+          </label>
+          <select
+            className={cn(selectClass, "w-32")}
+            value={repRole}
+            onChange={(e) => setRepRole(e.target.value as RepRole)}
+            aria-label="Role"
+          >
+            <option value="closer">Closer</option>
+            <option value="setter">Setter</option>
+            <option value="dm_setter">DM Setter</option>
+            <option value="manager">Manager</option>
+          </select>
+          <Button
+            type="submit"
+            disabled={addingRep || !repName.trim()}
+            className="gap-2"
+          >
+            <UserPlus className="size-3.5" /> Add
+          </Button>
+        </form>
       </Panel>
     </div>
   );
