@@ -157,9 +157,12 @@ export function CommissionsTable({
       render: (r) => (
         <span>
           <span className="block text-sm">{r.name}</span>
-          <span className="text-muted-foreground block text-xs capitalize">
-            {r.role.replace("_", " ")}
-          </span>
+          <Link
+            href={`/sales/commissions/statement?rep=${r.repId}&basis=${basis}`}
+            className="text-faint hover:text-brand block text-xs capitalize transition-colors"
+          >
+            {r.role.replace("_", " ")} · statement →
+          </Link>
         </span>
       ),
     },
