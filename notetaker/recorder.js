@@ -23,7 +23,6 @@ const {
   joinVoiceChannel,
   EndBehaviorType,
   VoiceConnectionStatus,
-  entersState,
 } = require("@discordjs/voice");
 const prism = require("prism-media");
 const fs = require("fs");
@@ -34,31 +33,23 @@ const GUILD = process.env.GUILD_ID;
 const CALLER = process.env.CALLER_ID || "";
 const VOICE_OVERRIDE = process.env.VOICE_CHANNEL_ID || "";
 const JOIN_WAIT_MS = (Number(process.env.JOIN_WAIT_MINUTES) || 15) * 60_000;
-const EMPTY_GRACE_MS = (Number(process.env.EMPTY_GRACE_SECONDS) || 90) * 1000;
+const EMPTY_GRACE_MS = (Number(process.env.EMPTY_GRACE_SECONDS) || 15) * 1000;
 const MAX_MS = (Number(process.env.MAX_MINUTES) || 120) * 60_000;
 const SESSIONS = process.env.SESSIONS_DIR || path.join(process.cwd(), "sessions");
-// Where to speak up. Default: the voice channel's own text chat, so the message
-// appears right in the call. Falls back to STATUS_CHANNEL_ID if that send fails.
+// The text channel the bot narrates in (🧠・operating), set by the workflow.
 const STATUS_CHANNEL = process.env.STATUS_CHANNEL_ID || "";
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-/** Best-effort, time-bounded status message so people know what's happening. */
-async function say(channel, text) {
+/** Best-effort, time-bounded status post to the operating channel. */
+async function say(text) {
+  if (!STATUS_CHANNEL) return;
   const bounded = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 8000))]);
   try {
-    await bounded(channel.send(text));
-    return;
-  } catch {
-    /* fall through to the configured status channel */
-  }
-  if (STATUS_CHANNEL) {
-    try {
-      const ch = await channel.client.channels.fetch(STATUS_CHANNEL);
-      await bounded(ch.send(text));
-    } catch (e) {
-      log("status post failed:", e.message);
-    }
+    const ch = await client.channels.fetch(STATUS_CHANNEL);
+    await bounded(ch.send(text));
+  } catch (e) {
+    log("status post failed:", e.message);
   }
 }
 
@@ -122,9 +113,8 @@ function startSession(channel) {
 
   connection.on(VoiceConnectionStatus.Ready, () => {
     say(
-      channel,
-      "🎙️ **Notetaker is recording.** When you're done, just **leave the call** " +
-        "(or drag me out) and I'll post the notes + action items to GV OS in a couple minutes.",
+      `🎙️ **Notetaker is recording** ${channel.name}. When everyone leaves the ` +
+        "call I'll wrap up and drop the notes + tasks in ✅・tasks.",
     );
     const receiver = connection.receiver;
     receiver.speaking.on("start", async (userId) => {
@@ -172,18 +162,15 @@ function startSession(channel) {
   });
   connection.on("error", (e) => log("conn err", e.message));
 
-  // Someone dragged the bot out of the call → finish now (after a short grace,
-  // so a transient network blip that auto-reconnects doesn't end the session).
-  connection.on(VoiceConnectionStatus.Disconnected, async () => {
-    try {
-      await Promise.race([
-        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
-        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
-      ]);
-      // reconnecting on its own — leave the session running
-    } catch {
-      endSession("disconnected");
-    }
+  // Dragged out of the call → finish. Give it 3s to self-recover from a blip;
+  // if it isn't Ready again by then, wrap up.
+  connection.on(VoiceConnectionStatus.Disconnected, () => {
+    log("voice disconnected");
+    setTimeout(() => {
+      if (!ended && connection.state.status !== VoiceConnectionStatus.Ready) {
+        endSession("disconnected");
+      }
+    }, 3000);
   });
 }
 
@@ -191,23 +178,18 @@ async function endSession(reason) {
   if (ended) return;
   ended = true;
   if (session) {
-    const { channel, dir, manifest } = session;
+    const { dir, manifest } = session;
     fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest));
-    // Hand the workflow the session dir to process + the call's channel so the
-    // finished notes get posted back into that same chat.
+    // Hand the workflow the session dir to process.
     if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(
-        process.env.GITHUB_OUTPUT,
-        `session_dir=${dir}\nstatus_channel=${session.channelId}\n`,
-      );
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `session_dir=${dir}\n`);
     }
     log("session ended", reason, dir, "speakers:", Object.values(manifest).join(","));
     // Only claim we're posting notes if someone actually spoke.
     if (Object.keys(manifest).length > 0) {
       await say(
-        channel,
-        "✅ **Call wrapped** — transcribing and posting the notes + tasks to GV OS " +
-          "now. Back in ~2 minutes.",
+        "✅ **Call wrapped** — transcribing now. Notes + tasks land in ✅・tasks " +
+          "in ~2 minutes.",
       );
     }
     try {
@@ -264,6 +246,15 @@ client.once(Events.ClientReady, async () => {
       log("vsu err", e.message);
     }
   });
+
+  // Backstop: poll every 5s so an empty room is caught even if a voice-state
+  // event is missed — the moment it's just the bot in there, wrap up.
+  setInterval(() => {
+    if (!session) return;
+    const g = client.guilds.cache.get(GUILD);
+    const ch = g?.channels.cache.get(session.channelId);
+    if (humanCount(ch) === 0) scheduleEmptyCheck(ch);
+  }, 5000);
 
   // No call showed up within the window → leave quietly.
   setTimeout(() => {
