@@ -14,7 +14,9 @@ import {
 } from "@/db/schema/app";
 import { revShareLines } from "@/lib/revshare/engine";
 import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
-import { assembleRevShareRun } from "@/lib/payouts/run";
+import { assemblePartnerSplit, assembleRevShareRun } from "@/lib/payouts/run";
+import { agencyLedger } from "@/lib/transactions/ledger";
+import { listTransactions } from "@/lib/transactions/queries";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -70,32 +72,38 @@ export async function generatePayoutRun(rawMonth?: string) {
       : dayKeyCT(new Date()).slice(0, 7);
 
   const db = getDb();
-  const [rules, rows, clientRows, existing] = await Promise.all([
-    db
-      .select({
-        clientId: revShareRules.clientId,
-        rateBps: revShareRules.rateBps,
-        effectiveFrom: revShareRules.effectiveFrom,
-        deductAdSpend: revShareRules.deductAdSpend,
-      })
-      .from(revShareRules),
-    db
-      .select({
-        clientId: transactions.clientId,
-        direction: transactions.direction,
-        layer: transactions.layer,
-        occurredOn: transactions.occurredOn,
-        cashCents: transactions.cashCents,
-        processorFeeCents: transactions.processorFeeCents,
-      })
-      .from(transactions)
-      .where(eq(transactions.layer, "client")),
-    db.select({ id: clients.id, name: clients.name }).from(clients),
-    db
-      .select({ clientId: payouts.clientId })
-      .from(payouts)
-      .where(and(eq(payouts.month, month), eq(payouts.kind, "revshare_received"))),
-  ]);
+  const [rules, rows, clientRows, existing, existingPartner, { rows: backlog }] =
+    await Promise.all([
+      db
+        .select({
+          clientId: revShareRules.clientId,
+          rateBps: revShareRules.rateBps,
+          effectiveFrom: revShareRules.effectiveFrom,
+          deductAdSpend: revShareRules.deductAdSpend,
+        })
+        .from(revShareRules),
+      db
+        .select({
+          clientId: transactions.clientId,
+          direction: transactions.direction,
+          layer: transactions.layer,
+          occurredOn: transactions.occurredOn,
+          cashCents: transactions.cashCents,
+          processorFeeCents: transactions.processorFeeCents,
+        })
+        .from(transactions)
+        .where(eq(transactions.layer, "client")),
+      db.select({ id: clients.id, name: clients.name }).from(clients),
+      db
+        .select({ clientId: payouts.clientId })
+        .from(payouts)
+        .where(and(eq(payouts.month, month), eq(payouts.kind, "revshare_received"))),
+      db
+        .select({ id: payouts.id })
+        .from(payouts)
+        .where(and(eq(payouts.month, month), eq(payouts.kind, "partner"))),
+      listTransactions({}),
+    ]);
 
   const nameFor = (id: string) => clientRows.find((c) => c.id === id)?.name ?? "Client";
   const lines = revShareLines(rows, rules, await getAdSpendByMonth());
@@ -110,7 +118,14 @@ export async function generatePayoutRun(rawMonth?: string) {
     existing.map((e) => e.clientId).filter((x): x is string => Boolean(x)),
   );
 
-  const drafts = assembleRevShareRun(month, owed, existingIds);
+  // Rev-share receivables (money in) + the 50/50 partner split of GV's
+  // undistributed net (money out to Daniel + Gus). The split uses the same net
+  // the agency ledger derives, so it can never disagree with the P&L.
+  const netCents = agencyLedger(backlog).chain.netCents;
+  const drafts = [
+    ...assembleRevShareRun(month, owed, existingIds),
+    ...assemblePartnerSplit(month, netCents, existingPartner.length > 0),
+  ];
   if (drafts.length > 0) {
     await db.insert(payouts).values(drafts);
   }
