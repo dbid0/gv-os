@@ -1,14 +1,27 @@
 import { EodTemplateForm } from "@/components/sales/eod-template-form";
+import { GenerateTemplatesButton } from "@/components/sales/generate-templates-button";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { listEodTemplates, listTeams } from "@/lib/sales/queries";
+import { listEodReps, listEodTemplates, listTeams } from "@/lib/sales/queries";
 import { CADENCE_LABEL, ROLE_LABEL, baseFieldLabel } from "@/lib/sales/eod-fields";
 
 export const metadata = { title: "EOD Templates - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
-  const [templates, teams] = await Promise.all([listEodTemplates(), listTeams()]);
+  const [templates, teams, eodReps] = await Promise.all([
+    listEodTemplates(),
+    listTeams(),
+    listEodReps(),
+  ]);
+
+  // Coverage: every team-role that has a rep should have a daily template so
+  // submitted/pulled EOD data always lands somewhere. Count the missing ones.
+  const haveEod = new Set(
+    templates.filter((t) => t.cadence === "eod").map((t) => `${t.clientId}:${t.role}`),
+  );
+  const neededRoles = new Set(eodReps.map((r) => `${r.clientId}:${r.role}`));
+  const missing = [...neededRoles].filter((key) => !haveEod.has(key)).length;
 
   return (
     <div className="space-y-6">
@@ -20,8 +33,42 @@ export default async function TemplatesPage() {
             the leaderboard columns and dashboard tiles.
           </p>
         </div>
-        <EodTemplateForm teams={teams.map((t) => ({ id: t.id, name: t.name }))} />
+        <div className="flex items-center gap-2">
+          <GenerateTemplatesButton missing={missing} />
+          <EodTemplateForm teams={teams.map((t) => ({ id: t.id, name: t.name }))} />
+        </div>
       </div>
+
+      {neededRoles.size > 0 && (
+        <div
+          className={
+            missing > 0
+              ? "border-warning/30 bg-warning/5 rounded-xl border p-4 text-sm"
+              : "card-grad rounded-xl border p-4 text-sm"
+          }
+        >
+          {missing > 0 ? (
+            <p>
+              <span className="font-medium">
+                {neededRoles.size - missing} of {neededRoles.size} team-roles
+              </span>{" "}
+              have a daily template.{" "}
+              <span className="text-muted-foreground">
+                {missing} {missing === 1 ? "role has" : "roles have"} reps but no
+                template — hit <span className="font-medium">Generate defaults</span> so
+                their EOD data has somewhere to land.
+              </span>
+            </p>
+          ) : (
+            <p>
+              <span className="font-medium">Every team-role has a daily template.</span>{" "}
+              <span className="text-muted-foreground">
+                Submitted and pulled EOD data lands on the right form automatically.
+              </span>
+            </p>
+          )}
+        </div>
+      )}
 
       {templates.length === 0 ? (
         <Panel title="No templates yet">
