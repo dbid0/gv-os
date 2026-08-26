@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BarChart3, Clapperboard, Receipt, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Clapperboard,
+  Receipt,
+  Rocket,
+  Users,
+} from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { AdSpendField } from "@/components/clients/ad-spend-field";
@@ -144,12 +151,26 @@ export default async function ClientPage({
           </span>
         }
         actions={
-          <Link
-            href="/clients"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
-          >
-            <ArrowLeft className="size-3.5" /> All clients
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/clients/${slug}/setup`}
+              className={cn(
+                buttonVariants({ variant: "default", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <Rocket className="size-3.5" /> Set up
+            </Link>
+            <Link
+              href="/clients"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <ArrowLeft className="size-3.5" /> All clients
+            </Link>
+          </div>
         }
       />
 
@@ -277,7 +298,7 @@ export default async function ClientPage({
           processor and its new-deal-forms sheet right here, scoped to this
           client. These are the two feeds that will fund the numbers. */}
       {team && (
-        <section className="space-y-3">
+        <section id="data-feeds" className="scroll-mt-20 space-y-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Data feeds</h2>
             <p className="text-muted-foreground text-sm">
