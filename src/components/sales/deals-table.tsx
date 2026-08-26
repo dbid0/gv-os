@@ -7,7 +7,8 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusDot, type StatusTone } from "@/components/ui/status";
 import { DataTable, type Column } from "@/components/ui/table";
-import { type Cents, ZERO, cents, sum } from "@/lib/money";
+import { ExportCsv } from "@/components/ui/export-csv";
+import { type Cents, ZERO, cents, formatUSD, sum } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
 import { useEntranceOnce } from "@/lib/client-state";
 
@@ -161,6 +162,33 @@ export function DealsTable({ rows }: { rows: DealRow[] }) {
               {filtered.length} of {rows.length}
             </span>
           )}
+          <div className="ml-auto">
+            <ExportCsv
+              filename="deals.csv"
+              headers={[
+                "Date",
+                "Customer",
+                "Rep",
+                "Team",
+                "Source",
+                "Type",
+                "Revenue",
+                "Cash collected",
+                "Status",
+              ]}
+              rows={filtered.map((r) => [
+                fmtDate(r.closedAtISO),
+                r.customerName ?? "",
+                r.repName ?? "",
+                r.teamName ?? "",
+                r.source ?? "",
+                r.recurrence ?? "",
+                formatUSD(r.revenueCents),
+                formatUSD(r.cashCollectedCents),
+                r.status,
+              ])}
+            />
+          </div>
         </div>
       </Panel>
 

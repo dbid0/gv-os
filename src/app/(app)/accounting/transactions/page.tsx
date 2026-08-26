@@ -5,7 +5,8 @@ import { Panel } from "@/components/ui/panel";
 import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { listTransactions, type BacklogFilters } from "@/lib/transactions/queries";
-import { cents } from "@/lib/money";
+import { ExportCsv } from "@/components/ui/export-csv";
+import { cents, formatUSD } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Transactions - GV OS" };
@@ -100,7 +101,38 @@ export default async function TransactionsPage({
           </p>
         </Panel>
       ) : (
-        <Panel title="Rows — newest first">
+        <Panel
+          title="Rows — newest first"
+          aside={
+            <ExportCsv
+              filename="transactions.csv"
+              headers={[
+                "Date",
+                "Layer",
+                "Description",
+                "Type",
+                "Method",
+                "Revenue",
+                "Cash",
+                "Fee",
+                "Direction",
+                "Source",
+              ]}
+              rows={rows.map((r) => [
+                r.occurredOn,
+                r.layer,
+                r.clientName ?? r.description ?? "",
+                r.dealType ?? "",
+                r.paymentMethod ?? "",
+                formatUSD(cents(r.revenueCents)),
+                formatUSD(cents(r.cashCents)),
+                formatUSD(cents(r.processorFeeCents)),
+                r.direction,
+                r.source,
+              ])}
+            />
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
