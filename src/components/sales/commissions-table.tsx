@@ -12,7 +12,8 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { DataTable, type Column } from "@/components/ui/table";
-import { type Cents } from "@/lib/money";
+import { ExportCsv } from "@/components/ui/export-csv";
+import { type Cents, formatUSD } from "@/lib/money";
 import { compactUsd } from "@/lib/revenue-chart";
 import { fadeUp } from "@/lib/motion";
 import { markAllPaid, markRepPaid } from "@/lib/sales/actions";
@@ -299,6 +300,35 @@ export function CommissionsTable({
             </span>
           </p>
           <div className="flex items-center gap-2">
+            <ExportCsv
+              filename="commissions.csv"
+              headers={[
+                "Rep",
+                "Role",
+                "Team",
+                "Rate %",
+                "Deals",
+                "Base",
+                "Commission",
+                "Bonus",
+                "Skim",
+                "Total owed",
+                "Paid",
+              ]}
+              rows={lines.map((l) => [
+                l.name,
+                l.role,
+                l.teamName,
+                l.rateBps === null ? "" : (l.rateBps / 100).toFixed(1),
+                l.deals,
+                formatUSD(l.baseCents),
+                formatUSD(l.commissionCents),
+                formatUSD(l.bonusCents),
+                formatUSD(l.skimCents),
+                formatUSD(l.totalOwedCents),
+                l.paid ? "Paid" : "Pending",
+              ])}
+            />
             <div className="bg-secondary/60 inline-flex rounded-lg border p-0.5 text-xs">
               {basisTab("cash_collected", "Cash collected")}
               {basisTab("deal_revenue", "Deal revenue")}
