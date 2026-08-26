@@ -25,6 +25,11 @@ import {
   getCommissionRollup,
   getPaidRepIds,
 } from "@/lib/sales/queries";
+import {
+  defaultTemplateForRole,
+  defaultTemplateName,
+} from "@/lib/sales/default-templates";
+import { ROLE_LABEL } from "@/lib/sales/eod-fields";
 import { QUOTA_METRIC_KEYS, quotaMetric } from "@/lib/sales/quota-pacing";
 import { percentToBps } from "@/lib/splits";
 
@@ -292,6 +297,61 @@ export async function createEodTemplate(raw: z.input<typeof eodTemplateInput>) {
     .returning();
   revalidatePath("/sales/templates");
   return { id: template.id };
+}
+
+/**
+ * Seed the standard EOD template for every team-role that has reps but no
+ * template yet — so pulled/submitted EOD data always has somewhere to land
+ * without anyone hand-building a form first (Daniel: templates "should already
+ * be made automatically"). Idempotent: only the missing ones are created.
+ */
+export async function generateDefaultTemplates(): Promise<{ created: number }> {
+  await requireUser();
+  const db = getDb();
+
+  const [repRows, existing] = await Promise.all([
+    db
+      .select({ clientId: reps.clientId, role: reps.role })
+      .from(reps)
+      .where(eq(reps.status, "active")),
+    db
+      .select({ clientId: eodTemplates.clientId, role: eodTemplates.role })
+      .from(eodTemplates)
+      .where(eq(eodTemplates.cadence, "eod")),
+  ]);
+
+  const have = new Set(existing.map((e) => `${e.clientId}:${e.role}`));
+  // Distinct (client, role) among active reps that lack an EOD template.
+  const missing = new Map<string, { clientId: string; role: string }>();
+  for (const r of repRows) {
+    const key = `${r.clientId}:${r.role}`;
+    if (have.has(key) || missing.has(key)) continue;
+    missing.set(key, { clientId: r.clientId, role: r.role });
+  }
+
+  if (missing.size === 0) {
+    revalidatePath("/sales/templates");
+    return { created: 0 };
+  }
+
+  const values = [...missing.values()].map(({ clientId, role }) => {
+    const tmpl = defaultTemplateForRole(role);
+    return {
+      clientId,
+      name: defaultTemplateName(ROLE_LABEL[role] ?? role),
+      role,
+      cadence: "eod",
+      baseFields: tmpl.baseFields,
+      customFields: [],
+      calcFields: tmpl.calcFields,
+      isActive: true,
+    };
+  });
+  const created = await db.insert(eodTemplates).values(values).returning({
+    id: eodTemplates.id,
+  });
+  revalidatePath("/sales/templates");
+  return { created: created.length };
 }
 
 // ---------------------------------------------------------------- Submit EOD
