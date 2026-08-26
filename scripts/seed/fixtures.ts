@@ -11,11 +11,15 @@
  * Drizzle insert types; run.ts is the only part that touches the database.
  */
 
+import type { InferInsertModel } from "drizzle-orm";
+
 import type {
+  NewActionItem,
   NewActivityReport,
   NewClient,
   NewDeal,
   NewEodTemplate,
+  NewIntegration,
   NewProfile,
   NewRep,
   NewTeamMember,
@@ -26,10 +30,17 @@ import type {
   OfferSettings,
   Transaction,
 } from "@/db/schema/app";
-import { quotas } from "@/db/schema/app";
+import {
+  kitSnapshots as kitSnapshotsTable,
+  quotas,
+  revShareRules as revShareRulesTable,
+} from "@/db/schema/app";
 import type { NewMoneyEvent } from "@/db/schema/ledger";
 
 import { Rng } from "./rng";
+
+type NewKitSnapshot = InferInsertModel<typeof kitSnapshotsTable>;
+type NewRevShareRule = InferInsertModel<typeof revShareRulesTable>;
 
 /** The schema exports no `Quota` select type, so derive it from the table. */
 type Quota = typeof quotas.$inferSelect;
@@ -65,6 +76,10 @@ export interface SeedData {
   offerSettings: Partial<OfferSettings>[];
   transactions: Partial<Transaction>[];
   moneyEvents: Partial<NewMoneyEvent>[];
+  revShareRules: WithId<NewRevShareRule>[];
+  integrations: WithId<NewIntegration>[];
+  kitSnapshots: WithId<NewKitSnapshot>[];
+  actionItems: WithId<NewActionItem>[];
 }
 
 // -------------------------------------------------------------- Date helpers
@@ -367,6 +382,13 @@ function buildDayMetrics(role: string, rng: Rng): Record<string, number> {
   }
 }
 
+/** The daily wellbeing check-in (1–5): mostly healthy, occasionally below 3 so
+ *  the "check on this rep" manager alert has real data. Drawn from a side rng so
+ *  adding it never perturbs the main deal-derivation stream. */
+function pickMood(rng: Rng): number {
+  return rng.chance(0.12) ? rng.int(1, 2) : rng.int(3, 5);
+}
+
 export function buildSeedData(rng: Rng): SeedData {
   const usedNames = new Set<string>();
 
@@ -488,13 +510,19 @@ export function buildSeedData(rng: Rng): SeedData {
     );
   }
 
-  // ---- Activity reports (daily EOD for sellers, weekly EOW for managers) ----
+  // ---- Activity reports (daily EOD for sellers, daily BOD for managers) ----
   // Built first so each rep's total shows is known before deals are derived
-  // from it, guaranteeing deals ≤ shows (Close % ≤ 100%) rep by rep.
+  // from it, guaranteeing deals ≤ shows (Close % ≤ 100%) rep by rep. GV runs
+  // only EOD + BOD — never an end-of-week form.
   const activityReports: WithId<NewActivityReport>[] = [];
   const showsByRep = new Map<string, number>();
   const addShows = (repId: string, m: Record<string, number>) =>
     showsByRep.set(repId, (showsByRep.get(repId) ?? 0) + (m.shows ?? 0));
+  // A side stream for everything ADDED to the seed since it was first tuned —
+  // the wellbeing check-in and the managers' extra daily BOD reports — so none
+  // of it disturbs the seller→deal numbers the close-rate band depends on. The
+  // main rng's consumption stays byte-identical to the original seed.
+  const sideRng = new Rng(SEED ^ 0x5eedbeef);
   const ACTIVITY_DAYS = 42;
   for (const rep of reps) {
     const isManager = rep.role === "manager";
@@ -502,16 +530,22 @@ export function buildSeedData(rng: Rng): SeedData {
       const day = shiftDay(ANCHOR_DAY, -back);
       if (!isWeekday(day)) continue;
       if (isManager) {
-        // Managers file an end-of-week report on Fridays.
-        if (weekdayOf(day) !== 5) continue;
-        const metrics = buildDayMetrics(rep.role, rng);
-        addShows(rep.id as string, metrics);
+        // Managers file a beginning-of-day plan each weekday (with the odd
+        // miss). A BOD is forward-looking, so it carries no shows and never
+        // counts toward the close-rate denominator. Drawn entirely from the
+        // side stream so it can't disturb the seller→deal numbers.
+        if (!sideRng.chance(0.85)) continue;
+        const metrics: Record<string, number> = {
+          calls_taken: sideRng.int(2, 6),
+          dials: sideRng.int(2, 12),
+          mood: pickMood(sideRng),
+        };
         activityReports.push({
-          id: rng.uuid(),
+          id: sideRng.uuid(),
           repId: rep.id,
           clientId: rep.clientId,
           reportDate: noonUtc(day),
-          kind: "eow",
+          kind: "bod",
           metrics,
           notes: null,
           externalRef: `${MARKER}:ar:${rep.externalRef}:${day}`,
@@ -521,6 +555,7 @@ export function buildSeedData(rng: Rng): SeedData {
       // Sellers file daily, with the occasional miss (keeps compliance honest).
       if (!rng.chance(0.9)) continue;
       const metrics = buildDayMetrics(rep.role, rng);
+      metrics.mood = pickMood(sideRng);
       addShows(rep.id as string, metrics);
       activityReports.push({
         id: rng.uuid(),
@@ -654,8 +689,8 @@ export function buildSeedData(rng: Rng): SeedData {
       },
       {
         role: "manager",
-        cadence: "eow",
-        name: "Manager EOW",
+        cadence: "bod",
+        name: "Manager BOD",
         baseFields: ["calls_taken", "shows", "dials"],
       },
     ];
@@ -670,7 +705,7 @@ export function buildSeedData(rng: Rng): SeedData {
         customFields: [
           {
             key: "mood",
-            label: "How did today feel? (1-10)",
+            label: "How are you feeling today? (1-5)",
             type: "number",
             showOnDashboard: false,
           },
@@ -1027,6 +1062,110 @@ export function buildSeedData(rng: Rng): SeedData {
     });
   }
 
+  // ---- Rev-share rules (one locked rate per client) ----
+  // Safe for the Money Spine: the reconciler derives the basis from the same
+  // client-layer transactions (cash − fees), so basis drift stays 0.
+  const REVSHARE_BPS: Record<string, { bps: number; deductAdSpend: boolean }> = {
+    "demo-the-grid": { bps: 2000, deductAdSpend: false },
+    "demo-the-vault": { bps: 1500, deductAdSpend: false },
+    "demo-racks-closes": { bps: 1000, deductAdSpend: true },
+    "demo-the-visionary": { bps: 3000, deductAdSpend: false },
+  };
+  const revShareRules: WithId<NewRevShareRule>[] = clients.map((c, i) => {
+    const rule = REVSHARE_BPS[CLIENT_SPECS[i].slug] ?? {
+      bps: 1500,
+      deductAdSpend: false,
+    };
+    return {
+      id: rng.uuid(),
+      clientId: c.id,
+      rateBps: rule.bps,
+      effectiveFrom: shiftDay(ANCHOR_DAY, -140),
+      deductAdSpend: rule.deductAdSpend,
+      note: `${MARKER} rate`,
+    };
+  });
+
+  // ---- Email: a connected Kit account + a snapshot per client ----
+  // Kit is a NON-processor provider, so a connected integration here never
+  // flips an offer's cash authority or touches the Money Spine.
+  const SEQ_NAMES = [
+    "Welcome sequence",
+    "Application nurture",
+    "Booked-call reminders",
+    "No-show win-back",
+    "Post-call follow-up",
+    "Long-term nurture",
+    "Re-engagement",
+  ];
+  const integrations: WithId<NewIntegration>[] = clients.map((c, i) => ({
+    id: rng.uuid(),
+    provider: "kit",
+    label: `${CLIENT_SPECS[i].name} Kit`,
+    clientId: c.id,
+    status: "connected",
+    secretHint: "…demo",
+    config: { method: "api_key" },
+    lastSyncAt: noonUtc(shiftDay(ANCHOR_DAY, -1)),
+  }));
+  const kitSnapshots: WithId<NewKitSnapshot>[] = integrations.map((intg, i) => {
+    const seqCount = 4 + (i % 4); // 4–7 sequences
+    return {
+      id: rng.uuid(),
+      integrationId: intg.id,
+      clientId: intg.clientId,
+      accountName: `${CLIENT_SPECS[i].name} Newsletter`,
+      plan: "Creator Pro",
+      sequenceCount: seqCount,
+      tagCount: 8 + i * 3,
+      subscriberCount: 1_200 + i * 900 + rng.int(0, 400),
+      sequences: SEQ_NAMES.slice(0, seqCount).map((name, s) => ({
+        id: s + 1,
+        name,
+        hold: rng.chance(0.2),
+      })),
+      takenAt: noonUtc(shiftDay(ANCHOR_DAY, -1)),
+    };
+  });
+
+  // ---- Calendar: action items across offers, spread around the anchor ----
+  const TASK_TITLES = [
+    "Review closer call recordings",
+    "Refresh the VSL hook",
+    "Approve this week's ad creative",
+    "1:1 with the setter team",
+    "Rebuild the follow-up sequence",
+    "Audit speed-to-lead",
+    "Draft the monthly rev-share statement",
+    "Update the offer's tracking sheet",
+    "Onboard the new closer",
+    "QA the application form",
+    "Weekly pipeline review",
+    "Send payout statements",
+    "Tighten the booking reminders",
+    "Plan next month's content",
+  ];
+  const TASK_STATUSES = ["not_started", "in_progress", "completed"];
+  const actionItems: WithId<NewActionItem>[] = [];
+  for (let i = 0; i < 40; i += 1) {
+    const scheduled = rng.chance(0.82);
+    const due = scheduled ? shiftDay(ANCHOR_DAY, rng.int(-8, 16)) : null;
+    const status = rng.pick(TASK_STATUSES);
+    const member = rng.chance(0.6) ? rng.pick(teamMembers) : null;
+    const client = rng.chance(0.7) ? rng.pick(clients) : null;
+    actionItems.push({
+      id: rng.uuid(),
+      title: rng.pick(TASK_TITLES),
+      cadence: rng.pick(["daily", "weekly", "monthly"]),
+      status,
+      dueDate: due,
+      assigneeId: member ? (member.id as string) : null,
+      clientId: client ? (client.id as string) : null,
+      notes: `${MARKER} task`,
+      completedAt: status === "completed" ? noonUtc(due ?? ANCHOR_DAY) : null,
+    });
+  }
+
   return {
     profiles,
     clients,
@@ -1041,5 +1180,9 @@ export function buildSeedData(rng: Rng): SeedData {
     offerSettings,
     transactions,
     moneyEvents,
+    revShareRules,
+    integrations,
+    kitSnapshots,
+    actionItems,
   };
 }

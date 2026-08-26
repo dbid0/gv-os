@@ -29,16 +29,20 @@ import postgres from "postgres";
 
 import * as schema from "@/db/schema/app";
 import {
+  actionItems,
   activityLogs,
   activityReports,
   clients,
   deals,
   eodTemplates,
+  integrations,
+  kitSnapshots,
   notifications,
   offerSettings,
   profiles,
   quotas,
   reps,
+  revShareRules,
   teamMembers,
   transactions,
 } from "@/db/schema/app";
@@ -115,6 +119,16 @@ async function resetMoneyEvents(pg: Sql): Promise<void> {
 async function reset(db: Db, pg: Sql): Promise<void> {
   await resetTransactions(pg);
   await resetMoneyEvents(pg);
+  // Demo clients' ids — kit snapshots + integrations are scoped by client, not
+  // a text marker, so they are cleared the same way offer_settings is.
+  const demoClientIds = db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(eq(clients.externalRef, MARKER));
+  await db.delete(kitSnapshots).where(inArray(kitSnapshots.clientId, demoClientIds));
+  await db.delete(integrations).where(inArray(integrations.clientId, demoClientIds));
+  await db.delete(actionItems).where(like(actionItems.notes, `${MARKER}%`));
+  await db.delete(revShareRules).where(like(revShareRules.note, `${MARKER}%`));
   await db.delete(notifications).where(like(notifications.dedupeKey, LIKE_MARKER));
   await db.delete(activityLogs).where(like(activityLogs.externalRef, LIKE_MARKER));
   await db
@@ -200,6 +214,18 @@ async function countSeed(pg: Sql): Promise<Record<string, number>> {
     money_events: await one(
       pg`select count(*)::int as count from ledger.money_events where idempotency_key like ${LIKE_MARKER}`,
     ),
+    rev_share_rules: await one(
+      pg`select count(*)::int as count from app.rev_share_rules where note like ${MARKER + "%"}`,
+    ),
+    integrations: await one(
+      pg`select count(*)::int as count from app.integrations where client_id in (select id from app.clients where external_ref = ${MARKER})`,
+    ),
+    kit_snapshots: await one(
+      pg`select count(*)::int as count from app.kit_snapshots where client_id in (select id from app.clients where external_ref = ${MARKER})`,
+    ),
+    action_items: await one(
+      pg`select count(*)::int as count from app.action_items where notes like ${MARKER + "%"}`,
+    ),
   };
 }
 
@@ -240,12 +266,16 @@ async function main() {
     await insertAll(db, teamMembers, data.teamMembers);
     await insertAll(db, deals, data.deals);
     await insertAll(db, moneyEvents, data.moneyEvents);
+    await insertAll(db, revShareRules, data.revShareRules);
+    await insertAll(db, integrations, data.integrations);
+    await insertAll(db, kitSnapshots, data.kitSnapshots);
     await insertAll(db, activityReports, data.activityReports);
     await insertAll(db, eodTemplates, data.eodTemplates);
     await insertAll(db, quotas, data.quotas);
     await insertAll(db, activityLogs, data.activityLogs);
     await insertAll(db, notifications, data.notifications);
     await insertAll(db, offerSettings, data.offerSettings);
+    await insertAll(db, actionItems, data.actionItems);
     await insertAll(db, transactions, data.transactions);
 
     const counts = await countSeed(pg);
