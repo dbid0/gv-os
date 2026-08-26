@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { StatusPill } from "@/components/ui/status";
 import { clientBySlug } from "@/lib/roster";
@@ -15,15 +16,16 @@ export function TeamsOverviewCard({ overview }: { overview: TeamsOverview }) {
   const { cashCents, revenueCents, deals, closeRatePct, teams } = overview;
 
   return (
-    <section className="card-grad elev-card rounded-xl border p-5">
-      <div className="mb-4 flex items-center gap-2">
+    <section className="card-grad elev-card relative overflow-hidden rounded-xl border p-5">
+      <AmbientBackdrop bars={40} className="opacity-[0.08]" />
+      <div className="relative mb-4 flex items-center gap-2">
         <h2 className="text-sm font-semibold tracking-tight">All teams overview</h2>
         <StatusPill tone={teams.length ? "live" : "muted"}>
           {teams.length} {teams.length === 1 ? "team" : "teams"}
         </StatusPill>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="relative grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Figure label="Cash collected" tone="text-success">
           <CountUpMoney cents={cashCents} />
         </Figure>
@@ -37,7 +39,7 @@ export function TeamsOverviewCard({ overview }: { overview: TeamsOverview }) {
       </div>
 
       {teams.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+        <div className="relative mt-4 flex flex-wrap gap-2 border-t pt-4">
           {teams.map((t) => {
             const accent = clientBySlug(t.slug)?.accent ?? "var(--brand)";
             return (
