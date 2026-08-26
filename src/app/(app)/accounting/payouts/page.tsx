@@ -12,6 +12,7 @@ import { cents } from "@/lib/money";
 import { partnerSplitCents, payoutTotalCents } from "@/lib/payouts/math";
 import { agencyLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
+import { getCommissionRollup } from "@/lib/sales/queries";
 
 export const metadata = { title: "Payouts - GV OS" };
 export const dynamic = "force-dynamic";
@@ -31,13 +32,14 @@ export default async function PayoutsPage({
   const month = /^\d{4}-\d{2}$/.test(raw) ? raw : dayKeyCT(new Date()).slice(0, 7);
 
   const db = getDb();
-  const [payoutRows, { rows: backlog }] = await Promise.all([
+  const [payoutRows, { rows: backlog }, commissionRollup] = await Promise.all([
     db
       .select()
       .from(payouts)
       .where(eq(payouts.month, month))
       .orderBy(asc(payouts.createdAt)),
     listTransactions({}),
+    getCommissionRollup(),
   ]);
   const adjustments = payoutRows.length
     ? await db.select().from(payoutAdjustments)
@@ -108,12 +110,27 @@ export default async function PayoutsPage({
           tone="brand"
         />
       </div>
-      <Panel title="How the split works">
-        <p className="text-faint text-sm">
-          The suggestion above is the current agency net split penny-exact at the 50/50
-          default — it becomes real only when you add the two partner payouts and mark
-          them paid. Per-case overrides just use a different amount.
-        </p>
+      <Panel title="How the run works">
+        <div className="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            <span className="text-foreground font-medium">Generate {month} run</span>{" "}
+            drafts every client&apos;s rev-share receivable and the two 50/50 partner
+            distributions (Daniel + Gus) from the net above — penny-exact, and never
+            doubled on a re-run. Nothing moves until you mark a row paid, which writes
+            the matching backlog transaction.
+          </p>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 border-t pt-3">
+            <span>
+              Rep commissions owed:{" "}
+              <span className="text-foreground font-medium">
+                <Money amount={cents(commissionRollup.totalOwedCents)} />
+              </span>
+            </span>
+            <Link href="/sales/commissions" className="text-brand hover:underline">
+              paid on the Commissions tab →
+            </Link>
+          </div>
+        </div>
       </Panel>
 
       <PayoutsPanel month={month} rows={rows} />
