@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { KeyRound, Plug, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { KeyRound, Link2, Plug, Plus, Trash2, Webhook } from "lucide-react";
 
 import {
   connectIntegration,
@@ -17,9 +17,14 @@ import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import {
   CREDENTIAL_LABELS,
+  METHOD_HINTS,
+  METHOD_LABELS,
   PROVIDER_GROUPS,
   PROVIDERS,
+  defaultMethod,
+  methodsForProvider,
   providerByValue,
+  type ConnectMethod,
 } from "@/lib/integrations/providers";
 import { isFailureNote } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
@@ -41,6 +46,8 @@ interface ConnectionRow {
   lastSyncAt: string | null;
   lastSyncNote: string | null;
   webhookPath: string | null;
+  method: string;
+  reference: string | null;
 }
 
 const selectClass =
@@ -80,6 +87,28 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
           {row.secretHint && (
             <span className="inline-flex items-center gap-1">
               <KeyRound className="size-3" /> {row.secretHint}
+            </span>
+          )}
+          {row.method === "webhook" && (
+            <span className="inline-flex items-center gap-1">
+              <Webhook className="size-3" /> webhook
+            </span>
+          )}
+          {row.method === "manual" && (
+            <span className="inline-flex items-center gap-1">
+              <Link2 className="size-3" />
+              {row.reference ? (
+                <a
+                  href={row.reference}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground underline"
+                >
+                  manual
+                </a>
+              ) : (
+                "manual"
+              )}
             </span>
           )}
           <span>
@@ -172,34 +201,60 @@ export function IntegrationsPanel({
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [provider, setProvider] = useState(PROVIDERS[0].value);
+  const [method, setMethod] = useState<ConnectMethod>(defaultMethod(PROVIDERS[0]));
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
+  const [reference, setReference] = useState("");
   const [scope, setScope] = useState(fixedClientId ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const selected = providerByValue(provider);
+  const methods = selected ? methodsForProvider(selected) : (["api_key"] as const);
   const connectedValues = new Set(
     connections.filter((c) => c.status !== "revoked").map((c) => c.provider),
   );
 
+  // Changing the tool resets the method to that tool's best option.
+  function pickProvider(value: string) {
+    setProvider(value);
+    const p = providerByValue(value);
+    if (p) setMethod(defaultMethod(p));
+    setSecret("");
+    setReference("");
+  }
+
+  // api_key needs a secret; webhook and manual don't.
+  const ready = label.trim() !== "" && (method !== "api_key" || secret.trim() !== "");
+
   function connect() {
-    if (label.trim() === "" || secret.trim() === "") return;
+    if (!ready) return;
     setError(null);
     start(async () => {
       try {
         await connectIntegration({
           provider,
           label,
-          secret,
+          method,
+          secret: method === "api_key" ? secret : undefined,
+          reference: method === "manual" ? reference : undefined,
           clientId: scope || null,
         });
         toast({
           tone: "success",
-          title: "Sealed and connected",
-          detail: "The key is encrypted — only its last 4 characters stay visible.",
+          title:
+            method === "api_key"
+              ? "Sealed and connected"
+              : method === "webhook"
+                ? "Connected — copy the webhook URL below"
+                : "Marked connected",
+          detail:
+            method === "api_key"
+              ? "The key is encrypted — only its last 4 characters stay visible."
+              : undefined,
         });
         setLabel("");
         setSecret("");
+        setReference("");
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not connect.");
@@ -229,7 +284,7 @@ export function IntegrationsPanel({
               <select
                 className={cn(selectClass, "w-48")}
                 value={provider}
-                onChange={(e) => setProvider(e.target.value)}
+                onChange={(e) => pickProvider(e.target.value)}
               >
                 {PROVIDER_GROUPS.map((group) => (
                   <optgroup key={group} label={group}>
@@ -250,18 +305,65 @@ export function IntegrationsPanel({
                 placeholder='e.g. "Grid Close account"'
               />
             </label>
-            <label className="min-w-[14rem] flex-1 space-y-1.5">
-              <span className="text-muted-foreground text-xs font-medium">
-                {selected ? CREDENTIAL_LABELS[selected.credential] : "Credential"}
-              </span>
-              <Input
-                type="password"
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
-                placeholder="Pasted once, sealed, never shown again"
-                autoComplete="off"
-              />
-            </label>
+            {methods.length > 1 && (
+              <label className="space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Method
+                </span>
+                <div className="bg-secondary/60 inline-flex h-9 items-center rounded-md border p-0.5">
+                  {methods.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMethod(m)}
+                      className={cn(
+                        "rounded px-2.5 py-1 text-xs transition-colors",
+                        method === m
+                          ? "bg-card text-foreground border-border-strong border font-medium"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {METHOD_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+              </label>
+            )}
+            {method === "api_key" ? (
+              <label className="min-w-[14rem] flex-1 space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  {selected ? CREDENTIAL_LABELS[selected.credential] : "Credential"}
+                </span>
+                <Input
+                  type="password"
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                  placeholder="Pasted once, sealed, never shown again"
+                  autoComplete="off"
+                />
+              </label>
+            ) : method === "manual" ? (
+              <label className="min-w-[14rem] flex-1 space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Reference <span className="text-faint font-normal">(optional)</span>
+                </span>
+                <Input
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Link or note — where this is set up"
+                />
+              </label>
+            ) : (
+              <div className="min-w-[14rem] flex-1 space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Credential
+                </span>
+                <p className="text-faint flex h-9 items-center gap-1.5 rounded-md border border-dashed px-3 text-xs">
+                  <Webhook className="size-3.5 shrink-0" /> A webhook URL is minted on
+                  connect — copy it from the connection below.
+                </p>
+              </div>
+            )}
             {!fixedClientId && (
               <label className="space-y-1.5">
                 <span className="text-muted-foreground text-xs font-medium">Scope</span>
@@ -279,11 +381,7 @@ export function IntegrationsPanel({
                 </select>
               </label>
             )}
-            <Button
-              onClick={connect}
-              disabled={pending || label.trim() === "" || secret.trim() === ""}
-              className="gap-2"
-            >
+            <Button onClick={connect} disabled={pending || !ready} className="gap-2">
               <Plus className="size-3.5" /> Connect
             </Button>
           </div>
@@ -293,6 +391,7 @@ export function IntegrationsPanel({
               Feeds: {selected.feeds}
             </p>
           )}
+          <p className="text-faint text-xs">{METHOD_HINTS[method]}</p>
           {error && <p className="text-destructive text-xs">{error}</p>}
         </div>
       </Panel>

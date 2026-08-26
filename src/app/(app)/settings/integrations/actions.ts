@@ -12,7 +12,11 @@ import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { seal, secretHint } from "@/lib/crypto/secretbox";
-import { PROVIDER_VALUES, providerByValue } from "@/lib/integrations/providers";
+import {
+  PROVIDER_VALUES,
+  providerByValue,
+  providerSupportsMethod,
+} from "@/lib/integrations/providers";
 import { serverEnv } from "@/env.server";
 
 async function requireUser() {
@@ -35,34 +39,60 @@ function requireKey(): string {
 const connectInput = z.object({
   provider: z.enum(PROVIDER_VALUES),
   label: z.string().min(1, "Give the connection a label."),
-  secret: z.string().min(1, "Paste the credential."),
+  /** How the tool connects. Not every tool is an API key. */
+  method: z.enum(["api_key", "webhook", "manual"]).default("api_key"),
+  /** Required only for the api_key method. */
+  secret: z.string().optional(),
+  /** Optional URL/note for the manual method. */
+  reference: z.string().optional(),
   clientId: z.string().uuid().nullable().optional(),
 });
 
 /**
- * Stores a connection. The credential is sealed BEFORE the insert and the
- * return value carries only the hint — the plaintext never leaves this module.
+ * Stores a connection using one of three methods:
+ *  - api_key: a secret is sealed BEFORE the insert; only its hint is returned.
+ *  - webhook: no secret — a capability-URL token is minted and the address IS
+ *    the credential the tool posts to.
+ *  - manual: no secret — the tool is set up outside GV OS and tracked here,
+ *    with an optional reference link.
+ * The plaintext of any key never leaves this module.
  */
 export async function connectIntegration(raw: z.input<typeof connectInput>) {
   await requireUser();
   const input = connectInput.parse(raw);
-  const key = requireKey();
+  const provider = providerByValue(input.provider);
+  if (!provider) throw new Error("Unknown provider.");
+  if (!providerSupportsMethod(provider, input.method)) {
+    throw new Error(`${provider.label} can't be connected by ${input.method}.`);
+  }
   const db = getDb();
-  // Payments and Bookings providers get a capability-URL webhook token at
-  // connect time — the address IS the credential the source posts to.
-  const group = providerByValue(input.provider)?.group;
-  const config =
-    group === "Payments" || group === "Bookings"
-      ? { webhook_token: randomBytes(24).toString("hex") }
-      : {};
+
+  const config: Record<string, unknown> = { method: input.method };
+  let secretBox: string | null = null;
+  let hint: string | null = null;
+
+  if (input.method === "api_key") {
+    const secret = input.secret?.trim();
+    if (!secret) throw new Error("Paste the credential.");
+    const key = requireKey();
+    secretBox = seal(secret, key);
+    hint = secretHint(secret);
+  } else if (input.method === "webhook") {
+    // The minted URL is the credential the tool posts to.
+    config.webhook_token = randomBytes(24).toString("hex");
+  } else {
+    const reference = input.reference?.trim();
+    if (reference) config.reference = reference;
+  }
+
   const [row] = await db
     .insert(integrations)
     .values({
       provider: input.provider,
       label: input.label.trim(),
       clientId: input.clientId ?? null,
-      secretBox: seal(input.secret, key),
-      secretHint: secretHint(input.secret),
+      secretBox,
+      secretHint: hint,
       config,
       status: "connected",
     })
