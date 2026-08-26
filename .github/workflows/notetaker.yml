@@ -64,10 +64,20 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install recorder deps (fast — so the bot joins quickly)
+      # Cache node_modules keyed on the lockfile — after the first run the bot
+      # joins in seconds instead of waiting ~40s on npm.
+      - name: Cache recorder deps
         if: steps.guard.outputs.go == 'true'
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: notetaker/node_modules
+          key: notetaker-npm-${{ runner.os }}-${{ hashFiles('notetaker/package-lock.json') }}
+
+      - name: Install recorder deps
+        if: steps.guard.outputs.go == 'true' && steps.deps-cache.outputs.cache-hit != 'true'
         working-directory: notetaker
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Join the call + record
         id: rec
@@ -78,6 +88,8 @@ jobs:
           GUILD_ID: ${{ github.event.client_payload.guild_id || vars.GV_GUILD_ID || '1535873854570889257' }}
           CALLER_ID: ${{ github.event.client_payload.caller_id || github.event.inputs.caller_id || '' }}
           VOICE_CHANNEL_ID: ${{ github.event.client_payload.voice_channel_id || '' }}
+          # Narrate in 🧠・operating.
+          STATUS_CHANNEL_ID: ${{ vars.GV_OPERATING_CHANNEL_ID || '1536050920121569380' }}
           JOIN_WAIT_MINUTES: "15"
           MAX_MINUTES: "120"
         run: node recorder.js
@@ -103,8 +115,8 @@ jobs:
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
           GV_OS_URL: https://os.globalventures.app
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          # Post the finished notes back into the call's own chat.
-          TASKS_CHANNEL_ID: ${{ steps.rec.outputs.status_channel || vars.GV_TASKS_CHANNEL_ID || '' }}
+          # Post the finished summary + tasks in ✅・tasks.
+          TASKS_CHANNEL_ID: ${{ vars.GV_TASKS_CHANNEL_ID || '1536050931668361348' }}
           MEETING_TITLE: ${{ github.event.client_payload.title || github.event.inputs.title || 'Team call' }}
           MEETING_SOURCE: ${{ github.event.client_payload.source || 'agency_call' }}
           CLIENT_SLUG: ${{ github.event.client_payload.client_slug || github.event.inputs.client_slug || '' }}
