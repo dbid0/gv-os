@@ -198,3 +198,49 @@ export const CREDENTIAL_LABELS: Record<CredentialKind, string> = {
   token: "Access token",
   mcp_url: "MCP endpoint URL",
 };
+
+/**
+ * How a tool is connected — not every connection is an API key. Some tools push
+ * to us (webhook), and some are set up outside GV OS and just tracked as
+ * connected (manual). OAuth is intentionally absent until each provider's app
+ * is registered — we never present a flow we can't actually complete.
+ */
+export type ConnectMethod = "api_key" | "webhook" | "manual";
+
+export const CONNECT_METHODS: ConnectMethod[] = ["api_key", "webhook", "manual"];
+
+export const METHOD_LABELS: Record<ConnectMethod, string> = {
+  api_key: "API key",
+  webhook: "Webhook",
+  manual: "Manual",
+};
+
+export const METHOD_HINTS: Record<ConnectMethod, string> = {
+  api_key: "Paste a key or token — sealed on save, never shown again.",
+  webhook: "No key needed — we mint a URL for the tool to post events to.",
+  manual: "Connected outside GV OS — record it here with an optional reference link.",
+};
+
+// Payments and Bookings tools can post events to a minted webhook URL; that is
+// their most natural connection. Everything else is a pasted key. Any tool can
+// also be marked connected manually.
+const WEBHOOK_GROUPS = new Set(["Payments", "Bookings"]);
+
+/** The connection methods a provider supports, best-first. */
+export function methodsForProvider(provider: Provider): ConnectMethod[] {
+  return WEBHOOK_GROUPS.has(provider.group)
+    ? ["webhook", "api_key", "manual"]
+    : ["api_key", "manual"];
+}
+
+/** The method a provider connects with by default (its best option). */
+export function defaultMethod(provider: Provider): ConnectMethod {
+  return methodsForProvider(provider)[0];
+}
+
+export function providerSupportsMethod(
+  provider: Provider,
+  method: ConnectMethod,
+): boolean {
+  return methodsForProvider(provider).includes(method);
+}

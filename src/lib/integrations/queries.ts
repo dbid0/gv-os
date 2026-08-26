@@ -19,6 +19,10 @@ export interface IntegrationRow {
   lastSyncNote: string | null;
   /** For payments connections: the catch-hook path to paste into the processor. */
   webhookPath: string | null;
+  /** How this connection was made: api_key | webhook | manual. */
+  method: string;
+  /** The optional reference link for a manual connection. */
+  reference: string | null;
 }
 
 /** Every connection, with its scope resolved. The sealed secret stays server-side. */
@@ -42,12 +46,22 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
     .orderBy(asc(integrations.provider), asc(integrations.label));
 
   return rows.map(({ config, ...row }) => {
-    const token = (config as { webhook_token?: string }).webhook_token;
+    const cfg = config as {
+      webhook_token?: string;
+      method?: string;
+      reference?: string;
+    };
+    const token = cfg.webhook_token;
     const group = providerByValue(row.provider)?.group;
     const lane = group === "Bookings" ? "bookings" : "payments";
+    // Legacy rows have no explicit method: infer from what they carry.
+    const method =
+      cfg.method ?? (token ? "webhook" : row.secretHint ? "api_key" : "manual");
     return {
       ...row,
       webhookPath: token ? `/api/webhooks/${lane}/${token}` : null,
+      method,
+      reference: cfg.reference ?? null,
     };
   });
 }
