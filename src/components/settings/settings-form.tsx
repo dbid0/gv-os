@@ -77,89 +77,82 @@ export function SettingsForm({ settings }: { settings: OrgSettings }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm">
-          Goals and display preferences. Goals are targets the dashboard measures
-          against — never money in the ledger.
-        </p>
-      </div>
-
-      <Panel title="Goals & targets">
-        <form onSubmit={submit} className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Display currency">
-              <select
-                className={selectClass}
-                value={currency}
-                onChange={(e) => {
-                  setCurrency(e.target.value);
-                  setSaved(false);
-                }}
-              >
-                <option value="USD">$ USD — US Dollar</option>
-                <option value="EUR">€ EUR — Euro</option>
-                <option value="GBP">£ GBP — British Pound</option>
-                <option value="CAD">$ CAD — Canadian Dollar</option>
-                <option value="AUD">$ AUD — Australian Dollar</option>
-              </select>
-            </Field>
-            <Field label="Monthly revenue goal ($)">
-              <Input
-                value={revenueGoal}
-                onChange={(e) => {
-                  setRevenueGoal(e.target.value);
-                  setSaved(false);
-                }}
-                inputMode="decimal"
-                placeholder="100000"
-              />
-            </Field>
-            <Field
-              label="Show rate goal (%)"
-              hint="(Calls taken − no shows) ÷ calls taken"
+    <Panel
+      title="Goals & targets"
+      aside={<span className="text-faint text-xs">Targets, never ledger money</span>}
+    >
+      <form onSubmit={submit} className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Display currency">
+            <select
+              className={selectClass}
+              value={currency}
+              onChange={(e) => {
+                setCurrency(e.target.value);
+                setSaved(false);
+              }}
             >
-              <Input
-                value={showGoal}
-                onChange={(e) => {
-                  setShowGoal(e.target.value);
-                  setSaved(false);
-                }}
-                inputMode="decimal"
-                placeholder="70"
-              />
-            </Field>
-            <Field label="Close rate goal (%)" hint="Deals ÷ shows">
-              <Input
-                value={closeGoal}
-                onChange={(e) => {
-                  setCloseGoal(e.target.value);
-                  setSaved(false);
-                }}
-                inputMode="decimal"
-                placeholder="30"
-              />
-            </Field>
-          </div>
+              <option value="USD">$ USD — US Dollar</option>
+              <option value="EUR">€ EUR — Euro</option>
+              <option value="GBP">£ GBP — British Pound</option>
+              <option value="CAD">$ CAD — Canadian Dollar</option>
+              <option value="AUD">$ AUD — Australian Dollar</option>
+            </select>
+          </Field>
+          <Field label="Monthly revenue goal ($)">
+            <Input
+              value={revenueGoal}
+              onChange={(e) => {
+                setRevenueGoal(e.target.value);
+                setSaved(false);
+              }}
+              inputMode="decimal"
+              placeholder="100000"
+            />
+          </Field>
+          <Field
+            label="Show rate goal (%)"
+            hint="(Calls taken − no shows) ÷ calls taken"
+          >
+            <Input
+              value={showGoal}
+              onChange={(e) => {
+                setShowGoal(e.target.value);
+                setSaved(false);
+              }}
+              inputMode="decimal"
+              placeholder="70"
+            />
+          </Field>
+          <Field label="Close rate goal (%)" hint="Deals ÷ shows">
+            <Input
+              value={closeGoal}
+              onChange={(e) => {
+                setCloseGoal(e.target.value);
+                setSaved(false);
+              }}
+              inputMode="decimal"
+              placeholder="30"
+            />
+          </Field>
+        </div>
 
-          {err && <p className="text-destructive text-xs">{err}</p>}
+        {err && <p className="text-destructive text-xs">{err}</p>}
 
-          <div className="flex items-center gap-3 border-t pt-4">
-            <Button type="submit" disabled={pending} className="gap-2">
-              {saved && !pending ? (
-                <>
-                  <Check className="size-3.5" /> Saved
-                </>
-              ) : pending ? (
-                "Saving…"
-              ) : (
-                "Save changes"
-              )}
-            </Button>
-          </div>
-        </form>
-      </Panel>
-    </div>
+        <div className="flex items-center gap-3 border-t pt-4">
+          <Button type="submit" disabled={pending} className="gap-2">
+            {saved && !pending ? (
+              <>
+                <Check className="size-3.5" /> Saved
+              </>
+            ) : pending ? (
+              "Saving…"
+            ) : (
+              "Save changes"
+            )}
+          </Button>
+        </div>
+      </form>
+    </Panel>
   );
 }
