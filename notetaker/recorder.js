@@ -1,21 +1,24 @@
 // GV Notetaker — cloud recorder (one-shot, for a GitHub Action).
 //
-// This is the port of the local recorder (scripts/gv-notetaker/recorder.js) that
-// used to run on Daniel's Mac via launchd. Here it runs in a GitHub Action: it
-// joins the GV team voice channel, captures per-speaker audio, and — when the
-// room empties (or a hard cap is hit) — hands the session to process_call.py,
-// then exits. Nothing persistent; the Action's schedule (call time) or a
-// /record slash command is what starts it. Never touches a laptop.
+// Triggered by the /join Discord command (via the app's interactions endpoint ->
+// repository_dispatch). Joins whatever call people are in, captures per-speaker
+// audio + a name manifest, and — when that channel empties (or a hard cap) —
+// writes the session and exits. The workflow's next step transcribes + posts.
+// Runs in GitHub's cloud, never a laptop.
 //
-// Config is all env (set by the workflow):
-//   DISCORD_BOT_TOKEN   the GV bot token           (required)
-//   GUILD_ID            server id                  (required)
-//   VOICE_CHANNEL_ID    the voice channel to sit in (required)
-//   JOIN_WAIT_MINUTES   give up if nobody joins    (default 20)
-//   EMPTY_GRACE_SECONDS wait after the room empties (default 90)
-//   MAX_MINUTES         hard safety cap on a call  (default 120)
-//   SESSIONS_DIR        where chunks are written   (default ./sessions)
-const { Client, GatewayIntentBits, Events } = require("discord.js");
+// It does NOT process here: keeping whisper/claude out of this step means the
+// bot joins the call in seconds instead of after a slow install.
+//
+// Config is all env (set by the workflow from the /join payload):
+//   DISCORD_BOT_TOKEN   the GV bot token                         (required)
+//   GUILD_ID            server id                                (required)
+//   CALLER_ID           the user who ran /join — join THEIR call (preferred)
+//   VOICE_CHANNEL_ID    explicit channel override                (optional)
+//   JOIN_WAIT_MINUTES   give up if no call is found              (default 15)
+//   EMPTY_GRACE_SECONDS wait after the room empties              (default 90)
+//   MAX_MINUTES         hard safety cap on a call                (default 120)
+//   SESSIONS_DIR        where chunks are written                 (default ./sessions)
+const { Client, GatewayIntentBits, Events, ChannelType } = require("discord.js");
 const {
   joinVoiceChannel,
   EndBehaviorType,
@@ -24,33 +27,53 @@ const {
 const prism = require("prism-media");
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD = process.env.GUILD_ID;
-const VOICE = process.env.VOICE_CHANNEL_ID;
-const JOIN_WAIT_MS = (Number(process.env.JOIN_WAIT_MINUTES) || 20) * 60_000;
+const CALLER = process.env.CALLER_ID || "";
+const VOICE_OVERRIDE = process.env.VOICE_CHANNEL_ID || "";
+const JOIN_WAIT_MS = (Number(process.env.JOIN_WAIT_MINUTES) || 15) * 60_000;
 const EMPTY_GRACE_MS = (Number(process.env.EMPTY_GRACE_SECONDS) || 90) * 1000;
 const MAX_MS = (Number(process.env.MAX_MINUTES) || 120) * 60_000;
 const SESSIONS = process.env.SESSIONS_DIR || path.join(process.cwd(), "sessions");
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-if (!TOKEN || !GUILD || !VOICE) {
-  log("missing DISCORD_BOT_TOKEN / GUILD_ID / VOICE_CHANNEL_ID — exiting");
-  process.exit(0); // exit clean: nothing to do, never fail the workflow
+if (!TOKEN || !GUILD) {
+  log("missing DISCORD_BOT_TOKEN / GUILD_ID — exiting");
+  process.exit(0); // never fail the workflow
 }
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
 
-let session = null; // { dir, connection, manifest, active:Set }
+let session = null; // { dir, connection, channelId, active:Set, manifest }
 let emptyTimer = null;
 let ended = false;
 
 function humanCount(channel) {
-  return channel.members.filter((m) => !m.user.bot).size;
+  return channel ? channel.members.filter((m) => !m.user.bot).size : 0;
+}
+
+/** Which channel to record: the caller's, else the busiest, else an override. */
+function resolveChannel(guild) {
+  if (CALLER) {
+    // Voice-state cache is the direct source; fall back to the member's cache.
+    const chId =
+      guild.voiceStates.cache.get(CALLER)?.channelId ??
+      guild.members.cache.get(CALLER)?.voice?.channelId;
+    if (chId) return guild.channels.cache.get(chId);
+  }
+  if (VOICE_OVERRIDE) {
+    const ch = guild.channels.cache.get(VOICE_OVERRIDE);
+    if (ch) return ch;
+  }
+  // Fallback: the voice channel with the most humans in it right now.
+  const voice = guild.channels.cache.filter(
+    (c) => c.type === ChannelType.GuildVoice && humanCount(c) > 0,
+  );
+  return [...voice.values()].sort((a, b) => humanCount(b) - humanCount(a))[0] ?? null;
 }
 
 function startSession(channel) {
@@ -58,14 +81,14 @@ function startSession(channel) {
   const dir = path.join(SESSIONS, stamp);
   fs.mkdirSync(dir, { recursive: true });
   const connection = joinVoiceChannel({
-    channelId: VOICE,
+    channelId: channel.id,
     guildId: GUILD,
     adapterCreator: channel.guild.voiceAdapterCreator,
     selfDeaf: false,
     selfMute: true,
   });
-  session = { dir, connection, manifest: {}, active: new Set(), stamp };
-  log("session started", dir);
+  session = { dir, connection, channelId: channel.id, active: new Set(), manifest: {} };
+  log("session started", dir, "channel", channel.name);
 
   connection.on(VoiceConnectionStatus.Ready, () => {
     const receiver = connection.receiver;
@@ -117,30 +140,30 @@ function startSession(channel) {
 function endSession(reason) {
   if (ended) return;
   ended = true;
-  if (!session) {
+  if (session) {
+    try {
+      session.connection.destroy();
+    } catch {
+      /* already gone */
+    }
+    fs.writeFileSync(
+      path.join(session.dir, "manifest.json"),
+      JSON.stringify(session.manifest),
+    );
+    // Tell the workflow which dir to process (also the newest, but be explicit).
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `session_dir=${session.dir}\n`);
+    }
+    log(
+      "session ended",
+      reason,
+      session.dir,
+      "speakers:",
+      Object.values(session.manifest).join(","),
+    );
+  } else {
     log("ending with no session:", reason);
-    return finish();
   }
-  const { dir, connection, manifest } = session;
-  try {
-    connection.destroy();
-  } catch {
-    /* already gone */
-  }
-  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest));
-  log("session ended", reason, dir, "speakers:", Object.values(manifest).join(","));
-
-  // Run the processor synchronously so the Action stays alive until it's done,
-  // then exit. python3 is on PATH in the workflow.
-  const py = spawnSync("python3", [path.join(__dirname, "process_call.py"), dir], {
-    stdio: "inherit",
-    env: process.env,
-  });
-  log("processor exit", py.status);
-  finish();
-}
-
-function finish() {
   try {
     client.destroy();
   } catch {
@@ -159,23 +182,28 @@ function scheduleEmptyCheck(channel) {
 
 client.once(Events.ClientReady, async () => {
   log("recorder online as", client.user.tag);
-  const guild = await client.guilds.fetch(GUILD);
-  const channel = await guild.channels.fetch(VOICE);
+  const guild = client.guilds.cache.get(GUILD) ?? (await client.guilds.fetch(GUILD));
 
-  // If the call is already going, start immediately.
-  if (humanCount(channel) > 0) startSession(channel);
+  const target = resolveChannel(guild);
+  if (target) startSession(target);
+  else log("no active call found yet — waiting for someone to join");
 
-  client.on(Events.VoiceStateUpdate, async () => {
+  client.on(Events.VoiceStateUpdate, () => {
     try {
-      const ch = await (await client.guilds.fetch(GUILD)).channels.fetch(VOICE);
-      const humans = humanCount(ch);
-      if (humans > 0) {
+      const g = client.guilds.cache.get(GUILD);
+      if (!g) return;
+      if (!session) {
+        const ch = resolveChannel(g);
+        if (ch) startSession(ch);
+        return;
+      }
+      const ch = g.channels.cache.get(session.channelId);
+      if (humanCount(ch) > 0) {
         if (emptyTimer) {
           clearTimeout(emptyTimer);
           emptyTimer = null;
         }
-        if (!session) startSession(ch);
-      } else if (session) {
+      } else {
         scheduleEmptyCheck(ch);
       }
     } catch (e) {
@@ -183,9 +211,9 @@ client.once(Events.ClientReady, async () => {
     }
   });
 
-  // Nobody showed up within the join window → leave without a fuss.
+  // No call showed up within the window → leave quietly.
   setTimeout(() => {
-    if (!session) endSession("nobody joined");
+    if (!session) endSession("no call found");
   }, JOIN_WAIT_MS);
 
   // Hard cap so a call left open can never pin the runner.

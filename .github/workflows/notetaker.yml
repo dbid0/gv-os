@@ -1,40 +1,35 @@
 name: notetaker
 
-# The GV notetaker, in the cloud. Joins the Discord team call, records per
-# speaker, transcribes with faster-whisper, distills with Claude Code, and POSTs
-# the recap + action items into GV OS (/api/notetaker/ingest — the tasks land on
-# the Work board). Runs entirely in GitHub's cloud: never a laptop, no paid host.
+# The GV notetaker, in the cloud. Triggered on demand by the Discord /join
+# command (never on a schedule) — the bot joins whatever call people are in,
+# records per speaker, then transcribes with faster-whisper, distills with
+# Claude Code, and POSTs the recap + action items into GV OS (Team -> Meetings,
+# and the tasks land on the Work board). Runs entirely in GitHub's cloud.
+#
+# Two steps on purpose: RECORD keeps only the Node deps so the bot joins the
+# call in seconds; the slow whisper/claude install waits until PROCESS, after
+# the call has already ended.
 #
 # Triggers:
-#   - schedule: the daily agency call. Cron is UTC and has no DST, so we fire at
-#     both 12:55 and 13:55 UTC — one lands ~5 min before 9:00 America/New_York
-#     year-round; the other finds an empty room, waits briefly, and exits clean.
-#   - repository_dispatch (notetaker-record): the Discord /record slash command
-#     (via the app's /api/discord/interactions endpoint) for ad-hoc client calls.
-#   - workflow_dispatch: run it by hand to test.
+#   - repository_dispatch (notetaker-join): the /join slash command, via the
+#     app's /api/discord/interactions endpoint.
+#   - workflow_dispatch: run it by hand (join whoever is in the team call now).
 #
-# Setup (one time) — repo secrets:
-#   DISCORD_BOT_TOKEN         the GV bot token
-#   CLAUDE_CODE_OAUTH_TOKEN   from `claude setup-token` (Daniel's plan; no API key)
-#   SYNC_SECRET               same value as the app's SYNC_SECRET (already set for
-#                             integration-sync)
-# Until DISCORD_BOT_TOKEN is set, the job skips cleanly instead of failing.
+# Setup (one time) — repo secrets: DISCORD_BOT_TOKEN, CLAUDE_CODE_OAUTH_TOKEN,
+# SYNC_SECRET. Until DISCORD_BOT_TOKEN is set, the job skips cleanly.
 
 on:
-  schedule:
-    - cron: "55 12 * * 1-5"
-    - cron: "55 13 * * 1-5"
   repository_dispatch:
-    types: [notetaker-record]
+    types: [notetaker-join]
   workflow_dispatch:
     inputs:
-      voice_channel_id:
-        description: "Voice channel id to record (blank = team call)"
+      caller_id:
+        description: "User id whose call to join (blank = busiest voice channel)"
         required: false
       title:
         description: "Meeting title"
         required: false
-        default: "Agency call"
+        default: "Team call"
       client_slug:
         description: "Scope to one client (slug), optional"
         required: false
@@ -57,7 +52,7 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         run: |
           if [ -z "$DISCORD_BOT_TOKEN" ]; then
-            echo "DISCORD_BOT_TOKEN not set — skipping (add it to enable the notetaker)."
+            echo "DISCORD_BOT_TOKEN not set — skipping."
             echo "go=false" >> "$GITHUB_OUTPUT"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"
@@ -69,42 +64,50 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Set up Python
+      - name: Install recorder deps (fast — so the bot joins quickly)
         if: steps.guard.outputs.go == 'true'
+        working-directory: notetaker
+        run: npm install --no-audit --no-fund
+
+      - name: Join the call + record
+        id: rec
+        if: steps.guard.outputs.go == 'true'
+        working-directory: notetaker
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          GUILD_ID: ${{ github.event.client_payload.guild_id || vars.GV_GUILD_ID || '1535873854570889257' }}
+          CALLER_ID: ${{ github.event.client_payload.caller_id || github.event.inputs.caller_id || '' }}
+          VOICE_CHANNEL_ID: ${{ github.event.client_payload.voice_channel_id || '' }}
+          JOIN_WAIT_MINUTES: "15"
+          MAX_MINUTES: "120"
+        run: node recorder.js
+
+      - name: Set up Python
+        if: steps.guard.outputs.go == 'true' && steps.rec.outputs.session_dir != ''
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install system + transcription + Claude Code
-        if: steps.guard.outputs.go == 'true'
+      - name: Install transcription + Claude Code
+        if: steps.guard.outputs.go == 'true' && steps.rec.outputs.session_dir != ''
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           pip install --quiet faster-whisper
           npm install -g @anthropic-ai/claude-code
 
-      - name: Install recorder deps
-        if: steps.guard.outputs.go == 'true'
-        working-directory: notetaker
-        run: npm install --no-audit --no-fund
-
-      - name: Record + process the call
-        if: steps.guard.outputs.go == 'true'
+      - name: Transcribe + distill + post to GV OS
+        if: steps.guard.outputs.go == 'true' && steps.rec.outputs.session_dir != ''
         working-directory: notetaker
         env:
-          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
           GV_OS_URL: https://os.globalventures.app
-          # Team call defaults; a dispatch/manual run can override the channel.
-          GUILD_ID: ${{ vars.GV_GUILD_ID || '1535873854570889257' }}
-          VOICE_CHANNEL_ID: ${{ github.event.client_payload.voice_channel_id || github.event.inputs.voice_channel_id || vars.GV_VOICE_CHANNEL_ID || '1536050916879376425' }}
-          MEETING_TITLE: ${{ github.event.client_payload.title || github.event.inputs.title || 'Agency call' }}
-          MEETING_SOURCE: ${{ github.event.client_payload.source || (github.event_name == 'schedule' && 'agency_call') || 'agency_call' }}
-          CLIENT_SLUG: ${{ github.event.client_payload.client_slug || github.event.inputs.client_slug || '' }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           TASKS_CHANNEL_ID: ${{ vars.GV_TASKS_CHANNEL_ID || '' }}
-          JOIN_WAIT_MINUTES: "20"
-          MAX_MINUTES: "120"
-        run: node recorder.js
+          MEETING_TITLE: ${{ github.event.client_payload.title || github.event.inputs.title || 'Team call' }}
+          MEETING_SOURCE: ${{ github.event.client_payload.source || 'agency_call' }}
+          CLIENT_SLUG: ${{ github.event.client_payload.client_slug || github.event.inputs.client_slug || '' }}
+        run: python3 process_call.py "${{ steps.rec.outputs.session_dir }}"
 
       - name: Upload run log
         if: always() && steps.guard.outputs.go == 'true'
