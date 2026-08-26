@@ -462,6 +462,31 @@
   animation: gv-spark-halo 2.4s ease-in-out infinite;
 }
 
+/* Ambient "rising chart" texture behind hero + overview surfaces. Decorative
+   only; stilled under prefers-reduced-motion by the base rule above. */
+@keyframes gv-ambient-rise {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+.gv-ambient-bar {
+  align-self: flex-end;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--brand) 60%, transparent),
+    transparent
+  );
+  transform-origin: bottom;
+  animation: gv-ambient-rise 4s ease-in-out infinite;
+}
+
 /* Deal-closed confetti (v2 §5) — pure CSS, fires once per toast. */
 @keyframes gv-confetti-fall {
   0% {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
+import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
@@ -79,6 +80,9 @@ export function HomeHeadline({
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
       >
+        {/* Ambient rising-chart motion, faintest layer — Whop-style life behind
+            the number, under the real growth curve. */}
+        <AmbientBackdrop />
         {/* A faint brand wash in the top-right corner gives the hero depth
             without fighting the number. */}
         <div
