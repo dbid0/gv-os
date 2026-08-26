@@ -23,6 +23,7 @@ const {
   joinVoiceChannel,
   EndBehaviorType,
   VoiceConnectionStatus,
+  entersState,
 } = require("@discordjs/voice");
 const prism = require("prism-media");
 const fs = require("fs");
@@ -36,8 +37,30 @@ const JOIN_WAIT_MS = (Number(process.env.JOIN_WAIT_MINUTES) || 15) * 60_000;
 const EMPTY_GRACE_MS = (Number(process.env.EMPTY_GRACE_SECONDS) || 90) * 1000;
 const MAX_MS = (Number(process.env.MAX_MINUTES) || 120) * 60_000;
 const SESSIONS = process.env.SESSIONS_DIR || path.join(process.cwd(), "sessions");
+// Where to speak up. Default: the voice channel's own text chat, so the message
+// appears right in the call. Falls back to STATUS_CHANNEL_ID if that send fails.
+const STATUS_CHANNEL = process.env.STATUS_CHANNEL_ID || "";
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
+
+/** Best-effort, time-bounded status message so people know what's happening. */
+async function say(channel, text) {
+  const bounded = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 8000))]);
+  try {
+    await bounded(channel.send(text));
+    return;
+  } catch {
+    /* fall through to the configured status channel */
+  }
+  if (STATUS_CHANNEL) {
+    try {
+      const ch = await channel.client.channels.fetch(STATUS_CHANNEL);
+      await bounded(ch.send(text));
+    } catch (e) {
+      log("status post failed:", e.message);
+    }
+  }
+}
 
 if (!TOKEN || !GUILD) {
   log("missing DISCORD_BOT_TOKEN / GUILD_ID — exiting");
@@ -87,10 +110,22 @@ function startSession(channel) {
     selfDeaf: false,
     selfMute: true,
   });
-  session = { dir, connection, channelId: channel.id, active: new Set(), manifest: {} };
+  session = {
+    dir,
+    connection,
+    channel,
+    channelId: channel.id,
+    active: new Set(),
+    manifest: {},
+  };
   log("session started", dir, "channel", channel.name);
 
   connection.on(VoiceConnectionStatus.Ready, () => {
+    say(
+      channel,
+      "🎙️ **Notetaker is recording.** When you're done, just **leave the call** " +
+        "(or drag me out) and I'll post the notes + action items to GV OS in a couple minutes.",
+    );
     const receiver = connection.receiver;
     receiver.speaking.on("start", async (userId) => {
       if (!session || session.active.has(userId)) return;
@@ -135,32 +170,50 @@ function startSession(channel) {
     });
   });
   connection.on("error", (e) => log("conn err", e.message));
+
+  // Someone dragged the bot out of the call → finish now (after a short grace,
+  // so a transient network blip that auto-reconnects doesn't end the session).
+  connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    try {
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
+      ]);
+      // reconnecting on its own — leave the session running
+    } catch {
+      endSession("disconnected");
+    }
+  });
 }
 
-function endSession(reason) {
+async function endSession(reason) {
   if (ended) return;
   ended = true;
   if (session) {
+    const { channel, dir, manifest } = session;
+    fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest));
+    // Hand the workflow the session dir to process + the call's channel so the
+    // finished notes get posted back into that same chat.
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `session_dir=${dir}\nstatus_channel=${session.channelId}\n`,
+      );
+    }
+    log("session ended", reason, dir, "speakers:", Object.values(manifest).join(","));
+    // Only claim we're posting notes if someone actually spoke.
+    if (Object.keys(manifest).length > 0) {
+      await say(
+        channel,
+        "✅ **Call wrapped** — transcribing and posting the notes + tasks to GV OS " +
+          "now. Back in ~2 minutes.",
+      );
+    }
     try {
       session.connection.destroy();
     } catch {
       /* already gone */
     }
-    fs.writeFileSync(
-      path.join(session.dir, "manifest.json"),
-      JSON.stringify(session.manifest),
-    );
-    // Tell the workflow which dir to process (also the newest, but be explicit).
-    if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, `session_dir=${session.dir}\n`);
-    }
-    log(
-      "session ended",
-      reason,
-      session.dir,
-      "speakers:",
-      Object.values(session.manifest).join(","),
-    );
   } else {
     log("ending with no session:", reason);
   }
