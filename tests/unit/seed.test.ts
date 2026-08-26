@@ -100,6 +100,43 @@ describe("buildSeedData", () => {
     expect(data.offerSettings.length).toBe(4);
   });
 
+  it("seeds the newer surfaces — email, rev-share, and the calendar", () => {
+    expect(data.revShareRules.length).toBe(4);
+    expect(data.integrations.length).toBe(4);
+    expect(data.kitSnapshots.length).toBe(4);
+    expect(data.actionItems.length).toBe(40);
+    // Every Kit account is a connected non-processor integration with sequences.
+    expect(data.integrations.every((i) => i.provider === "kit")).toBe(true);
+    expect(data.integrations.every((i) => i.status === "connected")).toBe(true);
+    expect(data.kitSnapshots.every((s) => (s.sequences ?? []).length > 0)).toBe(true);
+    // Rev-share rules + action items carry the marker for an exact reset.
+    expect(data.revShareRules.every((r) => r.note?.startsWith(MARKER))).toBe(true);
+    expect(data.actionItems.every((a) => a.notes?.startsWith(MARKER))).toBe(true);
+    // Some calendar tasks are scheduled (have a due date), some are backlog.
+    expect(data.actionItems.some((a) => a.dueDate)).toBe(true);
+    expect(data.actionItems.some((a) => !a.dueDate)).toBe(true);
+  });
+
+  it("runs only EOD + BOD cadences — never the retired EOW", () => {
+    const cadences = new Set(["eod", "bod"]);
+    expect(data.activityReports.every((r) => cadences.has(r.kind as string))).toBe(
+      true,
+    );
+    expect(data.eodTemplates.every((t) => cadences.has(t.cadence as string))).toBe(
+      true,
+    );
+    expect(data.activityReports.some((r) => r.kind === "bod")).toBe(true);
+  });
+
+  it("captures a wellbeing check-in (1-5) on every EOD, some below 3", () => {
+    const moods = data.activityReports.map(
+      (r) => (r.metrics as Record<string, number>).mood,
+    );
+    expect(moods.every((m) => typeof m === "number" && m >= 1 && m <= 5)).toBe(true);
+    // At least one low check-in, so the "check on this rep" alert has real data.
+    expect(moods.some((m) => m < 3)).toBe(true);
+  });
+
   it("tags every row with the demo-seed marker so reset is exact", () => {
     expect(data.clients.every((c) => c.externalRef === MARKER)).toBe(true);
     expect(data.reps.every((r) => r.externalRef?.startsWith(`${MARKER}:`))).toBe(true);
