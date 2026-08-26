@@ -70,7 +70,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-8">
-      <PageHeader title="Settings" />
+      <PageHeader
+        title="Settings"
+        description="Goals, per-offer alerts, and connections. Goals are targets the dashboards measure against — never money in the ledger."
+      />
 
       <section className="space-y-3">
         <SectionLabel>Organization</SectionLabel>
