@@ -23,7 +23,7 @@ import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
 import { roster } from "@/lib/roster";
-import { getSalesMetrics } from "@/lib/sales/metrics";
+import { getSalesMetrics, normalizeSalesMetricIds } from "@/lib/sales/metrics";
 import {
   getCloseRatePct,
   getEodCompliance,
@@ -64,7 +64,8 @@ export default async function DashboardPage({
     { rows: backlog },
     storedMode,
     storedCards,
-    salesMetrics,
+    salesCatalog,
+    storedMetrics,
     repTrends,
     [scalars],
   ] = await Promise.all([
@@ -76,6 +77,7 @@ export default async function DashboardPage({
     getPref<string>(user?.email ?? null, "home-mode"),
     getPref<unknown>(user?.email ?? null, "dashboard-cards"),
     getSalesMetrics(),
+    getPref<unknown>(user?.email ?? null, "sales-metrics"),
     getRepTrends(todayKey),
     getDb().execute<{
       pending_payout_cents: number;
@@ -134,6 +136,7 @@ export default async function DashboardPage({
   }));
 
   const cards = normalizeDashboardCards(storedCards);
+  const selectedMetricIds = normalizeSalesMetricIds(storedMetrics);
   const arItems = partialDealAr(backlog);
   const arTotalCents = arItems.reduce((t, i) => t + i.arCents, 0);
 
@@ -178,17 +181,9 @@ export default async function DashboardPage({
           per-team cash breakdown, folded from client-layer money. */}
       <TeamsOverviewCard overview={teamsOverview} />
 
-      {/* The RepVision-style KPI wall — every sales number at a glance, dense
-          and scannable, above the customizable cards. */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <h2 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-            Sales metrics
-          </h2>
-          <span className="bg-border h-px flex-1" />
-        </div>
-        <SalesMetricsGrid metrics={salesMetrics} />
-      </section>
+      {/* The RepVision-style KPI wall — a metric builder: dense, scannable, and
+          add/remove customizable, above the customizable cards. */}
+      <SalesMetricsGrid catalog={salesCatalog} selected={selectedMetricIds} />
 
       {/* Revenue over time — the RepVision chart panel: real $ and date axes,
           gridlines, and a hover crosshair over the daily collected series. */}
