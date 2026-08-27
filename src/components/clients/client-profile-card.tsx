@@ -7,6 +7,7 @@ import { ArrowRight, Camera, Check, Pencil, Settings2, X } from "lucide-react";
 
 import { saveClientSummary } from "@/app/(app)/clients/[slug]/actions";
 import { saveWorkspaceLogo } from "@/app/w/[slug]/logo-actions";
+import { ClientLogo } from "@/components/clients/client-logo";
 import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -55,8 +56,6 @@ export interface ClientCard {
   summary: string;
   since: string;
   accent: string;
-  initial: string;
-  logo: string | null;
 }
 
 /**
@@ -74,6 +73,10 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(client.summary);
   const [saving, startSave] = useTransition();
+  // The logo image route is cached, so router.refresh() alone won't repaint a
+  // just-uploaded logo. Hold the fresh data URL locally to keep the upload's
+  // instant feedback; the cached route takes over on the next full load.
+  const [freshLogo, setFreshLogo] = useState<string | null>(null);
 
   const cancelEdit = () => {
     setDraft(client.summary);
@@ -115,24 +118,20 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
             pending && "opacity-60",
           )}
         >
-          {client.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL
+          {freshLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- fresh local upload preview (data URL); the cached route serves it on next load
             <img
-              src={client.logo}
+              src={freshLogo}
               alt=""
               className="size-11 rounded-lg border object-cover"
             />
           ) : (
-            <span
-              className="grid size-11 place-items-center rounded-lg border text-sm font-bold"
-              style={{
-                color: client.accent,
-                borderColor: `${client.accent}55`,
-                background: `${client.accent}14`,
-              }}
-            >
-              {client.initial}
-            </span>
+            <ClientLogo
+              slug={client.slug}
+              name={client.name}
+              accent={client.accent}
+              size={44}
+            />
           )}
           <span className="bg-background/70 absolute inset-0 grid place-items-center rounded-lg opacity-0 transition-opacity group-hover:opacity-100">
             <Camera className="size-4" />
@@ -152,6 +151,7 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
               try {
                 const dataUrl = await toLogoDataUrl(file);
                 await saveWorkspaceLogo(client.slug, dataUrl);
+                setFreshLogo(dataUrl);
                 toast({ tone: "success", title: `${client.name} logo updated` });
                 router.refresh();
               } catch (err) {

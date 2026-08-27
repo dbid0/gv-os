@@ -6,8 +6,8 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill, type StatusTone } from "@/components/ui/status";
 import { Kpi } from "@/components/ui/metric";
 import { buttonVariants } from "@/components/ui/button";
+import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientHealthData } from "@/lib/clients/health-data";
-import { clientLogos } from "@/lib/clients/logos";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Client health - GV OS" };
@@ -25,7 +25,7 @@ const BAND_LABEL: Record<string, string> = {
 };
 
 export default async function ClientHealthPage() {
-  const [rows, logos] = await Promise.all([getClientHealthData(), clientLogos()]);
+  const rows = await getClientHealthData();
   const atRisk = rows.filter((r) => r.health.band === "at_risk").length;
   const watch = rows.filter((r) => r.health.band === "watch").length;
   const healthy = rows.filter((r) => r.health.band === "healthy").length;
@@ -79,26 +79,7 @@ export default async function ClientHealthPage() {
               )}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                {logos[r.slug] ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- data URL
-                  <img
-                    src={logos[r.slug]}
-                    alt=""
-                    className="size-10 shrink-0 rounded-lg border object-cover"
-                  />
-                ) : (
-                  <span
-                    aria-hidden
-                    className="grid size-10 shrink-0 place-items-center rounded-lg border text-sm font-bold"
-                    style={{
-                      color: r.accent,
-                      borderColor: `${r.accent}55`,
-                      background: `${r.accent}14`,
-                    }}
-                  >
-                    {r.name.slice(0, 1)}
-                  </span>
-                )}
+                <ClientLogo slug={r.slug} name={r.name} accent={r.accent} size={40} />
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-medium">
                     {r.name}

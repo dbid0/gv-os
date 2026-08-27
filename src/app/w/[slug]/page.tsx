@@ -12,8 +12,8 @@ import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
 import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
+import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
-import { clientLogos } from "@/lib/clients/logos";
 import { getClientReport } from "@/lib/clients/report";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { cents } from "@/lib/money";
@@ -69,14 +69,12 @@ export default async function WorkspacePage({
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
-  const [report, drive, { rows: backlog }, visibility, logos] = await Promise.all([
+  const [report, drive, { rows: backlog }, visibility] = await Promise.all([
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
     listTransactions({}),
     portalVisibility(slug),
-    clientLogos(),
   ]);
-  const logo = logos[slug] ?? null;
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
   const show = (key: string, fallback: boolean) =>
@@ -132,26 +130,7 @@ export default async function WorkspacePage({
           config; owners viewing their own portal never see it. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL
-            <img
-              src={logo}
-              alt=""
-              className="size-10 shrink-0 rounded-lg border object-cover"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="grid size-10 shrink-0 place-items-center rounded-lg border text-sm font-bold"
-              style={{
-                color: client.accent,
-                borderColor: `${client.accent}55`,
-                background: `${client.accent}14`,
-              }}
-            >
-              {client.name.slice(0, 1)}
-            </span>
-          )}
+          <ClientLogo slug={slug} name={client.name} accent={client.accent} size={40} />
           <div>
             <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
             <p className="text-muted-foreground text-xs">{client.offer}</p>
