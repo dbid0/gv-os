@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, FileText, Mic } from "lucide-react";
+import { ArrowLeft, FileText, Mic } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +83,7 @@ export default async function MeetingsPage() {
       <PageHeader
         title="Team"
         highlight="meetings."
-        description="Every recorded call — the morning standup and ad-hoc client calls. The notetaker records in Discord, transcribes, and drops the recap here; action items flow straight to the Work board."
+        description="Every recorded call. Run /join in a Discord call and the notetaker joins, transcribes it, and drops the recap here; action items flow straight to the Work board."
         actions={
           <Link
             href="/team"
@@ -99,15 +99,10 @@ export default async function MeetingsPage() {
           <div className="text-faint flex flex-col items-center gap-3 py-10 text-center">
             <Mic className="size-6 opacity-50" />
             <p className="max-w-sm text-sm">
-              When the notetaker records a call, its recap, transcript, and action items
-              land here. The next agency call will be the first.
+              Nothing recorded yet. Run{" "}
+              <span className="text-foreground font-medium">/join</span> in any Discord
+              call and its recap, transcript, and action items will land here.
             </p>
-            <a
-              href="https://os.globalventures.app"
-              className="text-muted-foreground inline-flex items-center gap-1 text-xs"
-            >
-              Auto-records the 9:00 AM call <ExternalLink className="size-3" />
-            </a>
           </div>
         </Panel>
       ) : (
