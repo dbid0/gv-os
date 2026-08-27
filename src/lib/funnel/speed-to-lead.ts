@@ -88,3 +88,85 @@ export function computeSpeedToLead(
     slaPct: matched ? durations.filter((d) => d <= 5 * MINUTE).length / matched : null,
   };
 }
+
+/** An application tagged with the offer (client) it belongs to. */
+export interface SpeedToLeadClientApp extends SpeedToLeadApp {
+  clientId: string | null;
+  clientName: string | null;
+}
+
+/** A logged call tagged with the offer (client) it belongs to. */
+export interface SpeedToLeadClientCall extends SpeedToLeadCall {
+  clientId: string | null;
+  clientName: string | null;
+}
+
+/** One offer's speed-to-lead line: the agency stats plus who they belong to. */
+export interface SpeedToLeadClientStats extends SpeedToLeadStats {
+  clientId: string | null;
+  clientName: string;
+}
+
+/**
+ * The grouping key for an offer. Prefer the stable client id; fall back to a
+ * normalized name so rows that only carry a name still bucket together; return
+ * null for rows with no offer at all (they carry no speed-to-lead we can
+ * attribute).
+ */
+function clientKey(clientId: string | null, clientName: string | null): string | null {
+  if (clientId) return clientId;
+  const n = clientName?.trim().toLowerCase();
+  return n ? `name:${n}` : null;
+}
+
+/**
+ * Speed to lead broken out per offer (client). Applications drive it: every
+ * offer that received at least one application gets a row, and its stats reuse
+ * the exact same pure `computeSpeedToLead` logic over that offer's own apps and
+ * calls — a lead is only ever matched to a dial inside the same offer.
+ *
+ * Rows with no offer are dropped (nothing to attribute them to). Deterministic
+ * order: most matched first, then most dialable, then name.
+ */
+export function computeSpeedToLeadByClient(
+  apps: SpeedToLeadClientApp[],
+  calls: SpeedToLeadClientCall[],
+): SpeedToLeadClientStats[] {
+  const appsByClient = new Map<string, SpeedToLeadApp[]>();
+  const callsByClient = new Map<string, SpeedToLeadCall[]>();
+  const nameByKey = new Map<string, string>();
+
+  for (const a of apps) {
+    const key = clientKey(a.clientId, a.clientName);
+    if (key === null) continue;
+    const bucket = appsByClient.get(key);
+    if (bucket) bucket.push(a);
+    else appsByClient.set(key, [a]);
+    if (a.clientName && !nameByKey.has(key)) nameByKey.set(key, a.clientName);
+  }
+  for (const c of calls) {
+    const key = clientKey(c.clientId, c.clientName);
+    if (key === null) continue;
+    const bucket = callsByClient.get(key);
+    if (bucket) bucket.push(c);
+    else callsByClient.set(key, [c]);
+    if (c.clientName && !nameByKey.has(key)) nameByKey.set(key, c.clientName);
+  }
+
+  const groups: SpeedToLeadClientStats[] = [];
+  for (const [key, clientApps] of appsByClient) {
+    groups.push({
+      clientId: key.startsWith("name:") ? null : key,
+      clientName: nameByKey.get(key) ?? "Unassigned",
+      ...computeSpeedToLead(clientApps, callsByClient.get(key) ?? []),
+    });
+  }
+
+  groups.sort(
+    (a, b) =>
+      b.matched - a.matched ||
+      b.dialableApps - a.dialableApps ||
+      a.clientName.localeCompare(b.clientName),
+  );
+  return groups;
+}

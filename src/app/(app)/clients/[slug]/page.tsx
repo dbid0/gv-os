@@ -65,9 +65,9 @@ function modulesFor(slug: string) {
     },
     {
       label: "Accounting",
-      href: `/w/${slug}`,
+      href: `/clients/${slug}/accounting`,
       icon: Receipt,
-      detail: "Cash, revenue, agreements",
+      detail: "Cash, rev-share, fees, deals",
       ready: true,
     },
     {

@@ -9,6 +9,7 @@ import { applications, clients, signedDocs } from "@/db/schema/app";
 
 export interface ApplicationRow {
   id: string;
+  clientId: string | null;
   clientName: string | null;
   formName: string | null;
   email: string | null;
@@ -38,6 +39,7 @@ export async function listApplications(limit = 100): Promise<ApplicationRow[]> {
   return db
     .select({
       id: applications.id,
+      clientId: applications.clientId,
       clientName: clients.name,
       formName: applications.formName,
       email: applications.email,

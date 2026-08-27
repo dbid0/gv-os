@@ -6,6 +6,8 @@ import {
   getEodCompliance,
   getLeaderboard,
   getSalesOverview,
+  type LeaderboardRow,
+  type SalesOverviewStats,
 } from "@/lib/sales/queries";
 
 /**
@@ -326,14 +328,27 @@ export function computeSalesMetrics(i: SalesMetricsInput): SalesMetric[] {
   }));
 }
 
-/** Gather real rows and format the full metric catalog. */
-export async function getSalesMetrics(): Promise<SalesMetric[]> {
-  const [overview, leaderboard, rollup, eod] = await Promise.all([
-    getSalesOverview(),
-    getLeaderboard(),
-    getCommissionRollup(),
-    getEodCompliance(),
-  ]);
+/**
+ * Extra inputs a page may already have on hand — commission owed and EOD
+ * compliance — folded into the metric input so their metrics show real values
+ * without this module re-querying. Absent, those metrics degrade honestly.
+ */
+export interface SalesMetricsExtras {
+  commissionOwedCents?: number;
+  eodSubmitted?: number;
+  eodTotal?: number;
+}
+
+/**
+ * Build the catalog from already-fetched overview + leaderboard (+ optional
+ * extras the page already has). Pure — so a page that already holds these rows
+ * (the dashboard) derives every metric without a second query.
+ */
+export function salesMetricsFrom(
+  overview: SalesOverviewStats,
+  leaderboard: LeaderboardRow[],
+  extras: SalesMetricsExtras = {},
+): SalesMetric[] {
   const totals = leaderboard.reduce(
     (acc, r) => ({
       dials: acc.dials + r.dials,
@@ -358,9 +373,24 @@ export async function getSalesMetrics(): Promise<SalesMetric[]> {
     deals: overview.dealsClosed,
     activeReps: leaderboard.length,
     activeTeams: overview.teamCount,
+    commissionOwedCents: extras.commissionOwedCents,
+    eodSubmitted: extras.eodSubmitted,
+    eodTotal: extras.eodTotal,
+    ...totals,
+  });
+}
+
+/** Gather real rows and build the full catalog — for standalone callers. */
+export async function getSalesMetrics(): Promise<SalesMetric[]> {
+  const [overview, leaderboard, rollup, eod] = await Promise.all([
+    getSalesOverview(),
+    getLeaderboard(),
+    getCommissionRollup(),
+    getEodCompliance(),
+  ]);
+  return salesMetricsFrom(overview, leaderboard, {
     commissionOwedCents: rollup.totalOwedCents,
     eodSubmitted: eod.submitted,
     eodTotal: eod.total,
-    ...totals,
   });
 }

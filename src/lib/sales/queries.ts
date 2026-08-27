@@ -302,7 +302,7 @@ export async function getEodCompliance(
     .from(activityReports)
     .where(
       and(
-        eq(activityReports.kind, "eod"),
+        eq(activityReports.kind, kind),
         gte(activityReports.reportDate, dayStart),
         lte(activityReports.reportDate, dayEnd),
       ),
@@ -313,12 +313,17 @@ export async function getEodCompliance(
 }
 
 /** Overall close rate = deals closed ÷ total shows, from real activity + deals. */
-export async function getCloseRatePct(): Promise<number | null> {
-  const rows = await getLeaderboard();
+/** Close rate from an already-fetched leaderboard — pure, so the dashboard can
+ * derive it without a second getLeaderboard() call. */
+export function closeRateFrom(rows: LeaderboardRow[]): number | null {
   const shows = rows.reduce((n, r) => n + r.shows, 0);
   const deals = rows.reduce((n, r) => n + r.dealsClosed, 0);
   if (!shows) return null;
   return Math.round((deals / shows) * 100);
+}
+
+export async function getCloseRatePct(): Promise<number | null> {
+  return closeRateFrom(await getLeaderboard());
 }
 
 /** One rep's ranked line: EOD activity summed, plus deals and cash from real rows. */
