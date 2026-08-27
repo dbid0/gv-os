@@ -6,6 +6,8 @@ import {
   CalendarCheck,
   Gauge,
   HeartPulse,
+  PhoneCall,
+  Sunrise,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -62,6 +64,7 @@ export default async function BriefPage() {
     settings,
     deals,
     compliance,
+    bodCompliance,
     eodReports,
     apps,
     calls,
@@ -71,7 +74,8 @@ export default async function BriefPage() {
     listTransactions({}),
     getSettings(),
     listDeals(),
-    getEodCompliance(),
+    getEodCompliance("eod"),
+    getEodCompliance("bod"),
     listActivityReports("eod"),
     listApplications(),
     listCallLogs(),
@@ -98,14 +102,17 @@ export default async function BriefPage() {
   const goalCents = settings.monthlyRevenueGoalCents ?? 0;
   const pace = monthPace(headline.collectedCents, goalCents, d, daysInMonth);
 
-  // 2) Yesterday — deals closed + applications in.
+  // 2) Today's cash + yesterday's deals, cash, and calls (calls > apps here).
+  const cashToday = homeRangeHeadline(
+    backlog,
+    "all",
+    rangeBounds("today", todayKey),
+  ).collectedCents;
   const yDeals = deals.filter(
     (dl) => dl.closedAt && dayKeyCT(dl.closedAt) === yesterdayKey,
   );
   const yDealCash = yDeals.reduce((s, dl) => s + dl.cashCollectedCents, 0);
-  const yApps = apps.filter(
-    (a) => dayKeyCT(a.submittedAt ?? a.createdAt) === yesterdayKey,
-  ).length;
+  const yCalls = calls.filter((c) => dayKeyCT(c.occurredAt) === yesterdayKey).length;
 
   // 3) Wellbeing — today's EOD check-ins below 3.
   const lowMood = eodReports
@@ -204,17 +211,28 @@ export default async function BriefPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
-          label="Deals yesterday"
-          value={String(yDeals.length)}
+          label="Cash today"
+          value={<Money amount={cents(cashToday)} />}
           icon={TrendingUp}
-          tone="brand"
+          tone="success"
         />
+        <Kpi label="Deals yesterday" value={String(yDeals.length)} tone="brand" />
         <Kpi
           label="Cash yesterday"
           value={<Money amount={cents(yDealCash)} />}
           tone="success"
         />
-        <Kpi label="Applications yesterday" value={String(yApps)} icon={ArrowRight} />
+        <Kpi label="Calls yesterday" value={String(yCalls)} icon={PhoneCall} />
+      </div>
+
+      {/* Check-ins in today — BOD first thing, EOD tonight. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Kpi
+          label="BODs in today"
+          value={`${bodCompliance.submitted} / ${bodCompliance.total}`}
+          icon={Sunrise}
+          tone={bodCompliance.missing.length > 0 ? "warning" : "success"}
+        />
         <Kpi
           label="EODs in today"
           value={`${compliance.submitted} / ${compliance.total}`}
@@ -270,13 +288,13 @@ export default async function BriefPage() {
           <div className="space-y-4">
             <div>
               <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium">
-                <CalendarCheck className="size-3.5" /> EOD not in yet
+                <Sunrise className="size-3.5" /> BOD not in yet
               </p>
-              {compliance.missing.length === 0 ? (
+              {bodCompliance.missing.length === 0 ? (
                 <p className="text-success text-sm">Everyone&apos;s in. ✓</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {compliance.missing.map((name) => (
+                  {bodCompliance.missing.map((name) => (
                     <span
                       key={name}
                       className="text-muted-foreground rounded-full border px-2 py-0.5 text-xs"
