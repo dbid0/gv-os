@@ -23,10 +23,11 @@ import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
 import { roster } from "@/lib/roster";
-import { getSalesMetrics } from "@/lib/sales/metrics";
+import { salesMetricsFrom } from "@/lib/sales/metrics";
 import {
-  getCloseRatePct,
+  closeRateFrom,
   getEodCompliance,
+  getLeaderboard,
   getSalesOverview,
 } from "@/lib/sales/queries";
 import { getSettings } from "@/lib/settings";
@@ -58,24 +59,22 @@ export default async function DashboardPage({
   const todayKey = dayKeyCT(new Date());
   const [
     overview,
+    leaderboard,
     compliance,
-    closeRatePct,
     settings,
     { rows: backlog },
     storedMode,
     storedCards,
-    salesMetrics,
     repTrends,
     [scalars],
   ] = await Promise.all([
     getSalesOverview(),
+    getLeaderboard(),
     getEodCompliance(),
-    getCloseRatePct(),
     getSettings(),
     listTransactions({}),
     getPref<string>(user?.email ?? null, "home-mode"),
     getPref<unknown>(user?.email ?? null, "dashboard-cards"),
-    getSalesMetrics(),
     getRepTrends(todayKey),
     getDb().execute<{
       pending_payout_cents: number;
@@ -96,6 +95,13 @@ export default async function DashboardPage({
           as processor_fees_cents
     `),
   ]);
+
+  // Derived from the single leaderboard + overview above — no second fetch.
+  // (Previously getCloseRatePct + getSalesMetrics re-ran both queries, so the
+  // dashboard scanned deals/moneyEvents/activity 2× each. Same numbers, fewer
+  // queries: both are pure functions of the already-fetched rows.)
+  const closeRatePct = closeRateFrom(leaderboard);
+  const salesMetrics = salesMetricsFrom(overview, leaderboard);
 
   const mode = normalizeHomeMode(storedMode);
   const custom =

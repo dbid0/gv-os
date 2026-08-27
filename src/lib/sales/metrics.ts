@@ -1,7 +1,12 @@
 import "server-only";
 
 import { formatUSD, cents } from "@/lib/money";
-import { getLeaderboard, getSalesOverview } from "@/lib/sales/queries";
+import {
+  getLeaderboard,
+  getSalesOverview,
+  type LeaderboardRow,
+  type SalesOverviewStats,
+} from "@/lib/sales/queries";
 
 /**
  * The RepVision-style dense KPI wall — one flat list of the numbers a sales
@@ -97,12 +102,14 @@ export function computeSalesMetrics(i: SalesMetricsInput): SalesMetric[] {
   ];
 }
 
-/** Gather real rows and build the wall. */
-export async function getSalesMetrics(): Promise<SalesMetric[]> {
-  const [overview, leaderboard] = await Promise.all([
-    getSalesOverview(),
-    getLeaderboard(),
-  ]);
+/**
+ * Build the wall from already-fetched overview + leaderboard. Pure — so a page
+ * that already has both (the dashboard) can derive metrics without re-querying.
+ */
+export function salesMetricsFrom(
+  overview: SalesOverviewStats,
+  leaderboard: LeaderboardRow[],
+): SalesMetric[] {
   const totals = leaderboard.reduce(
     (acc, r) => ({
       dials: acc.dials + r.dials,
@@ -129,4 +136,13 @@ export async function getSalesMetrics(): Promise<SalesMetric[]> {
     activeTeams: overview.teamCount,
     ...totals,
   });
+}
+
+/** Gather real rows and build the wall. */
+export async function getSalesMetrics(): Promise<SalesMetric[]> {
+  const [overview, leaderboard] = await Promise.all([
+    getSalesOverview(),
+    getLeaderboard(),
+  ]);
+  return salesMetricsFrom(overview, leaderboard);
 }
