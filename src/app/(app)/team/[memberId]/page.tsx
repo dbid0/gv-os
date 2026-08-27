@@ -24,6 +24,11 @@ export default async function MemberBoardPage(props: {
   ]);
 
   return (
-    <MemberBoard profile={profile} members={members} linkableReps={linkableReps} />
+    <MemberBoard
+      profile={profile}
+      members={members}
+      linkableReps={linkableReps}
+      nowMs={now.getTime()}
+    />
   );
 }
