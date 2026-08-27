@@ -26,16 +26,22 @@ import { resolveRealRole } from "@/lib/auth/resolve-role";
  * this renders, so there is no loading state to design around.
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const user = await shellUser();
-  const [monthCashCents, unreadCount, notifications, cookieStore, prefs, realRole] =
+  // The four user-independent fetches don't need user.email, so run them IN
+  // PARALLEL with the auth roundtrip instead of behind it — that auth wait was
+  // on the critical path of every cold shell render. Only prefs + realRole need
+  // the resolved email, so they wait in a second (tiny) batch.
+  const [user, monthCashCents, unreadCount, notifications, cookieStore] =
     await Promise.all([
+      shellUser(),
       currentMonthCashCents(),
       unreadNotificationCount(),
       recentNotifications(),
       cookies(),
-      getPrefs(user?.email ?? null, ["avatar", "display-name"]),
-      resolveRealRole(user?.email ?? null),
     ]);
+  const [prefs, realRole] = await Promise.all([
+    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
+    resolveRealRole(user?.email ?? null),
+  ]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
