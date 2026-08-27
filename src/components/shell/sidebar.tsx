@@ -65,6 +65,13 @@ export function Sidebar({
           }))
           .filter((group) => group.items.length > 0)
       : navigation;
+  // Longest matching href wins, so a parent item (/team) doesn't stay lit when a
+  // more specific sibling (/team/work, /team/meetings) is the real match.
+  const activeHref =
+    visibleNavigation
+      .flatMap((g) => g.items)
+      .filter((it) => pathname === it.href || pathname.startsWith(`${it.href}/`))
+      .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
   const activeClient =
     roster.find((c) => pathname.startsWith(`/clients/${c.slug}`)) ?? null;
   const reduceMotion = useReducedMotion();
@@ -245,9 +252,7 @@ export function Sidebar({
                   <NavLink
                     item={item}
                     collapsed={collapsed}
-                    active={
-                      pathname === item.href || pathname.startsWith(`${item.href}/`)
-                    }
+                    active={item.href === activeHref}
                     reduceMotion={Boolean(reduceMotion)}
                   />
                 </li>
