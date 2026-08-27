@@ -2,6 +2,8 @@ import "server-only";
 
 import { formatUSD, cents } from "@/lib/money";
 import {
+  getCommissionRollup,
+  getEodCompliance,
   getLeaderboard,
   getSalesOverview,
   type LeaderboardRow,
@@ -9,10 +11,17 @@ import {
 } from "@/lib/sales/queries";
 
 /**
- * The RepVision-style dense KPI wall — one flat list of the numbers a sales
- * dashboard leads with, computed from real activity (summed EOD reports) and
- * the money ledger. Pure formatting so it is testable to the character; the
- * DB gather is the thin wrapper below.
+ * The RepVision-style dense KPI wall — a curated CATALOG of the numbers a sales
+ * dashboard leads with, computed from real activity (summed EOD reports), the
+ * money ledger, and the tested commission engine. Every figure is pure
+ * formatting so it is testable to the character; the DB gather is the thin
+ * wrapper below.
+ *
+ * The wall is a metric BUILDER (Daniel's ask, WAP / RepVision style): the
+ * registry below is the full catalog a user can add from, `computeSalesMetrics`
+ * formats every one, and the dashboard renders only the ids the user has kept.
+ * Nothing here invents a number — a metric is a derived DISPLAY of an
+ * already-computed value, never new money math.
  *
  * Rates divide safely: a zero denominator yields an em dash, never NaN or a
  * fake 0% — "no shows yet" is not the same claim as "0% close rate".
@@ -27,6 +36,11 @@ export interface SalesMetric {
   kind: MetricKind;
 }
 
+/**
+ * Everything a metric can be derived from, gathered once. New fields are
+ * optional so a metric that has no source yet degrades honestly (an em dash or
+ * a real zero) instead of forcing every caller to supply it.
+ */
 export interface SalesMetricsInput {
   cashCents: number;
   revenueCents: number;
@@ -39,6 +53,12 @@ export interface SalesMetricsInput {
   followUps: number;
   activeReps: number;
   activeTeams: number;
+  /** Total commission owed across the book, from the commission rollup. */
+  commissionOwedCents?: number;
+  /** EODs filed on the latest submission day. */
+  eodSubmitted?: number;
+  /** Active reps expected to file that day. */
+  eodTotal?: number;
 }
 
 const DASH = "—";
@@ -56,59 +76,278 @@ function perUnit(totalCents: number, count: number): string {
 }
 
 const count = (n: number) => n.toLocaleString("en-US");
+const money = (c: number) => formatUSD(cents(c));
 
-/**
- * Build the metric wall. Order mirrors RepVision: money first, then volume,
- * then the derived rates — the reading order a sales lead scans.
- */
-export function computeSalesMetrics(i: SalesMetricsInput): SalesMetric[] {
-  const money = (key: string, label: string, value: string): SalesMetric => ({
-    key,
-    label,
-    value,
-    kind: "money",
-  });
-  const vol = (key: string, label: string, n: number): SalesMetric => ({
-    key,
-    label,
-    value: count(n),
-    kind: "count",
-  });
-  const pct = (key: string, label: string, value: string): SalesMetric => ({
-    key,
-    label,
-    value,
-    kind: "rate",
-  });
-
-  return [
-    money("cash", "Cash collected", formatUSD(cents(i.cashCents))),
-    money("revenue", "Revenue", formatUSD(cents(i.revenueCents))),
-    money("cash-per-deal", "Cash / deal", perUnit(i.cashCents, i.deals)),
-    money("avg-deal", "Avg deal size", perUnit(i.revenueCents, i.deals)),
-    vol("deals", "Deals closed", i.deals),
-    vol("shows", "Shows", i.shows),
-    vol("sets", "Sets booked", i.setsBooked),
-    vol("dials", "Dials", i.dials),
-    vol("connects", "Connects", i.connects),
-    vol("calls-taken", "Calls taken", i.callsTaken),
-    vol("follow-ups", "Follow-ups", i.followUps),
-    vol("reps", "Active reps", i.activeReps),
-    vol("teams", "Active teams", i.activeTeams),
-    pct("close-rate", "Close rate", rate(i.deals, i.shows)),
-    pct("set-to-close", "Set-to-close", rate(i.deals, i.setsBooked)),
-    pct("show-rate", "Show rate", rate(i.shows, i.setsBooked)),
-    pct("connect-rate", "Connect rate", rate(i.connects, i.dials)),
-  ];
+/** One entry in the metric catalog: how to derive and display one figure. */
+export interface SalesMetricDef {
+  id: string;
+  label: string;
+  kind: MetricKind;
+  /** Derive the display string from the gathered input. Pure. */
+  derive: (i: SalesMetricsInput) => string;
 }
 
 /**
- * Build the wall from already-fetched overview + leaderboard. Pure — so a page
- * that already has both (the dashboard) can derive metrics without re-querying.
+ * Every id in the catalog, as a literal tuple — the allow-list the save action
+ * validates against and the source of the `SalesMetricId` type.
+ */
+export const SALES_METRIC_IDS = [
+  // Money — what landed, and per-unit economics.
+  "cash",
+  "revenue",
+  "cash-per-deal",
+  "avg-deal",
+  "commission-owed",
+  "cash-per-rep",
+  "revenue-per-rep",
+  "cash-per-team",
+  // Volume — the counts behind the money.
+  "deals",
+  "shows",
+  "sets",
+  "dials",
+  "connects",
+  "calls-taken",
+  "follow-ups",
+  "reps",
+  "teams",
+  // Rates — the derived conversions a sales lead scans.
+  "close-rate",
+  "set-to-close",
+  "show-rate",
+  "connect-rate",
+  "call-to-close",
+  "dial-to-set",
+  "connect-to-set",
+  "collection-rate",
+  "eod-compliance",
+] as const;
+export type SalesMetricId = (typeof SALES_METRIC_IDS)[number];
+
+/**
+ * The full metric catalog. Order mirrors RepVision — money, then volume, then
+ * the derived rates: the reading order a sales lead scans. This is the menu the
+ * "+" picker offers; the wall shows whichever of these the user keeps.
+ */
+export const SALES_METRIC_REGISTRY: readonly SalesMetricDef[] = [
+  // Money.
+  {
+    id: "cash",
+    label: "Cash collected",
+    kind: "money",
+    derive: (i) => money(i.cashCents),
+  },
+  {
+    id: "revenue",
+    label: "Revenue",
+    kind: "money",
+    derive: (i) => money(i.revenueCents),
+  },
+  {
+    id: "cash-per-deal",
+    label: "Cash / deal",
+    kind: "money",
+    derive: (i) => perUnit(i.cashCents, i.deals),
+  },
+  {
+    id: "avg-deal",
+    label: "Avg deal size",
+    kind: "money",
+    derive: (i) => perUnit(i.revenueCents, i.deals),
+  },
+  {
+    id: "commission-owed",
+    label: "Commission owed",
+    kind: "money",
+    derive: (i) => money(i.commissionOwedCents ?? 0),
+  },
+  {
+    id: "cash-per-rep",
+    label: "Cash / rep",
+    kind: "money",
+    derive: (i) => perUnit(i.cashCents, i.activeReps),
+  },
+  {
+    id: "revenue-per-rep",
+    label: "Revenue / rep",
+    kind: "money",
+    derive: (i) => perUnit(i.revenueCents, i.activeReps),
+  },
+  {
+    id: "cash-per-team",
+    label: "Cash / team",
+    kind: "money",
+    derive: (i) => perUnit(i.cashCents, i.activeTeams),
+  },
+  // Volume.
+  { id: "deals", label: "Deals closed", kind: "count", derive: (i) => count(i.deals) },
+  { id: "shows", label: "Shows", kind: "count", derive: (i) => count(i.shows) },
+  {
+    id: "sets",
+    label: "Sets booked",
+    kind: "count",
+    derive: (i) => count(i.setsBooked),
+  },
+  { id: "dials", label: "Dials", kind: "count", derive: (i) => count(i.dials) },
+  {
+    id: "connects",
+    label: "Connects",
+    kind: "count",
+    derive: (i) => count(i.connects),
+  },
+  {
+    id: "calls-taken",
+    label: "Calls taken",
+    kind: "count",
+    derive: (i) => count(i.callsTaken),
+  },
+  {
+    id: "follow-ups",
+    label: "Follow-ups",
+    kind: "count",
+    derive: (i) => count(i.followUps),
+  },
+  {
+    id: "reps",
+    label: "Active reps",
+    kind: "count",
+    derive: (i) => count(i.activeReps),
+  },
+  {
+    id: "teams",
+    label: "Active teams",
+    kind: "count",
+    derive: (i) => count(i.activeTeams),
+  },
+  // Rates.
+  {
+    id: "close-rate",
+    label: "Close rate",
+    kind: "rate",
+    derive: (i) => rate(i.deals, i.shows),
+  },
+  {
+    id: "set-to-close",
+    label: "Set-to-close",
+    kind: "rate",
+    derive: (i) => rate(i.deals, i.setsBooked),
+  },
+  {
+    id: "show-rate",
+    label: "Show rate",
+    kind: "rate",
+    derive: (i) => rate(i.shows, i.setsBooked),
+  },
+  {
+    id: "connect-rate",
+    label: "Connect rate",
+    kind: "rate",
+    derive: (i) => rate(i.connects, i.dials),
+  },
+  {
+    id: "call-to-close",
+    label: "Call-to-close",
+    kind: "rate",
+    derive: (i) => rate(i.deals, i.callsTaken),
+  },
+  {
+    id: "dial-to-set",
+    label: "Dial-to-set",
+    kind: "rate",
+    derive: (i) => rate(i.setsBooked, i.dials),
+  },
+  {
+    id: "connect-to-set",
+    label: "Connect-to-set",
+    kind: "rate",
+    derive: (i) => rate(i.setsBooked, i.connects),
+  },
+  {
+    id: "collection-rate",
+    label: "Collection rate",
+    kind: "rate",
+    derive: (i) => rate(i.cashCents, i.revenueCents),
+  },
+  {
+    id: "eod-compliance",
+    label: "EOD compliance",
+    kind: "rate",
+    derive: (i) => rate(i.eodSubmitted ?? 0, i.eodTotal ?? 0),
+  },
+];
+
+/**
+ * The default wall — the set the dashboard has always shown, in its original
+ * order, so an unconfigured user (or a wiped pref) sees exactly what shipped
+ * before the builder existed. New catalog metrics live in the "+" picker.
+ */
+export const DEFAULT_SALES_METRIC_IDS: SalesMetricId[] = [
+  "cash",
+  "revenue",
+  "cash-per-deal",
+  "avg-deal",
+  "deals",
+  "shows",
+  "sets",
+  "dials",
+  "connects",
+  "calls-taken",
+  "follow-ups",
+  "reps",
+  "teams",
+  "close-rate",
+  "set-to-close",
+  "show-rate",
+  "connect-rate",
+];
+
+const VALID_IDS = new Set<string>(SALES_METRIC_IDS);
+
+/**
+ * Coerce a stored pref into a clean, ordered, de-duplicated id list. Anything
+ * that is not the catalog (a removed metric, a bad write) is dropped; an empty
+ * or absent selection falls back to the default wall.
+ */
+export function normalizeSalesMetricIds(value: unknown): SalesMetricId[] {
+  if (!Array.isArray(value)) return DEFAULT_SALES_METRIC_IDS;
+  const valid = value.filter((v): v is SalesMetricId => VALID_IDS.has(v as string));
+  const deduped = [...new Set(valid)];
+  return deduped.length > 0 ? deduped : DEFAULT_SALES_METRIC_IDS;
+}
+
+/**
+ * Format the whole catalog from one gathered input. The dashboard renders the
+ * user's chosen subset; the picker offers the rest. Order mirrors the registry.
+ */
+export function computeSalesMetrics(i: SalesMetricsInput): SalesMetric[] {
+  return SALES_METRIC_REGISTRY.map((def) => ({
+    key: def.id,
+    label: def.label,
+    value: def.derive(i),
+    kind: def.kind,
+  }));
+}
+
+/**
+ * Extra inputs a page may already have on hand — commission owed and EOD
+ * compliance — folded into the metric input so their metrics show real values
+ * without this module re-querying. Absent, those metrics degrade honestly.
+ */
+export interface SalesMetricsExtras {
+  commissionOwedCents?: number;
+  eodSubmitted?: number;
+  eodTotal?: number;
+}
+
+/**
+ * Build the catalog from already-fetched overview + leaderboard (+ optional
+ * extras the page already has). Pure — so a page that already holds these rows
+ * (the dashboard) derives every metric without a second query.
  */
 export function salesMetricsFrom(
   overview: SalesOverviewStats,
   leaderboard: LeaderboardRow[],
+  extras: SalesMetricsExtras = {},
 ): SalesMetric[] {
   const totals = leaderboard.reduce(
     (acc, r) => ({
@@ -134,15 +373,24 @@ export function salesMetricsFrom(
     deals: overview.dealsClosed,
     activeReps: leaderboard.length,
     activeTeams: overview.teamCount,
+    commissionOwedCents: extras.commissionOwedCents,
+    eodSubmitted: extras.eodSubmitted,
+    eodTotal: extras.eodTotal,
     ...totals,
   });
 }
 
-/** Gather real rows and build the wall. */
+/** Gather real rows and build the full catalog — for standalone callers. */
 export async function getSalesMetrics(): Promise<SalesMetric[]> {
-  const [overview, leaderboard] = await Promise.all([
+  const [overview, leaderboard, rollup, eod] = await Promise.all([
     getSalesOverview(),
     getLeaderboard(),
+    getCommissionRollup(),
+    getEodCompliance(),
   ]);
-  return salesMetricsFrom(overview, leaderboard);
+  return salesMetricsFrom(overview, leaderboard, {
+    commissionOwedCents: rollup.totalOwedCents,
+    eodSubmitted: eod.submitted,
+    eodTotal: eod.total,
+  });
 }

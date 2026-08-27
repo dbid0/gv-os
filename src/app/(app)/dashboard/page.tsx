@@ -23,9 +23,10 @@ import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
 import { roster } from "@/lib/roster";
-import { salesMetricsFrom } from "@/lib/sales/metrics";
+import { normalizeSalesMetricIds, salesMetricsFrom } from "@/lib/sales/metrics";
 import {
   closeRateFrom,
+  getCommissionRollup,
   getEodCompliance,
   getLeaderboard,
   getSalesOverview,
@@ -61,20 +62,24 @@ export default async function DashboardPage({
     overview,
     leaderboard,
     compliance,
+    commissionRollup,
     settings,
     { rows: backlog },
     storedMode,
     storedCards,
+    storedMetrics,
     repTrends,
     [scalars],
   ] = await Promise.all([
     getSalesOverview(),
     getLeaderboard(),
     getEodCompliance(),
+    getCommissionRollup(),
     getSettings(),
     listTransactions({}),
     getPref<string>(user?.email ?? null, "home-mode"),
     getPref<unknown>(user?.email ?? null, "dashboard-cards"),
+    getPref<unknown>(user?.email ?? null, "sales-metrics"),
     getRepTrends(todayKey),
     getDb().execute<{
       pending_payout_cents: number;
@@ -101,7 +106,15 @@ export default async function DashboardPage({
   // dashboard scanned deals/moneyEvents/activity 2× each. Same numbers, fewer
   // queries: both are pure functions of the already-fetched rows.)
   const closeRatePct = closeRateFrom(leaderboard);
-  const salesMetrics = salesMetricsFrom(overview, leaderboard);
+  // The full metric catalog, derived from rows already fetched above — the
+  // overview + leaderboard (never re-queried), plus the commission rollup and
+  // EOD compliance the dashboard already loads. The wall renders the user's
+  // chosen subset; the "+" picker offers the rest.
+  const salesCatalog = salesMetricsFrom(overview, leaderboard, {
+    commissionOwedCents: commissionRollup.totalOwedCents,
+    eodSubmitted: compliance.submitted,
+    eodTotal: compliance.total,
+  });
 
   const mode = normalizeHomeMode(storedMode);
   const custom =
@@ -140,6 +153,7 @@ export default async function DashboardPage({
   }));
 
   const cards = normalizeDashboardCards(storedCards);
+  const selectedMetricIds = normalizeSalesMetricIds(storedMetrics);
   const arItems = partialDealAr(backlog);
   const arTotalCents = arItems.reduce((t, i) => t + i.arCents, 0);
 
@@ -184,17 +198,9 @@ export default async function DashboardPage({
           per-team cash breakdown, folded from client-layer money. */}
       <TeamsOverviewCard overview={teamsOverview} />
 
-      {/* The RepVision-style KPI wall — every sales number at a glance, dense
-          and scannable, above the customizable cards. */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <h2 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-            Sales metrics
-          </h2>
-          <span className="bg-border h-px flex-1" />
-        </div>
-        <SalesMetricsGrid metrics={salesMetrics} />
-      </section>
+      {/* The RepVision-style KPI wall — a metric builder: dense, scannable, and
+          add/remove customizable, above the customizable cards. */}
+      <SalesMetricsGrid catalog={salesCatalog} selected={selectedMetricIds} />
 
       {/* Revenue over time — the RepVision chart panel: real $ and date axes,
           gridlines, and a hover crosshair over the daily collected series. */}
