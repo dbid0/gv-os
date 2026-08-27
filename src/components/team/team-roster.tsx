@@ -7,6 +7,7 @@ import { Link2, Mail, Plus, Search } from "lucide-react";
 
 import { createTeamMember, setTeamMemberStatus } from "@/app/(app)/team/actions";
 import { PageHeader } from "@/components/shell/page-header";
+import { MemberAvatar } from "@/components/team/member-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
@@ -32,52 +33,6 @@ interface TeamOption {
 
 const selectClass =
   "border-input bg-transparent h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
-
-// A person gets one consistent colour from their name — purely decorative, so
-// the roster reads as faces, not a spreadsheet. Static (no runtime cost).
-const AVATAR_COLORS = [
-  "#52b7ff",
-  "#9b6bff",
-  "#2dd4bf",
-  "#f59e0b",
-  "#f472b6",
-  "#4ade80",
-  "#60a5fa",
-  "#fb7185",
-];
-
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return (
-    (
-      (parts[0]?.[0] ?? "") +
-      (parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "")
-    ).toUpperCase() || "?"
-  );
-}
-
-function Avatar({ name }: { name: string }) {
-  const c = avatarColor(name);
-  return (
-    <span
-      aria-hidden
-      className="grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
-      style={{
-        background: `color-mix(in oklab, ${c} 16%, transparent)`,
-        color: c,
-        boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${c} 34%, transparent)`,
-      }}
-    >
-      {initials(name)}
-    </span>
-  );
-}
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
@@ -387,7 +342,7 @@ export function TeamRoster({
                           href={`/team/${m.id}`}
                           className="group inline-flex items-center gap-2.5 font-medium transition-colors"
                         >
-                          <Avatar name={m.name} />
+                          <MemberAvatar name={m.name} />
                           <span className="group-hover:text-brand inline-flex items-center gap-1.5 transition-colors">
                             {m.name}
                             {m.repId && (

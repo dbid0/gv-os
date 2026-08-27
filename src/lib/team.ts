@@ -3,16 +3,35 @@ import "server-only";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { activityLogs, clients, reps, teamMembers } from "@/db/schema/app";
+import {
+  actionItems,
+  activityLogs,
+  activityReports,
+  clients,
+  reps,
+  teamMembers,
+} from "@/db/schema/app";
 import { getRepGamification } from "@/lib/gamification/queries";
 import { type RepGamification } from "@/lib/gamification/engine";
+import { latestKitOverview, kitGrowthByConnection } from "@/lib/email/queries";
 import { callTypeLabel, dispositionLabel } from "@/lib/sales/call-activity";
 import {
   currentPayoutPeriod,
   getCommissionRollup,
+  getEodCompliance,
   getPaidRepIds,
 } from "@/lib/sales/queries";
 import { type QuotaRow, listQuotasWithPacing } from "@/lib/sales/quota-queries";
+import {
+  type MemberEmailCard,
+  type MemberEodSummary,
+  type MemberReportRow,
+  type MemberWorkItem,
+  type WorkSummary,
+  buildMemberEmailCard,
+  summarizeEodActivity,
+  summarizeWork,
+} from "@/lib/team-profile";
 
 /**
  * The Team read layer.
@@ -168,6 +187,14 @@ export interface MemberProfile {
   quotas: QuotaRow[];
   commission: MemberCommission | null;
   recentActivity: MemberActivityRow[];
+  /** Action items assigned to this member (every member, rep-linked or not). */
+  workItems: MemberWorkItem[];
+  /** Status buckets for the work items, overdue counted against `nowMs`. */
+  workSummary: WorkSummary;
+  /** The member's EOD/BOD standing, when they map to a rep. */
+  eod: MemberEodSummary | null;
+  /** Their client's Kit email account, when the client has one connected. */
+  email: MemberEmailCard | null;
 }
 
 async function repRecentActivity(repId: string): Promise<MemberActivityRow[]> {
@@ -197,6 +224,59 @@ async function repRecentActivity(repId: string): Promise<MemberActivityRow[]> {
   });
 }
 
+/** Action items assigned to this member, newest first. */
+async function memberWorkItems(memberId: string): Promise<MemberWorkItem[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: actionItems.id,
+      title: actionItems.title,
+      status: actionItems.status,
+      cadence: actionItems.cadence,
+      dueDate: actionItems.dueDate,
+      clientName: clients.name,
+    })
+    .from(actionItems)
+    .leftJoin(clients, eq(actionItems.clientId, clients.id))
+    .where(eq(actionItems.assigneeId, memberId))
+    .orderBy(desc(actionItems.createdAt))
+    .limit(50);
+}
+
+/** This rep's recent EOD/BOD submissions, newest first, for the timeline. */
+async function memberEodReports(repId: string): Promise<MemberReportRow[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: activityReports.id,
+      kind: activityReports.kind,
+      reportDate: activityReports.reportDate,
+      metrics: activityReports.metrics,
+      notes: activityReports.notes,
+    })
+    .from(activityReports)
+    .where(eq(activityReports.repId, repId))
+    .orderBy(desc(activityReports.reportDate))
+    .limit(14);
+}
+
+/**
+ * The member's client email account, when the client has a connected Kit
+ * integration. Short-circuits to null for agency-wide members (no client), and
+ * skips the growth query when the client has no Kit connection — so at most two
+ * reads run, and only for a member whose lane actually has email.
+ */
+async function memberEmailData(
+  clientName: string | null,
+): Promise<MemberEmailCard | null> {
+  if (!clientName) return null;
+  const overview = await latestKitOverview();
+  const row = overview.find((r) => r.clientName === clientName);
+  if (!row) return null;
+  const growth = await kitGrowthByConnection();
+  return buildMemberEmailCard(row, growth.get(row.integrationId) ?? []);
+}
+
 export async function getMemberProfile(
   memberId: string,
   nowMs: number,
@@ -204,31 +284,40 @@ export async function getMemberProfile(
   const member = await getTeamMember(memberId);
   if (!member) return null;
 
-  // No rep link → the identity card, and honest empties for the rest.
-  if (!member.repId) {
-    return {
-      member,
-      rep: null,
-      momentum: null,
-      quotas: [],
-      commission: null,
-      recentActivity: [],
-    };
-  }
-
   const repId = member.repId;
-  const [gamView, allQuotas, rollup, recentActivity] = await Promise.all([
-    getRepGamification(repId),
-    listQuotasWithPacing(nowMs),
-    getCommissionRollup(),
-    repRecentActivity(repId),
+
+  // One bounded burst (≤ 8 concurrent reads — see the pool law in db/client.ts).
+  // Work items and email run for every member; the rep-keyed reads resolve to
+  // honest empties when the member isn't linked to a sales rep, so an unlinked
+  // member still gets their work and their lane's email without paying for
+  // quota, momentum, or commission queries.
+  const [
+    gamView,
+    allQuotas,
+    rollup,
+    recentActivity,
+    eodReports,
+    eodCompliance,
+    workItems,
+    email,
+  ] = await Promise.all([
+    repId ? getRepGamification(repId) : Promise.resolve(null),
+    repId ? listQuotasWithPacing(nowMs) : Promise.resolve([] as QuotaRow[]),
+    repId ? getCommissionRollup() : Promise.resolve(null),
+    repId ? repRecentActivity(repId) : Promise.resolve([] as MemberActivityRow[]),
+    repId ? memberEodReports(repId) : Promise.resolve([] as MemberReportRow[]),
+    repId ? getEodCompliance("eod") : Promise.resolve(null),
+    memberWorkItems(memberId),
+    memberEmailData(member.clientName),
   ]);
 
-  const quotas = allQuotas.filter((q) => q.scope === "rep" && q.repId === repId);
+  const quotas = repId
+    ? allQuotas.filter((q) => q.scope === "rep" && q.repId === repId)
+    : [];
 
-  const line = rollup.reps.find((r) => r.repId === repId);
+  const line = repId && rollup ? rollup.reps.find((r) => r.repId === repId) : undefined;
   let commission: MemberCommission | null = null;
-  if (line) {
+  if (line && repId) {
     const period = currentPayoutPeriod();
     const paid = await getPaidRepIds(period);
     commission = {
@@ -243,6 +332,13 @@ export async function getMemberProfile(
     };
   }
 
+  const eod = repId
+    ? summarizeEodActivity(eodReports, eodCompliance?.asOf ?? null)
+    : null;
+
+  const todayKey = new Date(nowMs).toISOString().slice(0, 10);
+  const workSummary = summarizeWork(workItems, todayKey);
+
   return {
     member,
     rep: gamView ? gamView.rep : null,
@@ -250,5 +346,9 @@ export async function getMemberProfile(
     quotas,
     commission,
     recentActivity,
+    workItems,
+    workSummary,
+    eod,
+    email,
   };
 }
