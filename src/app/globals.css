@@ -353,8 +353,10 @@
   }
 
   .glass {
-    background: color-mix(in oklab, var(--background) 80%, transparent);
-    backdrop-filter: blur(12px);
+    /* Near-opaque tint instead of a blur. A 12px backdrop-filter on the sticky
+       header was re-composited every scroll frame — a major scroll-jank source
+       on lower-powered machines. The solid tint reads the same for ~free. */
+    background: color-mix(in oklab, var(--background) 92%, transparent);
   }
 
   .card-grad {
@@ -383,13 +385,15 @@
       0 10px 40px -14px color-mix(in oklab, #000 70%, transparent);
   }
 
-  /* Interactive tiles rise slightly. 3px, not 8: restraint is the point. */
+  /* Interactive tiles rise slightly. 3px, not 8: restraint is the point.
+     No permanent will-change: it forced a compositor layer on every tile for
+     good (dozens on a busy dashboard = real memory/paint cost). The browser
+     promotes on demand during the transition, which is what we actually want. */
   .hover-lift {
     transition:
       transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
       box-shadow 0.22s ease,
       border-color 0.22s ease;
-    will-change: transform;
   }
   .hover-lift:hover {
     transform: translateY(-3px);
@@ -484,6 +488,13 @@
     transparent
   );
   transform-origin: bottom;
+  /* Static by default — a static gradient "chart" texture. The bars used to run
+     an infinite scaleY/opacity loop (32-40 per instance, on hero + overview);
+     that constant compositing wasn't worth the flicker on heavier machines. The
+     gv-ambient-live opt-in below re-enables motion where it's clearly cheap. */
+}
+
+.gv-ambient-live .gv-ambient-bar {
   animation: gv-ambient-rise 4s ease-in-out infinite;
 }
 
