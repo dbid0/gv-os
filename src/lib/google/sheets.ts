@@ -115,6 +115,40 @@ export async function readSheetValues(
   );
 }
 
+/**
+ * Append one row to the finance sheet's Raw Data tab — the WRITE side of the
+ * two-way sync (a deal logged in GV OS lands in the sheet). USER_ENTERED so the
+ * date/number cells are interpreted exactly as if typed by hand (matching the
+ * Google form); INSERT_ROWS so it never overwrites an existing row. The row's
+ * column order is guaranteed to match the reader by the sheet-write round-trip
+ * test. Returns the A1 range the row landed in.
+ */
+export async function appendFinanceSheetRow(row: (string | number)[]): Promise<string> {
+  const token = await googleAccessToken();
+  const params = new URLSearchParams({
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+  });
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${FINANCE_SHEET_ID}/values/${encodeURIComponent(
+      "Raw Data!A:M",
+    )}:append?${params}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: [row] }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Sheets append failed: ${res.status} ${await res.text()}`);
+  }
+  const body = (await res.json()) as { updates?: { updatedRange?: string } };
+  return body.updates?.updatedRange ?? "Raw Data";
+}
+
 export interface FinanceSheetData {
   rawRows: (string | number)[][];
   computedRows: (string | number)[][];
