@@ -33,6 +33,61 @@ interface TeamOption {
 const selectClass =
   "border-input bg-transparent h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
+// A person gets one consistent colour from their name — purely decorative, so
+// the roster reads as faces, not a spreadsheet. Static (no runtime cost).
+const AVATAR_COLORS = [
+  "#52b7ff",
+  "#9b6bff",
+  "#2dd4bf",
+  "#f59e0b",
+  "#f472b6",
+  "#4ade80",
+  "#60a5fa",
+  "#fb7185",
+];
+
+function avatarColor(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return (
+    (
+      (parts[0]?.[0] ?? "") +
+      (parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "")
+    ).toUpperCase() || "?"
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const c = avatarColor(name);
+  return (
+    <span
+      aria-hidden
+      className="grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
+      style={{
+        background: `color-mix(in oklab, ${c} 16%, transparent)`,
+        color: c,
+        boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${c} 34%, transparent)`,
+      }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="card-grad rounded-lg border p-3">
+      <p className="numeric text-2xl font-bold">{value}</p>
+      <p className="text-muted-foreground mt-0.5 text-xs">{label}</p>
+    </div>
+  );
+}
+
 function StatusToggle({ member }: { member: TeamMemberRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -87,6 +142,9 @@ export function TeamRoster({
   const [laneFilter, setLaneFilter] = useState("all");
 
   const active = members.filter((m) => m.status === "active");
+  const salesReps = active.filter((m) => platformRoleOf(m) === "sales_rep").length;
+  const delivery = active.filter((m) => platformRoleOf(m) === "team_member").length;
+  const lanes = new Set(active.map((m) => m.clientName ?? "Agency")).size;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -140,6 +198,15 @@ export function TeamRoster({
         description="Everyone who runs out of GV OS — their role, whose lane they work, and the sales rep each one maps to."
         status={<StatusPill tone="live">{active.length} active</StatusPill>}
       />
+
+      {members.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Active" value={active.length} />
+          <StatTile label="Sales reps" value={salesReps} />
+          <StatTile label="Delivery & ops" value={delivery} />
+          <StatTile label="Lanes covered" value={lanes} />
+        </div>
+      )}
 
       <Panel title="Add a team member">
         <div className="flex flex-wrap items-end gap-2">
@@ -318,15 +385,18 @@ export function TeamRoster({
                       <td className="px-4 py-2.5">
                         <Link
                           href={`/team/${m.id}`}
-                          className="hover:text-brand inline-flex items-center gap-1.5 font-medium transition-colors"
+                          className="group inline-flex items-center gap-2.5 font-medium transition-colors"
                         >
-                          {m.name}
-                          {m.repId && (
-                            <Link2
-                              className="text-brand size-3"
-                              aria-label="Linked to a sales rep"
-                            />
-                          )}
+                          <Avatar name={m.name} />
+                          <span className="group-hover:text-brand inline-flex items-center gap-1.5 transition-colors">
+                            {m.name}
+                            {m.repId && (
+                              <Link2
+                                className="text-brand size-3"
+                                aria-label="Linked to a sales rep"
+                              />
+                            )}
+                          </span>
                         </Link>
                       </td>
                       <td className="text-muted-foreground px-4 py-2.5">
