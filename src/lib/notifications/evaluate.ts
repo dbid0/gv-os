@@ -15,8 +15,10 @@ import {
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import {
+  bodReminderRule,
   bodRule,
   driftRule,
+  eodReminderRule,
   repWellbeingRule,
   signedDocRule,
   spineDriftRule,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/notifications/rules";
 import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
 import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
+import { getEodCompliance } from "@/lib/sales/queries";
 import { roster } from "@/lib/roster";
 import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
 import { clientLedger } from "@/lib/transactions/ledger";
@@ -40,56 +43,65 @@ export async function evaluateNotifications(): Promise<{
 }> {
   const db = getDb();
   const now = new Date();
-  const [[latestRun], docs, clientRows, settingsRows, { rows: backlog }, moodRows] =
-    await Promise.all([
-      db
-        .select({
-          id: sheetSyncRuns.id,
-          driftRowCount: sheetSyncRuns.driftRowCount,
-          totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
-        })
-        .from(sheetSyncRuns)
-        .orderBy(desc(sheetSyncRuns.createdAt))
-        .limit(1),
-      db
-        .select({
-          externalId: signedDocs.externalId,
-          name: signedDocs.name,
-          clientId: signedDocs.clientId,
-          completedAt: signedDocs.completedAt,
-        })
-        .from(signedDocs)
-        .orderBy(desc(signedDocs.createdAt))
-        .limit(100),
-      db
-        .select({ id: clients.id, slug: clients.slug, name: clients.name })
-        .from(clients),
-      db
-        .select({
-          clientId: offerSettings.clientId,
-          bodAlertTime: offerSettings.bodAlertTime,
-          timezone: offerSettings.timezone,
-        })
-        .from(offerSettings),
-      listTransactions({}),
-      // Recent EOD submissions with their self-reported check-in score, for the
-      // rep-wellbeing alert. Filtered to today in JS after the day key is known.
-      db
-        .select({
-          repId: activityReports.repId,
-          repName: reps.name,
-          clientId: activityReports.clientId,
-          teamName: clients.name,
-          reportDate: activityReports.reportDate,
-          metrics: activityReports.metrics,
-        })
-        .from(activityReports)
-        .leftJoin(reps, eq(activityReports.repId, reps.id))
-        .leftJoin(clients, eq(activityReports.clientId, clients.id))
-        .where(eq(activityReports.kind, "eod"))
-        .orderBy(desc(activityReports.createdAt))
-        .limit(200),
-    ]);
+  const [
+    [latestRun],
+    docs,
+    clientRows,
+    settingsRows,
+    { rows: backlog },
+    moodRows,
+    eodCompliance,
+    bodCompliance,
+  ] = await Promise.all([
+    db
+      .select({
+        id: sheetSyncRuns.id,
+        driftRowCount: sheetSyncRuns.driftRowCount,
+        totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
+      })
+      .from(sheetSyncRuns)
+      .orderBy(desc(sheetSyncRuns.createdAt))
+      .limit(1),
+    db
+      .select({
+        externalId: signedDocs.externalId,
+        name: signedDocs.name,
+        clientId: signedDocs.clientId,
+        completedAt: signedDocs.completedAt,
+      })
+      .from(signedDocs)
+      .orderBy(desc(signedDocs.createdAt))
+      .limit(100),
+    db.select({ id: clients.id, slug: clients.slug, name: clients.name }).from(clients),
+    db
+      .select({
+        clientId: offerSettings.clientId,
+        bodAlertTime: offerSettings.bodAlertTime,
+        timezone: offerSettings.timezone,
+      })
+      .from(offerSettings),
+    listTransactions({}),
+    // Recent EOD submissions with their self-reported check-in score, for the
+    // rep-wellbeing alert. Filtered to today in JS after the day key is known.
+    db
+      .select({
+        repId: activityReports.repId,
+        repName: reps.name,
+        clientId: activityReports.clientId,
+        teamName: clients.name,
+        reportDate: activityReports.reportDate,
+        metrics: activityReports.metrics,
+      })
+      .from(activityReports)
+      .leftJoin(reps, eq(activityReports.repId, reps.id))
+      .leftJoin(clients, eq(activityReports.clientId, clients.id))
+      .where(eq(activityReports.kind, "eod"))
+      .orderBy(desc(activityReports.createdAt))
+      .limit(200),
+    // EOD/BOD compliance for the daily missing-report reminders.
+    getEodCompliance("eod"),
+    getEodCompliance("bod"),
+  ]);
 
   // BOD digests: every active offer, schema defaults standing in for offers
   // with no settings row yet (v2 defaults: 12:00 America/Chicago). A null
@@ -168,6 +180,8 @@ export async function evaluateNotifications(): Promise<{
     ...signedDocRule(docs),
     ...bodRule(bodOffers, now, todayKey),
     ...repWellbeingRule(wellbeingRows),
+    ...bodReminderRule(bodCompliance, now, todayKey),
+    ...eodReminderRule(eodCompliance, now, todayKey),
   ];
 
   let created = 0;

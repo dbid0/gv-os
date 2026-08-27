@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bodReminderRule,
   bodRule,
   driftRule,
+  eodReminderRule,
   repWellbeingRule,
   signedDocRule,
   spineDriftRule,
   stalenessRule,
   syncFailureRule,
+  type CheckInComplianceState,
   type IntegrationState,
   type RepWellbeingState,
   type SpineDriftRow,
@@ -157,6 +160,71 @@ describe("repWellbeingRule", () => {
   });
 });
 
+describe("eodReminderRule", () => {
+  const missing: CheckInComplianceState = {
+    submitted: 2,
+    total: 4,
+    missing: ["Jordan", "Maya"],
+  };
+  // 2026-08-23 21:00 UTC = 16:00 CT (before 8 PM). 2026-08-24 01:30 UTC = 20:30 CT.
+  const beforeEight = new Date("2026-08-23T21:00:00Z");
+  const afterEight = new Date("2026-08-24T01:30:00Z");
+
+  it("fires at or after 8 PM CT and names who's out, keyed to the day", () => {
+    const out = eodReminderRule(missing, afterEight, "2026-08-23");
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: "eod_missing", severity: "warning" });
+    expect(out[0].title).toBe("EOD not in: 2 of 4 still out");
+    expect(out[0].body).toContain("Jordan, Maya");
+    expect(out[0].dedupeKey).toBe("eod-missing:2026-08-23");
+  });
+
+  it("stays silent before 8 PM CT", () => {
+    expect(eodReminderRule(missing, beforeEight, "2026-08-23")).toHaveLength(0);
+  });
+
+  it("stays silent when everyone has filed", () => {
+    const allIn: CheckInComplianceState = { submitted: 4, total: 4, missing: [] };
+    expect(eodReminderRule(allIn, afterEight, "2026-08-23")).toHaveLength(0);
+  });
+
+  it("dedupes to one alert per day", () => {
+    const later = new Date("2026-08-24T04:00:00Z"); // 23:00 CT, same business day
+    const a = eodReminderRule(missing, afterEight, "2026-08-23")[0].dedupeKey;
+    const b = eodReminderRule(missing, later, "2026-08-23")[0].dedupeKey;
+    expect(a).toBe(b);
+  });
+});
+
+describe("bodReminderRule", () => {
+  const missing: CheckInComplianceState = {
+    submitted: 1,
+    total: 3,
+    missing: ["Sam", "Kai"],
+  };
+  // 2026-08-23 13:00 UTC = 08:00 CT (before 10 AM). 15:30 UTC = 10:30 CT.
+  const beforeTen = new Date("2026-08-23T13:00:00Z");
+  const afterTen = new Date("2026-08-23T15:30:00Z");
+
+  it("fires from mid-morning CT and names who's out, keyed to the day", () => {
+    const out = bodReminderRule(missing, afterTen, "2026-08-23");
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: "bod_missing", severity: "warning" });
+    expect(out[0].title).toBe("BOD not in: 2 of 3 still out");
+    expect(out[0].body).toContain("Sam, Kai");
+    expect(out[0].dedupeKey).toBe("bod-missing:2026-08-23");
+  });
+
+  it("stays silent before mid-morning CT", () => {
+    expect(bodReminderRule(missing, beforeTen, "2026-08-23")).toHaveLength(0);
+  });
+
+  it("stays silent when everyone has checked in", () => {
+    const allIn: CheckInComplianceState = { submitted: 3, total: 3, missing: [] };
+    expect(bodReminderRule(allIn, afterTen, "2026-08-23")).toHaveLength(0);
+  });
+});
+
 import { notificationHref } from "@/lib/notifications/links";
 
 describe("notificationHref", () => {
@@ -171,6 +239,8 @@ describe("notificationHref", () => {
     expect(notificationHref("bod_digest", "the-grid")).toBe("/w/the-grid");
     expect(notificationHref("bod_digest", null)).toBe("/dashboard");
     expect(notificationHref("rep_wellbeing", null)).toBe("/sales/eod");
+    expect(notificationHref("eod_missing", null)).toBe("/sales/eod");
+    expect(notificationHref("bod_missing", null)).toBe("/sales/eod");
     expect(notificationHref("unknown_kind", null)).toBe("/notifications");
   });
 });
