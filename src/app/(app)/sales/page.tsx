@@ -5,8 +5,8 @@ import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { cents } from "@/lib/money";
-import { clientLogos } from "@/lib/clients/logos";
-import { clientInitial, roster } from "@/lib/roster";
+import { ClientLogo } from "@/components/clients/client-logo";
+import { roster } from "@/lib/roster";
 import { listReps, listTeams } from "@/lib/sales/queries";
 
 export const metadata = { title: "Teams - GV OS" };
@@ -18,11 +18,7 @@ export const dynamic = "force-dynamic";
  * A team in GV OS is a client offer; this is where all of them are managed.
  */
 export default async function SalesPage() {
-  const [teams, reps, logos] = await Promise.all([
-    listTeams(),
-    listReps(),
-    clientLogos(),
-  ]);
+  const [teams, reps] = await Promise.all([listTeams(), listReps()]);
 
   const repsByTeam = new Map<string, typeof reps>();
   for (const r of reps) {
@@ -75,7 +71,6 @@ export default async function SalesPage() {
             const teamReps = repsByTeam.get(team.id) ?? [];
             const active = teamReps.filter((r) => r.status === "active").length;
             const goal = team.monthlyTargetCents ?? 0;
-            const logo = logos[team.slug];
             const accent = accentOf(team.slug);
             const owner = ownerOf(team.slug);
             return (
@@ -84,25 +79,12 @@ export default async function SalesPage() {
                 className="bg-card hover:border-brand/40 flex flex-col rounded-xl border transition-colors"
               >
                 <div className="flex items-center gap-3 border-b p-4">
-                  {logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- data URL
-                    <img
-                      src={logo}
-                      alt=""
-                      className="size-10 shrink-0 rounded-lg border object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="grid size-10 shrink-0 place-items-center rounded-lg border text-sm font-bold"
-                      style={{
-                        color: accent,
-                        borderColor: `${accent}55`,
-                        background: `${accent}14`,
-                      }}
-                    >
-                      {clientInitial(team.name)}
-                    </span>
-                  )}
+                  <ClientLogo
+                    slug={team.slug}
+                    name={team.name}
+                    accent={accent}
+                    size={40}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{team.name}</p>
                     {owner && <p className="text-faint text-xs">{owner}</p>}

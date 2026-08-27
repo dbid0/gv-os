@@ -27,6 +27,9 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/auth/error",
   "/api/health",
+  // Client logo images (/api/clients/[slug]/logo) — just a logo, so it's
+  // publicly cacheable by the browser and CDN. No sensitive data lives here.
+  "/api/clients",
   // Carry their own SYNC_SECRET bearer auth for scheduled jobs.
   "/api/sync/finance-sheet",
   "/api/sync/payments",

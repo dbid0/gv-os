@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { navigation, type NavItem } from "@/components/shell/nav-config";
+import { ClientLogo } from "@/components/clients/client-logo";
 import { canAccessRoute, type Role } from "@/lib/auth/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -24,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { clientInitial, roster } from "@/lib/roster";
+import { roster } from "@/lib/roster";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
 import { useIsHydrated, usePersistedBoolean } from "@/lib/client-state";
@@ -36,11 +37,9 @@ const STORAGE_KEY = "gvos.sidebar.collapsed";
 export function Sidebar({
   user,
   previewRole = null,
-  logos = {},
 }: {
   user: ShellUser | null;
   previewRole?: Role | null;
-  logos?: Record<string, string>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -137,20 +136,14 @@ export function Sidebar({
         <div className="px-3 pb-3">
           <DropdownMenu>
             <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors">
-              {activeClient && logos[activeClient.slug] ? (
-                // eslint-disable-next-line @next/next/no-img-element -- data URL
-                <img
-                  src={logos[activeClient.slug]}
-                  alt=""
-                  className="size-8 shrink-0 rounded-md border object-cover"
+              {activeClient ? (
+                <ClientLogo
+                  slug={activeClient.slug}
+                  name={activeClient.name}
+                  accent={activeClient.accent}
+                  size={32}
+                  radius="md"
                 />
-              ) : activeClient ? (
-                <span
-                  className="bg-card grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold"
-                  style={{ color: activeClient.accent }}
-                >
-                  {clientInitial(activeClient.name)}
-                </span>
               ) : (
                 <span className="bg-card grid size-8 shrink-0 place-items-center rounded-md border">
                   <Image
@@ -192,25 +185,13 @@ export function Sidebar({
                   render={<Link href={`/w/${client.slug}`} />}
                   className="gap-2"
                 >
-                  {logos[client.slug] ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- data URL
-                    <img
-                      src={logos[client.slug]}
-                      alt=""
-                      className="size-6 shrink-0 rounded-md border object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="grid size-6 place-items-center rounded-md border text-[10px] font-bold"
-                      style={{
-                        color: client.accent,
-                        borderColor: `${client.accent}55`,
-                        background: `${client.accent}14`,
-                      }}
-                    >
-                      {clientInitial(client.name)}
-                    </span>
-                  )}
+                  <ClientLogo
+                    slug={client.slug}
+                    name={client.name}
+                    accent={client.accent}
+                    size={24}
+                    radius="md"
+                  />
                   <span className="min-w-0 flex-1 truncate">{client.name}</span>
                   <span className="text-faint text-[10px]">{client.owner}</span>
                 </DropdownMenuItem>

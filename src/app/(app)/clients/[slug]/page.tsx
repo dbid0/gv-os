@@ -24,8 +24,8 @@ import { ColumnChart } from "@/components/ui/column-chart";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { Kpi } from "@/components/ui/metric";
 import { bucketByDay } from "@/lib/charts";
+import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
-import { clientLogos } from "@/lib/clients/logos";
 import { getClientReport } from "@/lib/clients/report";
 import { listAdSpendForClient } from "@/lib/revshare/ad-spend-query";
 import { clientBySlug } from "@/lib/roster";
@@ -89,14 +89,12 @@ export default async function ClientPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const [team, report, drive, allIntegrations, logos] = await Promise.all([
+  const [team, report, drive, allIntegrations] = await Promise.all([
     getTeamBySlug(slug),
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
     listIntegrations(),
-    clientLogos(),
   ]);
-  const logo = logos[slug] ?? null;
   const offerIntegrations = team
     ? allIntegrations
         .filter((c) => c.clientId === team.id)
@@ -129,22 +127,7 @@ export default async function ClientPage({
         title={client.name}
         description={team?.summary ?? client.summary}
         avatar={
-          logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL
-            <img src={logo} alt="" className="size-11 rounded-lg border object-cover" />
-          ) : (
-            <span
-              aria-hidden
-              className="grid size-11 place-items-center rounded-lg border text-base font-bold"
-              style={{
-                color: client.accent,
-                borderColor: `${client.accent}55`,
-                background: `${client.accent}14`,
-              }}
-            >
-              {client.name.slice(0, 1)}
-            </span>
-          )
+          <ClientLogo slug={slug} name={client.name} accent={client.accent} size={44} />
         }
         status={
           <span className="flex flex-wrap items-center gap-2">

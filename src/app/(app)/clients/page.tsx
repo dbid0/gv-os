@@ -8,9 +8,8 @@ import {
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
-import { clientLogos } from "@/lib/clients/logos";
 import { clientSummaries } from "@/lib/clients/summaries";
-import { clientInitial, roster } from "@/lib/roster";
+import { roster } from "@/lib/roster";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -20,7 +19,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const [logos, summaries] = await Promise.all([clientLogos(), clientSummaries()]);
+  const summaries = await clientSummaries();
   const cards: ClientCard[] = roster.map((client) => ({
     slug: client.slug,
     name: client.name,
@@ -29,8 +28,6 @@ export default async function ClientsPage() {
     summary: summaries[client.slug] ?? client.summary,
     since: client.since,
     accent: client.accent,
-    initial: clientInitial(client.name),
-    logo: logos[client.slug] ?? null,
   }));
 
   return (

@@ -14,7 +14,6 @@ import {
   unreadNotificationCount,
 } from "@/lib/notifications/count";
 import { getPrefs } from "@/lib/prefs";
-import { clientLogos } from "@/lib/clients/logos";
 import { shellUser } from "@/lib/auth/user";
 import { effectiveRole, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
@@ -28,23 +27,15 @@ import { resolveRealRole } from "@/lib/auth/resolve-role";
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await shellUser();
-  const [
-    monthCashCents,
-    unreadCount,
-    notifications,
-    cookieStore,
-    prefs,
-    logos,
-    realRole,
-  ] = await Promise.all([
-    currentMonthCashCents(),
-    unreadNotificationCount(),
-    recentNotifications(),
-    cookies(),
-    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
-    clientLogos(),
-    resolveRealRole(user?.email ?? null),
-  ]);
+  const [monthCashCents, unreadCount, notifications, cookieStore, prefs, realRole] =
+    await Promise.all([
+      currentMonthCashCents(),
+      unreadNotificationCount(),
+      recentNotifications(),
+      cookies(),
+      getPrefs(user?.email ?? null, ["avatar", "display-name"]),
+      resolveRealRole(user?.email ?? null),
+    ]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
