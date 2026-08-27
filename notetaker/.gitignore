@@ -2,3 +2,5 @@ node_modules/
 sessions/
 *.pcm
 *.wav
+__pycache__/
+*.pyc

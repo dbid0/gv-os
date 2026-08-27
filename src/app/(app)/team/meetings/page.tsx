@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Mic } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
+import { DeleteMeetingButton } from "@/components/meetings/delete-meeting-button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { buttonVariants } from "@/components/ui/button";
@@ -54,6 +55,7 @@ function MeetingRow({ m }: { m: MeetingSummary }) {
         <span className="text-faint ml-auto text-xs whitespace-nowrap">
           {meetingDate(m.meetingDate)}
         </span>
+        <DeleteMeetingButton id={m.id} mode="row" />
       </div>
       {m.summary && (
         <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm">{m.summary}</p>

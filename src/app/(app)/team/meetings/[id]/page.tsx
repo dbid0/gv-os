@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
+import { DeleteMeetingButton } from "@/components/meetings/delete-meeting-button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { buttonVariants } from "@/components/ui/button";
@@ -44,12 +45,18 @@ export default async function MeetingDetailPage({
         title={m.title}
         description={longDate(m.meetingDate)}
         actions={
-          <Link
-            href="/team/meetings"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
-          >
-            <ArrowLeft className="size-3.5" /> Meetings
-          </Link>
+          <div className="flex items-center gap-2">
+            <DeleteMeetingButton id={m.id} mode="detail" redirectTo="/team/meetings" />
+            <Link
+              href="/team/meetings"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <ArrowLeft className="size-3.5" /> Meetings
+            </Link>
+          </div>
         }
       />
 

@@ -95,16 +95,20 @@ def build_transcript(sdir):
     lines, speakers = [], []
     for ts, uid, name, pcm in chunks:
         wav = pcm[:-4] + ".wav"
+        # Input is 48kHz stereo PCM; downmix to 16kHz mono — whisper's native
+        # format — for cleaner, more accurate transcription.
         subprocess.run(
-            [FFMPEG, "-y", "-v", "quiet", "-f", "s16le", "-ar", "48000", "-ac", "2", "-i", pcm, wav],
+            [FFMPEG, "-y", "-v", "quiet", "-f", "s16le", "-ar", "48000", "-ac", "2",
+             "-i", pcm, "-ar", "16000", "-ac", "1", wav],
             check=False,
         )
         text = transcribe(wav) if os.path.exists(wav) else ""
         if os.path.exists(wav):
             os.remove(wav)
         if text:
-            hhmm = datetime.datetime.fromtimestamp(ts / 1000).strftime("%H:%M")
-            lines.append(f"{name} [{hhmm}]: {text}")
+            # No absolute clock time: it was the runner's UTC (wrong tz) and added
+            # noise. Speaker-labeled lines in spoken order are what matter.
+            lines.append(f"{name}: {text}")
             if name not in speakers and name != "?":
                 speakers.append(name)
     return "\n".join(lines), speakers
@@ -188,17 +192,23 @@ def post_discord(summary, items, link=None):
         plan += f"\n\n**{it.get('person', '?')}**"
         for t in it.get("tasks", []):
             plan += f"\n- {t}"
-    try:
-        req = urllib.request.Request(
-            f"https://discord.com/api/v10/channels/{TASKS_CHANNEL}/messages",
-            data=json.dumps({"content": plan[:1990]}).encode(),
-            method="POST",
-            headers={"Authorization": "Bot " + BOT_TOKEN, "Content-Type": "application/json"},
-        )
-        urllib.request.urlopen(req, timeout=15).read()
-        print("notetaker: mirrored plan to Discord")
-    except Exception as e:
-        print("notetaker: discord post failed (non-fatal):", str(e)[:200])
+    # Retry a couple times — a transient 403/5xx from Discord shouldn't lose the plan.
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                f"https://discord.com/api/v10/channels/{TASKS_CHANNEL}/messages",
+                data=json.dumps({"content": plan[:1990]}).encode(),
+                method="POST",
+                headers={"Authorization": "Bot " + BOT_TOKEN, "Content-Type": "application/json"},
+            )
+            urllib.request.urlopen(req, timeout=15).read()
+            print("notetaker: mirrored plan to Discord")
+            return
+        except Exception as e:
+            print(f"notetaker: discord post attempt {attempt + 1} failed:", str(e)[:200])
+            import time
+            time.sleep(2 * (attempt + 1))
+    print("notetaker: discord post gave up (non-fatal — recap is in GV OS)")
 
 
 def main(sdir):
