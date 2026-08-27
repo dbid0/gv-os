@@ -273,7 +273,9 @@ export interface EodCompliance {
  * widget: a submitted/total count plus the names still missing, so a manager
  * sees the gap at a glance. Purely derived from submitted reports.
  */
-export async function getEodCompliance(): Promise<EodCompliance> {
+export async function getEodCompliance(
+  kind: "eod" | "bod" = "eod",
+): Promise<EodCompliance> {
   const db = getDb();
   const activeReps = await db
     .select({ id: reps.id, name: reps.name })
@@ -284,7 +286,7 @@ export async function getEodCompliance(): Promise<EodCompliance> {
   const [latest] = await db
     .select({ d: sql<string | null>`max(${activityReports.reportDate})` })
     .from(activityReports)
-    .where(eq(activityReports.kind, "eod"));
+    .where(eq(activityReports.kind, kind));
   if (!latest?.d) {
     return { asOf: null, submitted: 0, total, missing: activeReps.map((r) => r.name) };
   }
