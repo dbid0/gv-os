@@ -243,10 +243,15 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Primary action, pinned. Live: logs a real deal. */}
+      {/* Primary action, pinned. Admin/agency logs to the finance sheet; a rep
+          logs their own deal into the sales module. */}
       <div className="px-3 pb-2">
         <Link
-          href="/sales/deals/new"
+          href={
+            previewRole === "sales_rep" || previewRole === "sales_manager"
+              ? "/sales/deals/new"
+              : "/accounting/log-deal"
+          }
           className={cn(
             buttonVariants({ size: collapsed ? "icon" : "default" }),
             "press w-full justify-center gap-2",
