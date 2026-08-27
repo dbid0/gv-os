@@ -212,3 +212,76 @@ export function bodRule(
       dedupeKey: `bod:${o.slug}:${todayKey}`,
     }));
 }
+
+/** The clock hour (0–23) at `now` in a timezone — for time-gated reminders. */
+function localHour(now: Date, timeZone = "America/Chicago"): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      hourCycle: "h23",
+      hour: "2-digit",
+      timeZone,
+    }).format(now),
+  );
+}
+
+/**
+ * EOD / BOD compliance for the reminder rules: how many of the team filed and
+ * who is still out. Fed straight from `getEodCompliance(kind)`.
+ */
+export interface CheckInComplianceState {
+  submitted: number;
+  total: number;
+  missing: string[];
+}
+
+/** Reminders don't nag before this hour in the morning (BOD). */
+const BOD_REMINDER_HOUR = 10;
+/** The 8 PM CT EOD sweep — Daniel's ask for a nightly missing-EOD nudge. */
+const EOD_REMINDER_HOUR = 20;
+
+/**
+ * Nightly EOD sweep. At or after 8 PM CT, if anyone still hasn't filed their
+ * EOD, one warning names who's out. One alert per day (the key carries the
+ * day), so the cron can replay it freely and it clears itself tomorrow.
+ */
+export function eodReminderRule(
+  compliance: CheckInComplianceState,
+  now: Date,
+  todayKey: string,
+): Candidate[] {
+  if (localHour(now) < EOD_REMINDER_HOUR) return [];
+  if (compliance.missing.length === 0) return [];
+  return [
+    {
+      kind: "eod_missing",
+      severity: "warning",
+      title: `EOD not in: ${compliance.missing.length} of ${compliance.total} still out`,
+      body: `Missing tonight: ${compliance.missing.join(", ")}. Nudge them before the day closes.`,
+      clientId: null,
+      dedupeKey: `eod-missing:${todayKey}`,
+    },
+  ];
+}
+
+/**
+ * Morning BOD nudge. From mid-morning CT on, if anyone still hasn't filed their
+ * BOD check-in, one warning names who's out. One alert per day.
+ */
+export function bodReminderRule(
+  compliance: CheckInComplianceState,
+  now: Date,
+  todayKey: string,
+): Candidate[] {
+  if (localHour(now) < BOD_REMINDER_HOUR) return [];
+  if (compliance.missing.length === 0) return [];
+  return [
+    {
+      kind: "bod_missing",
+      severity: "warning",
+      title: `BOD not in: ${compliance.missing.length} of ${compliance.total} still out`,
+      body: `Missing this morning: ${compliance.missing.join(", ")}. Get everyone checked in.`,
+      clientId: null,
+      dedupeKey: `bod-missing:${todayKey}`,
+    },
+  ];
+}

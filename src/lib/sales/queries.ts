@@ -302,7 +302,7 @@ export async function getEodCompliance(
     .from(activityReports)
     .where(
       and(
-        eq(activityReports.kind, "eod"),
+        eq(activityReports.kind, kind),
         gte(activityReports.reportDate, dayStart),
         lte(activityReports.reportDate, dayEnd),
       ),

@@ -21,7 +21,10 @@ import { clients, notifications } from "@/db/schema/app";
 import { monthPace } from "@/lib/brief/pace";
 import { dayKeyCT } from "@/lib/charts";
 import { cents } from "@/lib/money";
-import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import {
+  computeSpeedToLead,
+  computeSpeedToLeadByClient,
+} from "@/lib/funnel/speed-to-lead";
 import { listApplications } from "@/lib/funnel/queries";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { getEodCompliance, listActivityReports, listDeals } from "@/lib/sales/queries";
@@ -124,17 +127,22 @@ export default async function BriefPage() {
     }))
     .filter((r) => r.mood >= 1 && r.mood < 3);
 
-  // 4) Speed to lead — real time-to-first-dial, matched by email.
-  const stl = computeSpeedToLead(
-    apps.map((a) => ({
-      email: a.email,
-      submittedAtMs: (a.submittedAt ?? a.createdAt).getTime(),
-    })),
-    calls.map((c) => ({
-      email: c.customerEmail,
-      occurredAtMs: c.occurredAt.getTime(),
-    })),
-  );
+  // 4) Speed to lead — real time-to-first-dial, matched by email. Agency-wide,
+  // then broken out per offer over the exact same apps + calls (no extra query).
+  const stlApps = apps.map((a) => ({
+    clientId: a.clientId,
+    clientName: a.clientName,
+    email: a.email,
+    submittedAtMs: (a.submittedAt ?? a.createdAt).getTime(),
+  }));
+  const stlCalls = calls.map((c) => ({
+    clientId: c.clientId,
+    clientName: c.teamName,
+    email: c.customerEmail,
+    occurredAtMs: c.occurredAt.getTime(),
+  }));
+  const stl = computeSpeedToLead(stlApps, stlCalls);
+  const stlByOffer = computeSpeedToLeadByClient(stlApps, stlCalls);
 
   // 5) Quota laggards + top alerts.
   const behind = quotas.filter((q) => q.pacing.status === "behind" && !q.isPast);
@@ -398,6 +406,65 @@ export default async function BriefPage() {
           )}
         </Panel>
       </div>
+
+      {/* Speed to lead, per offer — first-dial vs the 5-minute standard. */}
+      {stlByOffer.length > 0 && (
+        <Panel
+          title="Speed to lead by offer"
+          aside={
+            <span className="text-faint text-xs">first dial vs the 5-min standard</span>
+          }
+          padded={false}
+        >
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint border-b text-[11px] tracking-wider uppercase">
+                  <th className="px-5 py-2.5 text-left font-medium">Offer</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Median dial</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Within 5m</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Over 60m</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Matched</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stlByOffer.map((o) => (
+                  <tr
+                    key={o.clientId ?? o.clientName}
+                    className="border-b last:border-0"
+                  >
+                    <td className="px-5 py-3 font-medium">{o.clientName}</td>
+                    <td className="numeric px-5 py-3 text-right">
+                      {o.medianMinutes === null ? "—" : `${o.medianMinutes}m`}
+                    </td>
+                    <td
+                      className={`numeric px-5 py-3 text-right ${
+                        o.slaPct === null
+                          ? ""
+                          : o.slaPct >= 0.8
+                            ? "text-success"
+                            : "text-warning"
+                      }`}
+                    >
+                      {o.slaPct === null ? "—" : `${Math.round(o.slaPct * 100)}%`}
+                    </td>
+                    <td
+                      className={`numeric px-5 py-3 text-right ${
+                        o.over60 > 0 ? "text-destructive" : ""
+                      }`}
+                    >
+                      {o.over60}
+                    </td>
+                    <td className="numeric text-muted-foreground px-5 py-3 text-right">
+                      {o.matched} / {o.dialableApps}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }
