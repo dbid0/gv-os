@@ -288,6 +288,13 @@
       "when": 1787775478672,
       "tag": "0040_meeting_action_items",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787892287394,
+      "tag": "0041_workspace_pages",
+      "breakpoints": true
     }
   ]
 }

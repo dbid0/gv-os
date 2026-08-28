@@ -4,12 +4,14 @@ import {
   boolean,
   date,
   index,
+  integer,
   jsonb,
   pgSchema,
   text,
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -1352,3 +1354,57 @@ export const aiConversationsRelations = relations(aiConversations, ({ one }) => 
     references: [profiles.id],
   }),
 }));
+
+/**
+ * The Workspace: a Notion-style docs/wiki that lives inside GV OS.
+ *
+ * A page is markdown, not a block tree — the body is a single `content` string,
+ * deliberately, so a page is a portable document Daniel can paste in or copy
+ * out, never a proprietary format that traps his writing.
+ *
+ * A page belongs to a TEAMSPACE via `clientId`: a client's teamspace when set,
+ * or the "Global Ventures" agency teamspace when null. Teamspaces are DERIVED
+ * from the roster (active clients + the agency), never their own table, so the
+ * two can't drift. Nesting is a self-reference on `parentId`: null = top-level
+ * in its teamspace. `sortOrder` is the manual order among siblings; ties break
+ * on title then id so a tree is always stable.
+ */
+export const workspacePages = appSchema.table(
+  "workspace_pages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The teamspace. Null = the Global Ventures agency teamspace. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** Parent page for nesting. Null = top-level in the teamspace. */
+    parentId: uuid("parent_id").references((): AnyPgColumn => workspacePages.id),
+    title: text("title").notNull().default("Untitled"),
+    /** A single emoji used as the page icon, e.g. "📄". */
+    icon: text("icon"),
+    /** The markdown body. Null until the page is written. */
+    content: text("content"),
+    /** Manual order among siblings; lower sorts first. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("workspace_pages_client_idx").on(table.clientId),
+    index("workspace_pages_parent_idx").on(table.parentId),
+  ],
+);
+
+export const workspacePagesRelations = relations(workspacePages, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [workspacePages.clientId],
+    references: [clients.id],
+  }),
+  parent: one(workspacePages, {
+    fields: [workspacePages.parentId],
+    references: [workspacePages.id],
+    relationName: "workspace_page_children",
+  }),
+  children: many(workspacePages, { relationName: "workspace_page_children" }),
+}));
+
+export type WorkspacePage = typeof workspacePages.$inferSelect;
+export type NewWorkspacePage = typeof workspacePages.$inferInsert;
