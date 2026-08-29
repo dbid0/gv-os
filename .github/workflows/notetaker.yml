@@ -92,6 +92,20 @@ jobs:
           MAX_MINUTES: "120"
         run: node recorder.js
 
+      # FAILSAFE: compress each speaker's raw PCM to a small opus BEFORE the slow
+      # transcription. Runs even if later steps fail/time out, so the recording is
+      # always captured in the uploaded artifact and a lost call can be re-processed.
+      - name: Preserve the recording (compress audio)
+        if: always() && steps.guard.outputs.go == 'true' && steps.rec.outputs.session_dir != ''
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          for pcm in "${{ steps.rec.outputs.session_dir }}"/u_*.pcm; do
+            [ -e "$pcm" ] || continue
+            ffmpeg -y -v quiet -f s16le -ar 48000 -ac 2 -i "$pcm" \
+              -ac 1 -ar 16000 -c:a libopus -b:a 24k "${pcm%.pcm}.opus" || true
+          done
+          echo "compressed audio kept for the artifact"
+
       - name: Set up Python
         if: steps.guard.outputs.go == 'true' && steps.rec.outputs.session_dir != ''
         uses: actions/setup-python@v5
@@ -120,11 +134,35 @@ jobs:
           CLIENT_SLUG: ${{ github.event.client_payload.client_slug || github.event.inputs.client_slug || '' }}
         run: python3 process_call.py "${{ steps.rec.outputs.session_dir }}"
 
-      - name: Upload run log
+      # FAILSAFE: keep the recording (compressed audio) + transcript + distilled
+      # result for 14 days, on EVERY run. If posting ever fails, nothing is lost —
+      # the transcript can be re-posted or the audio re-transcribed from here.
+      - name: Upload recording + transcript (failsafe)
         if: always() && steps.guard.outputs.go == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: notetaker-log
-          path: notetaker/sessions/**/manifest.json
+          name: notetaker-recording
+          path: |
+            notetaker/sessions/**/manifest.json
+            notetaker/sessions/**/transcript.txt
+            notetaker/sessions/**/result.json
+            notetaker/sessions/**/*.opus
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: 14
+
+      # FAILSAFE: if the run failed or timed out, TELL Daniel in #operating right
+      # away (with the run link) instead of it failing silently. The recording is
+      # already safe in the artifact above.
+      - name: Alert on failure
+        if: (failure() || cancelled()) && steps.guard.outputs.go == 'true'
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          OPERATING: ${{ vars.GV_OPERATING_CHANNEL_ID || '1536050920121569380' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -o /dev/null -X POST \
+            "https://discord.com/api/v10/channels/$OPERATING/messages" \
+            -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ **Notetaker run failed or timed out** — notes were NOT posted, but the recording + transcript are saved as a downloadable artifact for 14 days (re-processable). Run: $RUN_URL\"}" \
+            || true

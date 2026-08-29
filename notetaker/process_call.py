@@ -165,22 +165,29 @@ def post_ingest(source_ref, transcript, summary, items, speakers):
     if CLIENT_SLUG:
         payload["clientSlug"] = CLIENT_SLUG
     payload = {k: v for k, v in payload.items() if v is not None}
-    try:
-        req = urllib.request.Request(
-            f"{GV_OS_URL}/api/notetaker/ingest",
-            data=json.dumps(payload).encode(),
-            method="POST",
-            headers={
-                "Authorization": "Bearer " + SYNC_SECRET,
-                "Content-Type": "application/json",
-            },
-        )
-        res = json.loads(urllib.request.urlopen(req, timeout=30).read())
-        print("notetaker: ingested ->", res)
-        return res
-    except Exception as e:
-        print("notetaker: ingest failed:", str(e)[:300])
-        return None
+    # Retry — a transient 5xx/network blip shouldn't drop the meeting. Ingest is
+    # idempotent on sourceRef, so retries can't create duplicates.
+    import time
+
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                f"{GV_OS_URL}/api/notetaker/ingest",
+                data=json.dumps(payload).encode(),
+                method="POST",
+                headers={
+                    "Authorization": "Bearer " + SYNC_SECRET,
+                    "Content-Type": "application/json",
+                },
+            )
+            res = json.loads(urllib.request.urlopen(req, timeout=30).read())
+            print("notetaker: ingested ->", res)
+            return res
+        except Exception as e:
+            print(f"notetaker: ingest attempt {attempt + 1} failed:", str(e)[:300])
+            time.sleep(3 * (attempt + 1))
+    print("notetaker: ingest gave up (transcript saved in the run artifact)")
+    return None
 
 
 def post_discord(summary, items, link=None):
@@ -217,10 +224,29 @@ def post_discord(summary, items, link=None):
 def main(sdir):
     source_ref = os.path.basename(os.path.normpath(sdir))
     transcript, speakers = build_transcript(sdir)
+
+    # FAILSAFE: persist the transcript to the session dir the moment it exists,
+    # BEFORE the distill/post steps that could fail. The workflow uploads the
+    # session dir as an artifact, so a completed transcript is never lost even if
+    # everything downstream dies — it can be re-posted by hand from the artifact.
+    try:
+        with open(os.path.join(sdir, "transcript.txt"), "w") as f:
+            f.write(transcript or "")
+    except Exception as e:
+        print("notetaker: could not persist transcript.txt:", str(e)[:150])
+
     if not transcript or sum(len(line.split()) for line in transcript.split("\n")) < 12:
         print("notetaker: transcript too short — nothing to post")
         return
     summary, items = distill(transcript)
+
+    # Persist the distilled result too, so notes survive a failed ingest.
+    try:
+        with open(os.path.join(sdir, "result.json"), "w") as f:
+            json.dump({"summary": summary, "action_items": items, "speakers": speakers}, f)
+    except Exception as e:
+        print("notetaker: could not persist result.json:", str(e)[:150])
+
     res = post_ingest(source_ref, transcript, summary, items, speakers)
     meeting_id = (res or {}).get("meetingId")
     link = f"{GV_OS_URL}/team/meetings/{meeting_id}" if meeting_id else None
