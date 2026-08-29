@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BarChart3,
   Clapperboard,
+  NotebookText,
   Receipt,
   Rocket,
   Users,
@@ -49,6 +50,13 @@ export async function generateMetadata({
 // rest are honestly marked until they are built.
 function modulesFor(slug: string) {
   return [
+    {
+      label: "Workspace",
+      href: `/clients/${slug}/workspace`,
+      icon: NotebookText,
+      detail: "Docs, wikis, SOPs — Notion-style",
+      ready: true,
+    },
     {
       label: "Sales",
       href: `/w/${slug}/sales`,

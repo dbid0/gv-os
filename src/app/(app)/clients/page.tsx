@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartPulse } from "lucide-react";
+import { HeartPulse, NotebookText } from "lucide-react";
 
 import {
   ClientProfileCard,
@@ -37,12 +37,26 @@ export default async function ClientsPage() {
         highlight="roster."
         status={<StatusPill tone="live">{roster.length} active</StatusPill>}
         actions={
-          <Link
-            href="/clients/health"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
-          >
-            <HeartPulse className="size-3.5" /> Health
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/clients/workspace"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <NotebookText className="size-3.5" /> Agency workspace
+            </Link>
+            <Link
+              href="/clients/health"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "gap-2",
+              )}
+            >
+              <HeartPulse className="size-3.5" /> Health
+            </Link>
+          </div>
         }
       />
 

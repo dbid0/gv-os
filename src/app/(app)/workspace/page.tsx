@@ -1,17 +1,11 @@
-import { WorkspaceApp } from "@/components/workspace/workspace-app";
-import { listWorkspaceTree } from "@/lib/workspace/queries";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Workspace - GV OS" };
-export const dynamic = "force-dynamic";
-
-export default async function WorkspacePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const [teamspaces, params] = await Promise.all([listWorkspaceTree(), searchParams]);
-  const pageParam = params.page;
-  const initialPageId = typeof pageParam === "string" ? pageParam : null;
-
-  return <WorkspaceApp teamspaces={teamspaces} initialPageId={initialPageId} />;
+/**
+ * Workspace is no longer a top-level section — each client IS their workspace,
+ * so docs live under the client (/clients/[slug]/workspace) and the agency's own
+ * templates live at /clients/workspace. This legacy path just forwards there so
+ * old links and prefetches don't dead-end.
+ */
+export default function WorkspaceRedirect() {
+  redirect("/clients/workspace");
 }

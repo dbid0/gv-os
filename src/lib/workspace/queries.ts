@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, workspacePages, type WorkspacePage } from "@/db/schema/app";
@@ -48,6 +48,7 @@ function toLite(row: WorkspacePage): WorkspacePageLite {
     icon: row.icon,
     content: row.content,
     sortOrder: row.sortOrder,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -111,6 +112,41 @@ export async function listWorkspaceTree(): Promise<TeamspaceTree[]> {
     }));
   } catch {
     return [];
+  }
+}
+
+/**
+ * One teamspace with its page tree, scoped to a single client (or the agency).
+ *
+ * This is the fold-under-clients read: a client's docs live inside the client,
+ * so a page never asks for the whole workspace, only the teamspace it is
+ * showing. `slug` null selects the Global Ventures agency teamspace (the
+ * templates space); a slug that is not an active client returns null so the
+ * route can 404. Fail-soft: a database hiccup degrades to an empty tree, never
+ * a thrown error.
+ */
+export async function getTeamspaceTree(
+  slug: string | null,
+): Promise<TeamspaceTree | null> {
+  const teamspaces = await listTeamspaces();
+  const teamspace = teamspaces.find((ts) =>
+    slug === null ? ts.clientId === null : ts.slug === slug,
+  );
+  if (!teamspace) return null;
+
+  try {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(workspacePages)
+      .where(
+        teamspace.clientId === null
+          ? isNull(workspacePages.clientId)
+          : eq(workspacePages.clientId, teamspace.clientId),
+      );
+    return { ...teamspace, pages: buildPageTree(rows.map(toLite)) };
+  } catch {
+    return { ...teamspace, pages: [] };
   }
 }
 

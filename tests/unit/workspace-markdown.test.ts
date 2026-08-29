@@ -71,6 +71,20 @@ describe("parseInline", () => {
   it("keeps code spans literal (no emphasis inside)", () => {
     expect(parseInline("`a*b*c`")).toEqual([{ type: "code", value: "a*b*c" }]);
   });
+
+  it("parses coloured text with a known colour name", () => {
+    expect(parseInline("[hot]{red}")).toEqual([
+      { type: "color", color: "red", children: [{ type: "text", value: "hot" }] },
+    ]);
+  });
+
+  it("treats an unknown colour as literal text", () => {
+    expect(parseInline("[x]{mauve}")).toEqual([{ type: "text", value: "[x]{mauve}" }]);
+  });
+
+  it("still prefers a link over a colour span", () => {
+    expect(parseInline("[go](https://x.com)")[0]).toMatchObject({ type: "link" });
+  });
 });
 
 describe("parseBlocks", () => {
@@ -142,5 +156,42 @@ describe("parseBlocks", () => {
   it("does not confuse a divider with a bullet list", () => {
     const blocks = parseBlocks("- a real bullet");
     expect(blocks[0].type).toBe("list");
+  });
+
+  it("reads a tagged quote as a callout with a mapped emoji", () => {
+    const blocks = parseBlocks("> [!tip] Do this first");
+    expect(blocks[0].type).toBe("callout");
+    if (blocks[0].type === "callout") {
+      expect(blocks[0].emoji).toBe("💡");
+      expect(blocks[0].lines[0]).toEqual([{ type: "text", value: "Do this first" }]);
+    }
+  });
+
+  it("uses a bare emoji tag as the callout icon", () => {
+    const blocks = parseBlocks("> [!⚠️] Careful now");
+    expect(blocks[0]).toMatchObject({ type: "callout", emoji: "⚠️" });
+  });
+
+  it("leaves an untagged quote as a quote", () => {
+    expect(parseBlocks("> just a quote")[0].type).toBe("quote");
+  });
+
+  it("parses a toggle and its indented body", () => {
+    const blocks = parseBlocks("+ Summary line\n  hidden detail");
+    expect(blocks[0].type).toBe("toggle");
+    if (blocks[0].type === "toggle") {
+      expect(blocks[0].summary).toEqual([{ type: "text", value: "Summary line" }]);
+      expect(blocks[0].blocks).toHaveLength(1);
+      expect(blocks[0].blocks[0].type).toBe("paragraph");
+    }
+  });
+
+  it("parses block content nested inside a toggle", () => {
+    const blocks = parseBlocks("+ Open me\n  - a\n  - b");
+    if (blocks[0].type === "toggle") {
+      expect(blocks[0].blocks[0].type).toBe("list");
+    } else {
+      throw new Error("expected a toggle");
+    }
   });
 });
