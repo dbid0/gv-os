@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -12,9 +13,10 @@ import {
 } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   FileText,
-  NotebookText,
+  MoreHorizontal,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -22,7 +24,12 @@ import {
 import { createPage, deletePage, updatePage } from "@/app/(app)/workspace/actions";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 import {
   flattenTree,
@@ -32,7 +39,7 @@ import {
 } from "@/lib/workspace/tree";
 import { cn } from "@/lib/utils";
 
-/** The teamspace-with-tree shape the server hands down (structural). */
+/** The single teamspace this scoped view renders (a client, or the agency). */
 export interface TeamspaceView {
   clientId: string | null;
   slug: string | null;
@@ -43,48 +50,60 @@ export interface TeamspaceView {
 
 type Override = { title?: string; icon?: string | null };
 
-const teamspaceKey = (clientId: string | null) => clientId ?? "agency";
-
-function TeamspaceIcon({ ts }: { ts: TeamspaceView }) {
+function TeamspaceIcon({ ts, size = 20 }: { ts: TeamspaceView; size?: number }) {
   if (ts.slug) {
     return (
       <ClientLogo
         slug={ts.slug}
         name={ts.name}
         accent={ts.accent}
-        size={22}
+        size={size}
         radius="md"
       />
     );
   }
   return (
-    <span className="bg-card grid size-[22px] shrink-0 place-items-center rounded-md border">
+    <span
+      className="bg-card grid shrink-0 place-items-center rounded-[5px] border"
+      style={{ width: size, height: size }}
+    >
       <Image
         src="/brand/gv-mark-white.png"
         alt=""
-        width={14}
-        height={14}
-        className="size-3.5 object-contain"
+        width={Math.round(size * 0.62)}
+        height={Math.round(size * 0.62)}
+        className="object-contain"
+        style={{ width: size * 0.62, height: size * 0.62 }}
       />
     </span>
   );
 }
 
+/**
+ * The Workspace, scoped to ONE teamspace (a client, or the Global Ventures
+ * agency templates space) — the fold-under-clients model, where a client IS
+ * their workspace. The skin is a faithful Notion replica: a flush, slightly
+ * lighter sidebar with a neutral page tree, and a flat, borderless, doc-centric
+ * page pane.
+ */
 export function WorkspaceApp({
-  teamspaces,
+  teamspace,
   initialPageId,
+  homeHref,
+  agencyHref = null,
 }: {
-  teamspaces: TeamspaceView[];
+  teamspace: TeamspaceView;
   initialPageId: string | null;
+  /** The client (or /clients) this teamspace belongs to — back link + root crumb. */
+  homeHref: string;
+  /** Optional link to the agency templates space, shown only in client views. */
+  agencyHref?: string | null;
 }) {
   const { toast } = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
 
-  const allPages = useMemo(
-    () => teamspaces.flatMap((ts) => flattenTree(ts.pages)),
-    [teamspaces],
-  );
+  const allPages = useMemo(() => flattenTree(teamspace.pages), [teamspace.pages]);
   const byId = useMemo(() => new Map(allPages.map((p) => [p.id, p])), [allPages]);
   const firstPageId = allPages[0]?.id ?? null;
 
@@ -93,10 +112,7 @@ export function WorkspaceApp({
   );
   const [newPageId, setNewPageId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Map<string, Override>>(new Map());
-
-  const [openTeamspaces, setOpenTeamspaces] = useState<Set<string>>(
-    () => new Set(teamspaces.map((ts) => teamspaceKey(ts.clientId))),
-  );
+  const [teamspaceOpen, setTeamspaceOpen] = useState(true);
   const [openPages, setOpenPages] = useState<Set<string>>(() => {
     const start = new Set<string>();
     if (selectedId) {
@@ -107,13 +123,13 @@ export function WorkspaceApp({
 
   // Server data refreshed → drop live overrides (the sidebar now reads the saved
   // values) and keep the selection valid if its page was deleted.
-  const teamspacesRef = useRef(teamspaces);
+  const pagesRef = useRef(teamspace.pages);
   useEffect(() => {
-    if (teamspacesRef.current === teamspaces) return;
-    teamspacesRef.current = teamspaces;
+    if (pagesRef.current === teamspace.pages) return;
+    pagesRef.current = teamspace.pages;
     setOverrides(new Map());
     setSelectedId((cur) => (cur && byId.has(cur) ? cur : firstPageId));
-  }, [teamspaces, byId, firstPageId]);
+  }, [teamspace.pages, byId, firstPageId]);
 
   const labelOf = (node: WorkspacePageLite) => ({
     title: overrides.get(node.id)?.title ?? node.title,
@@ -152,13 +168,17 @@ export function WorkspaceApp({
   );
 
   const addPage = useCallback(
-    (clientId: string | null, parentId: string | null) => {
+    (parentId: string | null) => {
       start(async () => {
         try {
-          const { id } = await createPage({ clientId, parentId, title: "Untitled" });
+          const { id } = await createPage({
+            clientId: teamspace.clientId,
+            parentId,
+            title: "Untitled",
+          });
           setSelectedId(id);
           setNewPageId(id);
-          setOpenTeamspaces((prev) => new Set(prev).add(teamspaceKey(clientId)));
+          setTeamspaceOpen(true);
           if (parentId) setOpenPages((prev) => new Set(prev).add(parentId));
           router.refresh();
         } catch (e) {
@@ -170,12 +190,12 @@ export function WorkspaceApp({
         }
       });
     },
-    [router, toast],
+    [router, toast, teamspace.clientId],
   );
 
   const removePage = useCallback(
     (node: PageNode) => {
-      const { title } = labelOf(node);
+      const title = overrides.get(node.id)?.title ?? node.title;
       const kids = node.children.length;
       const msg =
         kids > 0
@@ -196,122 +216,140 @@ export function WorkspaceApp({
         }
       });
     },
-    // labelOf reads overrides/byId but the confirm text tolerates a stale title.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [router, toast],
   );
 
+  const toggleOpen = (id: string) =>
+    setOpenPages((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const selectedNode = selectedId ? byId.get(selectedId) : undefined;
-  const selectedTeamspace = selectedNode
-    ? teamspaces.find((ts) => ts.clientId === selectedNode.clientId)
-    : undefined;
   const ancestors: Crumb[] = selectedNode
     ? pageBreadcrumb(allPages, selectedNode.id)
         .slice(0, -1)
         .map((p) => ({ id: p.id, ...labelOf(p) }))
     : [];
 
-  const totalPages = allPages.length;
-
   return (
-    <div className="flex h-[calc(100dvh-7rem)] gap-3">
-      {/* LEFT — teamspaces + page tree */}
-      <aside className="card-grad flex w-64 shrink-0 flex-col overflow-hidden rounded-xl border sm:w-72">
-        <div className="flex items-center gap-2 border-b px-3.5 py-3">
-          <NotebookText className="text-brand size-4" />
-          <span className="text-sm font-semibold tracking-tight">Workspace</span>
-          <span className="text-faint ml-auto text-[11px]">
-            {totalPages} {totalPages === 1 ? "page" : "pages"}
+    <div className="-m-4 flex h-[calc(100dvh-3.5rem)] overflow-hidden md:-m-6">
+      {/* LEFT — flush sidebar, a touch lighter than the page. */}
+      <aside className="bg-card flex w-60 shrink-0 flex-col overflow-hidden border-r">
+        <Link
+          href={homeHref}
+          className="group text-muted-foreground hover:bg-secondary/50 flex h-11 shrink-0 items-center gap-2 px-3 transition-colors"
+        >
+          <TeamspaceIcon ts={teamspace} size={20} />
+          <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
+            {teamspace.name}
           </span>
-        </div>
+          <ChevronLeft className="text-faint size-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+        </Link>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2">
-          {teamspaces.map((ts) => {
-            const key = teamspaceKey(ts.clientId);
-            const open = openTeamspaces.has(key);
-            return (
-              <div key={key}>
-                <div className="group/ts hover:bg-secondary/60 flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors">
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+          <p className="text-faint px-2 pt-3 pb-1 text-[0.6875rem] font-medium tracking-wider uppercase">
+            Teamspaces
+          </p>
+
+          {/* The teamspace section header. */}
+          <div className="group/ts hover:bg-secondary/40 flex items-center gap-1 rounded-md px-1 py-1 transition-colors">
+            <button
+              type="button"
+              onClick={() => setTeamspaceOpen((v) => !v)}
+              className="text-faint hover:text-foreground grid size-5 shrink-0 place-items-center rounded"
+              aria-label={teamspaceOpen ? "Collapse teamspace" : "Expand teamspace"}
+            >
+              {teamspaceOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+            </button>
+            <TeamspaceIcon ts={teamspace} size={18} />
+            <span className="text-foreground min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
+              {teamspace.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => addPage(null)}
+              disabled={pending}
+              className="text-faint hover:text-foreground hover:bg-secondary grid size-5 shrink-0 place-items-center rounded opacity-0 transition-all group-hover/ts:opacity-100"
+              aria-label={`Add a page to ${teamspace.name}`}
+              title="Add a page"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </div>
+
+          {teamspaceOpen && (
+            <div className="mt-0.5">
+              {teamspace.pages.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => addPage(null)}
+                  disabled={pending}
+                  className="text-faint hover:text-foreground hover:bg-secondary/40 flex w-full items-center gap-1.5 rounded-md py-1 pl-8 text-[0.8125rem] transition-colors"
+                >
+                  <Plus className="size-3.5" /> Add a page
+                </button>
+              ) : (
+                <>
+                  {teamspace.pages.map((node) => (
+                    <TreeRow
+                      key={node.id}
+                      node={node}
+                      selectedId={selectedId}
+                      openPages={openPages}
+                      pending={pending}
+                      labelOf={labelOf}
+                      onToggle={toggleOpen}
+                      onSelect={selectNode}
+                      onAddChild={(n) => addPage(n.id)}
+                      onDelete={removePage}
+                    />
+                  ))}
                   <button
                     type="button"
-                    onClick={() =>
-                      setOpenTeamspaces((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(key)) next.delete(key);
-                        else next.add(key);
-                        return next;
-                      })
-                    }
-                    className="text-faint hover:text-foreground grid size-4 shrink-0 place-items-center"
-                    aria-label={open ? "Collapse teamspace" : "Expand teamspace"}
-                  >
-                    {open ? (
-                      <ChevronDown className="size-3.5" />
-                    ) : (
-                      <ChevronRight className="size-3.5" />
-                    )}
-                  </button>
-                  <TeamspaceIcon ts={ts} />
-                  <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-medium">
-                    {ts.name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => addPage(ts.clientId, null)}
+                    onClick={() => addPage(null)}
                     disabled={pending}
-                    className="text-faint hover:text-foreground hover:bg-secondary grid size-5 shrink-0 place-items-center rounded opacity-0 transition-all group-hover/ts:opacity-100"
-                    aria-label={`Add a page to ${ts.name}`}
-                    title="Add a page"
+                    className="text-faint hover:text-foreground hover:bg-secondary/40 mt-0.5 flex w-full items-center gap-1.5 rounded-md py-1 pl-8 text-[0.8125rem] transition-colors"
                   >
-                    <Plus className="size-3.5" />
+                    <Plus className="size-3.5" /> Add a page
                   </button>
-                </div>
+                </>
+              )}
+            </div>
+          )}
 
-                {open && (
-                  <div className="mt-0.5">
-                    {ts.pages.length === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => addPage(ts.clientId, null)}
-                        disabled={pending}
-                        className="text-faint hover:text-foreground flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 pl-7 text-xs transition-colors"
-                      >
-                        <Plus className="size-3" /> Add a page
-                      </button>
-                    ) : (
-                      ts.pages.map((node) => (
-                        <TreeRow
-                          key={node.id}
-                          node={node}
-                          selectedId={selectedId}
-                          openPages={openPages}
-                          pending={pending}
-                          labelOf={labelOf}
-                          onToggle={(id) =>
-                            setOpenPages((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(id)) next.delete(id);
-                              else next.add(id);
-                              return next;
-                            })
-                          }
-                          onSelect={selectNode}
-                          onAddChild={(n) => addPage(n.clientId, n.id)}
-                          onDelete={removePage}
-                        />
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {agencyHref && (
+            <div className="border-border/60 mt-4 border-t pt-3">
+              <Link
+                href={agencyHref}
+                className="text-faint hover:text-foreground hover:bg-secondary/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] transition-colors"
+              >
+                <span className="bg-card grid size-[18px] shrink-0 place-items-center rounded-[5px] border">
+                  <Image
+                    src="/brand/gv-mark-white.png"
+                    alt=""
+                    width={11}
+                    height={11}
+                    className="size-[11px] object-contain"
+                  />
+                </span>
+                <span className="truncate">Agency templates</span>
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* RIGHT — the selected page */}
-      <section className="card-grad flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border">
-        {selectedNode && selectedTeamspace ? (
+      {/* RIGHT — the flat, borderless document. */}
+      <section className="bg-background min-w-0 flex-1">
+        {selectedNode ? (
           <PageEditor
             key={selectedNode.id}
             page={{
@@ -319,11 +357,12 @@ export function WorkspaceApp({
               title: selectedNode.title,
               icon: selectedNode.icon,
               content: selectedNode.content,
+              updatedAt: selectedNode.updatedAt,
             }}
-            teamspaceName={selectedTeamspace.name}
+            teamspaceName={teamspace.name}
+            teamspaceHref={homeHref}
             ancestors={ancestors}
             saving={pending}
-            initialEditing={selectedNode.id === newPageId}
             autoFocusTitle={selectedNode.id === newPageId}
             onSave={(patch) => {
               if (patch.title !== undefined || patch.icon !== undefined) {
@@ -349,7 +388,7 @@ export function WorkspaceApp({
             onSelect={selectNode}
           />
         ) : (
-          <EmptyState hasAny={totalPages > 0} onCreate={() => addPage(null, null)} />
+          <EmptyState onCreate={() => addPage(null)} />
         )}
       </section>
     </div>
@@ -386,19 +425,17 @@ function TreeRow({
     <div>
       <div
         className={cn(
-          "group/row relative flex items-center gap-1 rounded-md pr-1.5 transition-colors",
-          active ? "bg-secondary text-foreground" : "hover:bg-secondary/60",
+          "group/row relative flex items-center gap-0.5 rounded-md pr-1 transition-colors",
+          // Notion selection is a NEUTRAL gray fill — no brand bar, no wash.
+          active ? "bg-secondary/70" : "hover:bg-secondary/40",
         )}
-        style={{ paddingLeft: `${0.375 + node.depth * 0.85}rem` }}
+        style={{ paddingLeft: `${0.25 + node.depth * 0.85}rem` }}
       >
-        {active && (
-          <span className="bg-brand absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full" />
-        )}
         <button
           type="button"
           onClick={() => hasChildren && onToggle(node.id)}
           className={cn(
-            "text-faint hover:text-foreground grid size-4 shrink-0 place-items-center",
+            "text-faint hover:text-foreground grid size-5 shrink-0 place-items-center rounded",
             !hasChildren && "pointer-events-none opacity-0",
           )}
           aria-label={open ? "Collapse" : "Expand"}
@@ -414,14 +451,14 @@ function TreeRow({
         <button
           type="button"
           onClick={() => onSelect(node.id)}
-          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+          className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
         >
-          <span className="grid size-4 shrink-0 place-items-center text-[13px]">
+          <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
             {icon ?? <FileText className="text-faint size-3.5" />}
           </span>
           <span
             className={cn(
-              "min-w-0 flex-1 truncate text-[13px]",
+              "min-w-0 flex-1 truncate text-[0.8125rem]",
               active ? "text-foreground" : "text-muted-foreground",
             )}
           >
@@ -430,6 +467,23 @@ function TreeRow({
         </button>
 
         <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/row:opacity-100">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={pending}
+              aria-label="Page options"
+              className="text-faint hover:text-foreground hover:bg-secondary grid size-5 place-items-center rounded"
+            >
+              <MoreHorizontal className="size-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => onAddChild(node)}>
+                <Plus className="size-4" /> Add page inside
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => onDelete(node)}>
+                <Trash2 className="size-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={() => onAddChild(node)}
@@ -439,16 +493,6 @@ function TreeRow({
             title="Add a nested page"
           >
             <Plus className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(node)}
-            disabled={pending}
-            className="text-faint hover:text-destructive hover:bg-secondary grid size-5 place-items-center rounded"
-            aria-label="Delete page"
-            title="Delete page"
-          >
-            <Trash2 className="size-3.5" />
           </button>
         </div>
       </div>
@@ -472,26 +516,24 @@ function TreeRow({
   );
 }
 
-function EmptyState({ hasAny, onCreate }: { hasAny: boolean; onCreate: () => void }) {
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="grid h-full place-items-center p-8">
+    <div className="bg-background grid h-full place-items-center p-8">
       <div className="max-w-sm text-center">
-        <span className="bg-secondary/60 mx-auto grid size-14 place-items-center rounded-2xl border">
-          <NotebookText className="text-faint size-6" />
-        </span>
-        <h2 className="mt-4 text-lg font-semibold tracking-tight">
-          {hasAny ? "Select a page" : "Your workspace is empty"}
+        <span className="text-5xl">📄</span>
+        <h2 className="text-foreground mt-4 text-lg font-semibold tracking-tight">
+          No page open
         </h2>
         <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-          {hasAny
-            ? "Pick a page from the left, or create a new one to start writing."
-            : "Create your first page in the Global Ventures teamspace, or in any client's teamspace on the left."}
+          Pick a page on the left, or create a new one to start writing.
         </p>
-        {!hasAny && (
-          <Button onClick={onCreate} className="mt-4">
-            <Plus className="size-4" /> Create your first page
-          </Button>
-        )}
+        <button
+          type="button"
+          onClick={onCreate}
+          className="bg-primary text-primary-foreground press mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+        >
+          <Plus className="size-4" /> New page
+        </button>
       </div>
     </div>
   );

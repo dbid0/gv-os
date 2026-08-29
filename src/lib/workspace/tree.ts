@@ -17,6 +17,8 @@ export interface WorkspacePageLite {
   icon: string | null;
   content: string | null;
   sortOrder: number;
+  /** ISO timestamp of the last edit, for the "Edited …" header chip. */
+  updatedAt?: string;
 }
 
 /** A placed page: the same fields plus its children and its depth in the tree. */
