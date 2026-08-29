@@ -18,7 +18,7 @@ Env:
   CLIENT_SLUG           scope the whole call to one client       (optional)
   DISCORD_BOT_TOKEN     to mirror the plan to Discord            (optional)
   TASKS_CHANNEL_ID      Discord channel for the action plan      (optional)
-  WHISPER_MODEL         faster-whisper model (default medium.en)
+  WHISPER_MODEL         faster-whisper model (default small.en)
 """
 import sys, os, re, glob, json, subprocess, shutil, datetime
 import urllib.request
@@ -30,9 +30,11 @@ TITLE = os.environ.get("MEETING_TITLE", "Team call")
 CLIENT_SLUG = os.environ.get("CLIENT_SLUG", "").strip()
 BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 TASKS_CHANNEL = os.environ.get("TASKS_CHANNEL_ID", "").strip()
-# medium.en is a big accuracy jump over small.en and still fine on the free
-# CPU runner (transcription happens after the call, so it isn't time-critical).
-WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "medium.en")
+# small.en, not medium.en: medium is ~4-6x slower on the free 2-CPU runner and a
+# long call (an ~87-min recording) blew past the job timeout mid-transcription,
+# so nothing posted. small.en + greedy decoding transcribes a 90-min call in
+# ~15-20 min instead of 60+ — accuracy stays fine for meeting speech.
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small.en")
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
 CLAUDE = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
 
@@ -64,13 +66,14 @@ def whisper_model():
 
 
 def transcribe(wav):
-    # vad_filter drops silence/breath so whisper doesn't hallucinate filler on it;
-    # beam_size 5 + no cross-segment conditioning reduces repetition/drift on the
-    # short per-speaker clips. initial_prompt biases spelling of names + tools.
+    # beam_size 1 (greedy) — the single biggest speed lever; beam 5 was ~4x
+    # slower and timed the job out on long calls. vad_filter drops silence so
+    # whisper doesn't hallucinate filler; no cross-segment conditioning curbs
+    # drift on the short per-speaker clips. initial_prompt biases names + tools.
     segments, _info = whisper_model().transcribe(
         wav,
         initial_prompt=VOCAB,
-        beam_size=5,
+        beam_size=1,
         vad_filter=True,
         condition_on_previous_text=False,
     )
