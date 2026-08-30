@@ -111,6 +111,86 @@ export function collectSubtreeIds(
   return ids;
 }
 
+/** What a move writes: the moved page's new parent, and every sibling's new order. */
+export interface MovePlan {
+  /** The moved page's new parent (null = top-level in the teamspace). */
+  parentId: string | null;
+  /** Sequential `sortOrder` (0, 1, 2 …) for the destination sibling list. */
+  updates: { id: string; sortOrder: number }[];
+}
+
+/** The stable sibling order — sortOrder, then title, then id (mirrors buildPageTree). */
+function siblingCompare(
+  a: Pick<WorkspacePageLite, "sortOrder" | "title" | "id">,
+  b: Pick<WorkspacePageLite, "sortOrder" | "title" | "id">,
+): number {
+  if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+  const byTitle = a.title.localeCompare(b.title);
+  if (byTitle !== 0) return byTitle;
+  return a.id.localeCompare(b.id);
+}
+
+/**
+ * Plan a drag-and-drop move: re-parent `moveId` under `newParentId` and slot it
+ * immediately before `beforeId` (or at the end of the sibling list when
+ * `beforeId` is null). It is PURE, so the server action and the client's
+ * optimistic update run the exact same reasoning off the exact same inputs.
+ *
+ * Returns null for an impossible move — an unknown page, or dropping a page onto
+ * itself or one of its own descendants (which would orphan the subtree). The
+ * destination siblings are scoped to the moved page's own teamspace (clientId)
+ * and re-indexed to a clean sequential `sortOrder`, so ordering stays stable no
+ * matter how the rows collided before.
+ */
+export function planMove(
+  pages: Pick<
+    WorkspacePageLite,
+    "id" | "clientId" | "parentId" | "sortOrder" | "title"
+  >[],
+  moveId: string,
+  newParentId: string | null,
+  beforeId: string | null,
+): MovePlan | null {
+  const moved = pages.find((p) => p.id === moveId);
+  if (!moved) return null;
+
+  // Never nest a page into itself or its own subtree — that would strand the
+  // whole branch as an orphan.
+  if (newParentId === moveId) return null;
+  if (newParentId !== null) {
+    const parentExists = pages.some((p) => p.id === newParentId);
+    if (!parentExists) return null;
+    const subtree = new Set(collectSubtreeIds(pages, moveId));
+    if (subtree.has(newParentId)) return null;
+  }
+
+  const siblings = pages
+    .filter(
+      (p) =>
+        p.id !== moveId &&
+        (p.clientId ?? null) === (moved.clientId ?? null) &&
+        (p.parentId ?? null) === (newParentId ?? null),
+    )
+    .sort(siblingCompare);
+
+  let insertAt = siblings.length;
+  if (beforeId !== null) {
+    const idx = siblings.findIndex((s) => s.id === beforeId);
+    if (idx >= 0) insertAt = idx;
+  }
+
+  const ordered = [
+    ...siblings.slice(0, insertAt).map((s) => s.id),
+    moveId,
+    ...siblings.slice(insertAt).map((s) => s.id),
+  ];
+
+  return {
+    parentId: newParentId ?? null,
+    updates: ordered.map((id, i) => ({ id, sortOrder: i })),
+  };
+}
+
 /**
  * The ancestor chain for a page — its teamspace root first, the page itself
  * last — used to draw the breadcrumb. A broken parent link stops the walk

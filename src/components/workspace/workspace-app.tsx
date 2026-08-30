@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  type DragEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -15,25 +16,45 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
   FileText,
   MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
 
-import { createPage, deletePage, updatePage } from "@/app/(app)/workspace/actions";
+import {
+  createPage,
+  deletePage,
+  duplicatePage,
+  movePage,
+  updatePage,
+} from "@/app/(app)/workspace/actions";
 import { ClientLogo } from "@/components/clients/client-logo";
+import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 import {
+  buildPageTree,
+  collectSubtreeIds,
   flattenTree,
   pageBreadcrumb,
+  planMove,
   type PageNode,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
@@ -49,6 +70,11 @@ export interface TeamspaceView {
 }
 
 type Override = { title?: string; icon?: string | null };
+
+/** Where a drop lands relative to the row it is over. */
+type DropMode = "before" | "after" | "inside";
+type DropHint = { id: string; mode: DropMode };
+type DeleteTarget = { id: string; parentId: string | null; title: string };
 
 function TeamspaceIcon({ ts, size = 20 }: { ts: TeamspaceView; size?: number }) {
   if (ts.slug) {
@@ -85,6 +111,11 @@ function TeamspaceIcon({ ts, size = 20 }: { ts: TeamspaceView; size?: number }) 
  * their workspace. The skin is a faithful Notion replica: a flush, slightly
  * lighter sidebar with a neutral page tree, and a flat, borderless, doc-centric
  * page pane.
+ *
+ * The tree is fully editable in place: rows drag to reorder, nest, and un-nest
+ * (optimistically, then reconciled against the server); every row has a
+ * right-click menu and a `•••`; delete goes through a clean in-app confirm, not
+ * the browser's native popup.
  */
 export function WorkspaceApp({
   teamspace,
@@ -101,52 +132,89 @@ export function WorkspaceApp({
 }) {
   const { toast } = useToast();
   const router = useRouter();
+  const basePath = usePathname();
   const [pending, start] = useTransition();
 
-  const allPages = useMemo(() => flattenTree(teamspace.pages), [teamspace.pages]);
+  // The render source is a LOCAL copy of the tree, so a drag can reorder it
+  // optimistically before the server round-trips. It re-syncs whenever the
+  // server sends a fresh tree (below).
+  const [pages, setPages] = useState<PageNode[]>(teamspace.pages);
+
+  const allPages = useMemo(() => flattenTree(pages), [pages]);
   const byId = useMemo(() => new Map(allPages.map((p) => [p.id, p])), [allPages]);
   const firstPageId = allPages[0]?.id ?? null;
 
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialPageId && byId.has(initialPageId) ? initialPageId : firstPageId,
+    initialPageId && allPages.some((p) => p.id === initialPageId)
+      ? initialPageId
+      : firstPageId,
   );
   const [newPageId, setNewPageId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
   const [overrides, setOverrides] = useState<Map<string, Override>>(new Map());
   const [teamspaceOpen, setTeamspaceOpen] = useState(true);
   const [openPages, setOpenPages] = useState<Set<string>>(() => {
-    const start = new Set<string>();
+    const initial = new Set<string>();
     if (selectedId) {
-      for (const crumb of pageBreadcrumb(allPages, selectedId)) start.add(crumb.id);
+      for (const crumb of pageBreadcrumb(allPages, selectedId)) initial.add(crumb.id);
     }
-    return start;
+    return initial;
   });
+  const [pendingDelete, setPendingDelete] = useState<DeleteTarget | null>(null);
 
-  // Server data refreshed → drop live overrides (the sidebar now reads the saved
-  // values) and keep the selection valid if its page was deleted.
-  const pagesRef = useRef(teamspace.pages);
+  // Drag state. The active id lives in a ref so the frequently-fired dragover
+  // handler always reads the live value; `dragId` in state only drives the
+  // dimmed look of the row being dragged.
+  const dragIdRef = useRef<string | null>(null);
+  const dragDescendants = useRef<Set<string>>(new Set());
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropHint, setDropHint] = useState<DropHint | null>(null);
+
+  // A fresh server tree replaces the optimistic copy, drops live overrides (the
+  // sidebar now reads saved values), and keeps the selection valid if its page
+  // was deleted.
+  const serverPagesRef = useRef(teamspace.pages);
   useEffect(() => {
-    if (pagesRef.current === teamspace.pages) return;
-    pagesRef.current = teamspace.pages;
+    if (serverPagesRef.current === teamspace.pages) return;
+    serverPagesRef.current = teamspace.pages;
+    setPages(teamspace.pages);
     setOverrides(new Map());
-    setSelectedId((cur) => (cur && byId.has(cur) ? cur : firstPageId));
-  }, [teamspace.pages, byId, firstPageId]);
+    const serverFlat = flattenTree(teamspace.pages);
+    const serverIds = new Set(serverFlat.map((p) => p.id));
+    setSelectedId((cur) =>
+      cur && serverIds.has(cur) ? cur : (serverFlat[0]?.id ?? null),
+    );
+  }, [teamspace.pages]);
 
-  const labelOf = (node: WorkspacePageLite) => ({
-    title: overrides.get(node.id)?.title ?? node.title,
-    icon: overrides.get(node.id)?.icon ?? node.icon,
-  });
+  const labelOf = useCallback(
+    (node: WorkspacePageLite) => ({
+      title: overrides.get(node.id)?.title ?? node.title,
+      icon: overrides.get(node.id)?.icon ?? node.icon,
+    }),
+    [overrides],
+  );
 
-  const selectNode = useCallback(
+  const revealAndSelect = useCallback(
     (id: string) => {
       setSelectedId(id);
-      setNewPageId(null);
       setOpenPages((prev) => {
         const next = new Set(prev);
         for (const crumb of pageBreadcrumb(allPages, id)) next.add(crumb.id);
         return next;
       });
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `${window.location.pathname}?page=${id}`);
+      }
     },
     [allPages],
+  );
+
+  const selectNode = useCallback(
+    (id: string) => {
+      setNewPageId(null);
+      revealAndSelect(id);
+    },
+    [revealAndSelect],
   );
 
   const persist = useCallback(
@@ -193,32 +261,66 @@ export function WorkspaceApp({
     [router, toast, teamspace.clientId],
   );
 
-  const removePage = useCallback(
+  const duplicate = useCallback(
     (node: PageNode) => {
-      const title = overrides.get(node.id)?.title ?? node.title;
-      const kids = node.children.length;
-      const msg =
-        kids > 0
-          ? `Delete "${title}" and its ${kids} nested page${kids > 1 ? "s" : ""}?`
-          : `Delete "${title}"?`;
-      if (!window.confirm(msg)) return;
       start(async () => {
         try {
-          await deletePage(node.id);
-          setSelectedId((cur) => (cur === node.id ? (node.parentId ?? null) : cur));
+          const { id } = await duplicatePage(node.id);
+          setSelectedId(id);
+          if (node.parentId) setOpenPages((prev) => new Set(prev).add(node.parentId!));
           router.refresh();
         } catch (e) {
           toast({
             tone: "error",
-            title: "Couldn't delete the page",
+            title: "Couldn't duplicate the page",
             detail: e instanceof Error ? e.message : undefined,
           });
         }
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [router, toast],
   );
+
+  const requestRename = useCallback(
+    (node: PageNode) => {
+      setNewPageId(node.id);
+      setFocusNonce((n) => n + 1);
+      revealAndSelect(node.id);
+    },
+    [revealAndSelect],
+  );
+
+  const requestDelete = useCallback(
+    (node: PageNode) => {
+      setPendingDelete({
+        id: node.id,
+        parentId: node.parentId,
+        title: overrides.get(node.id)?.title ?? node.title,
+      });
+    },
+    [overrides],
+  );
+
+  const confirmDelete = useCallback(() => {
+    const target = pendingDelete;
+    if (!target) return;
+    start(async () => {
+      try {
+        await deletePage(target.id);
+        // Land on the parent, or the teamspace root if there was none.
+        setSelectedId((cur) => (cur === target.id ? (target.parentId ?? null) : cur));
+        setPendingDelete(null);
+        router.refresh();
+      } catch (e) {
+        setPendingDelete(null);
+        toast({
+          tone: "error",
+          title: "Couldn't delete the page",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
+    });
+  }, [pendingDelete, router, toast]);
 
   const toggleOpen = (id: string) =>
     setOpenPages((prev) => {
@@ -228,11 +330,110 @@ export function WorkspaceApp({
       return next;
     });
 
+  // --- Drag and drop ------------------------------------------------------
+
+  const handleDragStart = useCallback(
+    (node: PageNode) => {
+      dragIdRef.current = node.id;
+      dragDescendants.current = new Set(collectSubtreeIds(allPages, node.id));
+      setDragId(node.id);
+    },
+    [allPages],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    dragIdRef.current = null;
+    setDragId(null);
+    setDropHint(null);
+  }, []);
+
+  const handleDragOver = useCallback((node: PageNode, mode: DropMode) => {
+    if (!dragIdRef.current) return;
+    // Never onto itself or its own subtree — that would orphan the branch.
+    if (dragDescendants.current.has(node.id)) {
+      setDropHint((prev) => (prev ? null : prev));
+      return;
+    }
+    setDropHint((prev) =>
+      prev && prev.id === node.id && prev.mode === mode ? prev : { id: node.id, mode },
+    );
+  }, []);
+
+  const performMove = useCallback(
+    (draggingId: string, target: PageNode, mode: DropMode) => {
+      let newParentId: string | null;
+      let beforeId: string | null;
+      if (mode === "inside") {
+        newParentId = target.id;
+        beforeId = null;
+      } else {
+        newParentId = target.parentId ?? null;
+        const siblings = (
+          newParentId == null ? pages : (byId.get(newParentId)?.children ?? [])
+        ).filter((n) => n.id !== draggingId);
+        const idx = siblings.findIndex((n) => n.id === target.id);
+        beforeId =
+          mode === "before"
+            ? (siblings[idx]?.id ?? null)
+            : (siblings[idx + 1]?.id ?? null);
+      }
+
+      const plan = planMove(allPages, draggingId, newParentId, beforeId);
+      if (!plan) return;
+
+      // Optimistic: apply the same plan the server will, then rebuild the tree.
+      const orderMap = new Map(plan.updates.map((u) => [u.id, u.sortOrder]));
+      const nextLite: WorkspacePageLite[] = allPages.map((n) => ({
+        id: n.id,
+        clientId: n.clientId,
+        parentId: n.id === draggingId ? plan.parentId : n.parentId,
+        title: n.title,
+        icon: n.icon,
+        content: n.content,
+        sortOrder: orderMap.get(n.id) ?? n.sortOrder,
+        updatedAt: n.updatedAt,
+      }));
+      setPages(buildPageTree(nextLite));
+      if (newParentId) setOpenPages((prev) => new Set(prev).add(newParentId!));
+
+      start(async () => {
+        try {
+          await movePage(draggingId, { parentId: newParentId, beforeId });
+          router.refresh();
+        } catch (e) {
+          toast({
+            tone: "error",
+            title: "Couldn't move the page",
+            detail: e instanceof Error ? e.message : undefined,
+          });
+          router.refresh(); // resync from the server on failure
+        }
+      });
+    },
+    [pages, byId, allPages, router, toast],
+  );
+
+  const handleDrop = useCallback(
+    (node: PageNode, mode: DropMode) => {
+      const draggingId = dragIdRef.current;
+      if (draggingId && !dragDescendants.current.has(node.id)) {
+        performMove(draggingId, node, mode);
+      }
+      handleDragEnd();
+    },
+    [performMove, handleDragEnd],
+  );
+
+  // ------------------------------------------------------------------------
+
   const selectedNode = selectedId ? byId.get(selectedId) : undefined;
   const ancestors: Crumb[] = selectedNode
     ? pageBreadcrumb(allPages, selectedNode.id)
         .slice(0, -1)
         .map((p) => ({ id: p.id, ...labelOf(p) }))
+    : [];
+  const subpages: Crumb[] = selectedNode
+    ? selectedNode.children.map((c) => ({ id: c.id, ...labelOf(c) }))
     : [];
 
   return (
@@ -287,7 +488,7 @@ export function WorkspaceApp({
 
           {teamspaceOpen && (
             <div className="mt-0.5">
-              {teamspace.pages.length === 0 ? (
+              {pages.length === 0 ? (
                 <button
                   type="button"
                   onClick={() => addPage(null)}
@@ -298,18 +499,26 @@ export function WorkspaceApp({
                 </button>
               ) : (
                 <>
-                  {teamspace.pages.map((node) => (
+                  {pages.map((node) => (
                     <TreeRow
                       key={node.id}
                       node={node}
                       selectedId={selectedId}
                       openPages={openPages}
                       pending={pending}
+                      dragId={dragId}
+                      dropHint={dropHint}
                       labelOf={labelOf}
                       onToggle={toggleOpen}
                       onSelect={selectNode}
                       onAddChild={(n) => addPage(n.id)}
-                      onDelete={removePage}
+                      onRename={requestRename}
+                      onDuplicate={duplicate}
+                      onDelete={requestDelete}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
                     />
                   ))}
                   <button
@@ -362,8 +571,11 @@ export function WorkspaceApp({
             teamspaceName={teamspace.name}
             teamspaceHref={homeHref}
             ancestors={ancestors}
+            subpages={subpages}
             saving={pending}
             autoFocusTitle={selectedNode.id === newPageId}
+            focusNonce={focusNonce}
+            basePath={basePath}
             onSave={(patch) => {
               if (patch.title !== undefined || patch.icon !== undefined) {
                 setOverrides((prev) => {
@@ -386,11 +598,23 @@ export function WorkspaceApp({
               })
             }
             onSelect={selectNode}
+            onDuplicate={() => duplicate(selectedNode)}
+            onDelete={() => requestDelete(selectedNode)}
           />
         ) : (
           <EmptyState onCreate={() => addPage(null)} />
         )}
       </section>
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title={pendingDelete?.title ?? ""}
+        pending={pending}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
@@ -400,102 +624,182 @@ function TreeRow({
   selectedId,
   openPages,
   pending,
+  dragId,
+  dropHint,
   labelOf,
   onToggle,
   onSelect,
   onAddChild,
+  onRename,
+  onDuplicate,
   onDelete,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   node: PageNode;
   selectedId: string | null;
   openPages: Set<string>;
   pending: boolean;
+  dragId: string | null;
+  dropHint: DropHint | null;
   labelOf: (n: WorkspacePageLite) => { title: string; icon: string | null };
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onAddChild: (n: PageNode) => void;
+  onRename: (n: PageNode) => void;
+  onDuplicate: (n: PageNode) => void;
   onDelete: (n: PageNode) => void;
+  onDragStart: (n: PageNode) => void;
+  onDragOver: (n: PageNode, mode: DropMode) => void;
+  onDrop: (n: PageNode, mode: DropMode) => void;
+  onDragEnd: () => void;
 }) {
   const active = node.id === selectedId;
   const open = openPages.has(node.id);
   const hasChildren = node.children.length > 0;
   const { title, icon } = labelOf(node);
+  const isDragging = dragId === node.id;
+  const dropMode = dropHint?.id === node.id ? dropHint.mode : null;
+
+  const modeFor = (e: DragEvent<HTMLElement>): DropMode => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    if (y < rect.height * 0.3) return "before";
+    if (y > rect.height * 0.7) return "after";
+    return "inside";
+  };
 
   return (
     <div>
-      <div
-        className={cn(
-          "group/row relative flex items-center gap-0.5 rounded-md pr-1 transition-colors",
-          // Notion selection is a NEUTRAL gray fill — no brand bar, no wash.
-          active ? "bg-secondary/70" : "hover:bg-secondary/40",
-        )}
-        style={{ paddingLeft: `${0.25 + node.depth * 0.85}rem` }}
-      >
-        <button
-          type="button"
-          onClick={() => hasChildren && onToggle(node.id)}
+      <ContextMenu>
+        <ContextMenuTrigger
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = "move";
+            try {
+              e.dataTransfer.setData("text/plain", node.id);
+            } catch {
+              // Some browsers reject setData outside a user drag; harmless.
+            }
+            onDragStart(node);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            onDragOver(node, modeFor(e));
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            onDrop(node, modeFor(e));
+          }}
+          onDragEnd={onDragEnd}
           className={cn(
-            "text-faint hover:text-foreground grid size-5 shrink-0 place-items-center rounded",
-            !hasChildren && "pointer-events-none opacity-0",
+            "group/row relative flex items-center gap-0.5 rounded-md pr-1 transition-colors",
+            // Notion selection is a NEUTRAL gray fill — no brand bar, no wash.
+            active ? "bg-secondary/70" : "hover:bg-secondary/40",
+            isDragging && "opacity-40",
+            dropMode === "inside" && "bg-brand/10 ring-brand/50 ring-1 ring-inset",
           )}
-          aria-label={open ? "Collapse" : "Expand"}
-          tabIndex={hasChildren ? 0 : -1}
+          style={{ paddingLeft: `${0.25 + node.depth * 0.85}rem` }}
         >
-          {open ? (
-            <ChevronDown className="size-3.5" />
-          ) : (
-            <ChevronRight className="size-3.5" />
+          {dropMode === "before" && (
+            <span className="bg-brand pointer-events-none absolute inset-x-1 -top-px z-10 h-0.5 rounded-full" />
           )}
-        </button>
+          {dropMode === "after" && (
+            <span className="bg-brand pointer-events-none absolute inset-x-1 -bottom-px z-10 h-0.5 rounded-full" />
+          )}
 
-        <button
-          type="button"
-          onClick={() => onSelect(node.id)}
-          className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
-        >
-          <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
-            {icon ?? <FileText className="text-faint size-3.5" />}
-          </span>
-          <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-[0.8125rem]",
-              active ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {title || "Untitled"}
-          </span>
-        </button>
-
-        <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/row:opacity-100">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={pending}
-              aria-label="Page options"
-              className="text-faint hover:text-foreground hover:bg-secondary grid size-5 place-items-center rounded"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => onAddChild(node)}>
-                <Plus className="size-4" /> Add page inside
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => onDelete(node)}>
-                <Trash2 className="size-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <button
             type="button"
-            onClick={() => onAddChild(node)}
-            disabled={pending}
-            className="text-faint hover:text-foreground hover:bg-secondary grid size-5 place-items-center rounded"
-            aria-label="Add a nested page"
-            title="Add a nested page"
+            onClick={() => hasChildren && onToggle(node.id)}
+            className={cn(
+              "text-faint hover:text-foreground grid size-5 shrink-0 place-items-center rounded",
+              !hasChildren && "pointer-events-none opacity-0",
+            )}
+            aria-label={open ? "Collapse" : "Expand"}
+            tabIndex={hasChildren ? 0 : -1}
           >
-            <Plus className="size-3.5" />
+            {open ? (
+              <ChevronDown className="size-3.5" />
+            ) : (
+              <ChevronRight className="size-3.5" />
+            )}
           </button>
-        </div>
-      </div>
+
+          <button
+            type="button"
+            onClick={() => onSelect(node.id)}
+            className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
+          >
+            <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
+              {icon ?? <FileText className="text-faint size-3.5" />}
+            </span>
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[0.8125rem]",
+                active ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {title || "Untitled"}
+            </span>
+          </button>
+
+          <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/row:opacity-100">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={pending}
+                aria-label="Page options"
+                className="text-faint hover:text-foreground hover:bg-secondary grid size-5 place-items-center rounded"
+              >
+                <MoreHorizontal className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem onClick={() => onRename(node)}>
+                  <Pencil className="size-4" /> Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAddChild(node)}>
+                  <Plus className="size-4" /> Add sub-page
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDuplicate(node)}>
+                  <Copy className="size-4" /> Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => onDelete(node)}>
+                  <Trash2 className="size-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              type="button"
+              onClick={() => onAddChild(node)}
+              disabled={pending}
+              className="text-faint hover:text-foreground hover:bg-secondary grid size-5 place-items-center rounded"
+              aria-label="Add a nested page"
+              title="Add a nested page"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </div>
+        </ContextMenuTrigger>
+
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => onRename(node)}>
+            <Pencil className="size-4" /> Rename
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => onAddChild(node)}>
+            <Plus className="size-4" /> Add sub-page
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => onDuplicate(node)}>
+            <Copy className="size-4" /> Duplicate
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
+            <Trash2 className="size-4" /> Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       {open &&
         node.children.map((child) => (
@@ -505,11 +809,19 @@ function TreeRow({
             selectedId={selectedId}
             openPages={openPages}
             pending={pending}
+            dragId={dragId}
+            dropHint={dropHint}
             labelOf={labelOf}
             onToggle={onToggle}
             onSelect={onSelect}
             onAddChild={onAddChild}
+            onRename={onRename}
+            onDuplicate={onDuplicate}
             onDelete={onDelete}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            onDragEnd={onDragEnd}
           />
         ))}
     </div>

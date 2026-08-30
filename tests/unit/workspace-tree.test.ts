@@ -5,6 +5,7 @@ import {
   collectSubtreeIds,
   flattenTree,
   pageBreadcrumb,
+  planMove,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
 
@@ -106,6 +107,99 @@ describe("collectSubtreeIds", () => {
   it("does not reach into other branches", () => {
     expect(collectSubtreeIds(pages, "c1").sort()).toEqual(["c1", "g1"]);
     expect(collectSubtreeIds(pages, "c1")).not.toContain("other");
+  });
+});
+
+describe("planMove", () => {
+  // Three top-level pages, and two children under "a".
+  const pages = [
+    page("a", null, 0),
+    page("b", null, 1),
+    page("c", null, 2),
+    page("a1", "a", 0),
+    page("a2", "a", 1),
+  ];
+
+  it("reorders siblings — moving c before a re-indexes the whole level", () => {
+    const plan = planMove(pages, "c", null, "a");
+    expect(plan).not.toBeNull();
+    expect(plan!.parentId).toBeNull();
+    expect(plan!.updates).toEqual([
+      { id: "c", sortOrder: 0 },
+      { id: "a", sortOrder: 1 },
+      { id: "b", sortOrder: 2 },
+    ]);
+  });
+
+  it("appends to the end when beforeId is null", () => {
+    const plan = planMove(pages, "a", null, null);
+    expect(plan!.updates).toEqual([
+      { id: "b", sortOrder: 0 },
+      { id: "c", sortOrder: 1 },
+      { id: "a", sortOrder: 2 },
+    ]);
+  });
+
+  it("nests a page into a new parent, appended after existing children", () => {
+    const plan = planMove(pages, "b", "a", null);
+    expect(plan!.parentId).toBe("a");
+    expect(plan!.updates).toEqual([
+      { id: "a1", sortOrder: 0 },
+      { id: "a2", sortOrder: 1 },
+      { id: "b", sortOrder: 2 },
+    ]);
+  });
+
+  it("nests before a specific sibling", () => {
+    const plan = planMove(pages, "b", "a", "a2");
+    expect(plan!.updates).toEqual([
+      { id: "a1", sortOrder: 0 },
+      { id: "b", sortOrder: 1 },
+      { id: "a2", sortOrder: 2 },
+    ]);
+  });
+
+  it("moves a nested page back out to the root", () => {
+    const plan = planMove(pages, "a1", null, "b");
+    expect(plan!.parentId).toBeNull();
+    expect(plan!.updates).toEqual([
+      { id: "a", sortOrder: 0 },
+      { id: "a1", sortOrder: 1 },
+      { id: "b", sortOrder: 2 },
+      { id: "c", sortOrder: 3 },
+    ]);
+  });
+
+  it("refuses to drop a page onto itself", () => {
+    expect(planMove(pages, "a", "a", null)).toBeNull();
+  });
+
+  it("refuses to drop a page into its own descendant (would orphan the subtree)", () => {
+    const deep = [
+      page("root", null, 0),
+      page("mid", "root", 0),
+      page("leaf", "mid", 0),
+    ];
+    expect(planMove(deep, "root", "leaf", null)).toBeNull();
+    expect(planMove(deep, "root", "mid", null)).toBeNull();
+  });
+
+  it("keeps moves inside the same teamspace (clientId) scope", () => {
+    const mixed = [
+      page("x", null, 0, { clientId: "c1" }),
+      page("y", null, 1, { clientId: "c1" }),
+      page("z", null, 0, { clientId: "c2" }),
+    ];
+    // Moving x to the end of its (c1) level ignores the c2 page entirely.
+    const plan = planMove(mixed, "x", null, null);
+    expect(plan!.updates).toEqual([
+      { id: "y", sortOrder: 0 },
+      { id: "x", sortOrder: 1 },
+    ]);
+  });
+
+  it("returns null for an unknown page", () => {
+    expect(planMove(pages, "ghost", null, null)).toBeNull();
   });
 });
 
