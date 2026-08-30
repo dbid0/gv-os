@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Link2,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -49,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
+import { copyText } from "@/lib/clipboard";
 import {
   buildPageTree,
   collectSubtreeIds,
@@ -266,9 +268,12 @@ export function WorkspaceApp({
       start(async () => {
         try {
           const { id } = await duplicatePage(node.id);
+          // Jump to the fresh copy so the action is visible, not silent.
+          setNewPageId(null);
           setSelectedId(id);
           if (node.parentId) setOpenPages((prev) => new Set(prev).add(node.parentId!));
           router.refresh();
+          toast({ tone: "success", title: "Duplicated" });
         } catch (e) {
           toast({
             tone: "error",
@@ -279,6 +284,22 @@ export function WorkspaceApp({
       });
     },
     [router, toast],
+  );
+
+  const copyPageLink = useCallback(
+    async (node: PageNode) => {
+      const url =
+        typeof window !== "undefined"
+          ? `${window.location.origin}${basePath}?page=${node.id}`
+          : `${basePath}?page=${node.id}`;
+      const ok = await copyText(url);
+      toast(
+        ok
+          ? { tone: "success", title: "Link copied" }
+          : { tone: "error", title: "Couldn't copy the link", detail: url },
+      );
+    },
+    [basePath, toast],
   );
 
   const requestRename = useCallback(
@@ -514,6 +535,7 @@ export function WorkspaceApp({
                       onAddChild={(n) => addPage(n.id)}
                       onRename={requestRename}
                       onDuplicate={duplicate}
+                      onCopyLink={copyPageLink}
                       onDelete={requestDelete}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
@@ -632,6 +654,7 @@ function TreeRow({
   onAddChild,
   onRename,
   onDuplicate,
+  onCopyLink,
   onDelete,
   onDragStart,
   onDragOver,
@@ -650,6 +673,7 @@ function TreeRow({
   onAddChild: (n: PageNode) => void;
   onRename: (n: PageNode) => void;
   onDuplicate: (n: PageNode) => void;
+  onCopyLink: (n: PageNode) => void;
   onDelete: (n: PageNode) => void;
   onDragStart: (n: PageNode) => void;
   onDragOver: (n: PageNode, mode: DropMode) => void;
@@ -765,6 +789,9 @@ function TreeRow({
                 <DropdownMenuItem onClick={() => onDuplicate(node)}>
                   <Copy className="size-4" /> Duplicate
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCopyLink(node)}>
+                  <Link2 className="size-4" /> Copy link
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => onDelete(node)}>
                   <Trash2 className="size-4" /> Delete
@@ -794,6 +821,9 @@ function TreeRow({
           <ContextMenuItem onClick={() => onDuplicate(node)}>
             <Copy className="size-4" /> Duplicate
           </ContextMenuItem>
+          <ContextMenuItem onClick={() => onCopyLink(node)}>
+            <Link2 className="size-4" /> Copy link
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
             <Trash2 className="size-4" /> Delete
@@ -817,6 +847,7 @@ function TreeRow({
             onAddChild={onAddChild}
             onRename={onRename}
             onDuplicate={onDuplicate}
+            onCopyLink={onCopyLink}
             onDelete={onDelete}
             onDragStart={onDragStart}
             onDragOver={onDragOver}

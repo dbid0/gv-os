@@ -8,6 +8,9 @@ import { en, type Dictionary } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
+import { useToast } from "@/components/ui/toast";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
+
 /**
  * The Workspace page BODY — a Notion-style WYSIWYG block editor (BlockNote).
  *
@@ -103,16 +106,21 @@ function readStored(raw: string | null): {
 
 export function BlockEditor({
   initialContent,
+  pageId,
   onChange,
   onReady,
 }: {
   /** The stored `content`: BlockNote JSON, legacy markdown, or null/empty. */
   initialContent: string | null;
+  /** The page this body belongs to — namespaces uploaded attachments. */
+  pageId?: string;
   /** Debounced: called with the serialised document JSON to persist. */
   onChange: (contentJson: string) => void;
   /** Handed a focus() fn once mounted, so title-Enter can jump into the body. */
   onReady?: (focus: () => void) => void;
 }) {
+  const { toast } = useToast();
+
   // Read the stored body once, at mount. The pane is keyed per page upstream, so
   // a page switch is a remount with fresh initial content — this never has to
   // react to a changing `initialContent` prop.
@@ -120,9 +128,77 @@ export function BlockEditor({
     readStored(initialContent),
   );
 
+  // Reachable from `uploadFile`'s async closure without re-creating the editor.
+  const toastRef = useRef(toast);
+  const pageIdRef = useRef(pageId);
+  useEffect(() => {
+    toastRef.current = toast;
+    pageIdRef.current = pageId;
+  });
+
   const editor = useCreateBlockNote({
     initialContent: initialBlocks,
     dictionary,
+    // Uploads an image / video / file picked from the computer to Supabase
+    // Storage and returns the public URL BlockNote embeds in the block. A size
+    // reject or server failure surfaces as an error toast; re-throwing lets
+    // BlockNote clear the loading state on the block.
+    uploadFile: async (file: File) => {
+      if (file.size > MAX_UPLOAD_BYTES) {
+        toastRef.current({
+          tone: "error",
+          title: "File too large",
+          detail: `The limit is ${MAX_UPLOAD_LABEL}.`,
+        });
+        throw new Error(`File exceeds the ${MAX_UPLOAD_LABEL} limit.`);
+      }
+
+      const form = new FormData();
+      form.append("file", file);
+      if (pageIdRef.current) form.append("pageId", pageIdRef.current);
+
+      let res: Response;
+      try {
+        res = await fetch("/api/workspace/upload", { method: "POST", body: form });
+      } catch {
+        toastRef.current({
+          tone: "error",
+          title: "Upload failed",
+          detail: "Couldn't reach the server. Check your connection.",
+        });
+        throw new Error("Upload request failed.");
+      }
+
+      if (!res.ok) {
+        let detail = "Something went wrong uploading that file.";
+        try {
+          const body: unknown = await res.json();
+          if (
+            body &&
+            typeof body === "object" &&
+            "error" in body &&
+            typeof (body as { error: unknown }).error === "string"
+          ) {
+            detail = (body as { error: string }).error;
+          }
+        } catch {
+          // Non-JSON error body — keep the generic detail.
+        }
+        toastRef.current({ tone: "error", title: "Upload failed", detail });
+        throw new Error(detail);
+      }
+
+      const data: unknown = await res.json();
+      const url =
+        data && typeof data === "object" && "url" in data
+          ? (data as { url: unknown }).url
+          : null;
+      if (typeof url !== "string" || !url) {
+        toastRef.current({ tone: "error", title: "Upload failed" });
+        throw new Error("The upload returned no URL.");
+      }
+      return url;
+    },
   });
 
   // Keep the latest callbacks reachable from async work (the debounced save and

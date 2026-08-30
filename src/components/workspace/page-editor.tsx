@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 /**
@@ -145,11 +146,19 @@ export function PageEditor({
   // Set once the block editor mounts; lets Enter in the title jump into the body.
   const focusBodyRef = useRef<(() => void) | null>(null);
 
+  // Focus the title and select all its text, DEFERRED to the next frame. When
+  // Rename is chosen from a menu, base-ui returns focus to the menu's trigger in
+  // a microtask as it closes; a synchronous focus here would be immediately
+  // stolen back. requestAnimationFrame runs after that microtask, so the title
+  // reliably keeps focus and the user can retype straight away — from both the
+  // header ••• and a tree-row rename (which re-mounts/re-focuses this pane).
   const focusTitle = () => {
-    const el = titleRef.current;
-    if (!el) return;
-    el.focus();
-    el.select();
+    requestAnimationFrame(() => {
+      const el = titleRef.current;
+      if (!el) return;
+      el.focus();
+      el.select();
+    });
   };
 
   useEffect(() => {
@@ -178,12 +187,12 @@ export function PageEditor({
 
   const copyLink = async () => {
     const url = `${window.location.origin}${basePath}?page=${page.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast({ tone: "success", title: "Link copied" });
-    } catch {
-      toast({ tone: "error", title: "Couldn't copy the link" });
-    }
+    const ok = await copyText(url);
+    toast(
+      ok
+        ? { tone: "success", title: "Link copied" }
+        : { tone: "error", title: "Couldn't copy the link", detail: url },
+    );
   };
 
   const edited = editedLabel(page.updatedAt);
@@ -307,6 +316,7 @@ export function PageEditor({
           <div className="mt-2">
             <BlockEditor
               initialContent={page.content}
+              pageId={page.id}
               onChange={(contentJson) => onSave({ content: contentJson })}
               onReady={(focus) => {
                 focusBodyRef.current = focus;
