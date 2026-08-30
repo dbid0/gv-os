@@ -26,6 +26,11 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@blocknote/core": "^0.54.0",
+    "@blocknote/mantine": "^0.54.0",
+    "@blocknote/react": "^0.54.0",
+    "@mantine/core": "^9.5.2",
+    "@mantine/hooks": "^9.5.2",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "class-variance-authority": "^0.7.1",

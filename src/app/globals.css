@@ -410,6 +410,30 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Workspace WYSIWYG editor (BlockNote).
+
+   The colours come from the theme object in block-editor.tsx (applied inline on
+   BlockNote's root, so they win). These are the STRUCTURAL fixes that make the
+   editor sit in our page rather than in a boxed BlockNote frame: the body text
+   aligns flush-left with the 40px title (BlockNote's default 54px side gutter
+   is removed — the drag handle lives in the column's own padding), 16px / 1.5
+   to match the reading skin, transparent so the page charcoal shows through,
+   and links in the one brand blue.
+   --------------------------------------------------------------------------- */
+.gv-block-editor .bn-container {
+  background: transparent;
+}
+.gv-block-editor .bn-editor {
+  padding-inline: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.gv-block-editor .bn-editor a {
+  color: var(--brand);
+  text-underline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
    Keyframes for the ambient "alive" motion. Kept out of any @layer so they are
    never purged. The prefers-reduced-motion rule in @layer base zeroes them.
    --------------------------------------------------------------------------- */
