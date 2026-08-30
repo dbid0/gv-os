@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { EmojiPicker } from "@/components/workspace/emoji-picker";
+import { ShareDialog } from "@/components/workspace/share-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,6 +142,7 @@ export function PageEditor({
   const { toast } = useToast();
   const [title, setTitle] = useState(page.title);
   const [starred, setStarred] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const titleRef = useAutoResize(title);
   // Set once the block editor mounts; lets Enter in the title jump into the body.
@@ -239,6 +241,7 @@ export function PageEditor({
           </span>
           <button
             type="button"
+            onClick={() => setShareOpen(true)}
             className="hover:bg-secondary/60 hover:text-foreground hidden rounded-md px-2 py-1 text-[0.8125rem] transition-colors sm:inline-flex"
           >
             <Share className="mr-1 size-3.5" /> Share
@@ -351,6 +354,15 @@ export function PageEditor({
           )}
         </div>
       </div>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        pageId={page.id}
+        inAppUrl={`${
+          typeof window !== "undefined" ? window.location.origin : ""
+        }${basePath}?page=${page.id}`}
+      />
     </div>
   );
 }

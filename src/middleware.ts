@@ -27,6 +27,10 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/auth/error",
   "/api/health",
+  // Public, view-only Workspace share links (/share/[token]). The token IS the
+  // capability — an unknown or revoked one 404s in the route, and the route only
+  // ever renders the shared page's own subtree, never any (app) surface.
+  "/share",
   // Client logo images (/api/clients/[slug]/logo) — just a logo, so it's
   // publicly cacheable by the browser and CDN. No sensitive data lives here.
   "/api/clients",

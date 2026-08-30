@@ -111,6 +111,25 @@ export function collectSubtreeIds(
   return ids;
 }
 
+/**
+ * Is `candidateId` the subtree root `rootId` itself, or one of its descendants?
+ *
+ * This is the PUBLIC-SHARE GUARD in pure form: a shared link exposes one page
+ * and (optionally) everything under it, never a parent, a sibling, or another
+ * teamspace. The server calls this on every `?p=` param before rendering, so a
+ * hand-edited id that points outside the shared subtree is rejected. Built on
+ * `collectSubtreeIds`, which includes the root — so viewing the root page
+ * itself is always allowed.
+ */
+export function isDescendantOrSelf(
+  pages: Pick<WorkspacePageLite, "id" | "parentId">[],
+  rootId: string,
+  candidateId: string,
+): boolean {
+  if (candidateId === rootId) return true;
+  return collectSubtreeIds(pages, rootId).includes(candidateId);
+}
+
 /** What a move writes: the moved page's new parent, and every sibling's new order. */
 export interface MovePlan {
   /** The moved page's new parent (null = top-level in the teamspace). */
