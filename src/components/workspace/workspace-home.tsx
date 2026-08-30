@@ -6,7 +6,9 @@ import {
   TeamspaceIcon,
   type TeamspaceLike,
 } from "@/components/workspace/teamspace-icon";
+import { TodoDatabase } from "@/components/workspace/todo-database";
 import { findNodeByTitle, type PageNode } from "@/lib/workspace/tree";
+import { type TodoRow } from "@/lib/workspace/todos";
 
 /**
  * The teamspace Home — a faithful recreation of the "Global Ventures
@@ -17,9 +19,10 @@ import { findNodeByTitle, type PageNode } from "@/lib/workspace/tree";
  * own pages for free — and Home can never be renamed or deleted.
  *
  * Layout matches Notion: a big icon + name title, then a two-column body — a
- * "⚡ Dashboard" callout of link rows on the left, a "# To-Do List" callout with
- * a status table on the right. Everything below is config-driven (the arrays at
- * the top), so tweaking the link list is a one-line edit.
+ * "⚡ Dashboard" callout of link rows on the left (config-driven by the array at
+ * the top, so tweaking the link list is a one-line edit), and a "# To-Do List"
+ * callout on the right that is a REAL, editable database — <TodoDatabase />,
+ * seeded from a server query and persisted per teamspace.
  */
 
 /** How a Home link resolves — to a workspace page, or to the Marketing area. */
@@ -38,25 +41,6 @@ const DASHBOARD_ITEMS: HomeLink[] = [
   { title: "Custom GPT's", emoji: "🤖", kind: "page" },
   { title: "Coaching Protocol", emoji: "🎯", kind: "page" },
   { title: "Resources", emoji: "🧰", kind: "page" },
-];
-
-interface TodoItem {
-  /** Leading static text — the whole label when there is no linked sheet. */
-  label: string;
-  /** When set, this sheet name is appended after `label` as a resolvable link. */
-  linkTitle?: string;
-}
-
-/** The "# To-Do List" callout — the three "Fill out …" rows link their sheet. */
-const TODO_ITEMS: TodoItem[] = [
-  { label: "Fill out ", linkTitle: "Software Logins" },
-  { label: "Fill out ", linkTitle: "Brand Sheets" },
-  { label: "Fill out ", linkTitle: "Client Roadmap" },
-  { label: "Film VSL" },
-  { label: "Film pre-call assets" },
-  { label: "Film course modules" },
-  { label: "Finalize Offer" },
-  { label: "Set up launch call" },
 ];
 
 /** The Marketing/Content area — where the Content pages live, off the tree. */
@@ -83,13 +67,19 @@ function resolveLink(item: HomeLink, pages: PageNode[], basePath: string): LinkT
 
 export function WorkspaceHome({
   teamspace,
+  clientId,
   pages,
+  initialTodos,
   basePath,
   onSelect,
 }: {
   teamspace: TeamspaceLike;
+  /** The teamspace this Home belongs to (null = the agency board), for the To-Dos. */
+  clientId: string | null;
   /** The teamspace's page forest — links resolve by title against the whole tree. */
   pages: PageNode[];
+  /** Server-loaded To-Do rows for this teamspace — the seed for the live table. */
+  initialTodos: TodoRow[];
   /** The workspace route path (e.g. /clients/foo/workspace) for `?page=` links. */
   basePath: string;
   onSelect: (id: string) => void;
@@ -126,7 +116,7 @@ export function WorkspaceHome({
               </div>
             </Callout>
 
-            {/* RIGHT — the # To-Do List callout with a status table. */}
+            {/* RIGHT — the # To-Do List callout with the live, editable table. */}
             <Callout>
               <CalloutHeader className="text-foreground">
                 <span className="text-faint" aria-hidden>
@@ -134,7 +124,7 @@ export function WorkspaceHome({
                 </span>
                 <span>To-Do List</span>
               </CalloutHeader>
-              <TodoTable pages={pages} basePath={basePath} onSelect={onSelect} />
+              <TodoDatabase clientId={clientId} initialTodos={initialTodos} />
             </Callout>
           </div>
         </div>
@@ -211,100 +201,5 @@ function LinkRow({
     <Link href={target.href} className={className}>
       {inner}
     </Link>
-  );
-}
-
-/** The To-Do table: Task + a "Not started" status pill on every row. */
-function TodoTable({
-  pages,
-  basePath,
-  onSelect,
-}: {
-  pages: PageNode[];
-  basePath: string;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <table className="mt-4 w-full border-collapse text-sm">
-      <thead>
-        <tr className="border-border/60 border-b text-left">
-          <th className="text-muted-foreground pr-4 pb-2 font-medium">Task</th>
-          <th className="text-muted-foreground pb-2 font-medium">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {TODO_ITEMS.map((item) => (
-          <tr
-            key={item.label + (item.linkTitle ?? "")}
-            className="border-border/40 border-b last:border-0"
-          >
-            <td className="text-foreground py-2.5 pr-4">
-              {item.label}
-              {item.linkTitle ? (
-                <TodoSheetLink
-                  title={item.linkTitle}
-                  pages={pages}
-                  basePath={basePath}
-                  onSelect={onSelect}
-                />
-              ) : null}
-            </td>
-            <td className="py-2.5">
-              <StatusPill />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-/** A sheet name inside a To-Do row, linked to its page when the tree has one. */
-function TodoSheetLink({
-  title,
-  pages,
-  basePath,
-  onSelect,
-}: {
-  title: string;
-  pages: PageNode[];
-  basePath: string;
-  onSelect: (id: string) => void;
-}) {
-  const node = findNodeByTitle(pages, title);
-  const className =
-    "text-foreground decoration-border/70 hover:text-brand hover:decoration-brand/60 font-medium underline decoration-1 underline-offset-2 transition-colors";
-
-  if (node) {
-    return (
-      <a
-        href={`${basePath}?page=${node.id}`}
-        onClick={(e) => {
-          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-          e.preventDefault();
-          onSelect(node.id);
-        }}
-        className={className}
-      >
-        {title}
-      </a>
-    );
-  }
-  // Not in this teamspace's tree — still render the name, pointed at the base
-  // route so it stays harmless rather than a dead link.
-  return (
-    <Link href={basePath} className={className}>
-      {title}
-    </Link>
-  );
-}
-
-/** Notion's "Not started" status chip — a muted grey pill with a dot. */
-function StatusPill() {
-  return (
-    <span className="bg-secondary/70 text-muted-foreground inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium">
-      <span className="bg-faint size-1.5 rounded-full" aria-hidden />
-      Not started
-    </span>
   );
 }

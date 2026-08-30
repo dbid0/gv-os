@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { WorkspaceApp } from "@/components/workspace/workspace-app";
-import { getTeamspaceTree } from "@/lib/workspace/queries";
+import { getTeamspaceTree, listTeamspaceTodos } from "@/lib/workspace/queries";
 import { clientBySlug } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +34,7 @@ export default async function ClientWorkspacePage({
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const teamspace = await getTeamspaceTree(slug);
   if (!teamspace) notFound();
+  const initialTodos = await listTeamspaceTodos(teamspace.clientId);
 
   const pageParam = sp.page;
   const initialPageId = typeof pageParam === "string" ? pageParam : null;
@@ -41,6 +42,7 @@ export default async function ClientWorkspacePage({
   return (
     <WorkspaceApp
       teamspace={teamspace}
+      initialTodos={initialTodos}
       initialPageId={initialPageId}
       homeHref={`/clients/${slug}`}
       agencyHref="/clients/workspace"

@@ -61,6 +61,7 @@ import {
   type PageNode,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
+import { type TodoRow } from "@/lib/workspace/todos";
 import { cn } from "@/lib/utils";
 
 /** The single teamspace this scoped view renders (a client, or the agency). */
@@ -96,11 +97,14 @@ const HOME_PARAM = "home";
  */
 export function WorkspaceApp({
   teamspace,
+  initialTodos,
   initialPageId,
   homeHref,
   agencyHref = null,
 }: {
   teamspace: TeamspaceView;
+  /** The teamspace's To-Do rows, for the Home board. Server-loaded, seeds state. */
+  initialTodos: TodoRow[];
   initialPageId: string | null;
   /** The client (or /clients) this teamspace belongs to — back link + root crumb. */
   homeHref: string;
@@ -643,7 +647,9 @@ export function WorkspaceApp({
         ) : (
           <WorkspaceHome
             teamspace={teamspace}
+            clientId={teamspace.clientId}
             pages={pages}
+            initialTodos={initialTodos}
             basePath={basePath}
             onSelect={selectNode}
           />

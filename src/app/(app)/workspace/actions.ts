@@ -1,17 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { workspacePages, workspaceShares } from "@/db/schema/app";
+import { workspacePages, workspaceShares, workspaceTodos } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { getShareForPage, type ShareState } from "@/lib/workspace/shares";
 import { generateShareToken } from "@/lib/workspace/share-token";
 import { collectSubtreeIds, planMove } from "@/lib/workspace/tree";
+import {
+  isTodoStatus,
+  normalizeTodoStatus,
+  planTodoReorder,
+  type TodoRow,
+} from "@/lib/workspace/todos";
 
 async function requireUser() {
   // Dev/preview bypass only — never passes in production.
@@ -317,4 +323,168 @@ export async function getShareState(pageId: string): Promise<ShareState | null> 
   await requireUser();
   const id = z.string().uuid().parse(pageId);
   return getShareForPage(id);
+}
+
+// --- Workspace To-Do database -------------------------------------------------
+//
+// The interactive task table on each teamspace's Home. Same auth gate and same
+// pure re-index discipline as the page tree: `planTodoReorder` (mirroring
+// `planMove`) is recomputed server-side from live data on every drag, so a
+// stale client order can never corrupt the board.
+
+/** Map a DB row to the serializable shape the client renders. */
+function toTodoRow(row: typeof workspaceTodos.$inferSelect): TodoRow {
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    task: row.task,
+    status: normalizeTodoStatus(row.status),
+    dueDate: row.dueDate,
+    sortOrder: row.sortOrder,
+  };
+}
+
+/** A `where` that scopes To-Dos to one teamspace (null clientId = agency). */
+function todoScope(clientId: string | null) {
+  return clientId === null
+    ? isNull(workspaceTodos.clientId)
+    : eq(workspaceTodos.clientId, clientId);
+}
+
+/** Every To-Do in a teamspace, in board order (sortOrder, then id). */
+export async function listTodos(clientId: string | null): Promise<TodoRow[]> {
+  await requireUser();
+  const scope = uuidOrNull.parse(clientId) ?? null;
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(workspaceTodos)
+    .where(todoScope(scope))
+    .orderBy(asc(workspaceTodos.sortOrder), asc(workspaceTodos.id));
+  return rows.map(toTodoRow);
+}
+
+/**
+ * Add an empty To-Do at the END of a teamspace's board, so a new row never
+ * jumps above the ones already there. Returns the created row for the client to
+ * render and focus.
+ */
+export async function addTodo(clientId: string | null): Promise<TodoRow> {
+  await requireUser();
+  const scope = uuidOrNull.parse(clientId) ?? null;
+  const db = getDb();
+
+  const existing = await db
+    .select({ sortOrder: workspaceTodos.sortOrder })
+    .from(workspaceTodos)
+    .where(todoScope(scope));
+  const nextOrder = existing.reduce((max, r) => Math.max(max, r.sortOrder), -1) + 1;
+
+  const [row] = await db
+    .insert(workspaceTodos)
+    .values({ clientId: scope, task: "", sortOrder: nextOrder })
+    .returning();
+
+  revalidatePath("/workspace");
+  return toTodoRow(row);
+}
+
+const todoUpdateInput = z.object({
+  task: z.string().optional(),
+  status: z.string().optional(),
+  /** yyyy-mm-dd, or null to clear. */
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Patch a To-Do's task, status, and/or due date. Only provided fields change.
+ * The status is VALIDATED against the three allowed values — an unknown status
+ * is rejected, never written — so the column can only ever hold a real option.
+ */
+export async function updateTodo(
+  id: string,
+  raw: z.input<typeof todoUpdateInput>,
+): Promise<{ ok: true }> {
+  await requireUser();
+  const todoId = z.string().uuid().parse(id);
+  const input = todoUpdateInput.parse(raw);
+
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (input.task !== undefined) patch.task = input.task;
+  if (input.status !== undefined) {
+    if (!isTodoStatus(input.status)) throw new Error("Invalid status.");
+    patch.status = input.status;
+  }
+  if (input.dueDate !== undefined) patch.dueDate = input.dueDate;
+
+  const db = getDb();
+  await db.update(workspaceTodos).set(patch).where(eq(workspaceTodos.id, todoId));
+
+  revalidatePath("/workspace");
+  return { ok: true };
+}
+
+/** Delete one To-Do. */
+export async function deleteTodo(id: string): Promise<{ ok: true }> {
+  await requireUser();
+  const todoId = z.string().uuid().parse(id);
+  const db = getDb();
+  await db.delete(workspaceTodos).where(eq(workspaceTodos.id, todoId));
+  revalidatePath("/workspace");
+  return { ok: true };
+}
+
+const reorderInput = z.object({
+  /** Slot the row immediately before this one; null/omitted = at the end. */
+  beforeId: z.string().uuid().nullable().optional(),
+});
+
+/**
+ * Drag-and-drop reorder: pull the row out and slot it before `beforeId` (or at
+ * the end), then re-index the whole board to a clean sequential `sortOrder` via
+ * the pure `planTodoReorder`. The plan is recomputed from live data scoped to
+ * the row's OWN teamspace — the client's optimistic order is never trusted — so
+ * a stale drag can't scramble another board or corrupt the ordering.
+ */
+export async function reorderTodo(
+  id: string,
+  raw: z.input<typeof reorderInput>,
+): Promise<{ ok: true }> {
+  await requireUser();
+  const todoId = z.string().uuid().parse(id);
+  const input = reorderInput.parse(raw);
+  const db = getDb();
+
+  const [moved] = await db
+    .select({ clientId: workspaceTodos.clientId })
+    .from(workspaceTodos)
+    .where(eq(workspaceTodos.id, todoId))
+    .limit(1);
+  if (!moved) throw new Error("To-Do not found.");
+
+  const siblings = await db
+    .select({ id: workspaceTodos.id, sortOrder: workspaceTodos.sortOrder })
+    .from(workspaceTodos)
+    .where(todoScope(moved.clientId));
+
+  const plan = planTodoReorder(siblings, todoId, input.beforeId ?? null);
+  if (!plan) throw new Error("That move isn't allowed.");
+
+  const currentOrder = new Map(siblings.map((s) => [s.id, s.sortOrder]));
+  for (const u of plan.updates) {
+    // Only write rows whose order actually changed — a no-op drag is free.
+    if (currentOrder.get(u.id) !== u.sortOrder) {
+      await db
+        .update(workspaceTodos)
+        .set({ sortOrder: u.sortOrder })
+        .where(eq(workspaceTodos.id, u.id));
+    }
+  }
+
+  revalidatePath("/workspace");
+  return { ok: true };
 }

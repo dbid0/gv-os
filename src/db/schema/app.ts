@@ -1458,3 +1458,51 @@ export const workspaceSharesRelations = relations(workspaceShares, ({ one }) => 
 
 export type WorkspaceShare = typeof workspaceShares.$inferSelect;
 export type NewWorkspaceShare = typeof workspaceShares.$inferInsert;
+
+/**
+ * The Workspace To-Do database — the interactive, Notion-style task table on
+ * each teamspace's Home. A faithful mirror of the Notion "To-Do List" schema:
+ * `task` (title/text), `status` (a SELECT limited to Not started | In progress |
+ * Done — enforced in the server action, not the column), `due_date`, and
+ * `assignee` (the person column; its picker is a later phase, the column exists
+ * now so the schema is complete).
+ *
+ * A To-Do belongs to a TEAMSPACE via `clientId`, exactly like `workspace_pages`:
+ * a client's board when set, the Global Ventures agency board when null.
+ * `sort_order` is the manual drag order within a board; ties break on id so the
+ * list is always stable. This is operational state, NOT money — it lives in the
+ * `app` schema and never touches the ledger.
+ */
+export const workspaceTodos = appSchema.table(
+  "workspace_todos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The teamspace. Null = the Global Ventures agency board. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** The task label. Empty is allowed — a fresh row starts blank. */
+    task: text("task").notNull().default(""),
+    /** Not started | In progress | Done. Validated in the action, not here. */
+    status: text("status").notNull().default("Not started"),
+    /** Optional due date, yyyy-mm-dd. */
+    dueDate: date("due_date", { mode: "string" }),
+    /** The assigned person, free-text for now (person-picker is a later phase). */
+    assignee: text("assignee"),
+    /** Manual drag order within the board; lower sorts first. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("workspace_todos_client_sort_idx").on(table.clientId, table.sortOrder),
+  ],
+);
+
+export const workspaceTodosRelations = relations(workspaceTodos, ({ one }) => ({
+  client: one(clients, {
+    fields: [workspaceTodos.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export type WorkspaceTodo = typeof workspaceTodos.$inferSelect;
+export type NewWorkspaceTodo = typeof workspaceTodos.$inferInsert;

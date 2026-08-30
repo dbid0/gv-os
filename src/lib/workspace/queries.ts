@@ -1,15 +1,21 @@
 import "server-only";
 
-import { eq, isNull } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, workspacePages, type WorkspacePage } from "@/db/schema/app";
+import {
+  clients,
+  workspacePages,
+  workspaceTodos,
+  type WorkspacePage,
+} from "@/db/schema/app";
 import { roster } from "@/lib/roster";
 import {
   buildPageTree,
   type PageNode,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
+import { normalizeTodoStatus, type TodoRow } from "@/lib/workspace/todos";
 
 /**
  * The Workspace read layer. Every function is FAIL-SOFT: a database hiccup
@@ -147,6 +153,37 @@ export async function getTeamspaceTree(
     return { ...teamspace, pages: buildPageTree(rows.map(toLite)) };
   } catch {
     return { ...teamspace, pages: [] };
+  }
+}
+
+/**
+ * A teamspace's To-Do rows, in board order (sortOrder, then id), shaped into the
+ * serializable `TodoRow` the Home dashboard renders. `clientId` null selects the
+ * agency board. Fail-soft: a database hiccup degrades to an empty list, never a
+ * thrown error, so a To-Do outage shows "no tasks yet" instead of breaking Home.
+ */
+export async function listTeamspaceTodos(clientId: string | null): Promise<TodoRow[]> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(workspaceTodos)
+      .where(
+        clientId === null
+          ? isNull(workspaceTodos.clientId)
+          : eq(workspaceTodos.clientId, clientId),
+      )
+      .orderBy(asc(workspaceTodos.sortOrder), asc(workspaceTodos.id));
+    return rows.map((r) => ({
+      id: r.id,
+      clientId: r.clientId,
+      task: r.task,
+      status: normalizeTodoStatus(r.status),
+      dueDate: r.dueDate,
+      sortOrder: r.sortOrder,
+    }));
+  } catch {
+    return [];
   }
 }
 
