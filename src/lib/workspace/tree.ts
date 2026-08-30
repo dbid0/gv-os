@@ -69,6 +69,18 @@ export function buildPageTree(pages: WorkspacePageLite[]): PageNode[] {
   return roots;
 }
 
+/**
+ * The top-level pages of a teamspace — the roots of the forest, in tree order.
+ *
+ * `buildPageTree` already returns the roots, but a caller may be holding a
+ * flattened list (the Home dashboard reads the same array the sidebar renders).
+ * Either way this returns only the depth-0 nodes, so Home shows exactly one card
+ * per top-level page and never a nested one.
+ */
+export function topLevelNodes(nodes: PageNode[]): PageNode[] {
+  return nodes.filter((n) => n.depth === 0);
+}
+
 /** Walk a forest into a flat list, parents before their children (render order). */
 export function flattenTree(nodes: PageNode[]): PageNode[] {
   const out: PageNode[] = [];

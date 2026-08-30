@@ -32,9 +32,10 @@ import {
   movePage,
   updatePage,
 } from "@/app/(app)/workspace/actions";
-import { ClientLogo } from "@/components/clients/client-logo";
 import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
+import { TeamspaceIcon } from "@/components/workspace/teamspace-icon";
+import { WorkspaceHome } from "@/components/workspace/workspace-home";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -78,34 +79,8 @@ type DropMode = "before" | "after" | "inside";
 type DropHint = { id: string; mode: DropMode };
 type DeleteTarget = { id: string; parentId: string | null; title: string };
 
-function TeamspaceIcon({ ts, size = 20 }: { ts: TeamspaceView; size?: number }) {
-  if (ts.slug) {
-    return (
-      <ClientLogo
-        slug={ts.slug}
-        name={ts.name}
-        accent={ts.accent}
-        size={size}
-        radius="md"
-      />
-    );
-  }
-  return (
-    <span
-      className="bg-card grid shrink-0 place-items-center rounded-[5px] border"
-      style={{ width: size, height: size }}
-    >
-      <Image
-        src="/brand/gv-mark-white.png"
-        alt=""
-        width={Math.round(size * 0.62)}
-        height={Math.round(size * 0.62)}
-        className="object-contain"
-        style={{ width: size * 0.62, height: size * 0.62 }}
-      />
-    </span>
-  );
-}
+/** The URL/selection sentinel for the derived Home view (no `?page=`). */
+const HOME_PARAM = "home";
 
 /**
  * The Workspace, scoped to ONE teamspace (a client, or the Global Ventures
@@ -144,12 +119,16 @@ export function WorkspaceApp({
 
   const allPages = useMemo(() => flattenTree(pages), [pages]);
   const byId = useMemo(() => new Map(allPages.map((p) => [p.id, p])), [allPages]);
-  const firstPageId = allPages[0]?.id ?? null;
 
+  // `null` is the derived Home landing (no `?page=`); a string is an open page.
+  // A deep-linked `?page=` that is not a real page (including `?page=home`)
+  // falls back to Home rather than guessing at a first page.
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialPageId && allPages.some((p) => p.id === initialPageId)
+    initialPageId &&
+      initialPageId !== HOME_PARAM &&
+      allPages.some((p) => p.id === initialPageId)
       ? initialPageId
-      : firstPageId,
+      : null,
   );
   const [newPageId, setNewPageId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
@@ -183,9 +162,8 @@ export function WorkspaceApp({
     setOverrides(new Map());
     const serverFlat = flattenTree(teamspace.pages);
     const serverIds = new Set(serverFlat.map((p) => p.id));
-    setSelectedId((cur) =>
-      cur && serverIds.has(cur) ? cur : (serverFlat[0]?.id ?? null),
-    );
+    // Keep the open page if it survived the refresh; otherwise land on Home.
+    setSelectedId((cur) => (cur && serverIds.has(cur) ? cur : null));
   }, [teamspace.pages]);
 
   const labelOf = useCallback(
@@ -218,6 +196,16 @@ export function WorkspaceApp({
     },
     [revealAndSelect],
   );
+
+  const selectHome = useCallback(() => {
+    setNewPageId(null);
+    setSelectedId(null);
+    // Home is the base workspace route with no query — it stays linkable, and
+    // Copy link / back-forward resolve to the same derived landing.
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const persist = useCallback(
     (id: string, patch: { title?: string; icon?: string | null; content?: string }) => {
@@ -509,6 +497,35 @@ export function WorkspaceApp({
 
           {teamspaceOpen && (
             <div className="mt-0.5">
+              {/* Home — a derived landing pinned above the pages. It is not a
+                  real page (no row in the DB), so it can't be renamed, moved,
+                  or deleted; it just redirects into the teamspace. */}
+              <button
+                type="button"
+                onClick={selectHome}
+                style={{ paddingLeft: "0.25rem" }}
+                className={cn(
+                  "flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors",
+                  selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
+                )}
+              >
+                <span className="grid size-5 shrink-0" aria-hidden />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left">
+                  <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
+                    🏠
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-[0.8125rem] font-medium",
+                      selectedId === null ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    Home
+                  </span>
+                </span>
+              </button>
+              <div className="bg-border/50 mx-2 my-1 h-px" aria-hidden />
+
               {pages.length === 0 ? (
                 <button
                   type="button"
@@ -624,7 +641,12 @@ export function WorkspaceApp({
             onDelete={() => requestDelete(selectedNode)}
           />
         ) : (
-          <EmptyState onCreate={() => addPage(null)} />
+          <WorkspaceHome
+            teamspace={teamspace}
+            pages={pages}
+            basePath={basePath}
+            onSelect={selectNode}
+          />
         )}
       </section>
 
@@ -855,29 +877,6 @@ function TreeRow({
             onDragEnd={onDragEnd}
           />
         ))}
-    </div>
-  );
-}
-
-function EmptyState({ onCreate }: { onCreate: () => void }) {
-  return (
-    <div className="bg-background grid h-full place-items-center p-8">
-      <div className="max-w-sm text-center">
-        <span className="text-5xl">📄</span>
-        <h2 className="text-foreground mt-4 text-lg font-semibold tracking-tight">
-          No page open
-        </h2>
-        <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-          Pick a page on the left, or create a new one to start writing.
-        </p>
-        <button
-          type="button"
-          onClick={onCreate}
-          className="bg-primary text-primary-foreground press mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-        >
-          <Plus className="size-4" /> New page
-        </button>
-      </div>
     </div>
   );
 }
