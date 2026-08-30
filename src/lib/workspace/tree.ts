@@ -95,6 +95,28 @@ export function flattenTree(nodes: PageNode[]): PageNode[] {
 }
 
 /**
+ * The first page in a forest whose title matches `title`, case-insensitively,
+ * searching the WHOLE tree — top-level pages and every nested descendant — in
+ * render order (a parent before its children). Returns null when nothing
+ * matches.
+ *
+ * This is how the Home dashboard resolves its hard-coded links to real pages: a
+ * client's Home searches that client's own tree, so its links land on that
+ * client's pages, and a title with no page simply resolves to null (the caller
+ * falls back to a safe route rather than a dead link). Whitespace on either side
+ * is ignored so "Software Logins" matches " Software Logins ".
+ */
+export function findNodeByTitle(nodes: PageNode[], title: string): PageNode | null {
+  const needle = title.trim().toLowerCase();
+  for (const node of nodes) {
+    if (node.title.trim().toLowerCase() === needle) return node;
+    const inChild = findNodeByTitle(node.children, title);
+    if (inChild) return inChild;
+  }
+  return null;
+}
+
+/**
  * Every id in the subtree rooted at `rootId`, including the root itself, in
  * top-down order. Used to delete a page and all its descendants in one shot.
  */

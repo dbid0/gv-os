@@ -91,15 +91,19 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        // Notion-style highlight: a subtle background that FADES in on both
-        // pointer hover and keyboard nav. base-ui drives both mouse and keyboard
-        // through `data-highlighted`, so the two now match exactly. Delete keeps
-        // its destructive red in both states (previously only `:focus`, which
-        // base-ui's virtual focus never fired — so keyboard-nav to Delete went
-        // grey). transition-colors keeps it a smooth fade, not an abrupt snap.
+        // Notion-style highlight: a subtle background that FADES in on plain
+        // mouse hover AND on keyboard nav. Two things #240 got wrong and this
+        // fixes: (1) it targeted `data-highlighted` — NOT a registered variant,
+        // so it compiled to nothing; the real syntax is `data-[highlighted]`,
+        // which base-ui actually sets on the highlighted item. (2) it washed in
+        // `bg-accent`, but in dark mode --accent, --secondary and --popover are
+        // all #25242b — identical to the menu surface, so the highlight was
+        // invisible. We use a translucent `bg-foreground/10` instead, which is
+        // guaranteed to show against the popover in BOTH themes. transition-colors
+        // keeps it a smooth fade, not an abrupt snap.
         "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden transition-colors duration-150 select-none active:scale-[0.985] data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "not-data-[variant=destructive]:hover:bg-accent not-data-[variant=destructive]:hover:text-accent-foreground not-data-[variant=destructive]:data-highlighted:bg-accent not-data-[variant=destructive]:data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground",
-        "data-[variant=destructive]:text-destructive data-[variant=destructive]:*:[svg]:text-destructive data-[variant=destructive]:hover:bg-destructive/10 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive/10 data-[variant=destructive]:data-highlighted:text-destructive dark:data-[variant=destructive]:hover:bg-destructive/20 dark:data-[variant=destructive]:data-highlighted:bg-destructive/20",
+        "not-data-[variant=destructive]:hover:bg-foreground/10 not-data-[variant=destructive]:focus:bg-foreground/10 not-data-[variant=destructive]:data-[highlighted]:bg-foreground/10",
+        "data-[variant=destructive]:text-destructive data-[variant=destructive]:*:[svg]:text-destructive data-[variant=destructive]:hover:bg-destructive/10 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:data-[highlighted]:bg-destructive/10 data-[variant=destructive]:data-[highlighted]:text-destructive dark:data-[variant=destructive]:hover:bg-destructive/20 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/20",
         className,
       )}
       {...props}
@@ -124,7 +128,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "hover:bg-foreground/10 focus:bg-foreground/10 data-[highlighted]:bg-foreground/10 data-popup-open:bg-foreground/10 data-open:bg-foreground/10 flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden transition-colors duration-150 select-none data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -173,7 +177,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "hover:bg-foreground/10 focus:bg-foreground/10 data-[highlighted]:bg-foreground/10 relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden transition-colors duration-150 select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       checked={checked}
@@ -209,7 +213,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "hover:bg-foreground/10 focus:bg-foreground/10 data-[highlighted]:bg-foreground/10 relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden transition-colors duration-150 select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}

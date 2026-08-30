@@ -52,12 +52,16 @@ function ContextMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        // Matches DropdownMenuItem exactly (see the note there): a smooth
-        // background fade on hover AND keyboard highlight via `data-highlighted`,
-        // with Delete's destructive red preserved in both states.
+        // Matches DropdownMenuItem exactly (see the long note there): a smooth
+        // background fade on plain mouse hover AND on keyboard highlight. Uses
+        // the correct `data-[highlighted]` bracket syntax (the bare
+        // `data-highlighted` of #240 was not a variant and never compiled) and a
+        // translucent `bg-foreground/10` wash (bg-accent is #25242b in dark —
+        // identical to the popover, so it was invisible). Delete keeps its
+        // destructive red in every state.
         "group/context-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden transition-colors duration-150 select-none active:scale-[0.985] data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "not-data-[variant=destructive]:hover:bg-accent not-data-[variant=destructive]:hover:text-accent-foreground not-data-[variant=destructive]:data-highlighted:bg-accent not-data-[variant=destructive]:data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground",
-        "data-[variant=destructive]:text-destructive data-[variant=destructive]:*:[svg]:text-destructive data-[variant=destructive]:hover:bg-destructive/10 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive/10 data-[variant=destructive]:data-highlighted:text-destructive dark:data-[variant=destructive]:hover:bg-destructive/20 dark:data-[variant=destructive]:data-highlighted:bg-destructive/20",
+        "not-data-[variant=destructive]:hover:bg-foreground/10 not-data-[variant=destructive]:focus:bg-foreground/10 not-data-[variant=destructive]:data-[highlighted]:bg-foreground/10",
+        "data-[variant=destructive]:text-destructive data-[variant=destructive]:*:[svg]:text-destructive data-[variant=destructive]:hover:bg-destructive/10 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:data-[highlighted]:bg-destructive/10 data-[variant=destructive]:data-[highlighted]:text-destructive dark:data-[variant=destructive]:hover:bg-destructive/20 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/20",
         className,
       )}
       {...props}

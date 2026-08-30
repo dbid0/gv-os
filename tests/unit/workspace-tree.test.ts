@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPageTree,
   collectSubtreeIds,
+  findNodeByTitle,
   flattenTree,
   pageBreadcrumb,
   planMove,
@@ -247,5 +248,47 @@ describe("pageBreadcrumb", () => {
 
   it("is empty for an unknown id", () => {
     expect(pageBreadcrumb(pages, "nope")).toEqual([]);
+  });
+});
+
+describe("findNodeByTitle", () => {
+  const tree = buildPageTree([
+    page("root", null, 0, { title: "Onboarding" }),
+    page("timeline", null, 1, { title: "Global Ventures Timeline" }),
+    page("child", "root", 0, { title: "Software Logins" }),
+    page("deep", "child", 0, { title: "Client Roadmap" }),
+  ]);
+
+  it("finds a top-level page by exact title", () => {
+    expect(findNodeByTitle(tree, "Global Ventures Timeline")?.id).toBe("timeline");
+  });
+
+  it("matches case-insensitively", () => {
+    expect(findNodeByTitle(tree, "onboarding")?.id).toBe("root");
+    expect(findNodeByTitle(tree, "SOFTWARE LOGINS")?.id).toBe("child");
+  });
+
+  it("searches the whole tree, including deeply nested pages", () => {
+    expect(findNodeByTitle(tree, "Client Roadmap")?.id).toBe("deep");
+  });
+
+  it("ignores surrounding whitespace on both sides", () => {
+    expect(findNodeByTitle(tree, "  Onboarding  ")?.id).toBe("root");
+  });
+
+  it("returns null when no page has that title", () => {
+    expect(findNodeByTitle(tree, "Nonexistent Page")).toBeNull();
+  });
+
+  it("returns null for an empty forest", () => {
+    expect(findNodeByTitle([], "Onboarding")).toBeNull();
+  });
+
+  it("returns the first match in render order (parent before child)", () => {
+    const dup = buildPageTree([
+      page("p", null, 0, { title: "Resources" }),
+      page("c", "p", 0, { title: "Resources" }),
+    ]);
+    expect(findNodeByTitle(dup, "Resources")?.id).toBe("p");
   });
 });
