@@ -1,12 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MoreHorizontal, Share, Star } from "lucide-react";
 
 import { EmojiPicker } from "@/components/workspace/emoji-picker";
-import { Markdown } from "@/components/workspace/markdown";
 import { cn } from "@/lib/utils";
+
+/**
+ * The body is a Notion-style WYSIWYG editor (BlockNote). It is client-only —
+ * ProseMirror + Mantine touch the DOM — so it is loaded with `ssr: false` to
+ * keep it out of the RSC/server render entirely (no hydration mismatch). The
+ * lightweight fallback holds the column height and shows Notion's placeholder
+ * until the editor chunk lands.
+ */
+const BlockEditor = dynamic(
+  () => import("@/components/workspace/block-editor").then((m) => m.BlockEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="text-faint/50 py-1 text-[1rem] leading-[1.5]">
+        Write something, or press &apos;/&apos; for commands
+      </p>
+    ),
+  },
+);
 
 export interface EditablePage {
   id: string;
@@ -27,12 +46,13 @@ export interface Crumb {
  *
  * FLAT and borderless: no cards, no panel outlines. A muted breadcrumb bar is
  * pinned at the top; the body sits in a centered ~720px column with a big top
- * gutter, a large emoji icon, and a 40px title. The body is one markdown
- * document string — click it to edit (a seamless textarea), click out to render
- * again — so there is no visible read/edit toggle to break the Notion feel.
- * Title and icon autosave on blur; the body autosaves when you leave the editor.
- * The pane is REMOUNTED per page (keyed by id upstream), so switching pages
- * always starts from that page's saved state with no stale draft bleeding.
+ * gutter, a large emoji icon, and a 40px title. The body is a Notion-style
+ * WYSIWYG block editor (BlockNote) that is ALWAYS editable — you click anywhere
+ * and type, you never see raw markdown, and "/" opens the slash menu. There is
+ * no read/edit toggle. Title and icon autosave on blur; the body autosaves on a
+ * debounce as you type. The pane is REMOUNTED per page (keyed by id upstream),
+ * so switching pages always starts from that page's saved state with no stale
+ * draft bleeding.
  */
 
 function useAutoResize(value: string) {
@@ -88,12 +108,11 @@ export function PageEditor({
   onSelect: (id: string) => void;
 }) {
   const [title, setTitle] = useState(page.title);
-  const [content, setContent] = useState(page.content ?? "");
-  const [editing, setEditing] = useState(false);
   const [starred, setStarred] = useState(false);
 
   const titleRef = useAutoResize(title);
-  const bodyRef = useAutoResize(content);
+  // Set once the block editor mounts; lets Enter in the title jump into the body.
+  const focusBodyRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (autoFocusTitle && titleRef.current) {
@@ -105,29 +124,9 @@ export function PageEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Move the caret to the end when the body flips into edit mode.
-  useEffect(() => {
-    if (editing && bodyRef.current) {
-      const el = bodyRef.current;
-      el.focus();
-      const end = el.value.length;
-      el.setSelectionRange(end, end);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing]);
-
   const commitTitle = () => {
     const next = title.trim() || "Untitled";
     if (next !== page.title) onSave({ title: next });
-  };
-  const commitContent = () => {
-    if (content !== (page.content ?? "")) onSave({ content });
-  };
-
-  const startEditingFrom = (e: React.MouseEvent) => {
-    // A click on a link inside the rendered doc should follow the link, not edit.
-    if ((e.target as HTMLElement).closest("a")) return;
-    setEditing(true);
   };
 
   const edited = editedLabel(page.updatedAt);
@@ -223,7 +222,7 @@ export function PageEditor({
               if (e.key === "Enter") {
                 e.preventDefault();
                 commitTitle();
-                setEditing(true);
+                focusBodyRef.current?.();
               }
             }}
             rows={1}
@@ -233,38 +232,13 @@ export function PageEditor({
           />
 
           <div className="mt-2">
-            {editing ? (
-              <textarea
-                ref={bodyRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onBlur={() => {
-                  commitContent();
-                  setEditing(false);
-                }}
-                spellCheck={false}
-                placeholder={
-                  "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`, [blue text]{blue}\n- a bullet\n1. a step\n- [ ] a to-do\n> a quote   ·   > [!tip] a callout\n+ a toggle"
-                }
-                className="placeholder:text-faint/50 text-foreground/85 min-h-[60vh] w-full resize-none bg-transparent text-[1rem] leading-[1.5] outline-none"
-              />
-            ) : content.trim() === "" ? (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="text-faint/60 hover:text-faint w-full py-1 text-left text-[1rem] leading-[1.5] transition-colors"
-              >
-                Write something, or paste in your notes…
-              </button>
-            ) : (
-              <div
-                onClick={startEditingFrom}
-                className="cursor-text"
-                role="presentation"
-              >
-                <Markdown content={content} />
-              </div>
-            )}
+            <BlockEditor
+              initialContent={page.content}
+              onChange={(contentJson) => onSave({ content: contentJson })}
+              onReady={(focus) => {
+                focusBodyRef.current = focus;
+              }}
+            />
           </div>
         </div>
       </div>
