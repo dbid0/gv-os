@@ -3,9 +3,26 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { MoreHorizontal, Share, Star } from "lucide-react";
+import {
+  Copy,
+  FileText,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Share,
+  Star,
+  Trash2,
+} from "lucide-react";
 
 import { EmojiPicker } from "@/components/workspace/emoji-picker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
@@ -89,11 +106,16 @@ export function PageEditor({
   teamspaceName,
   teamspaceHref,
   ancestors,
+  subpages,
   saving,
   autoFocusTitle,
+  focusNonce,
+  basePath,
   onSave,
   onDraftChange,
   onSelect,
+  onDuplicate,
+  onDelete,
 }: {
   page: EditablePage;
   teamspaceName: string;
@@ -101,12 +123,21 @@ export function PageEditor({
   teamspaceHref: string;
   /** Parent pages, teamspace-nearest first, excluding this page. */
   ancestors: Crumb[];
+  /** This page's direct children, rendered as clickable sub-page links. */
+  subpages: Crumb[];
   saving: boolean;
   autoFocusTitle: boolean;
+  /** Bumped by the parent to re-focus the title (a rename on an open page). */
+  focusNonce: number;
+  /** The workspace route path (e.g. /clients/foo/workspace) for `?page=` links. */
+  basePath: string;
   onSave: (patch: { title?: string; icon?: string | null; content?: string }) => void;
   onDraftChange: (patch: { title?: string; icon?: string | null }) => void;
   onSelect: (id: string) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
+  const { toast } = useToast();
   const [title, setTitle] = useState(page.title);
   const [starred, setStarred] = useState(false);
 
@@ -114,19 +145,45 @@ export function PageEditor({
   // Set once the block editor mounts; lets Enter in the title jump into the body.
   const focusBodyRef = useRef<(() => void) | null>(null);
 
+  const focusTitle = () => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  };
+
   useEffect(() => {
-    if (autoFocusTitle && titleRef.current) {
-      const el = titleRef.current;
-      el.focus();
-      el.select();
-    }
+    if (autoFocusTitle) focusTitle();
     // Only on first mount for this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-focus the title when the parent asks (a "Rename" on an already-open
+  // page, where the mount effect above has already run). The first run is the
+  // mount and is skipped, so a plain page switch never grabs the caret.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    if (autoFocusTitle) focusTitle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce]);
+
   const commitTitle = () => {
     const next = title.trim() || "Untitled";
     if (next !== page.title) onSave({ title: next });
+  };
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}${basePath}?page=${page.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ tone: "success", title: "Link copied" });
+    } catch {
+      toast({ tone: "error", title: "Couldn't copy the link" });
+    }
   };
 
   const edited = editedLabel(page.updatedAt);
@@ -186,13 +243,29 @@ export function PageEditor({
           >
             <Star className={cn("size-4", starred && "fill-current text-amber-400")} />
           </button>
-          <button
-            type="button"
-            aria-label="Page options"
-            className="hover:bg-secondary/60 hover:text-foreground grid size-7 place-items-center rounded-md transition-colors"
-          >
-            <MoreHorizontal className="size-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Page options"
+              className="hover:bg-secondary/60 hover:text-foreground grid size-7 place-items-center rounded-md transition-colors"
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={focusTitle}>
+                <Pencil className="size-4" /> Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDuplicate}>
+                <Copy className="size-4" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={copyLink}>
+                <Link2 className="size-4" /> Copy link
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                <Trash2 className="size-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -240,6 +313,32 @@ export function PageEditor({
               }}
             />
           </div>
+
+          {subpages.length > 0 && (
+            <div className="border-border/50 mt-8 border-t pt-3">
+              {subpages.map((sp) => (
+                <a
+                  key={sp.id}
+                  href={`${basePath}?page=${sp.id}`}
+                  onClick={(e) => {
+                    // Plain click switches page instantly, client-side; modified
+                    // clicks (new tab, etc.) keep the real link behaviour.
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    onSelect(sp.id);
+                  }}
+                  className="group hover:bg-secondary/40 -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
+                >
+                  <span className="grid size-5 shrink-0 place-items-center text-[0.95rem]">
+                    {sp.icon ?? <FileText className="text-faint size-4" />}
+                  </span>
+                  <span className="text-foreground min-w-0 flex-1 truncate text-[0.95rem] font-medium underline-offset-2 group-hover:underline">
+                    {sp.title || "Untitled"}
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
