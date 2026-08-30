@@ -61,6 +61,16 @@ export const serverEnvSchema = z.object({
    * the bot API is simply off.
    */
   BOT_API_TOKEN: z.string().min(1).optional(),
+
+  /**
+   * Supabase service-role key, for SERVER-SIDE Storage uploads only (workspace
+   * attachments). It bypasses RLS, so it must never reach the browser — it lives
+   * here, behind `server-only`, never in env.ts. Optional: when set, the upload
+   * route creates the `workspace-uploads` bucket and streams files with admin
+   * rights; when unset, uploads fall back to the signed-in user's anon client
+   * and need the bucket + policies from drizzle/manual/0001_workspace_uploads_bucket.sql.
+   */
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
