@@ -1408,3 +1408,53 @@ export const workspacePagesRelations = relations(workspacePages, ({ one, many })
 
 export type WorkspacePage = typeof workspacePages.$inferSelect;
 export type NewWorkspacePage = typeof workspacePages.$inferInsert;
+
+/**
+ * A public, view-only share of ONE workspace page — Notion's "Share to web".
+ *
+ * The `token` is the whole capability: whoever holds the URL can READ the page
+ * (and, when `includeChildren`, its descendants) with no login. It is a random
+ * URL-safe string generated in code, never guessable. Sharing is REVOCABLE
+ * without losing history — `revokedAt` is set rather than the row deleted, so a
+ * link can be turned off and the audit of who shared what stays intact. A page
+ * is deleted together with its shares (`onDelete: cascade`), so a dead link can
+ * never resolve to a ghost page.
+ *
+ * This is deliberately READ-ONLY and OUT of the money/ledger schemas: a share
+ * grants nothing but reading one page's own subtree, never a sibling, a parent,
+ * or another teamspace. Member-invite / rep-offer-tag sharing is a later phase;
+ * this table backs the public link only.
+ */
+export const workspaceShares = appSchema.table(
+  "workspace_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The shared page. Its shares go when it does. */
+    pageId: uuid("page_id")
+      .notNull()
+      .references(() => workspacePages.id, { onDelete: "cascade" }),
+    /** The capability token in the public URL. Unguessable, unique. */
+    token: text("token").notNull(),
+    /** When true, the page's descendants are browsable under the same token. */
+    includeChildren: boolean("include_children").notNull().default(true),
+    /** The email of whoever created the share, for the audit trail. */
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set to disable the link without deleting the history. Null = live. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("workspace_shares_token_key").on(table.token),
+    index("workspace_shares_page_idx").on(table.pageId),
+  ],
+);
+
+export const workspaceSharesRelations = relations(workspaceShares, ({ one }) => ({
+  page: one(workspacePages, {
+    fields: [workspaceShares.pageId],
+    references: [workspacePages.id],
+  }),
+}));
+
+export type WorkspaceShare = typeof workspaceShares.$inferSelect;
+export type NewWorkspaceShare = typeof workspaceShares.$inferInsert;

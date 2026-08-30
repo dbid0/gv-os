@@ -1,14 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { workspacePages } from "@/db/schema/app";
+import { workspacePages, workspaceShares } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
+import { getShareForPage, type ShareState } from "@/lib/workspace/shares";
+import { generateShareToken } from "@/lib/workspace/share-token";
 import { collectSubtreeIds, planMove } from "@/lib/workspace/tree";
 
 async function requireUser() {
@@ -16,6 +18,16 @@ async function requireUser() {
   if (devAuthBypass()) return;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) throw new Error("Not authorized.");
+}
+
+/** The signed-in email for an audit trail, best-effort (null under dev bypass). */
+async function currentEmail(): Promise<string | null> {
+  try {
+    const user = await currentUser();
+    return user?.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 const uuidOrNull = z.string().uuid().nullable().optional();
@@ -237,4 +249,72 @@ export async function duplicatePage(id: string) {
 
   revalidatePath("/workspace");
   return { id: copy.id };
+}
+
+const shareInput = z.object({ includeChildren: z.boolean().optional() });
+
+/**
+ * Turn a page's public "Share to web" link ON, and return its token.
+ *
+ * IDEMPOTENT: a page has at most one live share. If one already exists this
+ * reuses its token — flipping `includeChildren` in place when it changed — so
+ * toggling "Include sub-pages" never rotates the URL out from under someone who
+ * already has it. A fresh share mints a crypto-random token.
+ */
+export async function createShare(
+  pageId: string,
+  raw?: z.input<typeof shareInput>,
+): Promise<{ token: string }> {
+  await requireUser();
+  const id = z.string().uuid().parse(pageId);
+  const includeChildren = shareInput.parse(raw ?? {}).includeChildren ?? true;
+  const db = getDb();
+
+  const [existing] = await db
+    .select()
+    .from(workspaceShares)
+    .where(and(eq(workspaceShares.pageId, id), isNull(workspaceShares.revokedAt)))
+    .limit(1);
+
+  if (existing) {
+    if (existing.includeChildren !== includeChildren) {
+      await db
+        .update(workspaceShares)
+        .set({ includeChildren })
+        .where(eq(workspaceShares.id, existing.id));
+    }
+    return { token: existing.token };
+  }
+
+  const token = generateShareToken();
+  await db.insert(workspaceShares).values({
+    pageId: id,
+    token,
+    includeChildren,
+    createdBy: await currentEmail(),
+  });
+  return { token };
+}
+
+/**
+ * Turn a page's public link OFF. Revokes every live share for the page
+ * (there is only one) by stamping `revokedAt`, so the URL 404s immediately
+ * while the history of who shared it stays intact.
+ */
+export async function revokeShare(pageId: string): Promise<{ ok: true }> {
+  await requireUser();
+  const id = z.string().uuid().parse(pageId);
+  const db = getDb();
+  await db
+    .update(workspaceShares)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(workspaceShares.pageId, id), isNull(workspaceShares.revokedAt)));
+  return { ok: true };
+}
+
+/** The current live share for a page, or null — for the dialog's initial state. */
+export async function getShareState(pageId: string): Promise<ShareState | null> {
+  await requireUser();
+  const id = z.string().uuid().parse(pageId);
+  return getShareForPage(id);
 }
