@@ -6,6 +6,7 @@ import {
   flattenTree,
   pageBreadcrumb,
   planMove,
+  topLevelNodes,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
 
@@ -84,6 +85,28 @@ describe("flattenTree", () => {
       page("b", null, 1),
     ]);
     expect(flattenTree(tree).map((n) => n.id)).toEqual(["a", "a1", "a2", "b"]);
+  });
+});
+
+describe("topLevelNodes", () => {
+  const tree = buildPageTree([
+    page("a", null, 0),
+    page("b", null, 1),
+    page("a1", "a", 0),
+    page("a2", "a", 1),
+    page("a1x", "a1", 0),
+  ]);
+
+  it("returns the roots of a forest, in order", () => {
+    expect(topLevelNodes(tree).map((n) => n.id)).toEqual(["a", "b"]);
+  });
+
+  it("keeps only depth-0 nodes when handed a flattened list", () => {
+    expect(topLevelNodes(flattenTree(tree)).map((n) => n.id)).toEqual(["a", "b"]);
+  });
+
+  it("is empty for an empty forest", () => {
+    expect(topLevelNodes([])).toEqual([]);
   });
 });
 
