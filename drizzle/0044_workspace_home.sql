@@ -1,0 +1,1 @@
+ALTER TABLE "app"."workspace_pages" ADD COLUMN "is_home" boolean DEFAULT false NOT NULL;

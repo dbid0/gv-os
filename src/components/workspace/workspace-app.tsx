@@ -35,7 +35,6 @@ import {
 import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
 import { TeamspaceIcon } from "@/components/workspace/teamspace-icon";
-import { WorkspaceHome } from "@/components/workspace/workspace-home";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -61,7 +60,6 @@ import {
   type PageNode,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
-import { type TodoRow } from "@/lib/workspace/todos";
 import { cn } from "@/lib/utils";
 
 /** The single teamspace this scoped view renders (a client, or the agency). */
@@ -97,14 +95,18 @@ const HOME_PARAM = "home";
  */
 export function WorkspaceApp({
   teamspace,
-  initialTodos,
+  home,
   initialPageId,
   homeHref,
   agencyHref = null,
 }: {
   teamspace: TeamspaceView;
-  /** The teamspace's To-Do rows, for the Home board. Server-loaded, seeds state. */
-  initialTodos: TodoRow[];
+  /**
+   * The teamspace's Home — a REAL, editable page (is_home = true), created lazily
+   * by the server. The pinned "🏠 Home" row opens it. Null only if the database
+   * was unreachable, in which case a minimal fallback shows instead.
+   */
+  home: WorkspacePageLite | null;
   initialPageId: string | null;
   /** The client (or /clients) this teamspace belongs to — back link + root crumb. */
   homeHref: string;
@@ -613,6 +615,7 @@ export function WorkspaceApp({
             }}
             teamspaceName={teamspace.name}
             teamspaceHref={homeHref}
+            clientId={teamspace.clientId}
             ancestors={ancestors}
             subpages={subpages}
             saving={pending}
@@ -644,15 +647,38 @@ export function WorkspaceApp({
             onDuplicate={() => duplicate(selectedNode)}
             onDelete={() => requestDelete(selectedNode)}
           />
-        ) : (
-          <WorkspaceHome
-            teamspace={teamspace}
+        ) : home ? (
+          // Home is a REAL editable page, rendered in the exact same pane as any
+          // page — locked title, hidden structural actions, fully editable body
+          // (which includes the embedded To-Do database block). Autosaves through
+          // the same `updatePage` path via `persist`.
+          <PageEditor
+            key={home.id}
+            page={{
+              id: home.id,
+              title: teamspace.name,
+              icon: home.icon,
+              content: home.content,
+              updatedAt: home.updatedAt,
+            }}
+            teamspaceName={teamspace.name}
+            teamspaceHref={homeHref}
             clientId={teamspace.clientId}
-            pages={pages}
-            initialTodos={initialTodos}
+            ancestors={[]}
+            subpages={[]}
+            saving={pending}
+            autoFocusTitle={false}
+            focusNonce={focusNonce}
             basePath={basePath}
+            isHome
+            onSave={(patch) => persist(home.id, patch)}
+            onDraftChange={() => {}}
             onSelect={selectNode}
+            onDuplicate={() => {}}
+            onDelete={() => {}}
           />
+        ) : (
+          <HomeUnavailable name={teamspace.name} />
         )}
       </section>
 
@@ -665,6 +691,27 @@ export function WorkspaceApp({
         }}
         onConfirm={confirmDelete}
       />
+    </div>
+  );
+}
+
+/**
+ * The Home fallback — shown ONLY when the server couldn't load or create the
+ * Home page (a database hiccup). It never appears in normal operation; Home is a
+ * real, seeded page. Kept intentionally minimal so an outage degrades to a quiet
+ * message instead of a crash.
+ */
+function HomeUnavailable({ name }: { name: string }) {
+  return (
+    <div className="bg-background flex h-full min-w-0 flex-col">
+      <div className="mx-auto w-full max-w-[720px] px-6 pt-[100px] sm:px-12">
+        <h1 className="text-foreground text-[2.5rem] leading-[1.2] font-bold tracking-[-0.02em]">
+          {name}
+        </h1>
+        <p className="text-muted-foreground mt-4 text-sm">
+          Home is taking a moment to load. Refresh to try again.
+        </p>
+      </div>
     </div>
   );
 }

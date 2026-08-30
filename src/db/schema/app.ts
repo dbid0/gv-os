@@ -1382,6 +1382,13 @@ export const workspacePages = appSchema.table(
     icon: text("icon"),
     /** The markdown body. Null until the page is written. */
     content: text("content"),
+    /**
+     * The teamspace's Home page — the editable landing pinned above the tree.
+     * Exactly one per teamspace (client_id, is_home = true), created lazily with
+     * seeded default content. A home row is kept OUT of the normal page forest
+     * (it renders as the pinned "🏠 Home"), and is non-deletable / non-draggable.
+     */
+    isHome: boolean("is_home").notNull().default(false),
     /** Manual order among siblings; lower sorts first. */
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

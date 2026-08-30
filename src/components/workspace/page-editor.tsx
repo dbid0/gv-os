@@ -107,12 +107,14 @@ export function PageEditor({
   page,
   teamspaceName,
   teamspaceHref,
+  clientId,
   ancestors,
   subpages,
   saving,
   autoFocusTitle,
   focusNonce,
   basePath,
+  isHome = false,
   onSave,
   onDraftChange,
   onSelect,
@@ -123,6 +125,8 @@ export function PageEditor({
   teamspaceName: string;
   /** Where the root (teamspace) crumb links — the client page, or /clients. */
   teamspaceHref: string;
+  /** The teamspace (null = agency), for any embedded To-Do database block. */
+  clientId: string | null;
   /** Parent pages, teamspace-nearest first, excluding this page. */
   ancestors: Crumb[];
   /** This page's direct children, rendered as clickable sub-page links. */
@@ -133,6 +137,13 @@ export function PageEditor({
   focusNonce: number;
   /** The workspace route path (e.g. /clients/foo/workspace) for `?page=` links. */
   basePath: string;
+  /**
+   * This is the teamspace Home. The title is locked (it shows the teamspace
+   * name), and the structural actions — Rename, Duplicate, Delete, Share — are
+   * hidden, because Home can't be renamed, moved, deleted, or shared. The body
+   * is a normal, fully editable BlockNote document like any page.
+   */
+  isHome?: boolean;
   onSave: (patch: { title?: string; icon?: string | null; content?: string }) => void;
   onDraftChange: (patch: { title?: string; icon?: string | null }) => void;
   onSelect: (id: string) => void;
@@ -223,11 +234,15 @@ export function PageEditor({
               </button>
             </span>
           ))}
-          <span className="text-faint/60">/</span>
-          <span className="text-muted-foreground flex max-w-[14rem] items-center gap-1 truncate px-1 py-0.5">
-            {page.icon && <span className="text-[0.75rem]">{page.icon}</span>}
-            <span className="truncate">{title.trim() || "Untitled"}</span>
-          </span>
+          {!isHome && (
+            <>
+              <span className="text-faint/60">/</span>
+              <span className="text-muted-foreground flex max-w-[14rem] items-center gap-1 truncate px-1 py-0.5">
+                {page.icon && <span className="text-[0.75rem]">{page.icon}</span>}
+                <span className="truncate">{title.trim() || "Untitled"}</span>
+              </span>
+            </>
+          )}
         </nav>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -239,13 +254,15 @@ export function PageEditor({
           >
             {saving ? "Saving…" : edited}
           </span>
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            className="hover:bg-secondary/60 hover:text-foreground hidden rounded-md px-2 py-1 text-[0.8125rem] transition-colors sm:inline-flex"
-          >
-            <Share className="mr-1 size-3.5" /> Share
-          </button>
+          {!isHome && (
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="hover:bg-secondary/60 hover:text-foreground hidden rounded-md px-2 py-1 text-[0.8125rem] transition-colors sm:inline-flex"
+            >
+              <Share className="mr-1 size-3.5" /> Share
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setStarred((v) => !v)}
@@ -263,19 +280,27 @@ export function PageEditor({
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={focusTitle}>
-                <Pencil className="size-4" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate}>
-                <Copy className="size-4" /> Duplicate
-              </DropdownMenuItem>
+              {!isHome && (
+                <>
+                  <DropdownMenuItem onClick={focusTitle}>
+                    <Pencil className="size-4" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDuplicate}>
+                    <Copy className="size-4" /> Duplicate
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuItem onClick={copyLink}>
                 <Link2 className="size-4" /> Copy link
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                <Trash2 className="size-4" /> Delete
-              </DropdownMenuItem>
+              {!isHome && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <Trash2 className="size-4" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -295,31 +320,39 @@ export function PageEditor({
             />
           </div>
 
-          <textarea
-            ref={titleRef}
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              onDraftChange({ title: e.target.value });
-            }}
-            onBlur={commitTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitTitle();
-                focusBodyRef.current?.();
-              }
-            }}
-            rows={1}
-            spellCheck={false}
-            placeholder="Untitled"
-            className="placeholder:text-faint/60 text-foreground mt-1 w-full resize-none bg-transparent text-[2.5rem] leading-[1.2] font-bold tracking-[-0.02em] outline-none"
-          />
+          {isHome ? (
+            // Home's title is locked — it always reads as the teamspace name.
+            <h1 className="text-foreground mt-1 w-full text-[2.5rem] leading-[1.2] font-bold tracking-[-0.02em]">
+              {teamspaceName}
+            </h1>
+          ) : (
+            <textarea
+              ref={titleRef}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                onDraftChange({ title: e.target.value });
+              }}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitTitle();
+                  focusBodyRef.current?.();
+                }
+              }}
+              rows={1}
+              spellCheck={false}
+              placeholder="Untitled"
+              className="placeholder:text-faint/60 text-foreground mt-1 w-full resize-none bg-transparent text-[2.5rem] leading-[1.2] font-bold tracking-[-0.02em] outline-none"
+            />
+          )}
 
           <div className="mt-2">
             <BlockEditor
               initialContent={page.content}
               pageId={page.id}
+              todoClientId={clientId}
               onChange={(contentJson) => onSave({ content: contentJson })}
               onReady={(focus) => {
                 focusBodyRef.current = focus;

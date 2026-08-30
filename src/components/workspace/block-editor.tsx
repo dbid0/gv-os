@@ -3,12 +3,17 @@
 import "@blocknote/mantine/style.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PartialBlock } from "@blocknote/core";
 import { en, type Dictionary } from "@blocknote/core/locales";
-import { useCreateBlockNote } from "@blocknote/react";
+import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
 import { useToast } from "@/components/ui/toast";
+import {
+  getWorkspaceSlashItems,
+  TodoDatabaseClientProvider,
+  workspaceSchema,
+  type WorkspacePartialBlock,
+} from "@/components/workspace/todo-database-block";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
 import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
 
@@ -78,7 +83,7 @@ const gvTheme: Theme = {
  * or empty) is imported as markdown after mount.
  */
 function readStored(raw: string | null): {
-  initialBlocks: PartialBlock[] | undefined;
+  initialBlocks: WorkspacePartialBlock[] | undefined;
   legacyMarkdown: string | null;
 } {
   if (!raw || raw.trim() === "") {
@@ -93,7 +98,10 @@ function readStored(raw: string | null): {
           parsed.length > 0 &&
           parsed.every((b) => b !== null && typeof b === "object" && "type" in b);
         if (isBlockDoc) {
-          return { initialBlocks: parsed as PartialBlock[], legacyMarkdown: null };
+          return {
+            initialBlocks: parsed as WorkspacePartialBlock[],
+            legacyMarkdown: null,
+          };
         }
         // Valid JSON, but not a BlockNote document (or an empty array): open blank.
         return { initialBlocks: undefined, legacyMarkdown: null };
@@ -108,6 +116,7 @@ function readStored(raw: string | null): {
 export function BlockEditor({
   initialContent,
   pageId,
+  todoClientId,
   onChange,
   onReady,
 }: {
@@ -115,6 +124,11 @@ export function BlockEditor({
   initialContent: string | null;
   /** The page this body belongs to — namespaces uploaded attachments. */
   pageId?: string;
+  /**
+   * The teamspace this page belongs to (null = agency), for any embedded
+   * `todoDatabase` block — it reaches the block through the provider below.
+   */
+  todoClientId: string | null;
   /** Debounced: called with the serialised document JSON to persist. */
   onChange: (contentJson: string) => void;
   /** Handed a focus() fn once mounted, so title-Enter can jump into the body. */
@@ -147,6 +161,7 @@ export function BlockEditor({
   });
 
   const editor = useCreateBlockNote({
+    schema: workspaceSchema,
     initialContent: initialBlocks,
     dictionary,
     // Uploads an image / video / file picked from the computer to Supabase
@@ -297,7 +312,21 @@ export function BlockEditor({
 
   return (
     <div className="gv-block-editor">
-      <BlockNoteView editor={editor} theme={gvTheme} onChange={handleChange} />
+      <TodoDatabaseClientProvider clientId={todoClientId}>
+        <BlockNoteView
+          editor={editor}
+          theme={gvTheme}
+          onChange={handleChange}
+          slashMenu={false}
+        >
+          {/* Our own slash menu = the default items PLUS "To-Do database", so the
+              custom block is insertable anywhere with "/". */}
+          <SuggestionMenuController
+            triggerCharacter="/"
+            getItems={async (query) => getWorkspaceSlashItems(editor, query)}
+          />
+        </BlockNoteView>
+      </TodoDatabaseClientProvider>
     </div>
   );
 }
