@@ -142,7 +142,7 @@ export function todoDatabaseSlashItem(
     title: "To-Do database",
     subtext: "An interactive, editable task table",
     aliases: ["todo", "to-do", "tasks", "checklist"],
-    group: "Advanced",
+    group: "Databases",
     icon: <ListTodo className="size-4" />,
     onItemClick: () => {
       insertOrUpdateBlockForSlashMenu(editor, { type: TODO_DATABASE_BLOCK_TYPE });
@@ -164,7 +164,7 @@ export function databaseSlashItem(
     title: "Database",
     subtext: "An editable table with any columns",
     aliases: ["database", "table", "grid", "db"],
-    group: "Advanced",
+    group: "Databases",
     icon: <Table className="size-4" />,
     onItemClick: async () => {
       try {
