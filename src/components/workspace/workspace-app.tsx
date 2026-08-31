@@ -534,34 +534,38 @@ export function WorkspaceApp({
 
           {teamspaceOpen && (
             <div className="mt-0.5">
-              {/* Home — a derived landing pinned above the pages. It is not a
-                  real page (no row in the DB), so it can't be renamed, moved,
-                  or deleted; it just redirects into the teamspace. */}
-              <button
-                type="button"
-                onClick={selectHome}
-                style={{ paddingLeft: "0.25rem" }}
-                className={cn(
-                  "flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors",
-                  selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
-                )}
-              >
-                <span className="grid size-5 shrink-0" aria-hidden />
-                <span className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left">
-                  <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
-                    🏠
+              {/* The teamspace's landing = its main page (the template's own page,
+                  e.g. the onboarding dashboard). It is a REAL editable page, shown
+                  first with its own title + icon — NOT a separate synthetic "Home"
+                  above the list. Selecting it is the base route (no ?page=). */}
+              {home && (
+                <button
+                  type="button"
+                  onClick={selectHome}
+                  style={{ paddingLeft: "0.25rem" }}
+                  className={cn(
+                    "flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors",
+                    selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
+                  )}
+                >
+                  <span className="grid size-5 shrink-0" aria-hidden />
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left">
+                    <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
+                      {(overrides.get(home.id)?.icon ?? home.icon) || "📄"}
+                    </span>
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate text-[0.8125rem] font-medium",
+                        selectedId === null
+                          ? "text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {overrides.get(home.id)?.title ?? home.title}
+                    </span>
                   </span>
-                  <span
-                    className={cn(
-                      "min-w-0 flex-1 truncate text-[0.8125rem] font-medium",
-                      selectedId === null ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    Home
-                  </span>
-                </span>
-              </button>
-              <div className="bg-border/50 mx-2 my-1 h-px" aria-hidden />
+                </button>
+              )}
 
               {pages.length === 0 ? (
                 <button
