@@ -7,6 +7,8 @@ import type { PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
+import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
+
 /**
  * The Workspace page body, RENDERED READ-ONLY — the public share view.
  *
@@ -72,7 +74,18 @@ function readStored(raw: string | null): {
 }
 
 export function BlockReader({ content }: { content: string | null }) {
-  const [{ initialBlocks, legacyMarkdown }] = useState(() => readStored(content));
+  // Colourise the JSON path once, at mount, so a shared page shows the same
+  // callout colours as the editor. The legacy-markdown path is colourised after
+  // parse, below.
+  const [{ initialBlocks, legacyMarkdown }] = useState(() => {
+    const stored = readStored(content);
+    return {
+      ...stored,
+      initialBlocks: stored.initialBlocks
+        ? colorizeCallouts(stored.initialBlocks)
+        : stored.initialBlocks,
+    };
+  });
 
   const editor = useCreateBlockNote({ initialContent: initialBlocks });
 
@@ -84,7 +97,7 @@ export function BlockReader({ content }: { content: string | null }) {
     Promise.resolve(editor.tryParseMarkdownToBlocks(legacyMarkdown))
       .then((blocks) => {
         if (cancelled || !blocks || blocks.length === 0) return;
-        editor.replaceBlocks(editor.document, blocks);
+        editor.replaceBlocks(editor.document, colorizeCallouts(blocks));
       })
       .catch(() => {
         // A bad legacy note just renders empty rather than breaking the page.

@@ -10,6 +10,7 @@ import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
 import { useToast } from "@/components/ui/toast";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
+import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
 
 /**
  * The Workspace page BODY — a Notion-style WYSIWYG block editor (BlockNote).
@@ -123,10 +124,19 @@ export function BlockEditor({
 
   // Read the stored body once, at mount. The pane is keyed per page upstream, so
   // a page switch is a remount with fresh initial content — this never has to
-  // react to a changing `initialContent` prop.
-  const [{ initialBlocks, legacyMarkdown }] = useState(() =>
-    readStored(initialContent),
-  );
+  // react to a changing `initialContent` prop. Colourise the JSON path here so
+  // the editor's very first render (and its autosave baseline, captured below
+  // from `editor.document`) already carries the callout colours — opening a page
+  // never counts as an edit. The legacy-markdown path is colourised after parse.
+  const [{ initialBlocks, legacyMarkdown }] = useState(() => {
+    const stored = readStored(initialContent);
+    return {
+      ...stored,
+      initialBlocks: stored.initialBlocks
+        ? colorizeCallouts(stored.initialBlocks)
+        : stored.initialBlocks,
+    };
+  });
 
   // Reachable from `uploadFile`'s async closure without re-creating the editor.
   const toastRef = useRef(toast);
@@ -248,7 +258,10 @@ export function BlockEditor({
         .then((blocks) => {
           if (cancelled) return;
           if (blocks && blocks.length > 0) {
-            editor.replaceBlocks(editor.document, blocks);
+            // Colourise the freshly-parsed markdown before it becomes the
+            // document, so the migration lands already-coloured and `finish()`
+            // captures the coloured doc as the baseline (no spurious save).
+            editor.replaceBlocks(editor.document, colorizeCallouts(blocks));
           }
           finish();
         })
