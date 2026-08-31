@@ -44,8 +44,8 @@ export const CALLOUT_ICON_COLORS: ReadonlyArray<{
   meaning: string;
   icons: readonly string[];
 }> = [
-  { color: "yellow", meaning: "caution", icons: ["⚠️", "🚨"] },
-  { color: "red", meaning: "critical", icons: ["🔥"] },
+  { color: "yellow", meaning: "caution / timing", icons: ["⚠️", "⚡", "⏰", "⏱️"] },
+  { color: "red", meaning: "critical / compliance", icons: ["🔥", "🚨", "🛡️"] },
   { color: "blue", meaning: "info", icons: ["💡", "ℹ️", "📣"] },
   { color: "green", meaning: "good", icons: ["✅", "🟢", "🎉"] },
   { color: "red", meaning: "negative", icons: ["❌", "🔴", "🚫", "🔇"] },
