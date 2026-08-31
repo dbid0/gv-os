@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -10,6 +10,7 @@ import {
   type WorkspacePage,
 } from "@/db/schema/app";
 import { roster } from "@/lib/roster";
+import { buildHomeDefaultContent } from "@/lib/workspace/home";
 import {
   buildPageTree,
   type PageNode,
@@ -55,6 +56,7 @@ function toLite(row: WorkspacePage): WorkspacePageLite {
     content: row.content,
     sortOrder: row.sortOrder,
     updatedAt: row.updatedAt.toISOString(),
+    isHome: row.isHome,
   };
 }
 
@@ -106,6 +108,8 @@ export async function listWorkspaceTree(): Promise<TeamspaceTree[]> {
 
     const byTeamspace = new Map<string, WorkspacePageLite[]>();
     for (const row of rows) {
+      // Home pages render as the pinned "🏠 Home", never as a tree node.
+      if (row.isHome) continue;
       const key = row.clientId ?? "agency";
       const list = byTeamspace.get(key) ?? [];
       list.push(toLite(row));
@@ -150,9 +154,63 @@ export async function getTeamspaceTree(
           ? isNull(workspacePages.clientId)
           : eq(workspacePages.clientId, teamspace.clientId),
       );
-    return { ...teamspace, pages: buildPageTree(rows.map(toLite)) };
+    // Home pages render as the pinned "🏠 Home", never as a tree node.
+    const nonHome = rows.filter((r) => !r.isHome).map(toLite);
+    return { ...teamspace, pages: buildPageTree(nonHome) };
   } catch {
     return { ...teamspace, pages: [] };
+  }
+}
+
+/**
+ * A teamspace's Home page — the editable landing pinned above the tree —
+ * fetched, and CREATED lazily the first time with seeded default content.
+ *
+ * Home is a normal `workspace_pages` row (is_home = true, parent null) so it
+ * renders in the exact same editable page view as any page and autosaves through
+ * the same `updatePage` action. The seed (a "Dashboard" link list + an embedded
+ * To-Do database) is built from that teamspace's own tree, so each Home links to
+ * its own pages. One home per teamspace: if two ever race into existence, the
+ * OLDEST is chosen deterministically so the view is stable. Fail-soft — a
+ * database hiccup returns null and the app shows a minimal fallback, never a
+ * crash.
+ */
+export async function getOrCreateHomePage(
+  clientId: string | null,
+  pages: PageNode[],
+  teamspaceName: string,
+): Promise<WorkspacePageLite | null> {
+  const scope =
+    clientId === null
+      ? isNull(workspacePages.clientId)
+      : eq(workspacePages.clientId, clientId);
+  try {
+    const db = getDb();
+    const [existing] = await db
+      .select()
+      .from(workspacePages)
+      .where(and(scope, eq(workspacePages.isHome, true)))
+      .orderBy(asc(workspacePages.createdAt), asc(workspacePages.id))
+      .limit(1);
+    if (existing) return toLite(existing);
+
+    const content = JSON.stringify(buildHomeDefaultContent(pages));
+    const [created] = await db
+      .insert(workspacePages)
+      .values({
+        clientId,
+        parentId: null,
+        isHome: true,
+        title: teamspaceName,
+        icon: "🏠",
+        content,
+        // Sorts above every real page, though it is never listed in the forest.
+        sortOrder: -1,
+      })
+      .returning();
+    return toLite(created);
+  } catch {
+    return null;
   }
 }
 

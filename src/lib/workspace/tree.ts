@@ -19,6 +19,8 @@ export interface WorkspacePageLite {
   sortOrder: number;
   /** ISO timestamp of the last edit, for the "Edited …" header chip. */
   updatedAt?: string;
+  /** True only for a teamspace's Home page (kept out of the normal forest). */
+  isHome?: boolean;
 }
 
 /** A placed page: the same fields plus its children and its depth in the tree. */

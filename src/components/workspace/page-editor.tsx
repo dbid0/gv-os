@@ -107,12 +107,15 @@ export function PageEditor({
   page,
   teamspaceName,
   teamspaceHref,
+  clientId,
   ancestors,
   subpages,
   saving,
   autoFocusTitle,
   focusNonce,
   basePath,
+  resolvePageId,
+  isHome = false,
   onSave,
   onDraftChange,
   onSelect,
@@ -123,6 +126,8 @@ export function PageEditor({
   teamspaceName: string;
   /** Where the root (teamspace) crumb links — the client page, or /clients. */
   teamspaceHref: string;
+  /** The teamspace (null = agency), for any embedded To-Do database block. */
+  clientId: string | null;
   /** Parent pages, teamspace-nearest first, excluding this page. */
   ancestors: Crumb[];
   /** This page's direct children, rendered as clickable sub-page links. */
@@ -133,6 +138,17 @@ export function PageEditor({
   focusNonce: number;
   /** The workspace route path (e.g. /clients/foo/workspace) for `?page=` links. */
   basePath: string;
+  /** Title → page id in this teamspace, for the body's internal + To-Do links. */
+  resolvePageId: (title: string) => string | null;
+  /**
+   * This is the teamspace Home. It is a NORMAL, fully-featured page — the same
+   * editable title, Share, ••• menu (Rename / Duplicate / Copy link), and star
+   * as any page — that also happens to be the teamspace's main/landing page
+   * (pinned as the "🏠 Home" row, the default when there's no `?page=`). The one
+   * difference: it is NOT deletable, so "Delete" is dropped from its menu — a
+   * teamspace always keeps its home.
+   */
+  isHome?: boolean;
   onSave: (patch: { title?: string; icon?: string | null; content?: string }) => void;
   onDraftChange: (patch: { title?: string; icon?: string | null }) => void;
   onSelect: (id: string) => void;
@@ -272,10 +288,16 @@ export function PageEditor({
               <DropdownMenuItem onClick={copyLink}>
                 <Link2 className="size-4" /> Copy link
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                <Trash2 className="size-4" /> Delete
-              </DropdownMenuItem>
+              {/* Home is the teamspace's landing page — it can't be deleted, so
+                  it keeps everything above but drops Delete. */}
+              {!isHome && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <Trash2 className="size-4" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -320,6 +342,10 @@ export function PageEditor({
             <BlockEditor
               initialContent={page.content}
               pageId={page.id}
+              todoClientId={clientId}
+              basePath={basePath}
+              onSelectPage={onSelect}
+              resolvePageId={resolvePageId}
               onChange={(contentJson) => onSave({ content: contentJson })}
               onReady={(focus) => {
                 focusBodyRef.current = focus;

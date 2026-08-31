@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { WorkspaceApp } from "@/components/workspace/workspace-app";
-import { getTeamspaceTree, listTeamspaceTodos } from "@/lib/workspace/queries";
+import { getOrCreateHomePage, getTeamspaceTree } from "@/lib/workspace/queries";
 
 export const metadata = { title: "Agency workspace - GV OS" };
 export const dynamic = "force-dynamic";
@@ -18,7 +18,11 @@ export default async function AgencyWorkspacePage({
 }) {
   const [sp, teamspace] = await Promise.all([searchParams, getTeamspaceTree(null)]);
   if (!teamspace) notFound();
-  const initialTodos = await listTeamspaceTodos(teamspace.clientId);
+  const home = await getOrCreateHomePage(
+    teamspace.clientId,
+    teamspace.pages,
+    teamspace.name,
+  );
 
   const pageParam = sp.page;
   const initialPageId = typeof pageParam === "string" ? pageParam : null;
@@ -26,7 +30,7 @@ export default async function AgencyWorkspacePage({
   return (
     <WorkspaceApp
       teamspace={teamspace}
-      initialTodos={initialTodos}
+      home={home}
       initialPageId={initialPageId}
       homeHref="/clients"
     />

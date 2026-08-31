@@ -3,10 +3,13 @@
 import "@blocknote/mantine/style.css";
 
 import { useEffect, useState } from "react";
-import type { PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
+import {
+  workspaceSchema,
+  type WorkspacePartialBlock,
+} from "@/components/workspace/todo-database-block";
 import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
 
 /**
@@ -47,7 +50,7 @@ const gvTheme: Theme = {
  * mount so nothing ever written is lost on a shared page.
  */
 function readStored(raw: string | null): {
-  initialBlocks: PartialBlock[] | undefined;
+  initialBlocks: WorkspacePartialBlock[] | undefined;
   legacyMarkdown: string | null;
 } {
   if (!raw || raw.trim() === "") {
@@ -62,7 +65,10 @@ function readStored(raw: string | null): {
           parsed.length > 0 &&
           parsed.every((b) => b !== null && typeof b === "object" && "type" in b);
         if (isBlockDoc) {
-          return { initialBlocks: parsed as PartialBlock[], legacyMarkdown: null };
+          return {
+            initialBlocks: parsed as WorkspacePartialBlock[],
+            legacyMarkdown: null,
+          };
         }
         return { initialBlocks: undefined, legacyMarkdown: null };
       }
@@ -87,7 +93,14 @@ export function BlockReader({ content }: { content: string | null }) {
     };
   });
 
-  const editor = useCreateBlockNote({ initialContent: initialBlocks });
+  // Same schema as the editor — so a shared page that contains a `todoDatabase`
+  // block renders (as its inert placeholder) instead of erroring on an unknown
+  // type. No provider is mounted here, so the block stays static and calls no
+  // server action: read-only means read-only.
+  const editor = useCreateBlockNote({
+    schema: workspaceSchema,
+    initialContent: initialBlocks,
+  });
 
   // Import legacy markdown once, after mount, exactly like the editor does —
   // then the read-only view shows the same blocks the editor would.

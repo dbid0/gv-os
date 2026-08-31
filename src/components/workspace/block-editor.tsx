@@ -3,12 +3,18 @@
 import "@blocknote/mantine/style.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PartialBlock } from "@blocknote/core";
 import { en, type Dictionary } from "@blocknote/core/locales";
-import { useCreateBlockNote } from "@blocknote/react";
+import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
 
 import { useToast } from "@/components/ui/toast";
+import {
+  getWorkspaceSlashItems,
+  TodoDatabaseClientProvider,
+  workspaceSchema,
+  type WorkspacePartialBlock,
+} from "@/components/workspace/todo-database-block";
+import { isInternalPageHref } from "@/lib/workspace/links";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
 import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
 
@@ -78,7 +84,7 @@ const gvTheme: Theme = {
  * or empty) is imported as markdown after mount.
  */
 function readStored(raw: string | null): {
-  initialBlocks: PartialBlock[] | undefined;
+  initialBlocks: WorkspacePartialBlock[] | undefined;
   legacyMarkdown: string | null;
 } {
   if (!raw || raw.trim() === "") {
@@ -93,7 +99,10 @@ function readStored(raw: string | null): {
           parsed.length > 0 &&
           parsed.every((b) => b !== null && typeof b === "object" && "type" in b);
         if (isBlockDoc) {
-          return { initialBlocks: parsed as PartialBlock[], legacyMarkdown: null };
+          return {
+            initialBlocks: parsed as WorkspacePartialBlock[],
+            legacyMarkdown: null,
+          };
         }
         // Valid JSON, but not a BlockNote document (or an empty array): open blank.
         return { initialBlocks: undefined, legacyMarkdown: null };
@@ -108,6 +117,10 @@ function readStored(raw: string | null): {
 export function BlockEditor({
   initialContent,
   pageId,
+  todoClientId,
+  basePath,
+  onSelectPage,
+  resolvePageId,
   onChange,
   onReady,
 }: {
@@ -115,6 +128,21 @@ export function BlockEditor({
   initialContent: string | null;
   /** The page this body belongs to — namespaces uploaded attachments. */
   pageId?: string;
+  /**
+   * The teamspace this page belongs to (null = agency), for any embedded
+   * `todoDatabase` block — it reaches the block through the provider below.
+   */
+  todoClientId: string | null;
+  /** The workspace route (e.g. /clients/foo/workspace) — the internal-link base. */
+  basePath: string;
+  /**
+   * Navigate the workspace to a page id, client-side — the SAME `onSelect` the
+   * tree and sub-page links use. Fired when an INTERNAL page link in the body
+   * (or an embedded To-Do sheet link) is clicked, so links behave like Notion's.
+   */
+  onSelectPage: (id: string) => void;
+  /** Title → page id in this teamspace, for the To-Do rows' sheet deep-links. */
+  resolvePageId: (title: string) => string | null;
   /** Debounced: called with the serialised document JSON to persist. */
   onChange: (contentJson: string) => void;
   /** Handed a focus() fn once mounted, so title-Enter can jump into the body. */
@@ -147,6 +175,7 @@ export function BlockEditor({
   });
 
   const editor = useCreateBlockNote({
+    schema: workspaceSchema,
     initialContent: initialBlocks,
     dictionary,
     // Uploads an image / video / file picked from the computer to Supabase
@@ -216,10 +245,59 @@ export function BlockEditor({
   // during render.
   const onChangeRef = useRef(onChange);
   const onReadyRef = useRef(onReady);
+  const onSelectPageRef = useRef(onSelectPage);
+  const basePathRef = useRef(basePath);
   useEffect(() => {
     onChangeRef.current = onChange;
     onReadyRef.current = onReady;
+    onSelectPageRef.current = onSelectPage;
+    basePathRef.current = basePath;
   });
+
+  // Notion-style link navigation. The editor is always editable, so a plain
+  // click on a link would just drop the caret; instead we intercept clicks on
+  // anchors and make INTERNAL page links (`?page=<id>` on this workspace route)
+  // switch pages client-side via `onSelectPage`, exactly like the tree does.
+  // External links — and modifier-clicks on internal ones — open in a new tab.
+  // Clicking off a link still edits text normally: only the anchor itself acts.
+  //
+  // A NATIVE capture listener (not React's onClickCapture) is used so it runs
+  // BEFORE ProseMirror's own handlers on the inner contentEditable and can stop
+  // them; and it fires only for real `<a>` anchors, so the To-Do database's
+  // controls (its sheet links are <button>s, not anchors) are never touched.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = wrapperRef.current;
+    if (!root) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const anchor = target?.closest?.("a");
+      if (!anchor) return;
+      const rawHref = anchor.getAttribute("href");
+      if (!rawHref) return;
+
+      const sameOrigin = anchor.origin === window.location.origin;
+      const pageId = sameOrigin
+        ? isInternalPageHref(rawHref, basePathRef.current)
+        : null;
+      const modified =
+        e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
+
+      // Whatever it is, don't let the click reach ProseMirror (a caret flash) or
+      // trigger the anchor's default nav — we drive navigation ourselves.
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (pageId && !modified) {
+        onSelectPageRef.current(pageId);
+        return;
+      }
+      // Modifier-click on an internal link, or any external link: new tab.
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
+    };
+    root.addEventListener("click", onClick, true);
+    return () => root.removeEventListener("click", onClick, true);
+  }, []);
 
   // Autosave state. `ready` gates saves until initial/legacy content is settled,
   // so opening a page never writes; `baseline` is the last-known serialised doc,
@@ -296,8 +374,26 @@ export function BlockEditor({
   }, [editor]);
 
   return (
-    <div className="gv-block-editor">
-      <BlockNoteView editor={editor} theme={gvTheme} onChange={handleChange} />
+    <div className="gv-block-editor" ref={wrapperRef}>
+      <TodoDatabaseClientProvider
+        clientId={todoClientId}
+        resolvePageId={resolvePageId}
+        onNavigate={onSelectPage}
+      >
+        <BlockNoteView
+          editor={editor}
+          theme={gvTheme}
+          onChange={handleChange}
+          slashMenu={false}
+        >
+          {/* Our own slash menu = the default items PLUS "To-Do database", so the
+              custom block is insertable anywhere with "/". */}
+          <SuggestionMenuController
+            triggerCharacter="/"
+            getItems={async (query) => getWorkspaceSlashItems(editor, query)}
+          />
+        </BlockNoteView>
+      </TodoDatabaseClientProvider>
     </div>
   );
 }

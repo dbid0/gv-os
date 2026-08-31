@@ -35,7 +35,6 @@ import {
 import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
 import { TeamspaceIcon } from "@/components/workspace/teamspace-icon";
-import { WorkspaceHome } from "@/components/workspace/workspace-home";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -55,13 +54,13 @@ import { copyText } from "@/lib/clipboard";
 import {
   buildPageTree,
   collectSubtreeIds,
+  findNodeByTitle,
   flattenTree,
   pageBreadcrumb,
   planMove,
   type PageNode,
   type WorkspacePageLite,
 } from "@/lib/workspace/tree";
-import { type TodoRow } from "@/lib/workspace/todos";
 import { cn } from "@/lib/utils";
 
 /** The single teamspace this scoped view renders (a client, or the agency). */
@@ -97,14 +96,18 @@ const HOME_PARAM = "home";
  */
 export function WorkspaceApp({
   teamspace,
-  initialTodos,
+  home,
   initialPageId,
   homeHref,
   agencyHref = null,
 }: {
   teamspace: TeamspaceView;
-  /** The teamspace's To-Do rows, for the Home board. Server-loaded, seeds state. */
-  initialTodos: TodoRow[];
+  /**
+   * The teamspace's Home — a REAL, editable page (is_home = true), created lazily
+   * by the server. The pinned "🏠 Home" row opens it. Null only if the database
+   * was unreachable, in which case a minimal fallback shows instead.
+   */
+  home: WorkspacePageLite | null;
   initialPageId: string | null;
   /** The client (or /clients) this teamspace belongs to — back link + root crumb. */
   homeHref: string;
@@ -123,6 +126,14 @@ export function WorkspaceApp({
 
   const allPages = useMemo(() => flattenTree(pages), [pages]);
   const byId = useMemo(() => new Map(allPages.map((p) => [p.id, p])), [allPages]);
+
+  // Resolve a page by title within THIS teamspace — how the body's internal
+  // links and the To-Do rows' sheet deep-links ("Fill out Software Logins")
+  // find the real page they open. Null when nothing carries the title.
+  const resolvePageId = useCallback(
+    (title: string) => findNodeByTitle(pages, title)?.id ?? null,
+    [pages],
+  );
 
   // `null` is the derived Home landing (no `?page=`); a string is an open page.
   // A deep-linked `?page=` that is not a real page (including `?page=home`)
@@ -277,6 +288,28 @@ export function WorkspaceApp({
     },
     [router, toast],
   );
+
+  // Home is a normal, duplicable page — but it isn't a node in the tree, so it
+  // gets its own tiny duplicate that clones it into an ordinary page (the copy
+  // is NOT a home; `duplicatePage` never carries `is_home`) and jumps to it.
+  const duplicateHome = useCallback(() => {
+    if (!home) return;
+    start(async () => {
+      try {
+        const { id } = await duplicatePage(home.id);
+        setNewPageId(null);
+        setSelectedId(id);
+        router.refresh();
+        toast({ tone: "success", title: "Duplicated" });
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: "Couldn't duplicate the page",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
+    });
+  }, [home, router, toast]);
 
   const copyPageLink = useCallback(
     async (node: PageNode) => {
@@ -613,12 +646,14 @@ export function WorkspaceApp({
             }}
             teamspaceName={teamspace.name}
             teamspaceHref={homeHref}
+            clientId={teamspace.clientId}
             ancestors={ancestors}
             subpages={subpages}
             saving={pending}
             autoFocusTitle={selectedNode.id === newPageId}
             focusNonce={focusNonce}
             basePath={basePath}
+            resolvePageId={resolvePageId}
             onSave={(patch) => {
               if (patch.title !== undefined || patch.icon !== undefined) {
                 setOverrides((prev) => {
@@ -644,15 +679,59 @@ export function WorkspaceApp({
             onDuplicate={() => duplicate(selectedNode)}
             onDelete={() => requestDelete(selectedNode)}
           />
-        ) : (
-          <WorkspaceHome
-            teamspace={teamspace}
+        ) : home ? (
+          // Home is a REAL, fully-featured editable page, rendered in the exact
+          // same pane as any page — editable title, Share, ••• menu, star, and a
+          // fully editable body (which includes the embedded To-Do database
+          // block). It is only NOT deletable (PageEditor drops Delete for the
+          // home). Autosaves through the same `updatePage` path via `persist`.
+          <PageEditor
+            key={home.id}
+            page={{
+              id: home.id,
+              title: home.title,
+              icon: home.icon,
+              content: home.content,
+              updatedAt: home.updatedAt,
+            }}
+            teamspaceName={teamspace.name}
+            teamspaceHref={homeHref}
             clientId={teamspace.clientId}
-            pages={pages}
-            initialTodos={initialTodos}
+            ancestors={[]}
+            subpages={[]}
+            saving={pending}
+            autoFocusTitle={false}
+            focusNonce={focusNonce}
             basePath={basePath}
+            resolvePageId={resolvePageId}
+            isHome
+            onSave={(patch) => {
+              if (patch.title !== undefined || patch.icon !== undefined) {
+                setOverrides((prev) => {
+                  const next = new Map(prev);
+                  next.set(home.id, {
+                    ...next.get(home.id),
+                    ...(patch.title !== undefined ? { title: patch.title } : {}),
+                    ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+                  });
+                  return next;
+                });
+              }
+              persist(home.id, patch);
+            }}
+            onDraftChange={(patch) =>
+              setOverrides((prev) => {
+                const next = new Map(prev);
+                next.set(home.id, { ...next.get(home.id), ...patch });
+                return next;
+              })
+            }
             onSelect={selectNode}
+            onDuplicate={duplicateHome}
+            onDelete={() => {}}
           />
+        ) : (
+          <HomeUnavailable name={teamspace.name} />
         )}
       </section>
 
@@ -665,6 +744,27 @@ export function WorkspaceApp({
         }}
         onConfirm={confirmDelete}
       />
+    </div>
+  );
+}
+
+/**
+ * The Home fallback — shown ONLY when the server couldn't load or create the
+ * Home page (a database hiccup). It never appears in normal operation; Home is a
+ * real, seeded page. Kept intentionally minimal so an outage degrades to a quiet
+ * message instead of a crash.
+ */
+function HomeUnavailable({ name }: { name: string }) {
+  return (
+    <div className="bg-background flex h-full min-w-0 flex-col">
+      <div className="mx-auto w-full max-w-[720px] px-6 pt-[100px] sm:px-12">
+        <h1 className="text-foreground text-[2.5rem] leading-[1.2] font-bold tracking-[-0.02em]">
+          {name}
+        </h1>
+        <p className="text-muted-foreground mt-4 text-sm">
+          Home is taking a moment to load. Refresh to try again.
+        </p>
+      </div>
     </div>
   );
 }
