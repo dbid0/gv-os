@@ -6,6 +6,7 @@ import {
   COLUMN_LIST_BLOCK_TYPE,
   HOME_CONTENT_ITEMS,
   HOME_DASHBOARD_ITEMS,
+  isGreyTwoColumnSeed,
   isLegacyHomeSeed,
   MARKETING_ROUTE_HREF,
   resolveHomeLinkHref,
@@ -98,8 +99,8 @@ describe("buildHomeDefaultContent", () => {
     // Both boxes are grey callout quotes with a bold emoji header.
     expect(dashboard.type).toBe("quote");
     expect(content.type).toBe("quote");
-    expect(dashboard.props?.backgroundColor).toBe("gray");
-    expect(content.props?.backgroundColor).toBe("gray");
+    expect(dashboard.props?.backgroundColor).toBe("blue");
+    expect(content.props?.backgroundColor).toBe("blue");
     expect(textOf(dashboard)).toContain("Dashboard");
     expect(textOf(content)).toContain("Content");
 
@@ -108,13 +109,13 @@ describe("buildHomeDefaultContent", () => {
     expect(content.children).toHaveLength(HOME_CONTENT_ITEMS.length);
   });
 
-  it("puts a clean grey To-Do box header over the interactive database in the RIGHT column", () => {
+  it("puts a clean blue To-Do box header over the interactive database in the RIGHT column", () => {
     const [, right] = columns(buildHomeDefaultContent([]));
     const kids = right.children ?? [];
     expect(kids).toHaveLength(2);
-    // Same grey callout header the other boxes use — no coloured heading glitch.
+    // Same blue callout header the other boxes use — no coloured heading glitch.
     expect(kids[0].type).toBe("quote");
-    expect(kids[0].props?.backgroundColor).toBe("gray");
+    expect(kids[0].props?.backgroundColor).toBe("blue");
     expect(textOf(kids[0])).toContain("To-Do List");
     expect(kids[1].type).toBe(TODO_DATABASE_BLOCK_TYPE);
   });
@@ -233,5 +234,48 @@ describe("isLegacyHomeSeed", () => {
     expect(isLegacyHomeSeed("not json")).toBe(false);
     expect(isLegacyHomeSeed("{}")).toBe(false);
     expect(isLegacyHomeSeed("[]")).toBe(false);
+  });
+});
+
+describe("isGreyTwoColumnSeed — upgrade the old grey home to blue", () => {
+  /** Force the current (blue) seed's three boxes back to grey, as the old seed. */
+  function greyify(blocks: HomeSeedBlock[]): HomeSeedBlock[] {
+    const clone = JSON.parse(JSON.stringify(blocks)) as HomeSeedBlock[];
+    const root = clone[0];
+    for (const col of root.children ?? []) {
+      for (const box of col.children ?? []) {
+        if (box.type === "quote") box.props = { ...box.props, backgroundColor: "gray" };
+      }
+    }
+    return clone;
+  }
+
+  it("matches an untouched two-column home whose boxes are all still grey", () => {
+    const grey = greyify(buildHomeDefaultContent([]));
+    expect(isGreyTwoColumnSeed(JSON.stringify(grey))).toBe(true);
+  });
+
+  it("does NOT match the current blue seed (so it never re-upgrades in a loop)", () => {
+    expect(isGreyTwoColumnSeed(JSON.stringify(buildHomeDefaultContent([])))).toBe(
+      false,
+    );
+  });
+
+  it("does NOT match once a user recoloured a box (an edited home is left alone)", () => {
+    const grey = greyify(buildHomeDefaultContent([]));
+    // user turns the first box purple
+    grey[0].children![0].children; // no-op read to keep shape obvious
+    const root = grey[0];
+    (root.children![0].children![0] as HomeSeedBlock).props = {
+      backgroundColor: "purple",
+    };
+    expect(isGreyTwoColumnSeed(JSON.stringify(grey))).toBe(false);
+  });
+
+  it("is null/parse safe", () => {
+    expect(isGreyTwoColumnSeed(null)).toBe(false);
+    expect(isGreyTwoColumnSeed("")).toBe(false);
+    expect(isGreyTwoColumnSeed("not json")).toBe(false);
+    expect(isGreyTwoColumnSeed("[]")).toBe(false);
   });
 });

@@ -92,8 +92,13 @@ export const TODO_DATABASE_BLOCK_TYPE = "todoDatabase";
 export const COLUMN_LIST_BLOCK_TYPE = "columnList";
 export const COLUMN_BLOCK_TYPE = "column";
 
-/** The subtle grey that gives every section its Notion-callout "box" look. */
-const BOX_BACKGROUND = "gray";
+/**
+ * The blue tint that gives every section its Notion look. Daniel's real
+ * "Global Ventures Onboarding" home uses blue callouts (flash_blue /
+ * movie-camera_blue / hashtag_blue) with blue underlined titles — NOT grey — so
+ * all three boxes are blue to match it exactly.
+ */
+const BOX_BACKGROUND = "blue";
 
 /** A plain (or styled) text run. */
 function text(
@@ -131,7 +136,7 @@ function boxSection(
   return {
     type: "quote",
     props: { backgroundColor: BOX_BACKGROUND },
-    content: [text(`${emoji} ${title}`, { bold: true })],
+    content: [text(`${emoji} ${title}`, { bold: true, underline: true })],
     children: bullets,
   };
 }
@@ -171,7 +176,7 @@ function rightColumn(): HomeSeedBlock {
       {
         type: "quote",
         props: { backgroundColor: BOX_BACKGROUND },
-        content: [text("📋 To-Do List", { bold: true })],
+        content: [text("📋 To-Do List", { bold: true, underline: true })],
       },
       { type: TODO_DATABASE_BLOCK_TYPE, props: {} },
     ],
@@ -248,6 +253,47 @@ function leadingBlockText(block: unknown): string {
  * the wording) it stops matching and the home is left alone. Pure: it takes the
  * stored `content` JSON string and never touches the database.
  */
+/**
+ * True for an UNTOUCHED two-column Home whose boxes are still the old GREY tint
+ * — a single `columnList` whose only `quote` boxes all carry
+ * `backgroundColor: "gray"`, with the embedded `todoDatabase`. This is the seed
+ * shipped before the boxes were re-tinted blue to match Notion; recognising it
+ * lets an unedited grey Home upgrade to the blue layout on next load, while a
+ * Home the user recoloured or restructured no longer matches and is left alone.
+ * Pure: parses the stored JSON, never touches the database.
+ */
+export function isGreyTwoColumnSeed(content: string | null | undefined): boolean {
+  if (!content) return false;
+  let blocks: unknown;
+  try {
+    blocks = JSON.parse(content);
+  } catch {
+    return false;
+  }
+  if (!Array.isArray(blocks) || blocks.length !== 1) return false;
+  const root = blocks[0] as { type?: string; children?: unknown[] };
+  if (root?.type !== COLUMN_LIST_BLOCK_TYPE || !Array.isArray(root.children)) {
+    return false;
+  }
+  const quotes: { props?: { backgroundColor?: string } }[] = [];
+  let hasTodo = false;
+  for (const col of root.children) {
+    const kids = (col as { children?: unknown[] }).children;
+    if (!Array.isArray(kids)) continue;
+    for (const b of kids) {
+      const type = (b as { type?: string }).type;
+      if (type === "quote") quotes.push(b as { props?: { backgroundColor?: string } });
+      else if (type === TODO_DATABASE_BLOCK_TYPE) hasTodo = true;
+    }
+  }
+  // The seed has exactly three boxes; every one still grey ⇒ untouched.
+  return (
+    hasTodo &&
+    quotes.length === 3 &&
+    quotes.every((q) => q.props?.backgroundColor === "gray")
+  );
+}
+
 export function isLegacyHomeSeed(content: string | null | undefined): boolean {
   if (!content) return false;
   let blocks: unknown;
