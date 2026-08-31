@@ -456,21 +456,25 @@ function TaskCell({
     resolvePageId && onNavigate ? linkifyTaskText(value, resolvePageId) : null;
 
   // A linkified row shows its rendered text (with the sheet link) until the user
-  // clicks off the link to edit; then it becomes the plain input.
+  // clicks the NON-link text to edit; then it becomes the plain input. The cell
+  // enters edit mode on a plain click, but NOT on focus — a focus-driven flip
+  // would fire when the link button takes focus (focusin bubbles), unmounting
+  // the button before its click could navigate. So there is no `onFocus` here.
   if (linkified && !editing) {
     return (
       <div
-        role="textbox"
-        tabIndex={0}
         onClick={() => setEditing(true)}
-        onFocus={() => setEditing(true)}
-        className="text-foreground min-w-0 flex-1 cursor-text truncate rounded-md px-1.5 py-1.5 text-sm outline-none"
+        className="text-foreground min-w-0 flex-1 cursor-text truncate rounded-md px-1.5 py-1.5 text-sm"
       >
         {linkified.before}
         <button
           type="button"
+          // Don't steal focus on mousedown (focusin would otherwise bubble to
+          // the cell) and don't let the click bubble to the cell's click-to-edit
+          // — either would drop the row into EDIT mode instead of navigating.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={(e) => {
-            // Navigate, and don't let the click fall through to edit mode.
+            e.preventDefault();
             e.stopPropagation();
             onNavigate?.(linkified.link.pageId);
           }}
