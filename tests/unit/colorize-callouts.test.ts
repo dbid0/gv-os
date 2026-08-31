@@ -40,7 +40,11 @@ describe("colorizeCallouts — callout colour by leading icon", () => {
   it("colours a quote by each known leading emoji", () => {
     const cases: Array<[string, string]> = [
       ["⚠️ heads up", "yellow"],
-      ["🚨 alarm", "yellow"],
+      ["⚡ speed to lead", "yellow"],
+      ["⏰ before your first dial", "yellow"],
+      ["⏱️ timing", "yellow"],
+      ["🚨 compliance line", "red"],
+      ["🛡️ compliance", "red"],
       ["🔥 critical", "red"],
       ["💡 tip", "blue"],
       ["ℹ️ note", "blue"],
