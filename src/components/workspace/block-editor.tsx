@@ -390,7 +390,9 @@ export function BlockEditor({
               custom block is insertable anywhere with "/". */}
           <SuggestionMenuController
             triggerCharacter="/"
-            getItems={async (query) => getWorkspaceSlashItems(editor, query)}
+            getItems={async (query) =>
+              getWorkspaceSlashItems(editor, query, todoClientId)
+            }
           />
         </BlockNoteView>
       </TodoDatabaseClientProvider>

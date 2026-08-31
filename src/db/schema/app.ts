@@ -14,6 +14,8 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
+import type { DatabaseColumn, DbCellValue } from "@/lib/workspace/database";
+
 /**
  * The `app` schema holds mutable operational state: people, clients, deals.
  * Normal CRUD lives here.
@@ -1513,3 +1515,81 @@ export const workspaceTodosRelations = relations(workspaceTodos, ({ one }) => ({
 
 export type WorkspaceTodo = typeof workspaceTodos.$inferSelect;
 export type NewWorkspaceTodo = typeof workspaceTodos.$inferInsert;
+
+/**
+ * A generic, embeddable TABLE database — the Notion-style "any columns" grid a
+ * page can drop in as a block, distinct from the specialised To-Do board. The
+ * shape (an ordered array of typed columns) is DATA in `columns`, not schema
+ * columns, so a user reshapes their table without a migration. Column/value
+ * shaping lives in the pure, fully covered src/lib/workspace/database.ts.
+ *
+ * A database belongs to a TEAMSPACE via `clientId`, exactly like the pages and
+ * the To-Do board: a client's space when set, the Global Ventures agency space
+ * when null. Operational state, NOT money — it lives in `app` and never touches
+ * the ledger.
+ */
+export const workspaceDatabases = appSchema.table(
+  "workspace_databases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The teamspace. Null = the Global Ventures agency space. */
+    clientId: uuid("client_id").references(() => clients.id),
+    title: text("title").notNull().default("Untitled"),
+    /** Ordered column definitions: [{ id, name, type, options? }]. */
+    columns: jsonb("columns").$type<DatabaseColumn[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("workspace_databases_client_idx").on(table.clientId)],
+);
+
+/**
+ * One row of a generic database. `values` is a jsonb map keyed by COLUMN ID:
+ * a select stores the chosen option id, a checkbox a bool, a date an ISO string,
+ * text/url a string; a missing key renders empty. Rows cascade with their
+ * database. `sort_order` is the manual drag order; ties break on id so the list
+ * is always stable.
+ */
+export const workspaceDatabaseRows = appSchema.table(
+  "workspace_database_rows",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    databaseId: uuid("database_id")
+      .notNull()
+      .references(() => workspaceDatabases.id, { onDelete: "cascade" }),
+    /** Column id → cell value (option id | bool | ISO date | string). */
+    values: jsonb("values").$type<Record<string, DbCellValue>>().notNull().default({}),
+    /** Manual drag order within the database; lower sorts first. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("workspace_database_rows_db_sort_idx").on(table.databaseId, table.sortOrder),
+  ],
+);
+
+export const workspaceDatabasesRelations = relations(
+  workspaceDatabases,
+  ({ one, many }) => ({
+    client: one(clients, {
+      fields: [workspaceDatabases.clientId],
+      references: [clients.id],
+    }),
+    rows: many(workspaceDatabaseRows),
+  }),
+);
+
+export const workspaceDatabaseRowsRelations = relations(
+  workspaceDatabaseRows,
+  ({ one }) => ({
+    database: one(workspaceDatabases, {
+      fields: [workspaceDatabaseRows.databaseId],
+      references: [workspaceDatabases.id],
+    }),
+  }),
+);
+
+export type WorkspaceDatabase = typeof workspaceDatabases.$inferSelect;
+export type NewWorkspaceDatabase = typeof workspaceDatabases.$inferInsert;
+export type WorkspaceDatabaseRow = typeof workspaceDatabaseRows.$inferSelect;
+export type NewWorkspaceDatabaseRow = typeof workspaceDatabaseRows.$inferInsert;
