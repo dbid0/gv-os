@@ -30,6 +30,7 @@ import {
   type TodoRow,
   type TodoStatus,
 } from "@/lib/workspace/todos";
+import { linkifyTaskText } from "@/lib/workspace/links";
 import { cn } from "@/lib/utils";
 
 /**
@@ -68,11 +69,21 @@ type DropHint = { id: string; mode: DropMode };
 export function TodoDatabase({
   clientId,
   initialTodos,
+  resolvePageId,
+  onNavigate,
 }: {
   /** The teamspace this board belongs to (null = the agency board). */
   clientId: string | null;
   /** Server-loaded rows, in board order — the seed for local state. */
   initialTodos: TodoRow[];
+  /**
+   * Resolve a sheet title to a page id within this teamspace, so a task like
+   * "Fill out Software Logins" renders that sheet name as a link. Omitted when
+   * the board is rendered outside a workspace (nothing linkifies).
+   */
+  resolvePageId?: (title: string) => string | null;
+  /** Navigate the workspace to a page id when a task's sheet link is clicked. */
+  onNavigate?: (pageId: string) => void;
 }) {
   const { toast } = useToast();
   const [rows, setRows] = useState<TodoRow[]>(initialTodos);
@@ -248,6 +259,8 @@ export function TodoDatabase({
             isDragging={dragId === row.id}
             dropMode={dropHint?.id === row.id ? dropHint.mode : null}
             autoFocus={row.id === focusId}
+            resolvePageId={resolvePageId}
+            onNavigate={onNavigate}
             onFocused={() => setFocusId(null)}
             onTaskChange={(task) => setTask(row.id, task)}
             onStatusChange={(status) => setStatus(row.id, status)}
@@ -286,6 +299,8 @@ function TodoRowView({
   isDragging,
   dropMode,
   autoFocus,
+  resolvePageId,
+  onNavigate,
   onFocused,
   onTaskChange,
   onStatusChange,
@@ -300,6 +315,8 @@ function TodoRowView({
   isDragging: boolean;
   dropMode: DropMode | null;
   autoFocus: boolean;
+  resolvePageId?: (title: string) => string | null;
+  onNavigate?: (pageId: string) => void;
   onFocused: () => void;
   onTaskChange: (task: string) => void;
   onStatusChange: (status: TodoStatus) => void;
@@ -361,6 +378,8 @@ function TodoRowView({
       <TaskCell
         value={row.task}
         autoFocus={autoFocus}
+        resolvePageId={resolvePageId}
+        onNavigate={onNavigate}
         onFocused={onFocused}
         onCommit={onTaskChange}
       />
@@ -386,19 +405,31 @@ function TodoRowView({
   );
 }
 
-/** Inline-editable task text: click to edit, save on blur/Enter, empty allowed. */
+/**
+ * Inline-editable task text. When the task references a resolvable teamspace
+ * sheet ("Fill out Software Logins"), it renders that span as a Notion-style
+ * link (click it → navigate) while the rest of the text stays a normal click
+ * target: clicking anywhere off the link drops into the plain `<input>` to edit,
+ * saving on blur/Enter. A task with no resolvable sheet is always the input, so
+ * ordinary rows behave exactly as before.
+ */
 function TaskCell({
   value,
   autoFocus,
+  resolvePageId,
+  onNavigate,
   onFocused,
   onCommit,
 }: {
   value: string;
   autoFocus: boolean;
+  resolvePageId?: (title: string) => string | null;
+  onNavigate?: (pageId: string) => void;
   onFocused: () => void;
   onCommit: (task: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keep the draft in step when the row's value changes underneath us (a server
@@ -409,10 +440,48 @@ function TaskCell({
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
+      setEditing(true);
       inputRef.current.focus();
       onFocused();
     }
   }, [autoFocus, onFocused]);
+
+  // Focus the input the frame it appears when the user clicks into a linkified
+  // row to edit it (the input isn't mounted until `editing` flips).
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const linkified =
+    resolvePageId && onNavigate ? linkifyTaskText(value, resolvePageId) : null;
+
+  // A linkified row shows its rendered text (with the sheet link) until the user
+  // clicks off the link to edit; then it becomes the plain input.
+  if (linkified && !editing) {
+    return (
+      <div
+        role="textbox"
+        tabIndex={0}
+        onClick={() => setEditing(true)}
+        onFocus={() => setEditing(true)}
+        className="text-foreground min-w-0 flex-1 cursor-text truncate rounded-md px-1.5 py-1.5 text-sm outline-none"
+      >
+        {linkified.before}
+        <button
+          type="button"
+          onClick={(e) => {
+            // Navigate, and don't let the click fall through to edit mode.
+            e.stopPropagation();
+            onNavigate?.(linkified.link.pageId);
+          }}
+          className="gv-todo-sheet-link text-brand decoration-brand/40 hover:decoration-brand cursor-pointer rounded font-medium underline underline-offset-2 transition-colors"
+        >
+          {linkified.link.text}
+        </button>
+        {linkified.after}
+      </div>
+    );
+  }
 
   return (
     <input
@@ -420,7 +489,10 @@ function TaskCell({
       value={draft}
       placeholder="Untitled"
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => onCommit(draft)}
+      onBlur={() => {
+        onCommit(draft);
+        setEditing(false);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();

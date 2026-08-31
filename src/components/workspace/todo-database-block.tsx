@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ListTodo } from "lucide-react";
 import {
   BlockNoteSchema,
@@ -42,23 +42,41 @@ import { type TodoRow } from "@/lib/workspace/todos";
  */
 
 /**
- * The teamspace a page belongs to, for its embedded To-Do databases.
- * `undefined` = no provider (public reader); `null` = the agency board; a string
- * = a client's board. The distinction matters: only a present provider (defined
- * value) turns the block interactive.
+ * The live teamspace context an embedded To-Do database needs: its board's
+ * `clientId` (null = the agency board), a resolver that maps a sheet title to a
+ * real page id within THIS teamspace (for the deep-linking task rows), and the
+ * page-navigation callback those links fire. A PRESENT value = the interactive
+ * in-app editor; `null` = no provider (the public reader), which keeps the block
+ * a static, inert placeholder that touches no server action.
  */
-const TodoDatabaseClientContext = createContext<string | null | undefined>(undefined);
+export interface TodoDatabaseContextValue {
+  clientId: string | null;
+  /** Title → page id within this teamspace, or null when nothing carries it. */
+  resolvePageId: (title: string) => string | null;
+  /** Navigate the workspace to a page, client-side (the tree's `onSelect`). */
+  onNavigate: (pageId: string) => void;
+}
+
+const TodoDatabaseClientContext = createContext<TodoDatabaseContextValue | null>(null);
 
 /** Wrap the editor so every embedded To-Do database knows its teamspace. */
 export function TodoDatabaseClientProvider({
   clientId,
+  resolvePageId,
+  onNavigate,
   children,
 }: {
   clientId: string | null;
+  resolvePageId: (title: string) => string | null;
+  onNavigate: (pageId: string) => void;
   children: React.ReactNode;
 }) {
+  const value = useMemo(
+    () => ({ clientId, resolvePageId, onNavigate }),
+    [clientId, resolvePageId, onNavigate],
+  );
   return (
-    <TodoDatabaseClientContext.Provider value={clientId}>
+    <TodoDatabaseClientContext.Provider value={value}>
       {children}
     </TodoDatabaseClientContext.Provider>
   );
@@ -71,14 +89,15 @@ export function TodoDatabaseClientProvider({
  * share) it stays a static, inert placeholder and touches no server action.
  */
 function EmbeddedTodoDatabase() {
-  const clientId = useContext(TodoDatabaseClientContext);
-  const interactive = clientId !== undefined;
+  const ctx = useContext(TodoDatabaseClientContext);
+  const interactive = ctx !== null;
+  const clientId = ctx?.clientId ?? null;
   const [todos, setTodos] = useState<TodoRow[] | null>(null);
 
   useEffect(() => {
     if (!interactive) return;
     let cancelled = false;
-    listTodos(clientId ?? null)
+    listTodos(clientId)
       .then((rows) => {
         if (!cancelled) setTodos(rows);
       })
@@ -96,8 +115,13 @@ function EmbeddedTodoDatabase() {
   // the editor's side menu like any block.
   return (
     <div className="gv-todo-db-block" contentEditable={false}>
-      {interactive ? (
-        <TodoDatabase clientId={clientId ?? null} initialTodos={todos ?? []} />
+      {interactive && ctx ? (
+        <TodoDatabase
+          clientId={clientId}
+          initialTodos={todos ?? []}
+          resolvePageId={ctx.resolvePageId}
+          onNavigate={ctx.onNavigate}
+        />
       ) : (
         <div className="border-border/60 bg-secondary/30 text-muted-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
           <ListTodo className="size-4" />

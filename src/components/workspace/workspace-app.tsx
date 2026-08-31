@@ -54,6 +54,7 @@ import { copyText } from "@/lib/clipboard";
 import {
   buildPageTree,
   collectSubtreeIds,
+  findNodeByTitle,
   flattenTree,
   pageBreadcrumb,
   planMove,
@@ -125,6 +126,14 @@ export function WorkspaceApp({
 
   const allPages = useMemo(() => flattenTree(pages), [pages]);
   const byId = useMemo(() => new Map(allPages.map((p) => [p.id, p])), [allPages]);
+
+  // Resolve a page by title within THIS teamspace — how the body's internal
+  // links and the To-Do rows' sheet deep-links ("Fill out Software Logins")
+  // find the real page they open. Null when nothing carries the title.
+  const resolvePageId = useCallback(
+    (title: string) => findNodeByTitle(pages, title)?.id ?? null,
+    [pages],
+  );
 
   // `null` is the derived Home landing (no `?page=`); a string is an open page.
   // A deep-linked `?page=` that is not a real page (including `?page=home`)
@@ -279,6 +288,28 @@ export function WorkspaceApp({
     },
     [router, toast],
   );
+
+  // Home is a normal, duplicable page — but it isn't a node in the tree, so it
+  // gets its own tiny duplicate that clones it into an ordinary page (the copy
+  // is NOT a home; `duplicatePage` never carries `is_home`) and jumps to it.
+  const duplicateHome = useCallback(() => {
+    if (!home) return;
+    start(async () => {
+      try {
+        const { id } = await duplicatePage(home.id);
+        setNewPageId(null);
+        setSelectedId(id);
+        router.refresh();
+        toast({ tone: "success", title: "Duplicated" });
+      } catch (e) {
+        toast({
+          tone: "error",
+          title: "Couldn't duplicate the page",
+          detail: e instanceof Error ? e.message : undefined,
+        });
+      }
+    });
+  }, [home, router, toast]);
 
   const copyPageLink = useCallback(
     async (node: PageNode) => {
@@ -622,6 +653,7 @@ export function WorkspaceApp({
             autoFocusTitle={selectedNode.id === newPageId}
             focusNonce={focusNonce}
             basePath={basePath}
+            resolvePageId={resolvePageId}
             onSave={(patch) => {
               if (patch.title !== undefined || patch.icon !== undefined) {
                 setOverrides((prev) => {
@@ -648,15 +680,16 @@ export function WorkspaceApp({
             onDelete={() => requestDelete(selectedNode)}
           />
         ) : home ? (
-          // Home is a REAL editable page, rendered in the exact same pane as any
-          // page — locked title, hidden structural actions, fully editable body
-          // (which includes the embedded To-Do database block). Autosaves through
-          // the same `updatePage` path via `persist`.
+          // Home is a REAL, fully-featured editable page, rendered in the exact
+          // same pane as any page — editable title, Share, ••• menu, star, and a
+          // fully editable body (which includes the embedded To-Do database
+          // block). It is only NOT deletable (PageEditor drops Delete for the
+          // home). Autosaves through the same `updatePage` path via `persist`.
           <PageEditor
             key={home.id}
             page={{
               id: home.id,
-              title: teamspace.name,
+              title: home.title,
               icon: home.icon,
               content: home.content,
               updatedAt: home.updatedAt,
@@ -670,11 +703,31 @@ export function WorkspaceApp({
             autoFocusTitle={false}
             focusNonce={focusNonce}
             basePath={basePath}
+            resolvePageId={resolvePageId}
             isHome
-            onSave={(patch) => persist(home.id, patch)}
-            onDraftChange={() => {}}
+            onSave={(patch) => {
+              if (patch.title !== undefined || patch.icon !== undefined) {
+                setOverrides((prev) => {
+                  const next = new Map(prev);
+                  next.set(home.id, {
+                    ...next.get(home.id),
+                    ...(patch.title !== undefined ? { title: patch.title } : {}),
+                    ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+                  });
+                  return next;
+                });
+              }
+              persist(home.id, patch);
+            }}
+            onDraftChange={(patch) =>
+              setOverrides((prev) => {
+                const next = new Map(prev);
+                next.set(home.id, { ...next.get(home.id), ...patch });
+                return next;
+              })
+            }
             onSelect={selectNode}
-            onDuplicate={() => {}}
+            onDuplicate={duplicateHome}
             onDelete={() => {}}
           />
         ) : (
