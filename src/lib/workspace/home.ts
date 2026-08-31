@@ -157,16 +157,21 @@ function leftColumn(pages: PageNode[]): HomeSeedBlock {
   };
 }
 
-/** The RIGHT column: a "To-Do List" box over the interactive To-Do database. */
+/**
+ * The RIGHT column: a "To-Do List" box header over the interactive To-Do
+ * database. The header is the SAME grey bold `quote` callout the Dashboard and
+ * Content boxes use (not a coloured `heading`, which rendered a white stripe
+ * behind faint text), so all three section headers read identically.
+ */
 function rightColumn(): HomeSeedBlock {
   return {
     type: COLUMN_BLOCK_TYPE,
     props: { width: 1 },
     children: [
       {
-        type: "heading",
-        props: { level: 1, backgroundColor: BOX_BACKGROUND },
-        content: [text("📋 To-Do List")],
+        type: "quote",
+        props: { backgroundColor: BOX_BACKGROUND },
+        content: [text("📋 To-Do List", { bold: true })],
       },
       { type: TODO_DATABASE_BLOCK_TYPE, props: {} },
     ],

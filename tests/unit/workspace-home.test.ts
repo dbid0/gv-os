@@ -108,11 +108,13 @@ describe("buildHomeDefaultContent", () => {
     expect(content.children).toHaveLength(HOME_CONTENT_ITEMS.length);
   });
 
-  it("puts a To-Do heading over the interactive To-Do database in the RIGHT column", () => {
+  it("puts a clean grey To-Do box header over the interactive database in the RIGHT column", () => {
     const [, right] = columns(buildHomeDefaultContent([]));
     const kids = right.children ?? [];
     expect(kids).toHaveLength(2);
-    expect(kids[0].type).toBe("heading");
+    // Same grey callout header the other boxes use — no coloured heading glitch.
+    expect(kids[0].type).toBe("quote");
+    expect(kids[0].props?.backgroundColor).toBe("gray");
     expect(textOf(kids[0])).toContain("To-Do List");
     expect(kids[1].type).toBe(TODO_DATABASE_BLOCK_TYPE);
   });

@@ -268,9 +268,9 @@ export function BlockEditor({
     routerRef.current = router;
   });
 
-  // Notion-style link navigation. The editor is always editable, so a plain
-  // click on a link would just drop the caret; instead we intercept clicks on
-  // anchors and route EVERYTHING internal in-app:
+  // Notion-style link navigation. The editor is always editable, so links have
+  // to be intercepted or they misbehave two ways at once. We route EVERYTHING
+  // internal in-app:
   //   • an internal `?page=<id>` link  → switch pages via `onSelectPage`;
   //   • any other same-origin app route (e.g. the Content links' `/marketing`)
   //     → `router.push` — NOT a new tab;
@@ -279,14 +279,36 @@ export function BlockEditor({
   // like a browser. Clicking off a link still edits text normally: only the
   // anchor itself acts. Net: nothing on Home ever pops a browser tab.
   //
-  // A NATIVE capture listener (not React's onClickCapture) is used so it runs
-  // BEFORE ProseMirror's own handlers on the inner contentEditable and can stop
-  // them; and it fires only for real `<a>` anchors, so the To-Do database's
-  // controls (its sheet links are <button>s, not anchors) are never touched.
+  // WHY TWO LISTENERS. BlockNote renders links as `<a target="_blank">` AND its
+  // Tiptap link plugin opens them itself with `window.open(href, target)` — but
+  // it does so from ProseMirror's MOUSEUP handling, which runs BEFORE the DOM
+  // `click` event. So a click-phase `preventDefault()` is too late: the new tab
+  // is already open. The robust fix is to stop ProseMirror from ever starting
+  // that chain: ProseMirror registers its `mousedown` handler on the inner
+  // `.bn-editor` (bubble phase, a descendant of this wrapper), so a CAPTURE-phase
+  // `mousedown` listener here that `stopPropagation()`s for any anchor prevents
+  // ProseMirror's mousedown→mouseup→`window.open` from ever firing. The actual
+  // navigation is then driven solely by our own `click` handler. Both are native
+  // capture listeners (not React's onClickCapture) so they beat ProseMirror, and
+  // both act only on real `<a>` anchors, so the To-Do database's controls (its
+  // sheet links are <button>s, not anchors) are never touched.
   const wrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = wrapperRef.current;
     if (!root) return;
+
+    // Kill ProseMirror's own link-open (and caret placement) before it can run,
+    // for a primary-button press on any anchor. We do NOT navigate here — the
+    // click handler below owns that; this only neutralises the built-in opener so
+    // there is never a second, browser-driven tab.
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return; // let middle/right pass to native behaviour
+      const anchor = (e.target as HTMLElement | null)?.closest?.("a[href]");
+      if (!anchor) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const anchor = target?.closest?.("a");
@@ -297,10 +319,11 @@ export function BlockEditor({
       const modified =
         e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
 
-      // Whatever it is, don't let the click reach ProseMirror (a caret flash) or
-      // trigger the anchor's default nav — we drive navigation ourselves.
+      // Swallow the click so neither ProseMirror nor the anchor default (nor any
+      // other listener on this node) can also act — we drive navigation.
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
 
       // A modifier / middle click always gets a new tab, like a browser would.
       if (modified) {
@@ -327,8 +350,13 @@ export function BlockEditor({
       }
       window.open(anchor.href, "_blank", "noopener,noreferrer");
     };
+
+    root.addEventListener("mousedown", onMouseDown, true);
     root.addEventListener("click", onClick, true);
-    return () => root.removeEventListener("click", onClick, true);
+    return () => {
+      root.removeEventListener("mousedown", onMouseDown, true);
+      root.removeEventListener("click", onClick, true);
+    };
   }, []);
 
   // Autosave state. `ready` gates saves until initial/legacy content is settled,
