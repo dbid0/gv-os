@@ -10,7 +10,11 @@ import {
   type WorkspacePage,
 } from "@/db/schema/app";
 import { roster } from "@/lib/roster";
-import { buildHomeDefaultContent, isLegacyHomeSeed } from "@/lib/workspace/home";
+import {
+  buildHomeDefaultContent,
+  isGreyTwoColumnSeed,
+  isLegacyHomeSeed,
+} from "@/lib/workspace/home";
 import {
   buildPageTree,
   type PageNode,
@@ -201,8 +205,9 @@ export async function getOrCreateHomePage(
       .orderBy(asc(workspacePages.createdAt), asc(workspacePages.id))
       .limit(1);
     if (existing) {
-      // Upgrade an untouched legacy single-column Home to the new layout.
-      if (isLegacyHomeSeed(existing.content)) {
+      // Upgrade an untouched Home to the current layout: a legacy single-column
+      // seed, or a two-column seed still on the old grey tint (now blue).
+      if (isLegacyHomeSeed(existing.content) || isGreyTwoColumnSeed(existing.content)) {
         const upgraded = JSON.stringify(buildHomeDefaultContent(pages));
         try {
           const [row] = await db
