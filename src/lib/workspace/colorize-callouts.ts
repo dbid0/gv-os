@@ -260,9 +260,15 @@ function colorizeBlock(block: EditorBlock, topLevel: boolean): EditorBlock {
 /**
  * Colour callouts by leading emoji and wrap `[…]` placeholders in red across a
  * BlockNote block array. Pure and idempotent — safe to run on every load.
+ *
+ * Generic over the block type so it PRESERVES whatever schema the caller passes:
+ * the default `PartialBlock[]`, or the Workspace editor's own
+ * `WorkspacePartialBlock[]` (which carries the custom `todoDatabase` block). It
+ * only ever touches `type`, `props.backgroundColor`, inline `content`, and
+ * `children`, so returning the input type is faithful to the runtime shape.
  */
-export function colorizeCallouts(blocks: PartialBlock[]): PartialBlock[] {
+export function colorizeCallouts<T extends PartialBlock | object>(blocks: T[]): T[] {
   const input = blocks as unknown as EditorBlock[];
   const output = input.map((block) => colorizeBlock(block, true));
-  return output as unknown as PartialBlock[];
+  return output as unknown as T[];
 }
