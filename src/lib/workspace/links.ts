@@ -48,6 +48,71 @@ export function isInternalPageHref(
 }
 
 /**
+ * If `href` is a same-origin APP ROUTE (a path within this deployment that is
+ * NOT the `?page=` page-link form) return the path+query to hand to
+ * `router.push`, else null. This is what keeps a link like `/marketing` — the
+ * Content section links on Home, which live outside the workspace page tree — an
+ * IN-APP client-side navigation rather than a new browser tab.
+ *
+ * "Same-origin" is decided by resolving `href` against a throwaway origin: a
+ * relative href (or an absolute one that happens to match that origin) keeps it,
+ * while a genuinely external absolute URL brings a different origin and is
+ * rejected. Fragments and non-http schemes (`#`, `mailto:`, `tel:`, …) are never
+ * routes. The `?page=` page-link form is intentionally NOT excluded here — the
+ * classifier below checks {@link isInternalPageHref} first, so page links never
+ * reach this function in practice.
+ */
+export function internalRouteHref(
+  href: string | null | undefined,
+  basePath: string,
+): string | null {
+  if (!href) return null;
+  const raw = href.trim();
+  if (raw === "" || raw.startsWith("#")) return null;
+  if (/^(mailto:|tel:|javascript:|data:)/i.test(raw)) return null;
+
+  let url: URL;
+  try {
+    const safeBase = basePath.startsWith("/") ? basePath : `/${basePath}`;
+    url = new URL(raw, `http://internal.local${safeBase}`);
+  } catch {
+    return null;
+  }
+  // A different origin means a genuinely external, off-site URL — a new tab.
+  if (url.origin !== "http://internal.local") return null;
+  return `${url.pathname}${url.search}`;
+}
+
+/** How a clicked workspace link should be handled — the single source of truth. */
+export type WorkspaceLinkAction =
+  | { kind: "page"; pageId: string }
+  | { kind: "route"; href: string }
+  | { kind: "external" };
+
+/**
+ * Classify a link's `href` into the ONE way it should navigate, so the editor's
+ * click handler (and its tests) share the exact same reasoning:
+ *
+ *   • "page"     — an internal `?page=<id>` link → switch pages in-app (no nav).
+ *   • "route"    — any other same-origin app path (e.g. `/marketing`) →
+ *                  `router.push` in-app, NOT a new tab.
+ *   • "external" — a genuinely off-site URL → open in a new tab.
+ *
+ * Page links win over route links (a `?page=` on the base path is a page, never a
+ * route), which is why {@link isInternalPageHref} is checked first.
+ */
+export function classifyWorkspaceLink(
+  href: string | null | undefined,
+  basePath: string,
+): WorkspaceLinkAction {
+  const pageId = isInternalPageHref(href, basePath);
+  if (pageId) return { kind: "page", pageId };
+  const route = internalRouteHref(href, basePath);
+  if (route) return { kind: "route", href: route };
+  return { kind: "external" };
+}
+
+/**
  * The teamspace "sheet" pages a To-Do task can deep-link to by name — the
  * onboarding sheets a task like "Fill out Software Logins" refers to. When a
  * task's text contains one of these titles AND it resolves to a real page in the
