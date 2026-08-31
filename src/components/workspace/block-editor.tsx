@@ -3,9 +3,14 @@
 import "@blocknote/mantine/style.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { en, type Dictionary } from "@blocknote/core/locales";
 import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView, type Theme } from "@blocknote/mantine";
+import {
+  locales as multiColumnLocales,
+  multiColumnDropCursor,
+} from "@blocknote/xl-multi-column";
 
 import { useToast } from "@/components/ui/toast";
 import {
@@ -14,7 +19,7 @@ import {
   workspaceSchema,
   type WorkspacePartialBlock,
 } from "@/components/workspace/todo-database-block";
-import { isInternalPageHref } from "@/lib/workspace/links";
+import { classifyWorkspaceLink } from "@/lib/workspace/links";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
 import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
 
@@ -46,13 +51,16 @@ const PLACEHOLDER = "Write something, or press '/' for commands";
  * shows on any focused empty block; `emptyDocument` shows on a brand-new page
  * before it is even focused.
  */
-const dictionary: Dictionary = {
+const dictionary: Dictionary & Record<string, unknown> = {
   ...en,
   placeholders: {
     ...en.placeholders,
     default: PLACEHOLDER,
     emptyDocument: PLACEHOLDER,
   },
+  // The multi-column extension reads its slash-menu labels ("Two Columns" /
+  // "Three Columns") from `dictionary.multi_column`.
+  multi_column: multiColumnLocales.en,
 };
 
 /**
@@ -149,6 +157,7 @@ export function BlockEditor({
   onReady?: (focus: () => void) => void;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
 
   // Read the stored body once, at mount. The pane is keyed per page upstream, so
   // a page switch is a remount with fresh initial content — this never has to
@@ -178,6 +187,9 @@ export function BlockEditor({
     schema: workspaceSchema,
     initialContent: initialBlocks,
     dictionary,
+    // The multi-column drag/drop cursor: shows the vertical drop indicator that
+    // lets a block be dragged to the left/right edge of another to form columns.
+    dropCursor: multiColumnDropCursor,
     // Uploads an image / video / file picked from the computer to Supabase
     // Storage and returns the public URL BlockNote embeds in the block. A size
     // reject or server failure surfaces as an error toast; re-throwing lets
@@ -247,19 +259,25 @@ export function BlockEditor({
   const onReadyRef = useRef(onReady);
   const onSelectPageRef = useRef(onSelectPage);
   const basePathRef = useRef(basePath);
+  const routerRef = useRef(router);
   useEffect(() => {
     onChangeRef.current = onChange;
     onReadyRef.current = onReady;
     onSelectPageRef.current = onSelectPage;
     basePathRef.current = basePath;
+    routerRef.current = router;
   });
 
   // Notion-style link navigation. The editor is always editable, so a plain
   // click on a link would just drop the caret; instead we intercept clicks on
-  // anchors and make INTERNAL page links (`?page=<id>` on this workspace route)
-  // switch pages client-side via `onSelectPage`, exactly like the tree does.
-  // External links — and modifier-clicks on internal ones — open in a new tab.
-  // Clicking off a link still edits text normally: only the anchor itself acts.
+  // anchors and route EVERYTHING internal in-app:
+  //   • an internal `?page=<id>` link  → switch pages via `onSelectPage`;
+  //   • any other same-origin app route (e.g. the Content links' `/marketing`)
+  //     → `router.push` — NOT a new tab;
+  //   • a genuinely external URL       → a new browser tab.
+  // Only a modifier / middle click opens a new tab for an internal link, exactly
+  // like a browser. Clicking off a link still edits text normally: only the
+  // anchor itself acts. Net: nothing on Home ever pops a browser tab.
   //
   // A NATIVE capture listener (not React's onClickCapture) is used so it runs
   // BEFORE ProseMirror's own handlers on the inner contentEditable and can stop
@@ -276,10 +294,6 @@ export function BlockEditor({
       const rawHref = anchor.getAttribute("href");
       if (!rawHref) return;
 
-      const sameOrigin = anchor.origin === window.location.origin;
-      const pageId = sameOrigin
-        ? isInternalPageHref(rawHref, basePathRef.current)
-        : null;
       const modified =
         e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
 
@@ -288,11 +302,29 @@ export function BlockEditor({
       e.preventDefault();
       e.stopPropagation();
 
-      if (pageId && !modified) {
-        onSelectPageRef.current(pageId);
+      // A modifier / middle click always gets a new tab, like a browser would.
+      if (modified) {
+        window.open(anchor.href, "_blank", "noopener,noreferrer");
         return;
       }
-      // Modifier-click on an internal link, or any external link: new tab.
+
+      const action = classifyWorkspaceLink(rawHref, basePathRef.current);
+      if (action.kind === "page") {
+        onSelectPageRef.current(action.pageId);
+        return;
+      }
+      if (action.kind === "route") {
+        routerRef.current.push(action.href);
+        return;
+      }
+      // "external" per the pure classifier. One more in-app guard: a same-origin
+      // ABSOLUTE href (which the classifier resolves against a throwaway origin
+      // and so can't see as internal) still navigates in-app, never a new tab —
+      // new tabs are reserved for truly off-site URLs.
+      if (anchor.origin === window.location.origin) {
+        routerRef.current.push(`${anchor.pathname}${anchor.search}${anchor.hash}`);
+        return;
+      }
       window.open(anchor.href, "_blank", "noopener,noreferrer");
     };
     root.addEventListener("click", onClick, true);

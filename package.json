@@ -29,6 +29,7 @@
     "@blocknote/core": "^0.54.0",
     "@blocknote/mantine": "^0.54.0",
     "@blocknote/react": "^0.54.0",
+    "@blocknote/xl-multi-column": "^0.54.0",
     "@mantine/core": "^9.5.2",
     "@mantine/hooks": "^9.5.2",
     "@supabase/ssr": "^0.12.4",

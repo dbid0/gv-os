@@ -13,6 +13,10 @@ import {
   getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
+import {
+  getMultiColumnSlashMenuItems,
+  withMultiColumn,
+} from "@blocknote/xl-multi-column";
 
 import { createDatabase, listTodos } from "@/app/(app)/workspace/actions";
 import {
@@ -109,16 +113,22 @@ const todoDatabaseBlock = createReactBlockSpec(
 )();
 
 /**
- * The Workspace editor schema: the default blocks plus our two custom database
- * blocks. Shared by the editor (block-editor.tsx) and the read-only reader
- * (block-reader.tsx) so a page containing either block renders in both.
+ * The Workspace editor schema: the default blocks, our two custom database
+ * blocks, AND the official multi-column blocks (`columnList` / `column`) via
+ * `withMultiColumn`. Shared by the editor (block-editor.tsx) and the read-only
+ * reader (block-reader.tsx), so a page containing any of those blocks — a
+ * two-column Home, an embedded database, or a migrated Notion page whose columns
+ * were flattened — renders in both. `withMultiColumn` wraps the extended schema,
+ * so the custom blocks and the column blocks all coexist.
  */
-export const workspaceSchema = BlockNoteSchema.create().extend({
-  blockSpecs: {
-    [TODO_DATABASE_BLOCK_TYPE]: todoDatabaseBlock,
-    [DATABASE_BLOCK_TYPE]: databaseBlock,
-  },
-});
+export const workspaceSchema = withMultiColumn(
+  BlockNoteSchema.create().extend({
+    blockSpecs: {
+      [TODO_DATABASE_BLOCK_TYPE]: todoDatabaseBlock,
+      [DATABASE_BLOCK_TYPE]: databaseBlock,
+    },
+  }),
+);
 
 /** The editor type for the Workspace schema — for typing helpers cleanly. */
 export type WorkspaceEditor = typeof workspaceSchema.BlockNoteEditor;
@@ -182,10 +192,10 @@ export function databaseSlashItem(
 }
 
 /**
- * The full slash-menu item list for the Workspace editor: the defaults plus our
- * two database blocks, filtered by the live query. Passed to
- * `SuggestionMenuController`. `clientId` scopes a newly-created generic database
- * to the current teamspace.
+ * The full slash-menu item list for the Workspace editor: the defaults, the
+ * multi-column inserts ("Two Columns" / "Three Columns"), plus our two database
+ * blocks, filtered by the live query. Passed to `SuggestionMenuController`.
+ * `clientId` scopes a newly-created generic database to the current teamspace.
  */
 export function getWorkspaceSlashItems(
   editor: WorkspaceSlashEditor,
@@ -195,6 +205,7 @@ export function getWorkspaceSlashItems(
   return filterSuggestionItems(
     [
       ...getDefaultReactSlashMenuItems(editor),
+      ...getMultiColumnSlashMenuItems(editor),
       todoDatabaseSlashItem(editor),
       databaseSlashItem(editor, clientId),
     ],

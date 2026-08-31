@@ -10,7 +10,7 @@ import {
   type WorkspacePage,
 } from "@/db/schema/app";
 import { roster } from "@/lib/roster";
-import { buildHomeDefaultContent } from "@/lib/workspace/home";
+import { buildHomeDefaultContent, isLegacyHomeSeed } from "@/lib/workspace/home";
 import {
   buildPageTree,
   type PageNode,
@@ -168,12 +168,20 @@ export async function getTeamspaceTree(
  *
  * Home is a normal `workspace_pages` row (is_home = true, parent null) so it
  * renders in the exact same editable page view as any page and autosaves through
- * the same `updatePage` action. The seed (a "Dashboard" link list + an embedded
+ * the same `updatePage` action. The seed (a two-column dashboard + an embedded
  * To-Do database) is built from that teamspace's own tree, so each Home links to
  * its own pages. One home per teamspace: if two ever race into existence, the
  * OLDEST is chosen deterministically so the view is stable. Fail-soft — a
  * database hiccup returns null and the app shows a minimal fallback, never a
  * crash.
+ *
+ * RE-SEED: teamspaces created before the two-column layout already have a Home
+ * row seeded with the OLD single-column default. When such a row is still
+ * UNTOUCHED (`isLegacyHomeSeed` — it matches the old default exactly, ignoring
+ * which links resolved), it is upgraded in place to the new two-column layout on
+ * next load. A Home the user has edited never matches, so edits are never
+ * clobbered. The upgrade is best-effort: if the update fails, the existing row
+ * is returned as-is.
  */
 export async function getOrCreateHomePage(
   clientId: string | null,
@@ -192,7 +200,23 @@ export async function getOrCreateHomePage(
       .where(and(scope, eq(workspacePages.isHome, true)))
       .orderBy(asc(workspacePages.createdAt), asc(workspacePages.id))
       .limit(1);
-    if (existing) return toLite(existing);
+    if (existing) {
+      // Upgrade an untouched legacy single-column Home to the new layout.
+      if (isLegacyHomeSeed(existing.content)) {
+        const upgraded = JSON.stringify(buildHomeDefaultContent(pages));
+        try {
+          const [row] = await db
+            .update(workspacePages)
+            .set({ content: upgraded })
+            .where(eq(workspacePages.id, existing.id))
+            .returning();
+          if (row) return toLite(row);
+        } catch {
+          // Best-effort — fall through and serve the existing row unchanged.
+        }
+      }
+      return toLite(existing);
+    }
 
     const content = JSON.stringify(buildHomeDefaultContent(pages));
     const [created] = await db

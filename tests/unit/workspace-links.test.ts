@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifyWorkspaceLink,
+  internalRouteHref,
   isInternalPageHref,
   linkifyTaskText,
   SHEET_LINK_TITLES,
@@ -51,6 +53,71 @@ describe("isInternalPageHref", () => {
 
   it("ignores an empty page value", () => {
     expect(isInternalPageHref("?page=", base)).toBeNull();
+  });
+});
+
+describe("internalRouteHref", () => {
+  const base = "/clients/foo/workspace";
+
+  it("treats a same-origin app path (the Content links) as an in-app route", () => {
+    expect(internalRouteHref("/marketing", base)).toBe("/marketing");
+    expect(internalRouteHref("/clients/bar", base)).toBe("/clients/bar");
+  });
+
+  it("preserves a query string on a route", () => {
+    expect(internalRouteHref("/marketing?tab=assets", base)).toBe(
+      "/marketing?tab=assets",
+    );
+  });
+
+  it("returns null for genuinely external URLs, fragments, and non-http schemes", () => {
+    expect(internalRouteHref("https://youtube.com/watch", base)).toBeNull();
+    expect(internalRouteHref("#section", base)).toBeNull();
+    expect(internalRouteHref("mailto:hi@x.com", base)).toBeNull();
+    expect(internalRouteHref("", base)).toBeNull();
+    expect(internalRouteHref(null, base)).toBeNull();
+  });
+});
+
+describe("classifyWorkspaceLink", () => {
+  const base = "/clients/foo/workspace";
+
+  it("classifies an internal ?page= link as a page switch (in-app)", () => {
+    expect(classifyWorkspaceLink("?page=abc", base)).toEqual({
+      kind: "page",
+      pageId: "abc",
+    });
+    expect(
+      classifyWorkspaceLink(
+        "https://os.globalventures.app/clients/foo/workspace?page=xyz",
+        base,
+      ),
+    ).toEqual({ kind: "page", pageId: "xyz" });
+  });
+
+  it("classifies a same-origin app route (e.g. /marketing) as an in-app route push", () => {
+    expect(classifyWorkspaceLink("/marketing", base)).toEqual({
+      kind: "route",
+      href: "/marketing",
+    });
+    // A link to another workspace route is still in-app, never a new tab.
+    expect(classifyWorkspaceLink("/clients/bar/workspace", base)).toEqual({
+      kind: "route",
+      href: "/clients/bar/workspace",
+    });
+  });
+
+  it("classifies a genuinely external URL as external (new tab)", () => {
+    expect(classifyWorkspaceLink("https://youtube.com", base)).toEqual({
+      kind: "external",
+    });
+    expect(classifyWorkspaceLink("mailto:hi@x.com", base)).toEqual({
+      kind: "external",
+    });
+  });
+
+  it("prefers a page link over a route for a ?page= on the base path", () => {
+    expect(classifyWorkspaceLink("?page=q", base).kind).toBe("page");
   });
 });
 
