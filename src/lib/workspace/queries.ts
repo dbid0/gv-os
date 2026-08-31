@@ -12,7 +12,7 @@ import {
 import { roster } from "@/lib/roster";
 import {
   buildHomeDefaultContent,
-  isGreyTwoColumnSeed,
+  isFilledTwoColumnSeed,
   isLegacyHomeSeed,
 } from "@/lib/workspace/home";
 import {
@@ -206,8 +206,11 @@ export async function getOrCreateHomePage(
       .limit(1);
     if (existing) {
       // Upgrade an untouched Home to the current layout: a legacy single-column
-      // seed, or a two-column seed still on the old grey tint (now blue).
-      if (isLegacyHomeSeed(existing.content) || isGreyTwoColumnSeed(existing.content)) {
+      // seed, or a two-column seed still on an old fill (grey/blue → no-fill).
+      if (
+        isLegacyHomeSeed(existing.content) ||
+        isFilledTwoColumnSeed(existing.content)
+      ) {
         const upgraded = JSON.stringify(buildHomeDefaultContent(pages));
         try {
           const [row] = await db
