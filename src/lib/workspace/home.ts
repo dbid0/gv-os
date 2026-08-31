@@ -93,12 +93,14 @@ export const COLUMN_LIST_BLOCK_TYPE = "columnList";
 export const COLUMN_BLOCK_TYPE = "column";
 
 /**
- * The blue tint that gives every section its Notion look. Daniel's real
- * "Global Ventures Onboarding" home uses blue callouts (flash_blue /
- * movie-camera_blue / hashtag_blue) with blue underlined titles — NOT grey — so
- * all three boxes are blue to match it exactly.
+ * Daniel's real "Global Ventures Onboarding" home has NO background fill behind
+ * the sections — they are thin-bordered cards on the page background, with BLUE
+ * underlined titles. So the boxes carry no `backgroundColor` (the card border +
+ * rounding come from CSS on quote-in-column blocks) and the titles are blue.
+ * These prior fill values (grey, then blue) are what `isFilledTwoColumnSeed`
+ * upgrades away from.
  */
-const BOX_BACKGROUND = "blue";
+const TITLE_STYLE = { bold: true, underline: true, textColor: "blue" } as const;
 
 /** A plain (or styled) text run. */
 function text(
@@ -135,8 +137,8 @@ function boxSection(
 ): HomeSeedBlock {
   return {
     type: "quote",
-    props: { backgroundColor: BOX_BACKGROUND },
-    content: [text(`${emoji} ${title}`, { bold: true, underline: true })],
+    props: {},
+    content: [text(`${emoji} ${title}`, { ...TITLE_STYLE })],
     children: bullets,
   };
 }
@@ -175,10 +177,12 @@ function rightColumn(): HomeSeedBlock {
     children: [
       {
         type: "quote",
-        props: { backgroundColor: BOX_BACKGROUND },
-        content: [text("📋 To-Do List", { bold: true, underline: true })],
+        props: {},
+        content: [text("📋 To-Do List", { ...TITLE_STYLE })],
+        // The database lives INSIDE the box (as a child) so the card border
+        // wraps the header + the whole To-Do list, like Notion.
+        children: [{ type: TODO_DATABASE_BLOCK_TYPE, props: {} }],
       },
-      { type: TODO_DATABASE_BLOCK_TYPE, props: {} },
     ],
   };
 }
@@ -254,15 +258,15 @@ function leadingBlockText(block: unknown): string {
  * stored `content` JSON string and never touches the database.
  */
 /**
- * True for an UNTOUCHED two-column Home whose boxes are still the old GREY tint
- * — a single `columnList` whose only `quote` boxes all carry
- * `backgroundColor: "gray"`, with the embedded `todoDatabase`. This is the seed
- * shipped before the boxes were re-tinted blue to match Notion; recognising it
- * lets an unedited grey Home upgrade to the blue layout on next load, while a
- * Home the user recoloured or restructured no longer matches and is left alone.
+ * True for an UNTOUCHED two-column Home whose boxes still carry an old FILL — a
+ * single `columnList` whose only `quote` boxes are all `backgroundColor: "gray"`
+ * OR all `"blue"`, with the embedded `todoDatabase`. Those were the two earlier
+ * seeds (grey, then blue); recognising either lets an unedited home upgrade to
+ * the current no-fill (bordered, blue-title) layout on next load, while a Home
+ * the user recoloured or restructured no longer matches and is left alone.
  * Pure: parses the stored JSON, never touches the database.
  */
-export function isGreyTwoColumnSeed(content: string | null | undefined): boolean {
+export function isFilledTwoColumnSeed(content: string | null | undefined): boolean {
   if (!content) return false;
   let blocks: unknown;
   try {
@@ -275,22 +279,36 @@ export function isGreyTwoColumnSeed(content: string | null | undefined): boolean
   if (root?.type !== COLUMN_LIST_BLOCK_TYPE || !Array.isArray(root.children)) {
     return false;
   }
+  // The three boxes are the `quote` blocks that are DIRECT children of a column.
   const quotes: { props?: { backgroundColor?: string } }[] = [];
-  let hasTodo = false;
   for (const col of root.children) {
     const kids = (col as { children?: unknown[] }).children;
     if (!Array.isArray(kids)) continue;
     for (const b of kids) {
-      const type = (b as { type?: string }).type;
-      if (type === "quote") quotes.push(b as { props?: { backgroundColor?: string } });
-      else if (type === TODO_DATABASE_BLOCK_TYPE) hasTodo = true;
+      if ((b as { type?: string }).type === "quote") {
+        quotes.push(b as { props?: { backgroundColor?: string } });
+      }
     }
   }
-  // The seed has exactly three boxes; every one still grey ⇒ untouched.
+  // The To-Do database may sit at any depth (older seeds put it as a column
+  // child; the current seed nests it inside the To-Do box), so scan the tree.
+  const hasTodo = ((): boolean => {
+    const stack: unknown[] = [root];
+    while (stack.length) {
+      const node = stack.pop() as { type?: string; children?: unknown[] };
+      if (node?.type === TODO_DATABASE_BLOCK_TYPE) return true;
+      if (Array.isArray(node?.children)) stack.push(...node.children);
+    }
+    return false;
+  })();
+  // The seed has exactly three boxes; all still one old fill (grey or blue) and
+  // none edited to another colour ⇒ untouched, safe to upgrade to no-fill.
+  const colors = new Set(quotes.map((q) => q.props?.backgroundColor));
   return (
     hasTodo &&
     quotes.length === 3 &&
-    quotes.every((q) => q.props?.backgroundColor === "gray")
+    colors.size === 1 &&
+    (colors.has("gray") || colors.has("blue"))
   );
 }
 

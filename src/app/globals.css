@@ -433,6 +433,28 @@
   text-underline-offset: 2px;
 }
 
+/* Home dashboard sections — thin bordered CARDS with no fill, matching Daniel's
+   real "Global Ventures Onboarding" (Dashboard / Content / To-Do). The only
+   quote blocks that ever live inside a column are those three boxes, so scoping
+   to a column styles exactly them. The card wraps the header + its nested
+   children (the link bullets, and the To-Do database). */
+.gv-block-editor
+  .bn-block-column
+  .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type="quote"]) {
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 0.35rem 0.9rem 0.6rem;
+  margin-block: 0.4rem;
+  background: transparent;
+}
+/* Drop the default blockquote look (left bar, italic, muted) inside those cards
+   so the section reads as a titled card, not a quotation. */
+.gv-block-editor .bn-block-column .bn-block-content[data-content-type="quote"] {
+  border-left: 0;
+  padding-left: 0;
+  font-style: normal;
+}
+
 /* ---------------------------------------------------------------------------
    Keyframes for the ambient "alive" motion. Kept out of any @layer so they are
    never purged. The prefers-reduced-motion rule in @layer base zeroes them.

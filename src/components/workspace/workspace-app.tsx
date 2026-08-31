@@ -502,8 +502,15 @@ export function WorkspaceApp({
             Teamspaces
           </p>
 
-          {/* The teamspace section header. */}
-          <div className="group/ts hover:bg-secondary/40 flex items-center gap-1 rounded-md px-1 py-1 transition-colors">
+          {/* The teamspace section header. Clicking the teamspace name IS the
+              home link — it opens the teamspace's landing (its dashboard), just
+              like Notion. There is NO separate "🏠 Home" row below it. */}
+          <div
+            className={cn(
+              "group/ts flex items-center gap-1 rounded-md px-1 py-1 transition-colors",
+              selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
+            )}
+          >
             <button
               type="button"
               onClick={() => setTeamspaceOpen((v) => !v)}
@@ -516,10 +523,17 @@ export function WorkspaceApp({
                 <ChevronRight className="size-3.5" />
               )}
             </button>
-            <TeamspaceIcon ts={teamspace} size={18} />
-            <span className="text-foreground min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
-              {teamspace.name}
-            </span>
+            <button
+              type="button"
+              onClick={selectHome}
+              className="flex min-w-0 flex-1 items-center gap-1.5 rounded text-left"
+              title={`Open ${teamspace.name}`}
+            >
+              <TeamspaceIcon ts={teamspace} size={18} />
+              <span className="text-foreground min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
+                {teamspace.name}
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => addPage(null)}
@@ -534,39 +548,6 @@ export function WorkspaceApp({
 
           {teamspaceOpen && (
             <div className="mt-0.5">
-              {/* The teamspace's landing = its main page (the template's own page,
-                  e.g. the onboarding dashboard). It is a REAL editable page, shown
-                  first with its own title + icon — NOT a separate synthetic "Home"
-                  above the list. Selecting it is the base route (no ?page=). */}
-              {home && (
-                <button
-                  type="button"
-                  onClick={selectHome}
-                  style={{ paddingLeft: "0.25rem" }}
-                  className={cn(
-                    "flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors",
-                    selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
-                  )}
-                >
-                  <span className="grid size-5 shrink-0" aria-hidden />
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left">
-                    <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
-                      {(overrides.get(home.id)?.icon ?? home.icon) || "📄"}
-                    </span>
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 truncate text-[0.8125rem] font-medium",
-                        selectedId === null
-                          ? "text-foreground"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {overrides.get(home.id)?.title ?? home.title}
-                    </span>
-                  </span>
-                </button>
-              )}
-
               {pages.length === 0 ? (
                 <button
                   type="button"

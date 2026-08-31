@@ -6,7 +6,7 @@ import {
   COLUMN_LIST_BLOCK_TYPE,
   HOME_CONTENT_ITEMS,
   HOME_DASHBOARD_ITEMS,
-  isGreyTwoColumnSeed,
+  isFilledTwoColumnSeed,
   isLegacyHomeSeed,
   MARKETING_ROUTE_HREF,
   resolveHomeLinkHref,
@@ -96,11 +96,12 @@ describe("buildHomeDefaultContent", () => {
     expect(boxes).toHaveLength(2);
 
     const [dashboard, content] = boxes;
-    // Both boxes are grey callout quotes with a bold emoji header.
+    // Both boxes are quotes with NO background fill (bordered card via CSS) and a
+    // bold, underlined, BLUE emoji header — Daniel's real Notion look.
     expect(dashboard.type).toBe("quote");
     expect(content.type).toBe("quote");
-    expect(dashboard.props?.backgroundColor).toBe("blue");
-    expect(content.props?.backgroundColor).toBe("blue");
+    expect(dashboard.props?.backgroundColor).toBeUndefined();
+    expect(content.props?.backgroundColor).toBeUndefined();
     expect(textOf(dashboard)).toContain("Dashboard");
     expect(textOf(content)).toContain("Content");
 
@@ -109,15 +110,18 @@ describe("buildHomeDefaultContent", () => {
     expect(content.children).toHaveLength(HOME_CONTENT_ITEMS.length);
   });
 
-  it("puts a clean blue To-Do box header over the interactive database in the RIGHT column", () => {
+  it("wraps a no-fill To-Do box around the interactive database in the RIGHT column", () => {
     const [, right] = columns(buildHomeDefaultContent([]));
     const kids = right.children ?? [];
-    expect(kids).toHaveLength(2);
-    // Same blue callout header the other boxes use — no coloured heading glitch.
+    // ONE box: a no-fill quote header with the database nested INSIDE it, so the
+    // card border wraps the header + the whole To-Do list (Notion look).
+    expect(kids).toHaveLength(1);
     expect(kids[0].type).toBe("quote");
-    expect(kids[0].props?.backgroundColor).toBe("blue");
+    expect(kids[0].props?.backgroundColor).toBeUndefined();
     expect(textOf(kids[0])).toContain("To-Do List");
-    expect(kids[1].type).toBe(TODO_DATABASE_BLOCK_TYPE);
+    const inner = kids[0].children ?? [];
+    expect(inner).toHaveLength(1);
+    expect(inner[0].type).toBe(TODO_DATABASE_BLOCK_TYPE);
   });
 
   it("renders an unresolved dashboard link as plain emoji + title text (no link node)", () => {
@@ -237,45 +241,46 @@ describe("isLegacyHomeSeed", () => {
   });
 });
 
-describe("isGreyTwoColumnSeed — upgrade the old grey home to blue", () => {
-  /** Force the current (blue) seed's three boxes back to grey, as the old seed. */
-  function greyify(blocks: HomeSeedBlock[]): HomeSeedBlock[] {
+describe("isFilledTwoColumnSeed — upgrade an old filled home to no-fill", () => {
+  /** Force the current (no-fill) seed's three boxes to one old fill colour. */
+  function fill(blocks: HomeSeedBlock[], color: string): HomeSeedBlock[] {
     const clone = JSON.parse(JSON.stringify(blocks)) as HomeSeedBlock[];
-    const root = clone[0];
-    for (const col of root.children ?? []) {
+    for (const col of clone[0].children ?? []) {
       for (const box of col.children ?? []) {
-        if (box.type === "quote") box.props = { ...box.props, backgroundColor: "gray" };
+        if (box.type === "quote") box.props = { ...box.props, backgroundColor: color };
       }
     }
     return clone;
   }
 
-  it("matches an untouched two-column home whose boxes are all still grey", () => {
-    const grey = greyify(buildHomeDefaultContent([]));
-    expect(isGreyTwoColumnSeed(JSON.stringify(grey))).toBe(true);
+  it("matches an untouched home whose boxes are all grey (the first seed)", () => {
+    const grey = JSON.stringify(fill(buildHomeDefaultContent([]), "gray"));
+    expect(isFilledTwoColumnSeed(grey)).toBe(true);
   });
 
-  it("does NOT match the current blue seed (so it never re-upgrades in a loop)", () => {
-    expect(isGreyTwoColumnSeed(JSON.stringify(buildHomeDefaultContent([])))).toBe(
+  it("matches an untouched home whose boxes are all blue (the second seed)", () => {
+    const blue = JSON.stringify(fill(buildHomeDefaultContent([]), "blue"));
+    expect(isFilledTwoColumnSeed(blue)).toBe(true);
+  });
+
+  it("does NOT match the current no-fill seed (so it never re-upgrades in a loop)", () => {
+    expect(isFilledTwoColumnSeed(JSON.stringify(buildHomeDefaultContent([])))).toBe(
       false,
     );
   });
 
-  it("does NOT match once a user recoloured a box (an edited home is left alone)", () => {
-    const grey = greyify(buildHomeDefaultContent([]));
-    // user turns the first box purple
-    grey[0].children![0].children; // no-op read to keep shape obvious
-    const root = grey[0];
-    (root.children![0].children![0] as HomeSeedBlock).props = {
+  it("does NOT match once a user recoloured a single box (an edited home is left alone)", () => {
+    const filled = fill(buildHomeDefaultContent([]), "blue");
+    (filled[0].children![0].children![0] as HomeSeedBlock).props = {
       backgroundColor: "purple",
     };
-    expect(isGreyTwoColumnSeed(JSON.stringify(grey))).toBe(false);
+    expect(isFilledTwoColumnSeed(JSON.stringify(filled))).toBe(false);
   });
 
   it("is null/parse safe", () => {
-    expect(isGreyTwoColumnSeed(null)).toBe(false);
-    expect(isGreyTwoColumnSeed("")).toBe(false);
-    expect(isGreyTwoColumnSeed("not json")).toBe(false);
-    expect(isGreyTwoColumnSeed("[]")).toBe(false);
+    expect(isFilledTwoColumnSeed(null)).toBe(false);
+    expect(isFilledTwoColumnSeed("")).toBe(false);
+    expect(isFilledTwoColumnSeed("not json")).toBe(false);
+    expect(isFilledTwoColumnSeed("[]")).toBe(false);
   });
 });
