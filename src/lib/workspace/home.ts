@@ -4,7 +4,7 @@
  * The seed mirrors Daniel's real Notion "Global Ventures Onboarding" home: a
  * TWO-COLUMN layout. The LEFT column holds two boxed callout sections — a
  * "⚡ Dashboard" box of links to the teamspace's key pages, and a "🎥 Content"
- * box of links into the Marketing section — and the RIGHT column holds a
+ * box of links to its content pages — and the RIGHT column holds a
  * "To-Do List" box wrapping the embedded interactive To-Do database. Every part
  * is a normal BlockNote block (columns come from the official multi-column
  * schema, boxes from `quote` blocks tinted grey like our Notion callouts), so
@@ -40,11 +40,13 @@ export const HOME_DASHBOARD_ITEMS: HomeDashboardItem[] = [
 ];
 
 /**
- * The LEFT-column "Content" links, in order. These point at pages that live in
- * the Marketing SECTION, not the workspace page tree, so they never resolve to a
- * `?page=` link — they all navigate IN-APP to {@link MARKETING_ROUTE_HREF} (the
- * editor's click handler `router.push`es a same-origin app route rather than
- * opening a new tab).
+ * The LEFT-column "Content" links, in order. They resolve to real pages in the
+ * teamspace by title, EXACTLY like the Dashboard links above.
+ *
+ * They used to point at a fixed `/marketing` route, which does not exist in the
+ * app — so all five were dead links to a 404. They are ordinary sub-pages (as
+ * they are in Daniel's Notion), so they resolve the same way everything else on
+ * this dashboard does, and an unresolved title still degrades to plain text.
  */
 export const HOME_CONTENT_ITEMS: HomeDashboardItem[] = [
   { title: "Assets", emoji: "🎬" },
@@ -53,13 +55,6 @@ export const HOME_CONTENT_ITEMS: HomeDashboardItem[] = [
   { title: "Instagram Stories", emoji: "📸" },
   { title: "Ads", emoji: "📢" },
 ];
-
-/**
- * The in-app route the Content links navigate to. A same-origin app path (not a
- * `?page=` page link), so the click handler classifies it as a "route" and
- * `router.push`es it in-app — never a new browser tab.
- */
-export const MARKETING_ROUTE_HREF = "/marketing";
 
 /**
  * Resolve a dashboard link title to a `?page=<id>` href within THIS teamspace,
@@ -155,7 +150,9 @@ function leftColumn(pages: PageNode[]): HomeSeedBlock {
   const content = boxSection(
     "🎥",
     "Content",
-    HOME_CONTENT_ITEMS.map((item) => linkBullet(item, MARKETING_ROUTE_HREF)),
+    HOME_CONTENT_ITEMS.map((item) =>
+      linkBullet(item, resolveHomeLinkHref(pages, item.title)),
+    ),
   );
   return {
     type: COLUMN_BLOCK_TYPE,
