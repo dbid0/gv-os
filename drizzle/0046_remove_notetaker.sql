@@ -1,0 +1,1 @@
+DROP TABLE "app"."meeting_notes" CASCADE;

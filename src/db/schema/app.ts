@@ -823,54 +823,6 @@ export const actionItems = appSchema.table(
   ],
 );
 
-/**
- * One recorded call — the agency morning call or an ad-hoc client call. Written
- * by the cloud notetaker (a GitHub Action that joins the Discord voice channel,
- * transcribes with whisper, and distills with Claude Code), never by hand. The
- * distilled action items become `action_items` rows at ingest time, so they
- * flow straight onto the Work board and Calendar; this table is the permanent
- * recap + verbatim transcript home. `sourceRef` is the recorder's session
- * stamp, unique so a re-post of the same call updates in place rather than
- * duplicating.
- */
-export const meetingNotes = appSchema.table(
-  "meeting_notes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    title: text("title").notNull(),
-    /** agency_call · client_call · manual */
-    source: text("source").notNull().default("agency_call"),
-    /** The recorder's session id (dir stamp). Unique => idempotent re-ingest. */
-    sourceRef: text("source_ref"),
-    meetingDate: date("meeting_date", { mode: "string" }).notNull(),
-    summary: text("summary"),
-    transcript: text("transcript"),
-    /** Display names captured in the room, in speaking order. */
-    attendees: jsonb("attendees").$type<string[]>().notNull().default([]),
-    /**
-     * The distilled action items as the call assigned them, for the immutable
-     * recap. Live, mutable copies also land in `action_items` (the Work board)
-     * at ingest — this jsonb is the "what this call decided" record so the
-     * meeting detail never depends on later task edits.
-     */
-    actionItems: jsonb("action_items")
-      .$type<{ person: string; tasks: string[] }[]>()
-      .notNull()
-      .default([]),
-    /** Google Doc (full notes + verbatim transcript), when the upload succeeds. */
-    docLink: text("doc_link"),
-    /** Set when the call was scoped to one client (an ad-hoc client call). */
-    clientId: uuid("client_id").references(() => clients.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("meeting_notes_source_ref_idx").on(table.sourceRef),
-    index("meeting_notes_date_idx").on(table.meetingDate),
-    index("meeting_notes_client_idx").on(table.clientId),
-  ],
-);
-
 export const clientsRelations = relations(clients, ({ many }) => ({
   deals: many(deals),
   reps: many(reps),
@@ -926,10 +878,6 @@ export const actionItemsRelations = relations(actionItems, ({ one }) => ({
   client: one(clients, { fields: [actionItems.clientId], references: [clients.id] }),
 }));
 
-export const meetingNotesRelations = relations(meetingNotes, ({ one }) => ({
-  client: one(clients, { fields: [meetingNotes.clientId], references: [clients.id] }),
-}));
-
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type Client = typeof clients.$inferSelect;
@@ -949,8 +897,6 @@ export type NewEodTemplate = typeof eodTemplates.$inferInsert;
 export type Settings = typeof settings.$inferSelect;
 export type ActionItem = typeof actionItems.$inferSelect;
 export type NewActionItem = typeof actionItems.$inferInsert;
-export type MeetingNote = typeof meetingNotes.$inferSelect;
-export type NewMeetingNote = typeof meetingNotes.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;

@@ -323,6 +323,13 @@
       "when": 1788148703160,
       "tag": "0045_workspace_databases",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788275798625,
+      "tag": "0046_remove_notetaker",
+      "breakpoints": true
     }
   ]
 }
