@@ -8,7 +8,6 @@ import {
   HOME_DASHBOARD_ITEMS,
   isFilledTwoColumnSeed,
   isLegacyHomeSeed,
-  MARKETING_ROUTE_HREF,
   resolveHomeLinkHref,
   TODO_DATABASE_BLOCK_TYPE,
   type HomeSeedBlock,
@@ -145,12 +144,21 @@ describe("buildHomeDefaultContent", () => {
     }
   });
 
-  it("points every Content link at the in-app marketing route", () => {
-    const [left] = columns(buildHomeDefaultContent([]));
+  it("resolves a Content link to the real page that carries its title", () => {
+    // Content links used to point at a fixed /marketing route that does not
+    // exist in the app — five dead links to a 404. They are ordinary pages.
+    const tree = buildPageTree([page("content-1", HOME_CONTENT_ITEMS[0].title)]);
+    const [left] = columns(buildHomeDefaultContent(tree));
     const contentBullets = (left.children ?? [])[1].children ?? [];
     expect(contentBullets).toHaveLength(HOME_CONTENT_ITEMS.length);
+    expect(linkHrefs(contentBullets[0])).toEqual(["?page=content-1"]);
+  });
+
+  it("degrades an unresolved Content link to plain text, never a dead link", () => {
+    const [left] = columns(buildHomeDefaultContent([]));
+    const contentBullets = (left.children ?? [])[1].children ?? [];
     for (const bullet of contentBullets) {
-      expect(linkHrefs(bullet)).toEqual([MARKETING_ROUTE_HREF]);
+      expect(linkHrefs(bullet)).toEqual([]);
     }
   });
 });
