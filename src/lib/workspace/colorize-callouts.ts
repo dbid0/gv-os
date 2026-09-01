@@ -44,7 +44,12 @@ export const CALLOUT_ICON_COLORS: ReadonlyArray<{
   meaning: string;
   icons: readonly string[];
 }> = [
-  { color: "yellow", meaning: "caution / timing", icons: ["⚠️", "⚡", "⏰", "⏱️"] },
+  {
+    color: "yellow",
+    meaning: "caution / timing / welcome",
+    // 👋 is the teamspace welcome callout, which is yellow in Notion.
+    icons: ["⚠️", "⚡", "⏰", "⏱️", "👋"],
+  },
   { color: "red", meaning: "critical / compliance", icons: ["🔥", "🚨", "🛡️"] },
   { color: "blue", meaning: "info", icons: ["💡", "ℹ️", "📣"] },
   { color: "green", meaning: "good", icons: ["✅", "🟢", "🎉"] },
@@ -58,7 +63,6 @@ export const CALLOUT_ICON_COLORS: ReadonlyArray<{
       "📁",
       "📝",
       "🎯",
-      "👋",
       "🗂️",
       "📞",
       "☎️",
@@ -136,63 +140,6 @@ interface EditorBlock {
   children?: EditorBlock[];
 }
 
-/** Matches a `[…]` placeholder marker, e.g. `[INSERT LINK]`, `[X]`. */
-const BRACKET_RE = /\[[^\]]+\]/g;
-
-function hasExplicitColor(styles: StyleMap | undefined): boolean {
-  return (
-    styles !== undefined &&
-    typeof styles.textColor === "string" &&
-    styles.textColor !== "default"
-  );
-}
-
-/**
- * Split one text run so every `[…]` marker becomes its own red run and the rest
- * keeps its original styles. An already-coloured run is returned untouched —
- * that respects a user's own colour AND makes a second pass a no-op (our own red
- * markers are skipped).
- */
-function splitRunForBrackets(run: TextRun): TextRun[] {
-  const styles: StyleMap = run.styles ?? {};
-  if (hasExplicitColor(styles)) return [run];
-
-  const { text } = run;
-  const out: TextRun[] = [];
-  let last = 0;
-  for (const match of text.matchAll(BRACKET_RE)) {
-    const start = match.index ?? 0;
-    const end = start + match[0].length;
-    if (start > last) {
-      out.push({ type: "text", text: text.slice(last, start), styles: { ...styles } });
-    }
-    out.push({ type: "text", text: match[0], styles: { ...styles, textColor: "red" } });
-    last = end;
-  }
-  if (out.length === 0) return [run];
-  if (last < text.length) {
-    out.push({ type: "text", text: text.slice(last), styles: { ...styles } });
-  }
-  return out;
-}
-
-/** Bracket-wrap text runs across an inline array, descending into links. */
-function processInline(items: InlineItem[]): InlineItem[] {
-  const out: InlineItem[] = [];
-  for (const item of items) {
-    if (item.type === "text") {
-      out.push(...splitRunForBrackets(item as TextRun));
-    } else if (item.type === "link") {
-      const link = item as LinkRun;
-      const content = processInline(link.content) as TextRun[];
-      out.push({ ...link, content });
-    } else {
-      out.push(item);
-    }
-  }
-  return out;
-}
-
 /** The leading text of a block — the first non-empty text run it opens with. */
 function blockLeadingText(content: EditorBlock["content"]): string {
   if (typeof content === "string") return content;
@@ -229,10 +176,9 @@ function calloutColorFor(block: EditorBlock): CalloutColor | null {
 function colorizeBlock(block: EditorBlock, topLevel: boolean): EditorBlock {
   let next: EditorBlock = block;
 
-  // 1) Red placeholder markers — every block, at every depth.
-  if (Array.isArray(block.content)) {
-    next = { ...next, content: processInline(block.content) };
-  }
+  // NOTE: bracketed placeholders (`[CLIENT NAME]`, `[INSERT LINK]`) stay PLAIN.
+  // They were briefly auto-coloured red, but Notion renders them as ordinary
+  // text, and the red turned page titles and link lists into noise.
 
   // 2) Callout background — top-level quote/paragraph only, and only when there
   //    is no explicit colour yet (a user's own colour is never overwritten).
