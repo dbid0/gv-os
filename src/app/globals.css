@@ -428,9 +428,25 @@
   font-size: 16px;
   line-height: 1.5;
 }
+/* Links in a workspace page read as NORMAL text that happens to be underlined —
+   never brand-blue. Hovering lifts a soft rounded "bubble" behind the link (a
+   box-shadow spread, so it costs no layout) and firms the underline, which is
+   the hover Daniel liked on the old sub-page rows. */
 .gv-block-editor .bn-editor a {
-  color: var(--brand);
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 32%, transparent);
   text-underline-offset: 2px;
+  border-radius: 4px;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    text-decoration-color 0.15s ease;
+}
+.gv-block-editor .bn-editor a:hover {
+  background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--foreground) 9%, transparent);
+  text-decoration-color: currentColor;
 }
 
 /* A migrated Notion CALLOUT — a quote block that carries a background colour —
@@ -501,13 +517,6 @@
 }
 /* …and body text inside a tinted callout stays the normal reading colour. */
 .dark .gv-block-editor .bn-block-content[data-background-color] {
-  color: var(--foreground);
-}
-
-/* Page links inside the dashboard cards read as ORDINARY text, not brand-blue
-   links — the emoji carries the colour, the way Notion's sub-page lists look.
-   Scoped to columns, which only ever hold those cards. */
-.gv-block-editor .bn-editor .bn-block-column a {
   color: var(--foreground);
 }
 

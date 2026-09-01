@@ -478,7 +478,9 @@ function TaskCell({
             e.stopPropagation();
             onNavigate?.(linkified.link.pageId);
           }}
-          className="gv-todo-sheet-link text-brand decoration-brand/40 hover:decoration-brand cursor-pointer rounded font-medium underline underline-offset-2 transition-colors"
+          // Normal text colour, underlined — matching page links in the body.
+          // Brand-blue is reserved for the app's chrome, not document links.
+          className="gv-todo-sheet-link text-foreground decoration-foreground/30 hover:decoration-foreground cursor-pointer rounded font-medium underline underline-offset-2 transition-colors"
         >
           {linkified.link.text}
         </button>
