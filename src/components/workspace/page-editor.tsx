@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Copy, Link2, MoreHorizontal, Pencil, Share, Star, Trash2 } from "lucide-react";
 
 import { EmojiPicker } from "@/components/workspace/emoji-picker";
+import type { DescribePage } from "@/lib/workspace/page-mentions";
 import { PageIcon } from "@/components/workspace/page-icon";
 import { ShareDialog } from "@/components/workspace/share-dialog";
 import {
@@ -106,6 +107,7 @@ export function PageEditor({
   focusNonce,
   basePath,
   resolvePageId,
+  describePage,
   isHome = false,
   onSave,
   onDraftChange,
@@ -129,6 +131,8 @@ export function PageEditor({
   basePath: string;
   /** Title → page id in this teamspace, for the body's internal + To-Do links. */
   resolvePageId: (title: string) => string | null;
+  /** Page id → its live icon + title, for rendering internal links as mentions. */
+  describePage: DescribePage;
   /**
    * This is the teamspace Home. It is a NORMAL, fully-featured page — the same
    * editable title, Share, ••• menu (Rename / Duplicate / Copy link), and star
@@ -337,6 +341,7 @@ export function PageEditor({
               basePath={basePath}
               onSelectPage={onSelect}
               resolvePageId={resolvePageId}
+              describePage={describePage}
               onChange={(contentJson) => onSave({ content: contentJson })}
               onReady={(focus) => {
                 focusBodyRef.current = focus;

@@ -22,6 +22,7 @@ import {
 import { classifyWorkspaceLink } from "@/lib/workspace/links";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage/constants";
 import { colorizeCallouts } from "@/lib/workspace/colorize-callouts";
+import { enrichPageMentions, type DescribePage } from "@/lib/workspace/page-mentions";
 
 /**
  * The Workspace page BODY — a Notion-style WYSIWYG block editor (BlockNote).
@@ -129,6 +130,7 @@ export function BlockEditor({
   basePath,
   onSelectPage,
   resolvePageId,
+  describePage,
   onChange,
   onReady,
 }: {
@@ -151,6 +153,12 @@ export function BlockEditor({
   onSelectPage: (id: string) => void;
   /** Title → page id in this teamspace, for the To-Do rows' sheet deep-links. */
   resolvePageId: (title: string) => string | null;
+  /**
+   * Page id → its LIVE icon + title. Internal `?page=` links render as Notion
+   * page mentions built from this, so renaming a page (or changing its icon)
+   * updates every link to it instead of leaving frozen text behind.
+   */
+  describePage: DescribePage;
   /** Debounced: called with the serialised document JSON to persist. */
   onChange: (contentJson: string) => void;
   /** Handed a focus() fn once mounted, so title-Enter can jump into the body. */
@@ -165,12 +173,19 @@ export function BlockEditor({
   // the editor's very first render (and its autosave baseline, captured below
   // from `editor.document`) already carries the callout colours — opening a page
   // never counts as an edit. The legacy-markdown path is colourised after parse.
+  // Mentions are resolved once, at mount, from the prop itself — the lazy
+  // initialiser runs on the first render only, so a later `describePage`
+  // identity change never re-runs this and never counts as an edit.
   const [{ initialBlocks, legacyMarkdown }] = useState(() => {
     const stored = readStored(initialContent);
     return {
       ...stored,
       initialBlocks: stored.initialBlocks
-        ? colorizeCallouts(stored.initialBlocks)
+        ? enrichPageMentions(
+            colorizeCallouts(stored.initialBlocks),
+            basePath,
+            describePage,
+          )
         : stored.initialBlocks,
     };
   });
@@ -178,9 +193,12 @@ export function BlockEditor({
   // Reachable from `uploadFile`'s async closure without re-creating the editor.
   const toastRef = useRef(toast);
   const pageIdRef = useRef(pageId);
+  // Read by the async legacy-markdown import below, which resolves after render.
+  const describeRef = useRef(describePage);
   useEffect(() => {
     toastRef.current = toast;
     pageIdRef.current = pageId;
+    describeRef.current = describePage;
   });
 
   const editor = useCreateBlockNote({
@@ -399,7 +417,14 @@ export function BlockEditor({
             // Colourise the freshly-parsed markdown before it becomes the
             // document, so the migration lands already-coloured and `finish()`
             // captures the coloured doc as the baseline (no spurious save).
-            editor.replaceBlocks(editor.document, colorizeCallouts(blocks));
+            editor.replaceBlocks(
+              editor.document,
+              enrichPageMentions(
+                colorizeCallouts(blocks),
+                basePath,
+                describeRef.current,
+              ),
+            );
           }
           finish();
         })
