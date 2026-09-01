@@ -505,12 +505,9 @@ export function WorkspaceApp({
           {/* The teamspace section header. Clicking the teamspace name IS the
               home link — it opens the teamspace's landing (its dashboard), just
               like Notion. There is NO separate "🏠 Home" row below it. */}
-          <div
-            className={cn(
-              "group/ts flex items-center gap-1 rounded-md px-1 py-1 transition-colors",
-              selectedId === null ? "bg-secondary/70" : "hover:bg-secondary/40",
-            )}
-          >
+          {/* No persistent highlight on the teamspace row — Notion leaves the
+              teamspace header plain and only tints it on hover. */}
+          <div className="group/ts hover:bg-secondary/40 flex items-center gap-1 rounded-md px-1 py-1 transition-colors">
             <button
               type="button"
               onClick={() => setTeamspaceOpen((v) => !v)}

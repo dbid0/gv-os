@@ -448,11 +448,24 @@
   background: transparent;
 }
 /* Drop the default blockquote look (left bar, italic, muted) inside those cards
-   so the section reads as a titled card, not a quotation. */
-.gv-block-editor .bn-block-column .bn-block-content[data-content-type="quote"] {
+   so the section reads as a titled card, not a quotation. The 2px rule lives on
+   the inner <blockquote class="bn-inline-content">, not the block-content div,
+   so BOTH are reset — otherwise a stray vertical bar sits beside the title. */
+.gv-block-editor .bn-block-column .bn-block-content[data-content-type="quote"],
+.gv-block-editor .bn-block-column blockquote.bn-inline-content {
   border-left: 0;
   padding-left: 0;
   font-style: normal;
+}
+/* ...and no nesting guide line down the card's contents. BlockNote draws one per
+   nested row (`… .bn-block-group .bn-block-outer:not([data-prev-depth-changed])
+   ::before { border-left: 1px … }`); stacked, they read as a stray vertical bar
+   inside the card, which Notion does not show. That library selector carries a
+   high specificity (it uses `:not(:has(…))`), so this override is marked
+   important rather than mirroring — and stays scoped to columns, which in this
+   app only ever hold the home's dashboard cards. */
+.gv-block-editor .bn-block-column .bn-block-outer::before {
+  border-left: 0 !important;
 }
 
 /* ---------------------------------------------------------------------------
