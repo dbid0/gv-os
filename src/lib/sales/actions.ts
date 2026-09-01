@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
+import { seedClientWorkspaceFromTemplate } from "@/lib/workspace/seed-client";
 import {
   activityReports,
   clients,
@@ -118,6 +119,15 @@ export async function createTeam(raw: z.input<typeof teamInput>) {
       processorFeeFlatCents: dollarsToCents(input.processorFeeFlat),
     })
     .returning();
+  // Give the new client a real workspace: a copy of the agency's Client
+  // Template, exactly as we would set one up by hand in Notion. Best-effort —
+  // a seeding problem must never mean the client failed to be created.
+  try {
+    await seedClientWorkspaceFromTemplate(team.id);
+  } catch {
+    // Left unseeded; the workspace simply opens empty and can be seeded later.
+  }
+
   revalidatePath("/sales/teams");
   revalidatePath("/sales");
   return { id: team.id };
