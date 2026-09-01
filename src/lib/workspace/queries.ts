@@ -112,8 +112,8 @@ export async function listWorkspaceTree(): Promise<TeamspaceTree[]> {
 
     const byTeamspace = new Map<string, WorkspacePageLite[]>();
     for (const row of rows) {
-      // Home pages render as the pinned "🏠 Home", never as a tree node.
-      if (row.isHome) continue;
+      // Every page is a normal tree node — a teamspace is just a container, so
+      // there is no separate "home" view to hold one back from the list.
       const key = row.clientId ?? "agency";
       const list = byTeamspace.get(key) ?? [];
       list.push(toLite(row));
@@ -158,9 +158,8 @@ export async function getTeamspaceTree(
           ? isNull(workspacePages.clientId)
           : eq(workspacePages.clientId, teamspace.clientId),
       );
-    // Home pages render as the pinned "🏠 Home", never as a tree node.
-    const nonHome = rows.filter((r) => !r.isHome).map(toLite);
-    return { ...teamspace, pages: buildPageTree(nonHome) };
+    // Every page is a normal tree node — a teamspace is just a container.
+    return { ...teamspace, pages: buildPageTree(rows.map(toLite)) };
   } catch {
     return { ...teamspace, pages: [] };
   }

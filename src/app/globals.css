@@ -433,6 +433,77 @@
   text-underline-offset: 2px;
 }
 
+/* A migrated Notion CALLOUT — a quote block that carries a background colour —
+   renders as Notion draws it: a clean rounded, padded box. Without this it keeps
+   the blockquote look (a left bar + italic muted text), which reads as a
+   quotation rather than the welcome/compliance callouts these actually are.
+   Scoped to coloured quotes so an ordinary blockquote still looks like a quote. */
+.gv-block-editor .bn-block:has(> .bn-block-content[data-background-color]) {
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-block: 0.5rem;
+}
+.gv-block-editor .bn-block-content[data-background-color] blockquote.bn-inline-content {
+  border-left: 0;
+  padding-left: 0;
+  font-style: normal;
+  color: inherit;
+}
+/* BlockNote ships Notion's LIGHT callout palette (yellow = #fbf3db …), which on
+   our dark surface reads as a glaring pale slab. Restate the same colours in
+   Notion's DARK values so a migrated callout looks the way it does in Daniel's
+   dark Notion: a muted, tinted box with normal body text on top. */
+.dark .gv-block-editor .bn-block-content[data-background-color="gray"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="gray"]) {
+  background-color: #2f2f33;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="yellow"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="yellow"]) {
+  background-color: #564a2e;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="red"],
+.dark .gv-block-editor .bn-block:has(> .bn-block-content[data-background-color="red"]) {
+  background-color: #522e2a;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="blue"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="blue"]) {
+  background-color: #1a3a4d;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="green"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="green"]) {
+  background-color: #244a3a;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="orange"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="orange"]) {
+  background-color: #5c3b23;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="purple"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="purple"]) {
+  background-color: #3c2d49;
+}
+.dark .gv-block-editor .bn-block-content[data-background-color="pink"],
+.dark
+  .gv-block-editor
+  .bn-block:has(> .bn-block-content[data-background-color="pink"]) {
+  background-color: #4e2c3b;
+}
+/* …and body text inside a tinted callout stays the normal reading colour. */
+.dark .gv-block-editor .bn-block-content[data-background-color] {
+  color: var(--foreground);
+}
+
 /* Home dashboard sections — thin bordered CARDS with no fill, matching Daniel's
    real "Global Ventures Onboarding" (Dashboard / Content / To-Do). The only
    quote blocks that ever live inside a column are those three boxes, so scoping

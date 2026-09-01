@@ -132,98 +132,11 @@ describe("colorizeCallouts — never overwrite an explicit colour", () => {
   });
 });
 
-describe("colorizeCallouts — red bracket placeholders", () => {
-  it("splits a bracketed marker into its own red run, keeping the rest plain", () => {
+describe("colorizeCallouts — bracketed placeholders stay plain", () => {
+  it("leaves a [PLACEHOLDER] as ordinary text (Notion renders them plain)", () => {
     const [out] = run([paragraph("Send to [CLIENT NAME] today")]);
-    const content = out.content!;
-    expect(content).toEqual([
-      { type: "text", text: "Send to ", styles: {} },
-      { type: "text", text: "[CLIENT NAME]", styles: { textColor: "red" } },
-      { type: "text", text: " today", styles: {} },
-    ]);
-  });
-
-  it("wraps multiple markers in a single run", () => {
-    const [out] = run([paragraph("[A] and [B]")]);
-    const texts = (out.content as Inline[]).map((c) =>
-      c.type === "text" ? [c.text, c.styles?.textColor] : null,
-    );
-    expect(texts).toEqual([
-      ["[A]", "red"],
-      [" and ", undefined],
-      ["[B]", "red"],
-    ]);
-  });
-
-  it("preserves existing styles (bold/italic) on every split piece", () => {
-    const [out] = run([
-      {
-        type: "paragraph",
-        content: [
-          { type: "text", text: "bold [X] here", styles: { bold: true, italic: true } },
-        ],
-      },
-    ]);
-    for (const piece of out.content as Array<{ styles?: Style }>) {
-      expect(piece.styles?.bold).toBe(true);
-      expect(piece.styles?.italic).toBe(true);
-    }
-    const bracket = (out.content as Inline[]).find(
-      (c) => c.type === "text" && c.text === "[X]",
-    ) as { styles?: Style };
-    expect(bracket.styles?.textColor).toBe("red");
-  });
-
-  it("wraps markers inside link content too", () => {
-    const [out] = run([
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "link",
-            href: "https://x.test",
-            content: [{ type: "text", text: "go to [PORTAL]", styles: {} }],
-          },
-        ],
-      },
-    ]);
-    const link = (out.content as Inline[])[0];
-    expect(link.type).toBe("link");
-    if (link.type === "link") {
-      expect(link.content).toEqual([
-        { type: "text", text: "go to ", styles: {} },
-        { type: "text", text: "[PORTAL]", styles: { textColor: "red" } },
-      ]);
-    }
-  });
-
-  it("wraps markers everywhere, including inside nested children", () => {
-    const [out] = run([
-      {
-        type: "toggleListItem",
-        content: [{ type: "text", text: "Top [ONE]", styles: {} }],
-        children: [paragraph("Child [TWO]")],
-      },
-    ]);
-    const top = (out.content as Inline[]).find(
-      (c) => c.type === "text" && c.text === "[ONE]",
-    ) as { styles?: Style };
-    expect(top.styles?.textColor).toBe("red");
-    const child = (out.children![0].content as Inline[]).find(
-      (c) => c.type === "text" && c.text === "[TWO]",
-    ) as { styles?: Style };
-    expect(child.styles?.textColor).toBe("red");
-  });
-
-  it("does not touch a run that is already explicitly coloured", () => {
-    const [out] = run([
-      {
-        type: "paragraph",
-        content: [{ type: "text", text: "[X]", styles: { textColor: "blue" } }],
-      },
-    ]);
     expect(out.content).toEqual([
-      { type: "text", text: "[X]", styles: { textColor: "blue" } },
+      { type: "text", text: "Send to [CLIENT NAME] today", styles: {} },
     ]);
   });
 

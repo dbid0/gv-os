@@ -34,11 +34,6 @@ export default async function ClientWorkspacePage({
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const teamspace = await getTeamspaceTree(slug);
   if (!teamspace) notFound();
-  const home = await getOrCreateHomePage(
-    teamspace.clientId,
-    teamspace.pages,
-    teamspace.name,
-  );
 
   const pageParam = sp.page;
   const initialPageId = typeof pageParam === "string" ? pageParam : null;
@@ -46,7 +41,6 @@ export default async function ClientWorkspacePage({
   return (
     <WorkspaceApp
       teamspace={teamspace}
-      home={home}
       initialPageId={initialPageId}
       homeHref={`/clients/${slug}`}
       agencyHref="/clients/workspace"
