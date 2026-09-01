@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   EMOJI_BY_CATEGORY,
+  isImageIcon,
   searchEmoji,
   type EmojiEntry,
 } from "@/lib/workspace/emoji-data";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,10 +30,13 @@ export function EmojiPicker({
   /** Rendered size of the trigger mark, in px. */
   size?: number;
 }) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [uploading, setUploading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +64,46 @@ export function EmojiPicker({
     setOpen(false);
   };
 
+  /**
+   * Upload an image and use it as the icon. Reuses the workspace attachment
+   * endpoint, so the icon lands in the same storage as page uploads and the
+   * stored value is just its URL.
+   */
+  const upload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ tone: "error", title: "Pick an image file" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/workspace/upload", { method: "POST", body });
+      const data: unknown = await res.json().catch(() => null);
+      const url =
+        data && typeof data === "object" && "url" in data
+          ? String((data as { url: unknown }).url)
+          : null;
+      if (!res.ok || !url) {
+        const detail =
+          data && typeof data === "object" && "error" in data
+            ? String((data as { error: unknown }).error)
+            : undefined;
+        toast({ tone: "error", title: "Couldn't upload that image", detail });
+        return;
+      }
+      pick(url);
+    } catch (e) {
+      toast({
+        tone: "error",
+        title: "Couldn't upload that image",
+        detail: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -68,7 +113,17 @@ export function EmojiPicker({
         className="hover:bg-secondary grid place-items-center rounded-xl transition-colors"
         style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
       >
-        <span className="leading-none">{value ?? "📄"}</span>
+        {isImageIcon(value) ? (
+          // eslint-disable-next-line @next/next/no-img-element -- user-uploaded icon, arbitrary host
+          <img
+            src={value!}
+            alt=""
+            className="size-[80%] rounded-md object-contain"
+            draggable={false}
+          />
+        ) : (
+          <span className="leading-none">{value ?? "📄"}</span>
+        )}
       </button>
 
       {open && (
@@ -90,11 +145,31 @@ export function EmojiPicker({
             />
             <button
               type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              title="Upload an image to use as the icon"
+              className="text-faint hover:text-foreground shrink-0 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50"
+            >
+              {uploading ? "Uploading…" : "Upload"}
+            </button>
+            <button
+              type="button"
               onClick={() => pick(null)}
               className="text-faint hover:text-foreground shrink-0 rounded-md border px-2 py-1 text-xs transition-colors"
             >
               Remove
             </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void upload(file);
+              }}
+            />
           </div>
 
           <div className="max-h-64 overflow-y-auto pr-1">

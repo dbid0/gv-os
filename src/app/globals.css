@@ -504,6 +504,13 @@
   color: var(--foreground);
 }
 
+/* Page links inside the dashboard cards read as ORDINARY text, not brand-blue
+   links — the emoji carries the colour, the way Notion's sub-page lists look.
+   Scoped to columns, which only ever hold those cards. */
+.gv-block-editor .bn-editor .bn-block-column a {
+  color: var(--foreground);
+}
+
 /* Home dashboard sections — thin bordered CARDS with no fill, matching Daniel's
    real "Global Ventures Onboarding" (Dashboard / Content / To-Do). The only
    quote blocks that ever live inside a column are those three boxes, so scoping
@@ -527,6 +534,8 @@
   border-left: 0;
   padding-left: 0;
   font-style: normal;
+  /* …and the card header reads as normal text, not a quotation's muted grey. */
+  color: var(--foreground);
 }
 /* ...and no nesting guide line down the card's contents. BlockNote draws one per
    nested row (`… .bn-block-group .bn-block-outer:not([data-prev-depth-changed])

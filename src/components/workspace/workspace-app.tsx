@@ -34,6 +34,7 @@ import {
 } from "@/app/(app)/workspace/actions";
 import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
+import { PageIcon } from "@/components/workspace/page-icon";
 import { TeamspaceIcon } from "@/components/workspace/teamspace-icon";
 import {
   ContextMenu,
@@ -439,10 +440,6 @@ export function WorkspaceApp({
         .slice(0, -1)
         .map((p) => ({ id: p.id, ...labelOf(p) }))
     : [];
-  const subpages: Crumb[] = selectedNode
-    ? selectedNode.children.map((c) => ({ id: c.id, ...labelOf(c) }))
-    : [];
-
   return (
     <div className="-m-4 flex h-[calc(100dvh-3.5rem)] overflow-hidden md:-m-6">
       {/* LEFT — flush sidebar, a touch lighter than the page. */}
@@ -593,7 +590,6 @@ export function WorkspaceApp({
             teamspaceHref={homeHref}
             clientId={teamspace.clientId}
             ancestors={ancestors}
-            subpages={subpages}
             saving={pending}
             autoFocusTitle={selectedNode.id === newPageId}
             focusNonce={focusNonce}
@@ -783,7 +779,10 @@ function TreeRow({
             className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
           >
             <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">
-              {icon ?? <FileText className="text-faint size-3.5" />}
+              <PageIcon
+                icon={icon}
+                fallback={<FileText className="text-faint size-3.5" />}
+              />
             </span>
             <span
               className={cn(
