@@ -28,6 +28,18 @@ export interface EmojiCategory {
   label: string;
 }
 
+/**
+ * A page icon is either an emoji glyph or an UPLOADED IMAGE, in which case the
+ * stored value is that image's URL (absolute, or app-relative). Everywhere an
+ * icon is drawn asks this first, so a custom icon — the GV logo, a client's
+ * mark — renders as a picture instead of the literal URL text.
+ */
+export function isImageIcon(icon: string | null | undefined): boolean {
+  if (!icon) return false;
+  const v = icon.trim();
+  return /^https?:\/\//i.test(v) || v.startsWith("/");
+}
+
 /** Category ids in `@emoji-mart/data`, with the labels we display. */
 export const EMOJI_CATEGORIES: EmojiCategory[] = [
   { id: "people", label: "Smileys & People" },

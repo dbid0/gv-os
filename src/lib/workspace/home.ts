@@ -93,14 +93,14 @@ export const COLUMN_LIST_BLOCK_TYPE = "columnList";
 export const COLUMN_BLOCK_TYPE = "column";
 
 /**
- * Daniel's real "Global Ventures Onboarding" home has NO background fill behind
- * the sections — they are thin-bordered cards on the page background, with BLUE
- * underlined titles. So the boxes carry no `backgroundColor` (the card border +
- * rounding come from CSS on quote-in-column blocks) and the titles are blue.
- * These prior fill values (grey, then blue) are what `isFilledTwoColumnSeed`
- * upgrades away from.
+ * The section headers inside the dashboard cards. The cards themselves carry NO
+ * background fill (thin border + rounding come from CSS on quote-in-column
+ * blocks — those prior fill values are what `isFilledTwoColumnSeed` upgrades
+ * away from), and the headers are bold + underlined in the ORDINARY text colour.
+ * They were briefly blue; Daniel wants the card text to read as normal text, so
+ * the only colour on this page is the page icons.
  */
-const TITLE_STYLE = { bold: true, underline: true, textColor: "blue" } as const;
+const TITLE_STYLE = { bold: true, underline: true } as const;
 
 /** A plain (or styled) text run. */
 function text(

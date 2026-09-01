@@ -3,18 +3,10 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  Copy,
-  FileText,
-  Link2,
-  MoreHorizontal,
-  Pencil,
-  Share,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Copy, Link2, MoreHorizontal, Pencil, Share, Star, Trash2 } from "lucide-react";
 
 import { EmojiPicker } from "@/components/workspace/emoji-picker";
+import { PageIcon } from "@/components/workspace/page-icon";
 import { ShareDialog } from "@/components/workspace/share-dialog";
 import {
   DropdownMenu,
@@ -109,7 +101,6 @@ export function PageEditor({
   teamspaceHref,
   clientId,
   ancestors,
-  subpages,
   saving,
   autoFocusTitle,
   focusNonce,
@@ -130,8 +121,6 @@ export function PageEditor({
   clientId: string | null;
   /** Parent pages, teamspace-nearest first, excluding this page. */
   ancestors: Crumb[];
-  /** This page's direct children, rendered as clickable sub-page links. */
-  subpages: Crumb[];
   saving: boolean;
   autoFocusTitle: boolean;
   /** Bumped by the parent to re-focus the title (a rename on an open page). */
@@ -234,14 +223,16 @@ export function PageEditor({
                 onClick={() => onSelect(crumb.id)}
                 className="hover:text-foreground flex max-w-[12rem] items-center gap-1 truncate rounded px-1 py-0.5 transition-colors"
               >
-                {crumb.icon && <span className="text-[0.75rem]">{crumb.icon}</span>}
+                {crumb.icon && (
+                  <PageIcon icon={crumb.icon} className="text-[0.75rem]" />
+                )}
                 <span className="truncate">{crumb.title}</span>
               </button>
             </span>
           ))}
           <span className="text-faint/60">/</span>
           <span className="text-muted-foreground flex max-w-[14rem] items-center gap-1 truncate px-1 py-0.5">
-            {page.icon && <span className="text-[0.75rem]">{page.icon}</span>}
+            {page.icon && <PageIcon icon={page.icon} className="text-[0.75rem]" />}
             <span className="truncate">{title.trim() || "Untitled"}</span>
           </span>
         </nav>
@@ -353,31 +344,12 @@ export function PageEditor({
             />
           </div>
 
-          {subpages.length > 0 && (
-            <div className="border-border/50 mt-8 border-t pt-3">
-              {subpages.map((sp) => (
-                <a
-                  key={sp.id}
-                  href={`${basePath}?page=${sp.id}`}
-                  onClick={(e) => {
-                    // Plain click switches page instantly, client-side; modified
-                    // clicks (new tab, etc.) keep the real link behaviour.
-                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                    e.preventDefault();
-                    onSelect(sp.id);
-                  }}
-                  className="group hover:bg-secondary/40 -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
-                >
-                  <span className="grid size-5 shrink-0 place-items-center text-[0.95rem]">
-                    {sp.icon ?? <FileText className="text-faint size-4" />}
-                  </span>
-                  <span className="text-foreground min-w-0 flex-1 truncate text-[0.95rem] font-medium underline-offset-2 group-hover:underline">
-                    {sp.title || "Untitled"}
-                  </span>
-                </a>
-              ))}
-            </div>
-          )}
+          {/* NOTE: there is deliberately no auto-generated "sub-pages" footer.
+              A hub links its pages in the BODY (the dashboard cards, or a link
+              list), so a second machine-made list underneath just duplicated
+              them — Daniel: "those things at the bottom shouldn't be there, it
+              would only be where the [card] text is." Children remain reachable
+              from the sidebar tree and from the body links. */}
         </div>
       </div>
 
