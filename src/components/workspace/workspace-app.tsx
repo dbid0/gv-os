@@ -183,6 +183,17 @@ export function WorkspaceApp({
     [overrides],
   );
 
+  // Page id → its LIVE icon + title, so an internal `?page=` link in a body
+  // renders as a Notion page mention: rename a page or change its icon and every
+  // link to it follows, instead of keeping the text frozen at seed time.
+  const describePage = useCallback(
+    (pageId: string) => {
+      const node = byId.get(pageId);
+      return node ? labelOf(node) : null;
+    },
+    [byId, labelOf],
+  );
+
   const revealAndSelect = useCallback(
     (id: string) => {
       setSelectedId(id);
@@ -595,6 +606,7 @@ export function WorkspaceApp({
             focusNonce={focusNonce}
             basePath={basePath}
             resolvePageId={resolvePageId}
+            describePage={describePage}
             onSave={(patch) => {
               if (patch.title !== undefined || patch.icon !== undefined) {
                 setOverrides((prev) => {
