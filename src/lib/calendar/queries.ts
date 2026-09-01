@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { actionItems, clients, meetingNotes, teamMembers } from "@/db/schema/app";
+import { actionItems, clients, teamMembers } from "@/db/schema/app";
 import { isSoftwareDevItem } from "@/lib/calendar/filter";
 
 /** An action item shaped for the calendar — its date, scope, and who owns it. */
@@ -16,20 +16,6 @@ export interface CalendarItem {
   clientName: string | null;
   clientSlug: string | null;
   assignee: string | null;
-}
-
-/** A real, dated event on the calendar — a recorded call / meeting. */
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string;
-  /** agency_call · client_call · manual */
-  source: string;
-  clientName: string | null;
-  clientSlug: string | null;
-  attendees: string[];
-  docLink: string | null;
-  taskCount: number;
 }
 
 const selection = {
@@ -86,59 +72,6 @@ export async function listCalendarItems(
       .where(and(gte(actionItems.dueDate, fromKey), lte(actionItems.dueDate, toKey)))
       .orderBy(asc(actionItems.dueDate));
     return shape(rows);
-  } catch {
-    return [];
-  }
-}
-
-function taskCount(items: { tasks?: string[] }[] | null): number {
-  return (items ?? []).reduce((n, it) => n + (it.tasks?.length ?? 0), 0);
-}
-
-/**
- * Real events in the window: recorded calls / meetings, on the day they
- * happened. These are the client + team events Daniel wants the calendar to be
- * about — never filtered, because a meeting is real by definition.
- */
-export async function listCalendarEvents(
-  fromKey: string,
-  toKey: string,
-): Promise<CalendarEvent[]> {
-  try {
-    const db = getDb();
-    const rows = await db
-      .select({
-        id: meetingNotes.id,
-        title: meetingNotes.title,
-        date: meetingNotes.meetingDate,
-        source: meetingNotes.source,
-        attendees: meetingNotes.attendees,
-        actionItems: meetingNotes.actionItems,
-        docLink: meetingNotes.docLink,
-        clientName: clients.name,
-        clientSlug: clients.slug,
-      })
-      .from(meetingNotes)
-      .leftJoin(clients, eq(meetingNotes.clientId, clients.id))
-      .where(
-        and(
-          isNotNull(meetingNotes.meetingDate),
-          gte(meetingNotes.meetingDate, fromKey),
-          lte(meetingNotes.meetingDate, toKey),
-        ),
-      )
-      .orderBy(asc(meetingNotes.meetingDate));
-    return rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      date: r.date,
-      source: r.source,
-      clientName: r.clientName,
-      clientSlug: r.clientSlug,
-      attendees: r.attendees ?? [],
-      docLink: r.docLink,
-      taskCount: taskCount(r.actionItems),
-    }));
   } catch {
     return [];
   }

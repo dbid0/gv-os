@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { dayKeyCT } from "@/lib/charts";
 import { stepMonth } from "@/lib/calendar/month-grid";
-import { listCalendarEvents, listCalendarItems } from "@/lib/calendar/queries";
+import { listCalendarItems } from "@/lib/calendar/queries";
 
 export const metadata = { title: "Calendar - GV OS" };
 export const dynamic = "force-dynamic";
@@ -21,18 +21,15 @@ export default async function CalendarPage() {
   const lastDay = new Date(Date.UTC(to.year, to.month, 0)).getUTCDate();
   const toKey = `${to.year}-${pad(to.month)}-${pad(lastDay)}`;
 
-  const [items, events] = await Promise.all([
-    listCalendarItems(fromKey, toKey),
-    listCalendarEvents(fromKey, toKey),
-  ]);
+  const items = await listCalendarItems(fromKey, toKey);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader
         title="Calendar"
-        description="Real events and the day's work — client and team calls, plus the tasks due each day. Click any day to see everything on it."
+        description="The day's work — every task due, by day. Click any day to see what is on it."
       />
-      <CalendarView items={items} events={events} todayKey={todayKey} />
+      <CalendarView items={items} todayKey={todayKey} />
     </div>
   );
 }

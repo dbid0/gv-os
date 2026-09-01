@@ -1,14 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  ListChecks,
-  Mic,
-} from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
 
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
@@ -21,7 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { monthGrid, monthLabel, stepMonth } from "@/lib/calendar/month-grid";
-import type { CalendarEvent, CalendarItem } from "@/lib/calendar/queries";
+import type { CalendarItem } from "@/lib/calendar/queries";
 import { clientBySlug } from "@/lib/roster";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +25,6 @@ const STATUS_TONE: Record<string, string> = {
   not_started: "bg-faint",
   in_progress: "bg-warning",
   completed: "bg-success",
-};
-
-const SOURCE_LABEL: Record<string, string> = {
-  agency_call: "Agency call",
-  client_call: "Client call",
-  manual: "Note",
 };
 
 /** "2026-08-26" -> "Wednesday, August 26, 2026". Date-only, timezone-safe. */
@@ -84,17 +71,15 @@ function ClientTag({ name, slug }: { name: string; slug: string | null }) {
  * the server hands over a wide window of items once, and paging between months
  * is instant state, never a round-trip.
  *
- * The calendar shows REAL work: events (recorded client/team calls) and the
- * tasks due each day. Internal GV OS software-dev items are filtered upstream.
+ * The calendar shows REAL work: the tasks due each day. Internal GV OS
+ * software-dev items are filtered upstream.
  * Clicking any day opens a lightweight Sheet with everything on that day.
  */
 export function CalendarView({
   items,
-  events,
   todayKey,
 }: {
   items: CalendarItem[];
-  events: CalendarEvent[];
   todayKey: string;
 }) {
   const [ty, tm] = todayKey.split("-").map(Number);
@@ -113,33 +98,18 @@ export function CalendarView({
     return m;
   }, [items, monthKey]);
 
-  const eventsByDate = useMemo(() => {
-    const m = new Map<string, CalendarEvent[]>();
-    for (const ev of events) {
-      if (!ev.date || ev.date.slice(0, 7) !== monthKey) continue;
-      m.set(ev.date, [...(m.get(ev.date) ?? []), ev]);
-    }
-    return m;
-  }, [events, monthKey]);
-
   const weeks = useMemo(
     () => monthGrid(year, month, todayKey),
     [year, month, todayKey],
   );
 
   const monthTasks = useMemo(() => [...tasksByDate.values()].flat(), [tasksByDate]);
-  const monthEventCount = useMemo(
-    () => [...eventsByDate.values()].reduce((n, list) => n + list.length, 0),
-    [eventsByDate],
-  );
   const done = monthTasks.filter((i) => i.status === "completed").length;
   const inProgress = monthTasks.filter((i) => i.status === "in_progress").length;
 
   const selectedTasks = selectedKey ? (tasksByDate.get(selectedKey) ?? []) : [];
-  const selectedEvents = selectedKey ? (eventsByDate.get(selectedKey) ?? []) : [];
 
-  const totalOnDay = (dateKey: string) =>
-    (eventsByDate.get(dateKey)?.length ?? 0) + (tasksByDate.get(dateKey)?.length ?? 0);
+  const totalOnDay = (dateKey: string) => tasksByDate.get(dateKey)?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -184,7 +154,6 @@ export function CalendarView({
           value={String(monthTasks.length)}
           tone="brand"
         />
-        <Kpi label="Events" value={String(monthEventCount)} icon={Mic} />
         <Kpi label="In progress" value={String(inProgress)} tone="warning" />
         <Kpi label="Completed" value={String(done)} tone="success" />
       </div>
@@ -202,13 +171,10 @@ export function CalendarView({
         </div>
         <div className="grid grid-cols-7">
           {weeks.flat().map((cell) => {
-            const dayEvents = eventsByDate.get(cell.dateKey) ?? [];
             const dayTasks = tasksByDate.get(cell.dateKey) ?? [];
-            const total = dayEvents.length + dayTasks.length;
-            // Events lead the cell; tasks fill the rest, up to three chips.
-            const shownEvents = dayEvents.slice(0, 3);
-            const shownTasks = dayTasks.slice(0, Math.max(0, 3 - shownEvents.length));
-            const overflow = total - shownEvents.length - shownTasks.length;
+            // Up to three task chips per cell; the rest roll into "+N more".
+            const shownTasks = dayTasks.slice(0, 3);
+            const overflow = dayTasks.length - shownTasks.length;
             return (
               <button
                 type="button"
@@ -218,7 +184,7 @@ export function CalendarView({
                   "hover:bg-secondary/40 focus-visible:ring-ring/50 min-h-24 border-r border-b p-1.5 text-left transition-colors outline-none last:border-r-0 focus-visible:ring-2 [&:nth-child(7n)]:border-r-0",
                   !cell.inMonth && "bg-secondary/30",
                 )}
-                aria-label={`${fullDate(cell.dateKey)}${total ? `, ${total} item${total === 1 ? "" : "s"}` : ""}`}
+                aria-label={`${fullDate(cell.dateKey)}${dayTasks.length ? `, ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}` : ""}`}
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span
@@ -233,16 +199,6 @@ export function CalendarView({
                   </span>
                 </div>
                 <div className="space-y-0.5">
-                  {shownEvents.map((ev) => (
-                    <div
-                      key={ev.id}
-                      title={`${ev.title}${ev.clientName ? ` · ${ev.clientName}` : ""}`}
-                      className="bg-brand-soft/60 text-brand flex items-center gap-1 rounded px-1 py-0.5 text-[11px]"
-                    >
-                      <Mic className="size-2.5 shrink-0" />
-                      <span className="truncate">{ev.title}</span>
-                    </div>
-                  ))}
                   {shownTasks.map((it) => (
                     <div
                       key={it.id}
@@ -266,12 +222,12 @@ export function CalendarView({
         </div>
       </Panel>
 
-      {items.length === 0 && events.length === 0 && (
+      {items.length === 0 && (
         <Panel title="Nothing scheduled yet">
           <p className="text-faint py-8 text-center text-sm">
             <CalendarDays className="mr-1 inline size-4" />
-            Recorded calls land here on the day they happened, and any task with a due
-            date lands on that day. Give a task a due date and it shows up here.
+            Any task with a due date lands on that day. Give a task a due date and it
+            shows up here.
           </p>
         </Panel>
       )}
@@ -285,8 +241,8 @@ export function CalendarView({
         <p className="text-muted-foreground text-sm">
           Two-way sync with Google Calendar — so meetings and hours show up here
           alongside the day&apos;s work — lands with the Google connection. Until then
-          the calendar reflects recorded calls and the GV OS task boards only; nothing
-          is pushed to or pulled from Google.
+          the calendar reflects the GV OS task boards only; nothing is pushed to or
+          pulled from Google.
         </p>
       </Panel>
 
@@ -302,60 +258,12 @@ export function CalendarView({
             <SheetTitle>{selectedKey ? fullDate(selectedKey) : ""}</SheetTitle>
             <SheetDescription>
               {selectedKey && totalOnDay(selectedKey) > 0
-                ? [
-                    selectedEvents.length > 0 &&
-                      `${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}`,
-                    selectedTasks.length > 0 &&
-                      `${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
+                ? `${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}`
                 : "Nothing on this day."}
             </SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-4">
-            {selectedEvents.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
-                  <Mic className="size-3" /> Events
-                </h3>
-                {selectedEvents.map((ev) => (
-                  <div key={ev.id} className="rounded-lg border p-3">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-medium">{ev.title}</span>
-                      <span className="text-faint rounded-full border px-1.5 text-[10px]">
-                        {SOURCE_LABEL[ev.source] ?? ev.source}
-                      </span>
-                      {ev.clientName && (
-                        <ClientTag name={ev.clientName} slug={ev.clientSlug} />
-                      )}
-                    </div>
-                    <div className="text-faint mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                      {ev.attendees.length > 0 && (
-                        <span>{ev.attendees.join(" · ")}</span>
-                      )}
-                      {ev.taskCount > 0 && (
-                        <span className="text-foreground/70">
-                          {ev.taskCount} task{ev.taskCount === 1 ? "" : "s"}
-                        </span>
-                      )}
-                      {ev.docLink && (
-                        <a
-                          href={ev.docLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-brand inline-flex items-center gap-1 hover:underline"
-                        >
-                          <FileText className="size-3" /> Doc
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            )}
-
             {selectedTasks.length > 0 && (
               <section className="space-y-2">
                 <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">

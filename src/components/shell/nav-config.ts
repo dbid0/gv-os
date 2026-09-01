@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Mail,
   Megaphone,
-  Mic,
   Plug,
   Receipt,
   Settings,
@@ -133,13 +132,6 @@ export const navigation: NavGroup[] = [
         icon: ClipboardList,
         status: "ready",
         description: "Copywriting & delivery across every offer, by owner and status",
-      },
-      {
-        label: "Meetings",
-        href: "/team/meetings",
-        icon: Mic,
-        status: "ready",
-        description: "Recorded calls — recaps, transcripts, and the tasks they created",
       },
       {
         label: "Calendar",

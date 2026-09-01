@@ -50,10 +50,6 @@ const PUBLIC_PATHS = [
   "/api/webhooks/bookings",
   // Discord bot's task API — its own BOT_API_TOKEN bearer.
   "/api/bot/tasks",
-  // Cloud notetaker (GitHub Action) posts call recaps; own SYNC_SECRET bearer.
-  "/api/notetaker/ingest",
-  // Discord /record slash command; ed25519 signature IS the auth.
-  "/api/discord/interactions",
 ];
 
 function isPublic(pathname: string) {

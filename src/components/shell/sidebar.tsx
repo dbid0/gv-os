@@ -65,7 +65,7 @@ export function Sidebar({
           .filter((group) => group.items.length > 0)
       : navigation;
   // Longest matching href wins, so a parent item (/team) doesn't stay lit when a
-  // more specific sibling (/team/work, /team/meetings) is the real match.
+  // more specific sibling (e.g. /team/work) is the real match.
   const activeHref =
     visibleNavigation
       .flatMap((g) => g.items)
