@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Link2, Mail, Plus, Search } from "lucide-react";
+import { Link2, Mail, Plus, Search, UserPlus } from "lucide-react";
 
 import { createTeamMember, setTeamMemberStatus } from "@/app/(app)/team/actions";
 import { PageHeader } from "@/components/shell/page-header";
@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import type { TeamMemberRow } from "@/lib/team";
 import {
@@ -90,6 +98,7 @@ export function TeamRoster({
   const [subtype, setSubtype] = useState<MemberSubtype>("copywriter");
   const [email, setEmail] = useState("");
   const [scope, setScope] = useState("");
+  const [adding, setAdding] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -132,6 +141,7 @@ export function TeamRoster({
           clientId: scope || null,
         });
         toast({ tone: "success", title: `${name.trim()} added to the roster` });
+        setAdding(false);
         setName("");
         setEmail("");
         router.refresh();
@@ -163,97 +173,153 @@ export function TeamRoster({
         </div>
       )}
 
-      <Panel title="Add a team member">
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="min-w-[12rem] flex-1 space-y-1.5">
-            <span className="text-muted-foreground text-xs font-medium">Name</span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              placeholder="Full name"
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-muted-foreground text-xs font-medium">Role</span>
-            <select
-              className={cn(selectClass, "w-40")}
-              value={platformRole}
-              onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
-            >
-              {PLATFORM_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {platformRole === "sales_rep" && (
-            <label className="space-y-1.5">
-              <span className="text-muted-foreground text-xs font-medium">Type</span>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">
+          {members.length === 0
+            ? "No one on the roster yet."
+            : `${filtered.length} of ${members.length} shown`}
+        </p>
+        <Button onClick={() => setAdding(true)}>
+          <UserPlus className="size-4" /> Add member
+        </Button>
+      </div>
+
+      {/* Adding someone is a deliberate, guided step rather than a cramped strip
+          of inputs: pick WHAT THEY DO from real role cards (each with the blurb
+          that already describes it), then who they are and whose lane they run. */}
+      <Sheet open={adding} onOpenChange={(o) => !o && setAdding(false)}>
+        <SheetContent className="gap-0 sm:max-w-lg">
+          <SheetHeader className="border-b">
+            <SheetTitle>Add a team member</SheetTitle>
+            <SheetDescription>
+              Their role decides what they can open in GV OS.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-5 overflow-y-auto p-4">
+            <section className="space-y-2">
+              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                What they do
+              </h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PLATFORM_ROLES.map((r) => {
+                  const on = platformRole === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setPlatformRole(r.value as PlatformRole)}
+                      aria-pressed={on}
+                      className={cn(
+                        "rounded-lg border p-3 text-left transition-colors",
+                        on
+                          ? "border-brand bg-brand-soft/40"
+                          : "hover:bg-secondary/50 border-border",
+                      )}
+                    >
+                      <span className="block text-sm font-medium">{r.label}</span>
+                      <span className="text-faint mt-0.5 block text-xs">{r.blurb}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {(platformRole === "sales_rep" || platformRole === "team_member") && (
+              <section className="space-y-2">
+                <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Specifically
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {(platformRole === "sales_rep" ? REP_KINDS : MEMBER_SUBTYPES).map(
+                    (k) => {
+                      const on =
+                        platformRole === "sales_rep"
+                          ? repKind === k.value
+                          : subtype === k.value;
+                      return (
+                        <button
+                          key={k.value}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            platformRole === "sales_rep"
+                              ? setRepKind(k.value as RepKind)
+                              : setSubtype(k.value as MemberSubtype)
+                          }
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs transition-colors",
+                            on
+                              ? "border-brand bg-brand-soft/40 text-foreground"
+                              : "text-muted-foreground hover:bg-secondary/50",
+                          )}
+                        >
+                          {k.label}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </section>
+            )}
+
+            <section className="space-y-3">
+              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                Who they are
+              </h3>
+              <label className="block space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">Name</span>
+                <Input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && add()}
+                  placeholder="Full name"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Email <span className="text-faint">— how they sign in</span>
+                </span>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && add()}
+                  placeholder="Optional"
+                />
+              </label>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                Whose lane
+              </h3>
               <select
-                className={cn(selectClass, "w-36")}
-                value={repKind}
-                onChange={(e) => setRepKind(e.target.value as RepKind)}
+                className={cn(selectClass, "w-full")}
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
               >
-                {REP_KINDS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
+                <option value="">Agency-wide</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
                   </option>
                 ))}
               </select>
-            </label>
-          )}
-          {platformRole === "team_member" && (
-            <label className="space-y-1.5">
-              <span className="text-muted-foreground text-xs font-medium">Type</span>
-              <select
-                className={cn(selectClass, "w-40")}
-                value={subtype}
-                onChange={(e) => setSubtype(e.target.value as MemberSubtype)}
-              >
-                {MEMBER_SUBTYPES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="space-y-1.5">
-            <span className="text-muted-foreground text-xs font-medium">Email</span>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Optional"
-              className="w-48"
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-muted-foreground text-xs font-medium">Lane</span>
-            <select
-              className={cn(selectClass, "w-36")}
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-            >
-              <option value="">Agency-wide</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            onClick={add}
-            disabled={pending || name.trim() === ""}
-            className="gap-2"
-          >
-            <Plus className="size-3.5" /> Add
-          </Button>
-        </div>
-      </Panel>
+              <p className="text-faint text-xs">
+                Agency-wide sees every offer; a lane scopes them to that one.
+              </p>
+            </section>
+          </div>
+
+          <SheetFooter className="border-t">
+            <Button onClick={add} disabled={pending || name.trim() === ""}>
+              {pending ? "Adding…" : "Add to the roster"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {members.length === 0 ? (
         <Panel title="Roster">
