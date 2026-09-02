@@ -103,7 +103,7 @@ export default async function ArPage() {
       <PageHeader
         title="Owed &"
         highlight="upcoming."
-        description="Accounts receivable — partial deals and rev-share owed — plus the money calendar: what should arrive and what is planned to leave, month by month. All computed from the backlog and the payout tracker."
+        description="Accounts receivable — partial deals and rev-share owed — plus the money calendar: what should arrive and what is planned to leave, month by month."
         status={
           <StatusPill tone={arItems.length ? "progress" : "good"}>
             {arItems.length ? `${arItems.length} open items` : "Nothing owed"}
