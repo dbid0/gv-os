@@ -72,11 +72,13 @@ import {
 const TODAY = "2026-08-22";
 
 describe("normalizeHomeRange", () => {
-  it("accepts presets and defaults junk to month", () => {
+  it("accepts presets and defaults anything unknown to a rolling 30 days", () => {
     expect(normalizeHomeRange("7d")).toBe("7d");
     expect(normalizeHomeRange("life")).toBe("life");
-    expect(normalizeHomeRange("junk")).toBe("month");
-    expect(normalizeHomeRange(undefined)).toBe("month");
+    // Unknown input falls back to the DEFAULT window — a rolling 30 days, not
+    // month-to-date, so the headline is never $0 just because the month is new.
+    expect(normalizeHomeRange("junk")).toBe("30d");
+    expect(normalizeHomeRange(undefined)).toBe("30d");
   });
 });
 

@@ -75,10 +75,21 @@ export const HOME_RANGES = [
 ] as const;
 export type HomeRange = (typeof HOME_RANGES)[number];
 
+/**
+ * The window a dashboard opens on when the URL does not name one.
+ *
+ * A ROLLING 30 DAYS, not month-to-date. Month-to-date makes the headline read
+ * $0 for the first days of every month — on the 2nd, the hero said "$0" while
+ * the card beneath it showed $687,466 of collected cash, which reads as a
+ * broken dashboard rather than an early month. A rolling window always shows
+ * the business; month-to-date is one click away in the picker.
+ */
+export const DEFAULT_HOME_RANGE: HomeRange = "30d";
+
 export function normalizeHomeRange(value: unknown): HomeRange {
   return (HOME_RANGES as readonly unknown[]).includes(value)
     ? (value as HomeRange)
-    : "month";
+    : DEFAULT_HOME_RANGE;
 }
 
 function shiftDayKey(key: string, byDays: number): string {
