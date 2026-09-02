@@ -5,6 +5,7 @@ import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { latestKitOverview } from "@/lib/email/queries";
 import { clientBySlug } from "@/lib/roster";
+import { clientIdBySlug } from "@/lib/clients/id";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,13 @@ export default async function WorkspaceMarketingPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const overview = await latestKitOverview().catch(() => []);
-  const mine = overview.filter((k) => k.clientName === client.name);
+  const [overview, clientId] = await Promise.all([
+    latestKitOverview().catch(() => []),
+    clientIdBySlug(slug),
+  ]);
+  // By id, never by name: two client records can share a display name, and
+  // this page would then show another client's list to this one.
+  const mine = overview.filter((k) => clientId !== null && k.clientId === clientId);
 
   if (mine.length === 0) {
     return (

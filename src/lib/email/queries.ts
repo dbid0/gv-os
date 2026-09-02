@@ -7,6 +7,8 @@ import { clients, integrations, kitSnapshots } from "@/db/schema/app";
 
 /** The latest snapshot per Kit connection, shaped for the Email section. */
 export interface KitOverviewRow {
+  /** The client this connection belongs to — the ONLY safe way to match it. */
+  clientId: string | null;
   integrationId: string;
   label: string;
   clientName: string | null;
@@ -25,6 +27,7 @@ export async function latestKitOverview(): Promise<KitOverviewRow[]> {
     .select({
       integrationId: kitSnapshots.integrationId,
       label: integrations.label,
+      clientId: kitSnapshots.clientId,
       clientName: clients.name,
       accountName: kitSnapshots.accountName,
       plan: kitSnapshots.plan,

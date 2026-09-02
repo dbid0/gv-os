@@ -15,7 +15,7 @@ import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { getClientReport } from "@/lib/clients/report";
-import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
+import { rowsForClient } from "@/lib/clients/attribution";
 import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
 import {
@@ -85,12 +85,10 @@ export default async function WorkspacePage({
 
   // This client's income inside the range — attributed the same way the
   // client ledger does it (join first, sheet aliases second).
-  const rangeRows = homeRangeRows(backlog, "all", bounds).filter(
-    (r) =>
-      (r.clientName !== null && r.clientName === client.name) ||
-      (r.clientName === null &&
-        r.description !== null &&
-        matchesSheetClient(slug, r.description)),
+  const rangeRows = rowsForClient(
+    homeRangeRows(backlog, "all", bounds),
+    report.clientId,
+    slug,
   );
   const rangeCash = rangeRows.reduce((s, r) => s + r.cashCents, 0);
   const rangeRevenue = rangeRows.reduce((s, r) => s + r.revenueCents, 0);
@@ -99,14 +97,7 @@ export default async function WorkspacePage({
 
   // This offer's most recent money, attributed the same way — the workspace's
   // own transaction feed, mirroring the admin dashboard.
-  const offerRecent = backlog
-    .filter(
-      (r) =>
-        (r.clientName !== null && r.clientName === client.name) ||
-        (r.clientName === null &&
-          r.description !== null &&
-          matchesSheetClient(slug, r.description)),
-    )
+  const offerRecent = rowsForClient(backlog, report.clientId, slug)
     .slice(0, 8)
     .map((r) => ({
       id: r.id,
@@ -229,17 +220,25 @@ export default async function WorkspacePage({
 
       {showCash && <RecentTransactions rows={offerRecent} />}
 
-      {showDrive && <DriveAssetsPanel slug={slug} drive={drive} />}
+      {/* A client sees their files; the folder link itself is GV's setup, so
+          the panel is skipped entirely until there is something in it. */}
+      {showDrive && (!portalView || drive.folderId) && (
+        <DriveAssetsPanel slug={slug} drive={drive} canEdit={!portalView} />
+      )}
 
-      <Panel title="Emergency signals">
-        <div className="text-faint flex flex-col items-center gap-2 py-6 text-center">
-          <Siren className="size-6 opacity-60" />
-          <p className="max-w-md text-sm">
-            Unanswered DMs and leads uncalled past 20 minutes surface here once this
-            offer&apos;s ManyChat + Close feeds connect. Nothing to flag yet.
-          </p>
-        </div>
-      </Panel>
+      {/* Nothing to flag AND nothing wired up is an empty promise on a
+          client's page — it stays on GV's own view of the workspace. */}
+      {!portalView && (
+        <Panel title="Emergency signals">
+          <div className="text-faint flex flex-col items-center gap-2 py-6 text-center">
+            <Siren className="size-6 opacity-60" />
+            <p className="max-w-md text-sm">
+              Unanswered DMs and leads uncalled past 20 minutes surface here once this
+              offer&apos;s ManyChat + Close feeds connect. Nothing to flag yet.
+            </p>
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }

@@ -67,17 +67,24 @@ function FolderForm({
 export function DriveAssetsPanel({
   slug,
   drive,
+  canEdit = true,
 }: {
   slug: string;
   drive: ClientDriveAssets;
+  /**
+   * False in the client-facing portal: the folder link is GV's own setup, and
+   * the client sees the FILES, never the plumbing that points at them.
+   */
+  canEdit?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const showForm = canEdit && (!drive.folderId || editing);
 
   return (
     <Panel
       title="Client assets — Drive"
       aside={
-        drive.folderId && !editing ? (
+        canEdit && drive.folderId && !editing ? (
           <button
             type="button"
             onClick={() => setEditing(true)}
@@ -88,7 +95,7 @@ export function DriveAssetsPanel({
         ) : undefined
       }
     >
-      {!drive.folderId || editing ? (
+      {showForm ? (
         <div className="space-y-2 py-2">
           <p className="text-faint text-sm">
             Link this client&apos;s Drive root and their files appear here, read live
@@ -100,6 +107,8 @@ export function DriveAssetsPanel({
             onDone={() => setEditing(false)}
           />
         </div>
+      ) : !drive.folderId ? (
+        <p className="text-faint py-4 text-center text-sm">No files shared yet.</p>
       ) : drive.error ? (
         <p className="text-warning py-4 text-sm">{drive.error}</p>
       ) : drive.assets.length === 0 ? (

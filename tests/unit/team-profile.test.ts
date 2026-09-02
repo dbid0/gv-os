@@ -111,6 +111,7 @@ describe("summarizeEodActivity", () => {
 const overview = (over: Partial<KitOverviewRow>): KitOverviewRow => ({
   integrationId: "int-1",
   label: "Kit",
+  clientId: "id-vault",
   clientName: "The Vault",
   accountName: "Vault Media",
   plan: "creator",
