@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/ui/status";
 import { chartColorForClient, latestPerDay } from "@/lib/charts";
 import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
 import { clientBySlug } from "@/lib/roster";
+import { clientIdBySlug } from "@/lib/clients/id";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +22,15 @@ export default async function WorkspaceEmailPage({
   const client = clientBySlug(slug);
   if (!client) notFound();
 
-  const [accounts, growthSamples] = await Promise.all([
+  const [accounts, growthSamples, clientId] = await Promise.all([
     latestKitOverview(),
     kitGrowthByConnection(),
+    clientIdBySlug(slug),
   ]);
-  const account = accounts.find((a) => a.clientName === client.name) ?? null;
+  // Matched by id — a shared display name must not surface another client's
+  // list here (see lib/clients/attribution).
+  const account =
+    accounts.find((a) => clientId !== null && a.clientId === clientId) ?? null;
   const growth = account
     ? latestPerDay(growthSamples.get(account.integrationId) ?? [])
     : [];
