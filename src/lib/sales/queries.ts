@@ -418,6 +418,8 @@ export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
 export interface EodReportRow {
   id: string;
   reportDate: Date;
+  /** When it was actually FILED — the BOD/EOD standard is a time, not a day. */
+  submittedAt: Date;
   kind: string;
   repName: string | null;
   role: string | null;
@@ -433,6 +435,7 @@ export async function listActivityReports(kind = "eod"): Promise<EodReportRow[]>
     .select({
       id: activityReports.id,
       reportDate: activityReports.reportDate,
+      submittedAt: activityReports.createdAt,
       kind: activityReports.kind,
       repName: reps.name,
       role: reps.role,
