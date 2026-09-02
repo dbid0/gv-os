@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Gauge, GitBranch, Plus, Settings2, Users } from "lucide-react";
+import { ArrowRight, Gauge, GitBranch, Plus } from "lucide-react";
 
 import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { cents } from "@/lib/money";
 import { ClientLogo } from "@/components/clients/client-logo";
+import { getClientReport } from "@/lib/clients/report";
 import { roster } from "@/lib/roster";
 import { listReps, listTeams } from "@/lib/sales/queries";
 
@@ -14,11 +15,26 @@ export const dynamic = "force-dynamic";
 
 /**
  * The Sales landing is the admin view of the sales TEAMS (Daniel's ask): one
- * card per offer — reps, goal, and the way into its workspace and config.
+ * card per offer — the cash it has collected, its monthly goal, and one way in.
  * A team in GV OS is a client offer; this is where all of them are managed.
+ *
+ * Cash is READ FROM `getClientReport`, the same tested client-ledger figure the
+ * client's own accounting page shows, so this card can never disagree with it.
+ * Reports are fetched with bounded concurrency — a page must not burst the
+ * connection pool.
  */
 export default async function SalesPage() {
   const [teams, reps] = await Promise.all([listTeams(), listReps()]);
+
+  const cashByTeam = new Map<string, number>();
+  for (const team of teams) {
+    try {
+      const report = await getClientReport(team.slug, team.name);
+      cashByTeam.set(team.slug, report.mirror.cashCents);
+    } catch {
+      // A reporting hiccup shows "—", never a broken card.
+    }
+  }
 
   const repsByTeam = new Map<string, typeof reps>();
   for (const r of reps) {
@@ -94,11 +110,13 @@ export default async function SalesPage() {
 
                 <div className="bg-border grid grid-cols-2 gap-px">
                   <div className="bg-card p-4">
-                    <p className="text-faint flex items-center gap-1.5 text-[11px]">
-                      <Users className="size-3" /> Reps
-                    </p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                      {active}
+                    <p className="text-faint text-[11px]">Cash collected</p>
+                    <p className="mt-0.5 text-lg font-semibold">
+                      {cashByTeam.has(team.slug) ? (
+                        <Money amount={cents(cashByTeam.get(team.slug) ?? 0)} />
+                      ) : (
+                        "—"
+                      )}
                     </p>
                   </div>
                   <div className="bg-card p-4">
@@ -115,12 +133,6 @@ export default async function SalesPage() {
                     className="bg-secondary/60 hover:bg-secondary text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
                   >
                     Enter workspace <ArrowRight className="size-3" />
-                  </Link>
-                  <Link
-                    href={`/clients/${team.slug}`}
-                    className="text-muted-foreground hover:text-foreground hover:bg-secondary/60 inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors"
-                  >
-                    <Settings2 className="size-3.5" /> Configure
                   </Link>
                 </div>
               </div>
