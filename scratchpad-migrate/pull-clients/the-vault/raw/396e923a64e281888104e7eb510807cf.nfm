@@ -1,0 +1,26 @@
+<page url="https://app.notion.com/p/396e923a64e281888104e7eb510807cf" icon="💬">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Slack Channels Guide"}
+</properties>
+<content>
+<callout icon="💬" color="gray_bg">
+	Workspace: [**thevaultugc.slack.com**](http://thevaultugc.slack.com) — your invite comes from Daniel by DM. Channels are numbered by importance. Channels are for signal; questions go to Daniel by DM.
+</callout>
+### The Channels
+- **1-general** — Team HQ. Announcements, pinned resources, anything team-wide. Everyone keeps this unmuted.
+- **2-new-applications** — Every application (full AND partial) lands here automatically. This is the setter's starting gun: first contact within 5 minutes of the post. **Setters: set this channel to All Messages notifications — a muted setter is a dead funnel.** First setter to claim a lead in the channel owns it.
+- **3-calls-booked** — Booking confirmations post here automatically.
+- **4-no-show-police** — Every no-show posts here for recovery and rebooking. No-shows are the #1 funnel leak; this channel exists so none slip.
+- **5-payment-success** — High-ticket payment confirmations. Celebrate loudly.
+- **6-low-ticket-payments** — Low-ticket purchases, kept separate so the main payment channel stays signal. Mutable if you don't act on it.
+- **7-eod-reminders** — The automated evening EOD reminder. Mutable if you already never miss.
+- **8-eods** — Where you post your end-of-day numbers: Calls Made / Booked / Taken / Closed / Revenue / Notes. If you were off, post OFF and the reason. Pure data — no chatter.
+### Rules
+- Update the CRM before you post the win.
+- If something's broken — a link, a zap, a calendar — say so in 1-general immediately.
+- Pay questions: DM Daniel only, never in channels (see Compensation & Pay Structure).
+</content>
+</page>

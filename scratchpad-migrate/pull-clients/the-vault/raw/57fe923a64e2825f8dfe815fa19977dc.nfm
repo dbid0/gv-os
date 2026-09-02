@@ -1,0 +1,36 @@
+<page url="https://app.notion.com/p/57fe923a64e2825f8dfe815fa19977dc" icon="📊">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Close CRM SOPs (Closers)"}
+</properties>
+<content>
+<callout icon="⚠️" color="yellow_bg">
+	CRM is your accountability tool. Bad notes = bad handoffs = lost deals. Every interaction gets logged. No exceptions.
+</callout>
+### Status Workflow (Closers)
+**Application Received → Setter Triage → Booked → Pre-Call Done → **<span color="green">**Closed / No-Close / No-Show**</span>
+---
+### Required Fields on Every Contact
+- Name, phone, email, Instagram handle
+- **Setter triage notes** — READ THESE before every call. They shape your entire approach.
+- Financial situation (budget, capital access)
+- Main pain point / goal
+- Objections raised (on triage and close call)
+- Call outcome + detailed notes (3+ sentences minimum)
+---
+### After Every Call — 4 Required Actions
+1. Update lead status immediately
+2. Write detailed notes (minimum 3 sentences — situation, objections, outcome)
+3. Set follow-up task if no-close
+4. Fill out Closer Post-Call Notes form (Typeform link in welcome block)
+---
+### Smart Views to Know
+- **"My Booked Calls"** — Your pipeline for today
+- **"No-Close Follow Up"** — Leads to re-engage
+- **"No-Show"** — People who missed a call
+- **"Closed This Month"** — Your wins for the month
+</content>
+</page>

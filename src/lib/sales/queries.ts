@@ -336,6 +336,8 @@ export interface LeaderboardRow {
   repId: string;
   name: string;
   role: string;
+  /** The offer this rep belongs to — lets a scoped viewer filter by id. */
+  clientId: string | null;
   teamName: string | null;
   dials: number;
   connects: number;
@@ -355,7 +357,13 @@ export interface LeaderboardRow {
 export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
   const db = getDb();
   const repRows = await db
-    .select({ id: reps.id, name: reps.name, role: reps.role, teamName: clients.name })
+    .select({
+      id: reps.id,
+      name: reps.name,
+      role: reps.role,
+      clientId: reps.clientId,
+      teamName: clients.name,
+    })
     .from(reps)
     .leftJoin(clients, eq(reps.clientId, clients.id))
     .where(
@@ -394,6 +402,7 @@ export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
     return {
       repId: r.id,
       name: r.name,
+      clientId: r.clientId,
       role: r.role,
       teamName: r.teamName,
       dials: m.dials ?? 0,

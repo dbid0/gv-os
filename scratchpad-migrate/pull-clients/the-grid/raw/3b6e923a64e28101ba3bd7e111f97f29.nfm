@@ -1,0 +1,18 @@
+<page url="https://app.notion.com/p/3b6e923a64e28101ba3bd7e111f97f29" icon="📊">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"📊 Master Sales Tracker (make a copy)"}
+</properties>
+<content>
+The Grid sales tracker, pre-configured for this offer. Make your own copy and start logging.
+**How to use:** open the sheet below, then **File → Make a Copy**, save it to your Drive, share edit access to Daniel, and paste your copy's link here in the teamspace.
+[**➡️ Open The Grid Master Sales Tracker**](https://docs.google.com/spreadsheets/d/1oPo_Sr7wuD6VtyKiF5yWcmWl9Io1bePdmyR8J1irvPE/edit)
+## What's inside
+- **Follow-Up Pipeline** - chase everyone who hasn't bought yet. Log why they're in follow-up, the objection, deal size, and next follow-up date. Rows due today auto-highlight red.
+- **Upsell / Ascension Board** - ascend everyone who HAS bought. Pick their current tier (Manual, Operation Room, Mastermind, Add-On) and the sheet auto-shows the next upsell, price, and when they're due. Manual to Operation Room at 21 days, Operation Room to Mastermind at 45, Mastermind to Add-On at 30.
+- **CONFIG tab** - already filled for The Grid (tiers, sources, objections, niches, ascension map). Edit there if anything changes.
+</content>
+</page>

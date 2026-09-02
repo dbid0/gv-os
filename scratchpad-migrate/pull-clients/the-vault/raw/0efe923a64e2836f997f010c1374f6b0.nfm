@@ -1,0 +1,24 @@
+<page url="https://app.notion.com/p/0efe923a64e2836f997f010c1374f6b0" icon="👥">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Closer Contacts"}
+</properties>
+<content>
+<callout icon="👥" color="gray_bg">
+	Every booking gets a direct Slack message to the closer within 5 minutes — never assume they saw the calendar. This page is the roster.
+</callout>
+### Management
+- **Daniel** — sales manager / operator. Slack DM for anything broken, any question, any pay issue. Questions go by DM, not channels.
+### Closers
+Added as closers are onboarded. Format for each: Name — Slack handle — phone — Calendly link — timezone/hours.
+- *(No closers onboarded yet — roster fills as Module 16 hiring completes.)*
+### Setter → Closer Handoff Rules
+- Slack the closer directly on every confirmed booking with a 1–2 sentence summary + "full notes in CRM"
+- Closer running long? You keep the next lead warm — nobody sits alone in a Zoom waiting room
+- Reschedules, link resends, and calendar conflicts are setter problems; the closer's one job is being fully present on calls
+- Check your closers' calendar availability at the start of every shift
+</content>
+</page>

@@ -1,0 +1,25 @@
+<page url="https://app.notion.com/p/3a9e923a64e2813a912dc4f0a336f9c5" icon="🎟️">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Sales Calls Recordings"}
+</properties>
+<content>
+<callout icon="🎟️" color="gray_bg">
+	Record every call. It's how you get better, how we coach you, and how we build the objection library. No recording = no review = no improvement.
+</callout>
+## The rule
+- **Every** call gets recorded, closes and no-closes both. The no-closes teach us the most.
+- Recordings live in the Master Drive, in the sales-call-recordings folder.
+- Name each file: Date – Prospect Name – Outcome (e.g. 2026-07-26 – John D – No-Close).
+## What we do with them
+- **Call Review** (see the team meeting schedule): we pull real calls and break down what worked and what didn't.
+- Your best closes become training for new reps. Your toughest objections feed the Objection Handling Cheat Sheet.
+- Before a call review, flag the one call you most want eyes on.
+<callout icon="🛡️" color="red_bg">
+	Recordings are internal training only. Never send a raw sales call to a prospect. Client-facing proof (wins, screenshots) is a separate, approved set.
+</callout>
+</content>
+</page>

@@ -7,6 +7,8 @@ import { StatusPill } from "@/components/ui/status";
 import { cents } from "@/lib/money";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientReport } from "@/lib/clients/report";
+import { getViewerScope } from "@/lib/home/viewer-scope";
+import { scopeRowsToViewer } from "@/lib/home/visibility";
 import { roster } from "@/lib/roster";
 import { listReps, listTeams } from "@/lib/sales/queries";
 
@@ -24,7 +26,14 @@ export const dynamic = "force-dynamic";
  * connection pool.
  */
 export default async function SalesPage() {
-  const [teams, reps] = await Promise.all([listTeams(), listReps()]);
+  // Whose offers this viewer may read. A rep is granted /sales for their own
+  // leaderboard and commissions, but must not see other clients' books.
+  const [scope, teamsAll, reps] = await Promise.all([
+    getViewerScope(),
+    listTeams(),
+    listReps(),
+  ]);
+  const teams = scopeRowsToViewer(teamsAll, (t) => t.id, scope.allowed);
 
   const cashByTeam = new Map<string, number>();
   for (const team of teams) {

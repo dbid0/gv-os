@@ -1,0 +1,31 @@
+<page url="https://app.notion.com/p/5e6e923a64e282ae98f601ed6d5037be" icon="☎️">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Dialer"}
+</properties>
+<content>
+<callout icon="☎️" color="gray_bg">
+	Your job starts the moment a lead submits. Speed-to-lead is your single most important daily habit — intent drops every minute you wait.
+</callout>
+## 📱 Dialer Platform
+**Close CRM built-in dialer.** Your login is provisioned by Daniel when you're onboarded (the CRM build is going live now). Credentials come by DM — never posted in Slack channels, never shared.
+---
+## 📋 Dialer Rules
+- Contact every new lead within 5 minutes of application submission — no exceptions
+- Minimum 3 call attempts before moving to SMS-only follow-up
+- Never leave a voicemail without also sending an SMS immediately after
+- Log every call attempt in Close CRM — time, outcome, next step
+- If no answer after 3 attempts: move to SMS sequence and set a follow-up task in CRM
+---
+## ⚡ Speed-to-Lead Protocol
+<callout icon="🚨" color="red_bg">
+	Intent drops every minute you wait. This is not optional — it's the difference between a booked call and a dead lead.
+</callout>
+- Minute 1 — Automated SMS fires immediately after application
+- Minute 5 — You call the lead
+- Same day — Closer call if qualified
+</content>
+</page>

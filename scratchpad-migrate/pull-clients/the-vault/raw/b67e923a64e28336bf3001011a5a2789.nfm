@@ -1,0 +1,27 @@
+<page url="https://app.notion.com/p/b67e923a64e28336bf3001011a5a2789" icon="👻">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"No-Show Process"}
+</properties>
+<content>
+<callout icon="⚠️" color="yellow_bg">
+	A no-show is not a lost deal. Most no-shows rebook if you follow the sequence correctly. Do NOT ghost them or mark them as lost without at least 3 follow-up touches.
+</callout>
+### No-Show Sequence
+**Minute 0:** Attempt call twice. Wait on the line for 2 minutes.
+**Minute 5:** Send text — "Hey \[Name\], we had a call scheduled for \[time\]. Missed you — everything okay?"
+**Hour 1:** Setter follows up via SMS with a softer check-in.
+**Hour 24:** Setter makes 2nd attempt — "Hey \[Name\], I know life gets busy. Still interested in \[goal\]? We have \[X\] spots left this week."
+**Day 3:** Send value (relevant case study or testimonial) + soft CTA. "Thought you'd find this useful — \[case study\]. Still happy to hop on a call if the timing works."
+**Day 5+:** Move to long-term nurture in CRM if no response. Tag as "No-Show — Nurture".
+---
+### CRM Actions After No-Show
+1. Update status to "No-Show" immediately
+2. Log date/time of no-show in notes
+3. Set a follow-up task for 24 hours out
+4. Notify setter via Slack to begin follow-up sequence
+</content>
+</page>

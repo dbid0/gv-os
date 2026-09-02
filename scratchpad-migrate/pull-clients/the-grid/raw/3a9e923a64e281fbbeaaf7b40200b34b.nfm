@@ -1,0 +1,25 @@
+<page url="https://app.notion.com/p/3a9e923a64e281fbbeaaf7b40200b34b" icon="🔗">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e2801d9a4bc2970cf5dd1d" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Booking Links & Sales Assets"}
+</properties>
+<content>
+<callout icon="🔗" color="gray_bg">
+	Everything you send a prospect lives here. Send the right link, book to the right calendar, use the approved proof only.
+</callout>
+## Links
+- **Book-a-call funnel:** [mbemultiaccounting.com/apply](https://mbemultiaccounting.com/apply)
+- **Community / Discord:** [discord.gg/mbe](https://discord.gg/mbe)
+- **Closer booking:** leads are booked onto the closer's iClosed calendar (link provided by your manager).
+- **Payment:** closes are collected through the Fanbasis payment link (provided by your manager).
+## Sales assets (what you're allowed to send)
+- Approved proof only: Kaden's operation screen recordings and verified client wins (from the Case Studies page).
+- Booked leads get the pre-call page on the funnel's call-booked step.
+<callout icon="🛡️" color="red_bg">
+	Only send approved assets. Never send raw sales-call recordings or internal training. Never send "proof" with numbers that aren't Kaden's or a verified client's.
+</callout>
+</content>
+</page>

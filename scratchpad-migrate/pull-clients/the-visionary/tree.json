@@ -1,0 +1,418 @@
+[
+  {
+    "notionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "parentNotionId": null,
+    "title": "The Visionary Onboarding",
+    "icon": null,
+    "markdown": "---\n> **Dashboard**\n\n    - {{REF:4c9e923a-64e2-8325-a6f1-0162d38c3d7b}}\n\n    - {{REF:8ece923a-64e2-832e-9d39-81c2bd6fac4d}}\n\n    - {{REF:f46e923a-64e2-83d8-a64c-818c2ae7fb3a}}\n\n    - {{REF:535e923a-64e2-8251-837f-018710c946d6}}\n\n    - {{REF:ea7e923a-64e2-834c-91bd-0116464aeaa5}}\n\n    - {{REF:f98e923a-64e2-8360-bc7a-0167a58897c4}}\n\n    - {{REF:d37e923a-64e2-8389-bcfa-813852c1d55b}}\n---\n> **Content**\n\n    - {{REF:f99e923a-64e2-8268-a639-810073a9e519}}\n\n    - {{REF:345e923a-64e2-82f9-a4a7-812d690f41b1}}\n\n    - {{REF:69be923a-64e2-82a0-8251-81139bfca598}}\n\n    - {{REF:460e923a-64e2-8356-837f-01482cdf076c}}\n\n    - {{REF:703e923a-64e2-8274-8173-01b9bbeb55d3}}\n>\n> **Tico To-Do List** (database)",
+    "order": 0
+  },
+  {
+    "notionId": "4c9e923a-64e2-8325-a6f1-0162d38c3d7b",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Global Ventures Timeline",
+    "icon": null,
+    "markdown": "### COACH ROADMAP\n\nThis is a timeline we’ve created for you. This was created so you can have a clear vision on how we operate, so you can understand each step of the way working with us, in order to get results as quickly and orderly as possible.\n\n---\n\n---\n\n> **Phase 1**\n> - [ ] **Full backend build**\n>   - [ ] Get setup on Fanbasis\n>   - [ ] Get setup on Whop\n>   - [ ] Zapier automations\n>   - [ ] Typeform setup\n>   - [ ] Calendly - funnel & dm calendar (+ optional - solo & general dialing calendars)\n>   - [ ] Implement Calendly - pre-call email sequence\n>   - [ ] Airtable/AI tracking\n>   - [ ] Google sheet payout tracker\n>   - [ ] Close snapshot implement\n>   - [ ] Implement Close post call status emails\n>   - [ ] Review backend build\n\n> **Phase 2**\n> - [ ] **Sales build**\n>   - [ ] Create Teamspace\n>   - [ ] Create closing hub\n>   - [ ] Create dm setting script + implement into dialing hub\n>   - [ ] Create dialing script + implement into dialing hub\n>   - [ ] Create closing script + implement into closing hub\n>   - [ ] Onboard setters\n>   - [ ] Onboard dialers\n>   - [ ] Onboard closers\n\n> **Phase 3**\n> - [ ] **Funnel build**\n>   - [ ] Create full landing page\n>   - [ ] Create full confirmation page\n>   - [ ] Implement confirmation page into calendars + dialing hub\n\n> **Phase 4**\n\n- [ ] **Front end onboarding**\n  - [ ] VA sets up custom GPT bot (using Global Ventures account)\n  - [ ] GPT loaded with onboarding + brand kit + proof docs\n  - [ ] VA begins competitor research (5 competitors: funnels, ads, IG, YT)\n  - [ ] Collects All Swipes Inside of Notion For The Copywriter \n  - [ ] VA creates one-pager per competitor in Drive For The Copywriter\n  - [ ] Copywriter reviews onboarding + GPT + Knowledge Doc\n  - [ ] Copywriter audits competitors’ VSLs, IG, ads, funnels\n  - [ ] Copywriter drafts **New Opportunity** statement\n  - [ ] Copywriter builds **Awareness Funnel & Belief Chain**\n  - [ ] Copywriter creates **Strategy Packet v1** (New Opp, Belief Chain, Differentiation, Angle Bank)\n  - [ ] Strategy Packet uploaded to Notion\n  - [ ] Copywriter leads onboarding call with client\n  - [ ] Clarify voice, story, proof, differentiators, objections\n  - [ ] Capture founder story beats (dates, numbers, struggles, wins)\n  - [ ] Fill in any gaps from onboarding/market research\n  - [ ] Save call notes to Drive\n\n- [ ] **VSL Funnel**\n  - [ ] VSL Script (12–18 min) \n  - [ ] Landing page copy (headline, subhead, bullets, proof, FAQs, CTA)\n  - [ ] Application form questions (10–12)\n  - [ ] Pre Call Funnel Copy → Emails\n\n- [ ] **Email Sequences**\n  - [ ] 5-Day Welcome Sequence (Big Idea → Myths → Proof → Process → Next Step)\n  - [ ] Post-Call No Close (3 emails: proof, risk reversal, urgency)\n  - [ ] Post-Call No Show (2 emails: reschedule, opportunity cost)\n  - [ ] Subject line variations (3 per email)\n\n- [ ] **ManyChat Flows**\n  - [ ] Lead magnet opt-in flow\n  - [ ] Keyword triggers (APPLY, START, etc.)\n  - [ ] Nurture drip (3–5 msgs)\n  - [ ] Call booking flow\n  - [ ] Segmentation tags (cold/warm/hot, objections, source)\n\n- [ ] **IG Lander Content**\n  - [ ] Optimized Bio \n  - [ ] 3 Pinned Posts (offer, mechanism, proof)\n  - [ ] Story Highlights (Start Here, Wins, Process, FAQs, You)\n\n- [ ] **YouTube Content Kit**\n  - [ ] 5 titles (TOF/MOF/BOF mix)\n\n> **Phase 5**\n> - [ ] **Community Build / Onboarding**\n>   - [ ] Set up Discord channels / roles\n>   - [ ] Set up Discord automations\n>   - [ ] Set up onboarding form\n>   - [ ] Embed onboarding form\n>   - [ ] Script onboarding vid\n>   - [ ] Embed onboarding vid\n>   - [ ] Script onboarding email\n>   - [ ] Add email to GHL once form is submitted\n>   - [ ] Script post onboarding video\n>   - [ ] Embed post onboarding video",
+    "order": 0
+  },
+  {
+    "notionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Onboarding",
+    "icon": null,
+    "markdown": "- {{REF:72ce923a-64e2-82e4-b5f3-8140e07eb77f}}\n\n- {{REF:ebce923a-64e2-8202-9afd-01c38d6ad62a}}\n\n- {{REF:11de923a-64e2-82e2-9af2-01c580094ca7}}\n\n- {{REF:616e923a-64e2-83d5-a259-813bf25034bc}}\n\n- {{REF:a17e923a-64e2-8360-9789-814ad0c60a08}}\n\n- {{REF:89de923a-64e2-82fe-b4b7-01ec02003aae}}",
+    "order": 1
+  },
+  {
+    "notionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Creating Content",
+    "icon": null,
+    "markdown": "## 📌 ***Watch To Understand fools***  \n\n---\n\n### Overall Content Startegy\n\n### YouTube:\n\n- {{REF:4c1e923a-64e2-8258-b3b9-01c78b84d194}}\n\n### Instagram:\n\n- {{REF:87be923a-64e2-8321-9c2b-0174940b922c}}\n\n- {{REF:669e923a-64e2-83d6-87fb-014c4e3c4bbf}}\n\n### Putting It All Together:\n\n- {{REF:0dee923a-64e2-8253-b196-81609820174e}}\n\n---\n\n### **Fill This Out Every** Week:\n\n- {{REF:c98e923a-64e2-831a-93c6-01c5bd20168d}}\n\n---\n\n### General:\n\n- {{REF:65fe923a-64e2-8334-b9d3-01e9bb56d245}}\n\n- {{REF:0e7e923a-64e2-8318-bd96-01fcbbe6eb0e}}\n\n- {{REF:66fe923a-64e2-8278-ae93-01a945445914}}\n\n---\n\n### For VA’s:\n\n- {{REF:545e923a-64e2-83b0-966c-017998b0342d}}",
+    "order": 2
+  },
+  {
+    "notionId": "535e923a-64e2-8251-837f-018710c946d6",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Custom GPT’s",
+    "icon": null,
+    "markdown": "> Coming Soon…\n\n- {{REF:4cbe923a-64e2-8394-b4cd-018dcb601203}}\n\n- {{REF:456e923a-64e2-837f-9f0a-0192d2320b6a}}",
+    "order": 3
+  },
+  {
+    "notionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Coaching Protocol",
+    "icon": null,
+    "markdown": "---\n\n- {{REF:976e923a-64e2-82b2-99b6-81ed839b2443}}\n\n- {{REF:904e923a-64e2-8227-b86a-8129b40730cf}}\n\n[Crafting Your Offer](https://app.notion.com/p/616e923a64e283d5a259813bf25034bc)   \n\n- {{REF:658e923a-64e2-8356-ab30-81afaba9233c}}\n\n- {{REF:b3fe923a-64e2-822e-8c66-81a48b29ea60}}\n\n- {{REF:a91e923a-64e2-834d-a34c-01d31754a356}}\n\n- {{REF:33ce923a-64e2-82a5-ab06-013268dd5fbd}}\n\n- {{REF:dfae923a-64e2-83f6-b97c-013b5e67ba74}}",
+    "order": 4
+  },
+  {
+    "notionId": "f98e923a-64e2-8360-bc7a-0167a58897c4",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "SOP Database",
+    "icon": null,
+    "markdown": "### SOP Database ( For Global Ventures )\n\n---\n\n>\n> - {{REF:fe5e923a-64e2-834d-b13d-810f4bc0e4f9}}\n>\n> - {{REF:755e923a-64e2-836a-aa8f-01117151988d}}",
+    "order": 5
+  },
+  {
+    "notionId": "d37e923a-64e2-8389-bcfa-813852c1d55b",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Resources",
+    "icon": null,
+    "markdown": "### All Resources\n\n---\n\n> **Sales Hubs:**\n> - Teamspace\n>\n> \n\n**Funnel Resources**\n>\n> - {{REF:185e923a-64e2-8363-beee-810c80bd0c5c}}",
+    "order": 6
+  },
+  {
+    "notionId": "f99e923a-64e2-8268-a639-810073a9e519",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Assets",
+    "icon": null,
+    "markdown": ">\n> **Funnel Asset Recording ** (database)",
+    "order": 7
+  },
+  {
+    "notionId": "345e923a-64e2-82f9-a4a7-812d690f41b1",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "YouTube",
+    "icon": null,
+    "markdown": ">\n> **YouTube Content System** (database)",
+    "order": 8
+  },
+  {
+    "notionId": "69be923a-64e2-82a0-8251-81139bfca598",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Instagram Reels",
+    "icon": null,
+    "markdown": ">\n> **Instagram Content System** (database)\n\n>\n> **Instagram Content System** (database)",
+    "order": 9
+  },
+  {
+    "notionId": "460e923a-64e2-8356-837f-01482cdf076c",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Instagram Stories",
+    "icon": null,
+    "markdown": ">\n> **Instagram Content System** (database)",
+    "order": 10
+  },
+  {
+    "notionId": "703e923a-64e2-8274-8173-01b9bbeb55d3",
+    "parentNotionId": "3bfe923a-64e2-8066-ace6-cbfe2f165e2a",
+    "title": "Ads",
+    "icon": null,
+    "markdown": ">\n> **Ads Content System** (database)",
+    "order": 11
+  },
+  {
+    "notionId": "72ce923a-64e2-82e4-b5f3-8140e07eb77f",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Software Logins",
+    "icon": null,
+    "markdown": "Select the path that applies to you:\n\n- {{REF:1ace923a-64e2-82bd-aa33-81239e544803}}",
+    "order": 0
+  },
+  {
+    "notionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Brand Sheets",
+    "icon": null,
+    "markdown": "- {{REF:e52e923a-64e2-82cf-adc6-81af06fa369e}}\n\n- {{REF:653e923a-64e2-82bc-878e-018acd18fc61}}\n\n- {{REF:3d3e923a-64e2-8342-a423-815f392e6c77}}\n\n- {{REF:e30e923a-64e2-8278-8eca-01091e76d35f}}\n\n- {{REF:6e2e923a-64e2-83c6-923e-01f00b9dc8c1}}\n\n- {{REF:b76e923a-64e2-83d9-b14b-81aa8c3eb863}}\n\n- {{REF:9afe923a-64e2-826c-bd6b-0199bf099e17}}",
+    "order": 1
+  },
+  {
+    "notionId": "11de923a-64e2-82e2-9af2-01c580094ca7",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Crafting D1 fulfillment  ",
+    "icon": null,
+    "markdown": "## 📌 Outlining Your Process\n\n[video](https://www.loom.com/share/55fe516a9ad74cbd812599d75ca9cc03)\n\n# **Coaching Offer Process Builder**\n\n### **1. The Big Picture**\n\n- What is the main *transformation or result* your coaching program helps clients achieve?\n  *(Example: Go from inconsistent content to generating leads daily through authority-driven videos)*\n\n- From start to finish, how many *main phases* does it take for a client to reach that transformation?\n  *(Example: 5  Phases → Foundation, Content Strategy, Creation, Conversion, Optimization)*\n\n---\n\n### **2. Step Breakdown**\n\nFor each step, explain briefly:\n\n- **Step Name:**\n\n- **What happens here?**\n\n- **Why is it important?**\n\n- **What outcome should be achieved by the end of this step?**\n\n*(Repeat for each step until the entire transformation is covered.)*\n\n---\n\n### **3. Phase Grouping**\n\nNow group your steps into bigger *phases* of your program (typically 3–5).\n\nFor each phase, fill out:\n\n- **Phase Name:**\n\n- **Which steps are included?**\n\n- **Goal of this phase:**\n  *(What do clients walk away with or accomplish at the end?)*\n\n- **Key Materials/Resources Needed:** \n  *(Modules, templates, call replays, worksheets, etc.)*\n\n- **Actions the Client Must Take:** \n  *(What must they complete to move forward?)*\n\n- **What You (the Coach) Do in This Phase:**\n  *(What’s expected from you—calls, feedback, reviews, accountability?)*\n\n---\n\n### **4. Phase Progression**\n\n- What needs to happen before a client can move from one phase to the next?\n  *(Example: Submit onboarding deliverables, complete worksheet, implement system, etc.)*\n\n- How do you track that progress or verify completion?\n  *(Example: Review form, tracker, or feedback check-in)*\n\n---\n\n### **5. Final Outcome**\n\n- Once all phases are complete, what *final transformation* should your client confidently have achieved?\n\n- What proof or deliverables show that they’ve succeeded?\n  *(Example: A working content system, a launched offer, 5 booked calls/week, etc.)*\n\n## 📌 Ideating The Fulfillment\n\n[video](https://www.loom.com/share/c1ba483908e64dad9e0ff5e1d8eaf480)\n\n# **Coaching Offer Blueprint (SOP)**\n\n## **1. Program Overview**\n\n- **Program Length:** [e.g., 12 weeks coaching + lifetime course access]\n\n- **Offer Structure:**\n  - Done-With-You (Coaching) \n  - Do-It-Yourself (Course + Resources)\n  - Done-For-You (Templates/Assets, optional)\n\n**Purpose:** Provide clarity on what students receive, how they’re supported, and the transformation they’ll achieve.\n\n---\n\n## **2. Done-With-You: Coaching Structure**\n\n### **A. Coaching Schedule**\n\n- **Coaching Days:** [Choose 3 days per week – e.g., Mon/Wed/Fri]\n\n- **Availability Window:** [e.g., 5–6 hours per day available for sessions]\n\n### **B. Group Coaching**\n\n- **Format:** [Live group calls, Q&A style, peer learning]\n\n- **Frequency:** [e.g., 2 group calls per week]\n\n- **Purpose:** Address common questions, share solutions, create community accountability.\n\n### **C. 1:1 Coaching**\n\n- **Frequency:** [Weekly 1:1 call per student]\n\n- **Condition:** Students unlock each call only after completing deliverables from the prior week.\n\n- **Purpose:** Tailored guidance for their specific situation, tied directly to their progress on the roadmap.\n\n### **D. Ongoing Support**\n\n- **Platform:** [Discord/Slack/FB group]\n\n- **Support Method:** Daily Q&A, feedback threads, and direct answers from coach.\n\n- **Objective:** Ensure students can get help between calls, keep momentum, and feel supported.\n\n---\n\n## **3. Do-It-Yourself: Course Material**\n\n### **A. Content Library**\n\n- **Modules:** Step-by-step trainings aligned with the 12-week roadmap.\n\n- **Format:** [Videos, worksheets, checklists]\n\n- **Focus:** Take students from setup → implementation → scaling.\n\n### **B. Roadmap Integration**\n\n- Every DIY module matches the week-by-week coaching process.\n\n- Students can always revisit training to reinforce learning.\n\n### **C. Self-Paced Access**\n\n- **Access Level:** Lifetime access after the 12-week live coaching ends.\n\n- **Updates:** [Specify if ongoing updates are included].\n\n---\n\n## **4. Done-For-You: Resources & Assets**\n\n### **A. Pre-Built Resources**\n\n- **Guides/Workbooks:** [Templates, SOPs, worksheets]\n\n- **Tools:** [Swipe files, scripts, plug-and-play frameworks]\n\n### **B. Application**\n\n- Designed to save students time (no starting from scratch).\n\n- Aligned directly with course modules and coaching calls.\n\n---\n\n## **5. Accountability System**\n\n- **Progression Rule:** Students cannot book the next 1:1 call until they complete deliverables from the prior call.\n\n- **Tracking:** [Notion board, Google Sheet, or internal tracker to log deliverables].\n\n- **Coach Responsibility:** Enforce progression to keep students accountable and ensure results.\n\n---\n\n## **6. Deliverables Summary (Fill-in)**\n\n- **Coaching Calls:** [X group calls per week, 1x weekly 1:1 calls]\n\n- **Support Channel:** [Discord Q&A + daily support]\n\n- **Course Material:** [Lifetime access, structured by roadmap]\n\n- **Resources:** [Templates, SOPs, guides, swipe files]\n\n- **Transformation Promise:** [State the end goal clearly – e.g., “Go from ____ → ____ in 12 weeks, with tools for lifetime growth”]\n\n---\n\n## **7. Pricing & Offer Terms (Fill-in)**\n\n- **Pricing Options:** [One-time, payment plans, tiers]\n\n- **Guarantee (if any):** [Money-back, results-based, etc.]\n\n- **Enrollment Process:** [Call → Payment → Onboarding → Access granted]\n\n---\n\n## **8. SOP Checklist (For Any Coach)**\n\n1. Define coaching days & availability.\n\n1. Set group call cadence.\n\n1. Lock in 1:1 call progression rules.\n\n1. Build course roadmap modules.\n\n1. Create DFY resources to cut setup time.\n\n1. Launch support community.\n\n1. Clarify deliverables & end transformation.\n\n1. Finalize pricing & enrollment steps.\n\n## 📌 Crafting The Fulfillment\n\n[video](https://www.loom.com/share/446ae1cd5e8042ffb5970a811afd1a3f)\n\n**Program Creator** (database)",
+    "order": 2
+  },
+  {
+    "notionId": "616e923a-64e2-83d5-a259-813bf25034bc",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Crafting Your Offer ",
+    "icon": null,
+    "markdown": "## 📌 ***Watch This before Creating your Coaching*** \n\n[video](https://www.loom.com/share/c1ba483908e64dad9e0ff5e1d8eaf480)\n\n**{Program Name} Top Tier Package**\n\n*Offer Statement:*  **We’ll Help You Start & Grow A Profitable [Business Type] To [$X]/mo Within [Time Frame] Using Only A [Tool/Resource] And [X Hours] Per Day – Guaranteed.**\n\n**The Price: ${X,XXX}**\n\n**Payment Plan:**  **${X,XXX} Payment Plan** - $XXXX Due Now, Remaining Balance Paid The Following Month. **Access Begins Once ${X,XXX} is Paid in Full.**\n\n- **Value Comparison To Other Offers:** 5 **1v1 Calls*\n\n**Deliverables:**\n\n- Full [Business Type] Course (30+ Modules)\n\n- 3 Weekly Group Calls led by [Instructor’s Name/Team] (Reviews, Strategy, & Q&A)\n\n- 90-Day Customized Action Plan and Initial Onboarding Call with a Success Coach\n\n- 5 1v1 Calls Focused on [Core Skill]\n\n- Personalized 1v1 Video Reviews of [Work or Progress]\n\n- 24/7 Priority Private Chat Support with [Instructor’s Name/Team]\n\n- Behind-the-Scenes Access to [Instructor’s] Work and Processes\n\n- Access to a Private [Community/Platform] Group\n\n- Access to [Specific Tool]\n\n- Team Placement Support\n\n- **Bonus**: Done-For-You [Entity Setup]",
+    "order": 3
+  },
+  {
+    "notionId": "a17e923a-64e2-8360-9789-814ad0c60a08",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Client Roadmap",
+    "icon": null,
+    "markdown": "### CLIENT ROADMAP\n\nHere, we want to create a roadmap for your students/clients, this roadmap should be a timeline of what should be getting done at each stage working with you, to get them results as quick and orderly as possible. Use [Global Ventures Timeline](https://app.notion.com/p/4c9e923a64e28325a6f10162d38c3d7b)  as a reference…\n\n---\n\n> **Phase 1**\n> - [ ]\n\n> **Phase 2**\n> - [ ]\n\n> **Phase 3**\n> - [ ]\n\n> **Phase 4**\n> - [ ]",
+    "order": 4
+  },
+  {
+    "notionId": "89de923a-64e2-82fe-b4b7-01ec02003aae",
+    "parentNotionId": "8ece923a-64e2-832e-9d39-81c2bd6fac4d",
+    "title": "Funnel Info",
+    "icon": null,
+    "markdown": "### Funnel Info\n\n---\n\n> Google Drive Folder Link:\n> Color Scheme:\n>\n> Landing Page Link:\n>\n> Confirmation Page Link:",
+    "order": 5
+  },
+  {
+    "notionId": "c98e923a-64e2-831a-93c6-01c5bd20168d",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Experience Database Vault (D**uplicate Every Week**)",
+    "icon": null,
+    "markdown": "> 📌 *Use this page to build your personal bank of content ideas pulled from your unique knowledge and story not trends.*\n\n---\n\n## 🔐 WHY THIS MATTERS\n\nYou’re not here to copy. You’re here to *clarify*. This is how you:\n\n- Build trust with real substance\n\n- Teach from conviction, not theory\n\n- Turn what’s in your head into scalable, value-packed content\n\n---\n\n## 🧠 CATEGORY 1: EXPERIENCE\n\n**These are the defining moments that shaped you.**\n\n| Moment | What Happened | What I Learned | How This Can Help My Audience |\n| --- | --- | --- | --- |\n| Moment | What Happened | What I Learned | How This Can Help My Audience |\n|  |  |  |  |\n|  |  |  |  |\n\nPrompt → *“I remember when I…” → What changed?*\n\n---\n\n## 🔁 CATEGORY 2: LESSONS\n\n**Failures and wins that taught you something important.**\n\n| Failure or Trial | Why It Failed | What I’d Do Differently | Lesson for My Audience |\n| --- | --- | --- | --- |\n| Failure or Trial | Why It Failed | What I’d Do Differently | Lesson for My Audience |\n|  |  |  |  |\n|  |  |  |  |\n\nPrompt → *“I used to do ___ — now I do ___.”*\n\n---\n\n## ⚙️ CATEGORY 3: FRAMEWORKS \n\n**Repeatable systems or methods you use that work.**\n\n| Framework Name | What It Helps Solve | Steps (1–3) | Nickname or Acronym? |\n| --- | --- | --- | --- |\n| Framework Name | What It Helps Solve | Steps (1–3) | Nickname or Acronym? |\n|  |  |  |  |\n|  |  |  |  |\n\nPrompt → *“Here’s my 3-step system for ___.”*\n\n---\n\n## 🧭 CATEGORY 4: PRINCIPLES \n\n**The rules you live and build by — what never changes.**\n\n| Principle | Why It Matters | How It Shows Up in My Work |\n| --- | --- | --- |\n| Principle | Why It Matters | How It Shows Up in My Work |\n|  |  |  |\n|  |  |  |\n\nPrompt → *“If x is what you want then One thing I always live by as a [title] is…”*\n\n---\n\n## 🔥 CATEGORY 5: BELIEFS\n\n**What you believe about your industry, your clients, and your mission.**\n\n| Belief | Why I Believe It | Why It Attracts My Ideal Audience |\n| --- | --- | --- |\n| Belief | Why I Believe It | Why It Attracts My Ideal Audience |\n|  |  |  |\n|  |  |  |\n\nPrompt → *“Most people think ___ — I believe ___.”*\n\n---",
+    "order": 0
+  },
+  {
+    "notionId": "65fe923a-64e2-8334-b9d3-01e9bb56d245",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Footage Links",
+    "icon": null,
+    "markdown": "> ***Place Drive Footage Here*** 👇",
+    "order": 1
+  },
+  {
+    "notionId": "0e7e923a-64e2-8318-bd96-01fcbbe6eb0e",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Editing SOPs",
+    "icon": null,
+    "markdown": "---\n\n*(Place your own editing SOPs here):*\n\n- \n\n- \n\n- \n\n- \n\n- \n\n-",
+    "order": 2
+  },
+  {
+    "notionId": "66fe923a-64e2-8278-ae93-01a945445914",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Amazon Storefront",
+    "icon": null,
+    "markdown": "### All Resources\n\n---\n\n> **Camera Equipment:**\n\n- [Convenient Camera](https://amzn.to/46BTQ1F)\n\n- [Main Camera](https://amzn.to/4nBU0fx)\n\n- [Lens](https://amzn.to/478z35Y)\n\n- [ND Filter](https://amzn.to/46D4aq7)\n\n- [Storage (SD Card)](https://amzn.to/479ybhn)\n\n- [Batteries](https://amzn.to/46E7Ec6)\n\n- [Microphone](https://amzn.to/46AG3II)\n\n- [SD Card Adapter](https://amzn.to/46OaEBq)\n\n- [MacBook Adapter](https://amzn.to/46YbBY5)\n\n- [Floor Tripod](https://amzn.to/4gTj4vU)\n\n- [Gorilla Tripod](https://amzn.to/3IulEfi)\n\n- [Vlogging Tripod](https://amzn.to/48LaT2I)\n\n**Lighting:**\n\n- [Video Light](https://amzn.to/46PanOA)\n\n- [Soft Box](https://amzn.to/46VvQWe)\n\n- [Soft Box Tripod](https://amzn.to/3ILxQZa)\n\n**Desktop Mic Setup:**\n\n- [Mic](https://amzn.to/3KuiJnv)\n\n- [Boom Arm](https://amzn.to/4mPw86K)\n\n**Setup Accessories:**\n\n- [Desktop Speakers](https://amzn.to/4nYPQhs)\n\n- [Monitor](https://amzn.to/4o3zxjr)\n\n- [Monitor Lights](https://amzn.to/4334Wuc)\n\n- [Blue Light Blockers](https://www.blockbluelight.com/products/nightfall-taylor-blue-blocking-glasses-crystal)",
+    "order": 3
+  },
+  {
+    "notionId": "545e923a-64e2-83b0-966c-017998b0342d",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Competitor Database",
+    "icon": null,
+    "markdown": "**Competitor YouTube Content** (database)\n\n**Competitor IG Content ** (database)\n\n**Competitor Ad’s Content ** (database)\n\n- {{REF:879e923a-64e2-8325-bc43-01299bfdf319}}",
+    "order": 4
+  },
+  {
+    "notionId": "4c1e923a-64e2-8258-b3b9-01c78b84d194",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "YouTube Gameplan",
+    "icon": null,
+    "markdown": "",
+    "order": 5
+  },
+  {
+    "notionId": "87be923a-64e2-8321-9c2b-0174940b922c",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Instagram Gameplan",
+    "icon": null,
+    "markdown": "",
+    "order": 6
+  },
+  {
+    "notionId": "669e923a-64e2-83d6-87fb-014c4e3c4bbf",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Instagram Stories",
+    "icon": null,
+    "markdown": "",
+    "order": 7
+  },
+  {
+    "notionId": "0dee923a-64e2-8253-b196-81609820174e",
+    "parentNotionId": "f46e923a-64e2-83d8-a64c-818c2ae7fb3a",
+    "title": "Putting It all Together",
+    "icon": null,
+    "markdown": "",
+    "order": 8
+  },
+  {
+    "notionId": "4cbe923a-64e2-8394-b4cd-018dcb601203",
+    "parentNotionId": "535e923a-64e2-8251-837f-018710c946d6",
+    "title": "Content GPT",
+    "icon": null,
+    "markdown": "> Coming Soon…",
+    "order": 0
+  },
+  {
+    "notionId": "456e923a-64e2-837f-9f0a-0192d2320b6a",
+    "parentNotionId": "535e923a-64e2-8251-837f-018710c946d6",
+    "title": "Marketing GPT",
+    "icon": null,
+    "markdown": "Coming soon…",
+    "order": 1
+  },
+  {
+    "notionId": "976e923a-64e2-82b2-99b6-81ed839b2443",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Daily Task ",
+    "icon": "☑️",
+    "markdown": "- Check your calendar for any client calls\n\n- Welcome new clients that joined and are assigned to you\n\n- Clear your inbox, respond to all necessary messages from clients\n\n- Hold clients accountable",
+    "order": 0
+  },
+  {
+    "notionId": "904e923a-64e2-8227-b86a-8129b40730cf",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Weekly Tasks ",
+    "icon": "📆",
+    "markdown": "- Have your client calls\n\n- Message new & existing clients\n\n- Share feedback with the team on how clients are doing\n\n- Interact in the discord community\n\n- Attend weekly team call for coaches\n\n- Fill out this form when clients complete there 5 1v1 sessions: \n\n- Schedule student interviews",
+    "order": 1
+  },
+  {
+    "notionId": "658e923a-64e2-8356-ab30-81afaba9233c",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Client Onboarding Process ",
+    "icon": "👽",
+    "markdown": "",
+    "order": 2
+  },
+  {
+    "notionId": "b3fe923a-64e2-822e-8c66-81a48b29ea60",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Roadmap For Clients ",
+    "icon": null,
+    "markdown": "> 💡 Phase 1: Onboarding (Day 1)\n\n- [ ] Onboarding Email\n\n- [ ] Join Private Discord Community\n\n- [ ] Subscribe To Our Weekly Calendar\n\n- [ ] Book Your Onboarding Call \n\n- [ ] Start The {Fill In}\n\n- [ ] Signup For \n\n- [ ] Message Your Assigned Success Coach\n\n> 💡 Phase 2: { }\n\n- [ ] Complete 100% Of The {Fill In} Module\n\n- [ ] {Fill In}\n\n- [ ] {Fill In}\n\n- [ ] {Fill In}\n\n- [ ] Book Your Niche Selection Call With Your Success Coach \n\n**Please book a call with your success coach on their calendar link via your private discord chat**\n\n> 💡 Phase 3: {Fill In}\n\n- [ ] Complete 100% Of The {Fill In} Module\n\n- [ ] {Fill In}\n\n- [ ] {Fill In}\n\n- [ ] {Fill In}\n\n- [ ] {Fill In}\n\n- [ ] Your coach will send you a loom video review of your channel \n\n> 💡 Phase 4: {Fill In}\n\n- [ ] Complete 100% Of The Finding Ideas Modules\n\n- [ ] {Fill In}\n\n- [ ] Receive Feedback From Your Success Coach\n\n- [ ] **Please book a call with your success coach on their calendar link via your private discord chat**\n\n> 💡 Phase 5: {Fill In}\n\n- [ ] Complete 100% Of The Posting Modules\n\n- [ ] {Fill In}\n\n- [ ] Book In Your Channel Posting Call With Your Success Coach\n\n- [ ] **Please book a call with your success coach on their calendar link via your private discord chat**\n\n> 💡 Phase 6: {Fill In}\n\n- [ ] Complete 100% Of The {Fill In} Modules So You Can Start Taking Your Channel To The{Fill In}\n\n- [ ] Book in your “{Fill In}” call with your coach\n\n- [ ] **Please book a call with your success coach on their calendar link via your private Discord chat**\n\n- [ ] *Your coach will outline how to properly analyze the performance of your channel \n\n> 💡 Phase 7: {Fill In}\n\n- [ ] Complete 100% Of The Team Structure, Monetization, and Team Organization Modules\n\n> 🏆 Phase 8: {Fill In}\n\n- [ ] Reach out to your success coach once you’ve reached 10M views in a month and we will give you exclusive access to our secret monetization strategy with **boosted** RPM’s 💰",
+    "order": 3
+  },
+  {
+    "notionId": "a91e923a-64e2-834d-a34c-01d31754a356",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Student Interview/Testimonial Process",
+    "icon": "🧑🏽‍🎓",
+    "markdown": "- After the client gets some good results message them to try and get them on a interview call",
+    "order": 4
+  },
+  {
+    "notionId": "33ce923a-64e2-82a5-ab06-013268dd5fbd",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Student Wins ",
+    "icon": "🕣",
+    "markdown": "",
+    "order": 5
+  },
+  {
+    "notionId": "dfae923a-64e2-83f6-b97c-013b5e67ba74",
+    "parentNotionId": "ea7e923a-64e2-834c-91bd-0116464aeaa5",
+    "title": "Coaches Call Recordings ",
+    "icon": "⚡",
+    "markdown": "**Coach ** (database)",
+    "order": 6
+  },
+  {
+    "notionId": "fe5e923a-64e2-834d-b13d-810f4bc0e4f9",
+    "parentNotionId": "f98e923a-64e2-8360-bc7a-0167a58897c4",
+    "title": "Onboarding Sales Reps",
+    "icon": null,
+    "markdown": "- {{REF:503e923a-64e2-82d9-b6cc-01a6ae7cf41f}}\n\n- {{REF:90de923a-64e2-822f-8620-01a091f30ced}}",
+    "order": 0
+  },
+  {
+    "notionId": "755e923a-64e2-836a-aa8f-01117151988d",
+    "parentNotionId": "f98e923a-64e2-8360-bc7a-0167a58897c4",
+    "title": "Using Airtable",
+    "icon": null,
+    "markdown": "",
+    "order": 1
+  },
+  {
+    "notionId": "185e923a-64e2-8363-beee-810c80bd0c5c",
+    "parentNotionId": "d37e923a-64e2-8389-bcfa-813852c1d55b",
+    "title": "Typeform Questions",
+    "icon": null,
+    "markdown": "| **Question Number:** | **Question:** |\n| --- | --- |\n| **Question Number:** | **Question:** |\n|  |  |\n|  |  |\n|  |  |\n|  |  |\n|  |  |\n|  |  |\n|  |  |\n|  |  |",
+    "order": 0
+  },
+  {
+    "notionId": "1ace923a-64e2-82bd-aa33-81239e544803",
+    "parentNotionId": "72ce923a-64e2-82e4-b5f3-8140e07eb77f",
+    "title": "I Have a Google Workspace",
+    "icon": "✅",
+    "markdown": "**📌  What We're Setting Up**\n\nSince you already have a Google Workspace, we're going to add a dedicated user — **ggv@yourbrand.com** — to your workspace. That account will sign up for every software tool we use to build your system. Once it's set up, you give us the password to that one Google account and we have everything we need to start building.\n\n**STEP 1 — Add the Global Ventures User to Your Workspace**\n\n- Go to **admin.google.com** → Users → Add new user\n\n- Create user: **ggv@yourbrand.com**  *(replace \"yourbrand\" with your actual brand/domain)*\n\n- Set a strong password — *save this, you'll enter it below*\n\n- Role: **Admin** (full access is required to build and manage your systems)\n\n**STEP 2 — Sign Into ggv@yourbrand.com and Create All Accounts**\n\n*Log into ggv@yourbrand.com and use that email to sign up for each platform below.*\n\n- **Zapier**  *(automation)*  \n\n- **Manychat**  *(DMs)*\n\n- **Typeform**  *(application form)*    \n\n- **Calendly**  *(booking)*    \n\n- **Close CRM**  *(CRM + SMS)*  \n\n- **Slack**  *(team comms)*  \n\n- *Loveable  (Funnel) (Use This Link →* [https://lovable.dev/invite/XAAOLHO](https://lovable.dev/invite/XAAOLHO))\n\n- *Kit  (Email Sequences)*\n\n- **Domain Platform**  *(GoDaddy or Square space — only if you need a new domain)*\n\n- **PandaDoc (student agreements)**\n\n- **Payment Processor** (Whop, Commas, etc) (Use This Link → [https://commas.com/login?ref=fbUDYmtN](https://commas.com/login?ref=fbUDYmtN))\n\n- {{REF:8a6e923a-64e2-832e-9e10-010b83fe1a34}}\n\n**📋  STEP 3 — Fill In Your Login Details Below**\n\nIn case you had existing accounts on a different email, or Global Ventures needs direct access to any tool, enter the credentials below. If you just created everything fresh under ggv@yourbrand.com, use that email and password for each one.\n\n**ggv@yourbrand.com (Google Account)**\n\n- Email: ggv@ticovisuals.co\n\n- Password: GGVxTICO1*visuals\n\n**Zapier**\n\n- Email: ggv@ticovisuals.co\n\n- Password: GGVxTICO1*visuals\n\nCommas (dont worry about this yet)\n\n- Email: ggv@ticovisuals.co\n\n- Password: \n\nManychat\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through google\n\n**Calendly (dont buy subscription yet)**\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through go\n\n**Close CRM**\n\n- Email: ggv@ticovisuals.co\n\n- Password: GGVxTICO1*visuals\n\n**Slack**\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through google\n\nLoveable (Use this link for signup → [https://lovable.dev/invite/XAAOLHO](https://lovable.dev/invite/XAAOLHO))\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through google\n\nKit\n\n- Email: ggv@ticovisuals.co\n\n- Password: GGVxTICO1*\n\n**Domain Platform**\n\n- Email: shotbytico@gmail.com\n\n- Password: GGVxTICO1*\n\n**PandaDoc (dont buy subscription yet)**\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through google\n\nWhop\n\n- Email: ggv@ticovisuals.co\n\n- Password: Continue through google\n\n**Payment Processor (Use this link for signup →** [https://commas.com/login?ref=fbUDYmtN](https://commas.com/login?ref=fbUDYmtN))\n\n- Email: \n\n- Password: \n\n**If you created a new email and password for any software above, please enter it here:**\n\n- Email: \n\n- Password:",
+    "order": 0
+  },
+  {
+    "notionId": "e52e923a-64e2-82cf-adc6-81af06fa369e",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Dream Follower/ICP Sheet",
+    "icon": null,
+    "markdown": "> **Important: Go into detail**\n\nThese are your fans, which is what your brand is going to attract - they have the same characteristics, goals, values and resonate with you\n\n---\n\n> **Dream Follower:**\n\n- **Who are they, what’s their story, what do they look like?** - a dream follower for me would consist of someone that picked up a camera at a young age preferebly doing sports and saw being a cameraman as a side hustle and they started up doing maybe high school football around 14, 15 years old and is trying to take it to the next level. Mainly based in places where the entertainment/sports/music industry is at examples : miami, LA, NYC, houston, orlando, etc or planning to move there some day.\n\n- **What are they passionate about?** - theyre passionate about photography and videography. Creating valuable content for clients to post on social media. They like to network with people and always finding ways to learn more about the creative space. Preferably, to have a personal brand and dont care to post their face on insta.\n\n- **What are their goals, dreams, and desires?** - they want to learn how to shoot and work with high respected people in the industry. whether thats pro athletes, celebrities, rappers, influencers, etc. they would like to be making a solid income while proving to their parents that this can actually work for a future career, not needing school. they would want to be connected to the entire creative space, work with the biggest guys in the industry and grow their personal brand. to be “known” as well, kind of to be known as that guy who shoots for so and so.\n\n- **What are their deepest fears?** - deepest fears i would say that would be not knowing how to operate a camera when first starting, not knowing how to color grade. they can be overwhelmed with doing free content, and dont know how to make money/what to charge. they might think that they need expensive gear to start off. making and building a personal brand can be one to, people scared of showing their faces for their brand because they think the content wont blow up and they might get made fun of.\n\n- **What are their struggles?** - the struggles i would say would be they dont know how to have retainer clients, or keep clients from coming back not just a one and done process. they might not know how to network properly, or they dont talk to anybody when they at the gigs. maybe when theyre in rooms, they get shy start acting weird and nervous around professionals etc. sometimes theyre unprofessional without realizing it like they will promise work by such and such date and they dont get it done so it looks bad on them. somestimes they don't communicate with clients fast , no contracts, no invoices, no llc. sometimes they overwork themseleves becausse they dont know what to charge or how to value their work. some are also just stuck ina. horrible city for this whole creative industry. they might think its geographically impossible.\n\n> **Within your fanbase these are the people that you are selling to and that you want to buy**\n\n> **ICP (Ideal Customer Profile):**\n\n- **How much are they making** - an ideal customer would be making around $300-5k a month.\n\n- **What business/service are they providing** - they provide videography, photography, and social media services. they shoot for brands, athletes, sports, real estate, lifestyle shoots.\n\n- **Current situation** - Their current situation could be that they're kind of just stuck in that high school football or high school sports in general, photography and videography. They don't know how to escape it and get to the level that I'm operating at with celebrities and artists and stuff like that that they want to be at. Maybe they're making not that much money and they would like to increase that.\n\n- **Desired outcome** - So the desired outcome with that would be to start operating and dealing with higher-level clients like NBA players, maybe college athletes, celebrities in their city, and just making some more income, maybe getting some retainer clients as well. \n\n- **Perceived problems** - \n\nSo some perceived problems could be maybe that they think they need better gear. Maybe their city is too small and there are no celebrities in their city or NBA athletes and stuff like that. They don't have any connections where you need to know somebody in order to grow in the creative space. I feel like they're kind of just invisible. They don't have a personal brand or any content up on their page showing their face to actually get to that level that they want to get to. I think they don't do any outreach or networking consistently. Talking to everyone is literally the whole cheat code that they're not doing.\n\n- **What makes a customer a bad fit?** - A bad customer would really just takes this as a side hustle or a hobby. Kinda doesn't wanna go too crazy with it and doesn't mind staying in the high school football, high school sports photography and videography. They're kind of capped at a certain level of money and they don't plan on growing that anytime soon. They're kind of good with what they're making right now and they're doing it as a side gig. They're not posting on social media. That's the biggest part. Posting your work and portfolio, I think, is very important and if my clients or my customers aren't doing that then they're a pretty bad fit. If they're not willing to learn or go the extra step with just knowledge in general with this, I don't think they're a good fit. I would just need people that actually want to learn and want to go all out on this and really want to further their career or whatever they want to do with this.\n\n- **What limiting beliefs does your ICP have?** - Some limiting beliefs, I would say, would be that some people think they need better gear before they could start networking and just putting themselves out there. They think that they're too late because everyone's a videographer nowadays and stuff like that and they didn't hop on the wave early enough. Or they think they need to know somebody to get into the industry. Maybe for personal branding if they pose their face and everyone sees it, they'll get laughed at and stuff like that. Maybe they don't know what to quote customers and clients.",
+    "order": 0
+  },
+  {
+    "notionId": "653e923a-64e2-82bc-878e-018acd18fc61",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Brand Identity Sheet",
+    "icon": null,
+    "markdown": "> **Why will people love you for you**\n\n- **What is your story?** → I was born in Miami. I played soccer for around 10 years, and then I played football for two years. I have Cuban roots, and I have Cuban parents. I started filming when I was around 15 with a Canon R7 that my brother's fiancée lent to me. The way I got into it was that I was playing football, and one of my friends would buy pictures from me. I thought it was pretty cool that he was doing that, and he was making a little bit of money. I picked up my brother's fiancée's camera. She lent it to me for around a month, and then from there, I just started doing high school football games, or middle school football games. I was doing sports in high school, and I was making a little bit of money, but I knew I could take it to the next level. I didn't have any connections, and nobody in my family was in the industry, so nobody really handed me anything. At first, my first-ever actual shoot was my old soccer team. I had gone there, and I was doing free work a lot of the time. I was doing free work at high school football games as well, just because I kind of liked it and it was something different that I had never done. There is a point where people kind of just saw me as this new photographer guy, and people didn't like me sometimes as well. To be honest, a lot of the guys that were in the game for a few months, or a few years, kind of just looked at me like I'm this trash kid. I did think about stopping at one point, but I kept picking up the camera, and I met the right person to get me into an FIU game. I met the athletic director for FIU, and he kind of was the first person to believe in me with this. I shot FIU football games, and I connected with a lot of the videographers on campus, along with a lot of other creatives that are on Instagram and stuff like that. From there, I started building a portfolio outside of high school football. That was the first, I would say, decently bigger client that I had, even though I wasn't getting paid for it. From there, I just kind of talked to everyone in every room that I got in. I talked to everybody. From there, I met one of the athletic directors for the University of Miami. He helped me get into University of Miami basketball. I shot a few games for University of Miami basketball, and then I would post that for my portfolio and stuff like that. I would do a lot of outreach as well. I reached out to Davion Mitchell's manager, and he got back to me. They were doing some workouts at the University of Miami, so I would go out there and work for free a lot of the time. I would kind of just show up every day until the season. During the season, his manager actually gave me some tickets to cover the NBA for De'Veon. That's how I got into the NBA and the Heat. Additionally, I saw my boy Lucas doing social media, and his content was doing very well. I kind of hopped on the content thing and the personal branding content, and it really did blow up my page. I'm at around 65,000 followers now. A little bit before this, while this was all happening, Baller League reached out to me before their launch of the first season. They wanted me as a photographer for Baller League. That's where I met Speed, Marlon, Drewski, J Balvin, Kit Super, Ronaldinho, and a lot of other guys. They opened up doors for me, connecting with each and every single one of them, and that opened up doors for me to work with Arcángel in front of literally a stadium of 50,000 people at 16 years old. They also opened up doors for me to work with Speed Slips. They actually reached out to me, saying that they need somebody to help them out for a few streams. I came out there and helped out, and hopefully we're building something long term as well. My content has been doing very well. Now I've done like 20 million views, and each and every day I'm just trying to push for harder and bigger. That's basically my story.\n\n*{Insert Loom of your  Story For Team Members To Watch & Get Ramped On}*\n\n- **What are your values?** - My values, I would say, are hard work kind of beats talent. Talking to everyone is definitely my biggest value. Never gatekeep information. I think that people that help people will always get opportunities back to them. For example, if I give my friend a gig, he always repays me with a gig that he can't make it to, stuff like that. That's why I'm kind of making this course. It's really just to show people how to get it done. I think families come first, but definitely putting people on when you're already doing well and staying humble no matter what is very important to me. Delivering everything that I promise regarding work every time, I think, is very important.\n\n- **What are your beliefs?** - I would say my beliefs are that if you put your mind to it and you work hard at it, then you get anything achieved. You just need to not quit. You need to make your connections along the way in order to get access to the right rooms. You don't really need the best gear. You need to start with what you've got and your budget. I think that conversations and just networking bring a lot of opportunities, but definitely the biggest one is that consistency beats talent every single time. Consistency and networking, knowing the right people, beats talent. \n\n- **Your personality?** - I feel like my personality would be. High energy, Funny, Easy to talk to, Outgoing, Communicative, Very direct. I kind of like to have fun with my job. I'm kind of a guy that talks to everybody in the room. A bit motivational, but I like to keep it real about the grind and just keep going hard at it. I think I would say I'm very humble.\n\n> **Your visual design**\n> - **Describe your style** - I would say my style is just kind of cinematic and clean. I like a lot of the BTS content, so the behind-the-scenes energy when I'm doing videos.\n> - **Favourite colors** - I like the Miami Vice colors, like the teal and the pink, but also I like a little bit of red. It would signify working with the Miami Heat. Kind of whatever you think is best for the funnel, but that's kinda my idea of it. Something that would just match the logo too.\n> - **Editing** - Regarding the editing, I like more of the cinematography, kind of just cinematic edits, some quick cuts, hooks in the first couple of seconds. I like to do some cinematic captions on the screen, along with the cinematic colors. The sound design as well, I think, is big.\n\n> **Brand Outliers**\n> - **What makes you different? i.e special talents, play sports, where you live, can you speak multiple languages?** - Well, what makes me different? I'm based in Miami, which is one of the biggest entertainment and sports cities in the world, I would say. For artists, too. I speak English and Spanish, so I kind of work double the rooms, and I can reach double the audience. I have access to a lot that a lot of creators never touch in their lifetime. At 16 years old, whether it's NBA, Miami Heat, Speed, working alongside Marlon, Drewski, and a lot of people, my audience kind of already knows me for that: pick up the camera, talk to everyone, because that's kind of been my message from the start. I also played soccer for 10 years Im athletic.\n\n> **Vehicle**\n\n- **Explain your business** - \n\nMy business operates like this: I freelance, so I shoot anything that comes my way. I travel for gigs as well. People would just hit me up for gigs that they have here in Miami or in LA and stuff like that. I'll fly out or I'll go to the gigs, and I'll shoot whether they need photography, videography, or event recaps, kind of all of the above. I do social media management as well for brands, and I do content creation in general for these brands, athletes, and teams. When I'm done with the shoots, I go back home. I usually deliver everything within 48 hours. I would edit the photos, edit a recap, or edit the videos, and I'll deliver that to them. Those will be the deliverables, depending on what they need. That's how budget comes into play and pricing for people.\n\n- **What is your goal with that business?** - \n\nMy goal with this business: right now, I'm 17 years old, and I've been able to very much breach into the entertainment industry with this. I've been able to talk to a lot of people in the industry and get a lot of knowledge from people that are older than me, which I think is very, very important and advantageous. My goal with this business, really, is to build it to a different level and a different scale. I want to get to the point where the whole city of Miami, especially, knows me and what I do. I can make an agency where I send out other videographers and other photographers to gigs that I don't want to go to anymore, and I'm still making a cut out of it.For example, if they tell me, \"Oh, shoot a high school game,\" kids DM me for high school games. I'm like, \"Okay, yeah, you could all point a photographer that can go for me through my agency,\" and then I'll take a cut for that. Obviously, for the bigger-level clients, my NBA clients, my celebrity clients, I'll take care of them and stuff like that. I just keep stacking, keep going at it, keep building, definitely. I want to get my Instagram to another level. I'm at 65,000 followers. I want to get it to at least 200,000 and just keep building the personal brand as well.\n\n- **Why are you running that business?** - \n\nWell, right now I'm running this business for a few different reasons. I'm doing it to really break into an industry that I want to work in in the future, 100%. I'm doing it for the connections, the people that I meet every day. You never know that they could open doors for any other opportunities in anything, for example, whether it's real estate or just other opportunities. I want to get into the real estate industry as well very soon. With that, I could ask a lot of people that are very well connected for real estate and that already own that and already know a thing or two, and kind of pick their brain about it. Also, I'm running the business to make money. I think that's important. I still live with my parents and stuff like that, so I just want to keep stacking money so that I can see what I do in the future.\n\n- **What type of value can you provide around that business?** - \n\nI think that I can provide value in definitely operating a camera, editing, and color grading. A lot of the business side that nobody really teaches about, like:\n\n- retainer clients\n\n- pricing\n\n- contracts\n\n- invoices\n\n- delivering on time\n\n- networking\n\n- how to talk to everyone and actually follow up\n\nAccess to stories and behind-the-scenes from rooms that I've been in and a community that you're not going to be grinding alone in anymore. You're going to have people in your corner, and you could ask questions, definitely",
+    "order": 1
+  },
+  {
+    "notionId": "3d3e923a-64e2-8342-a423-815f392e6c77",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Business Identity Sheet",
+    "icon": null,
+    "markdown": "- **Who does your business sell to?** - kids who are already making money with videography and photography and want to grow not just a side hustle.\n\n- **Dream Followers / Students** - videographers, photographers, influencers and people who enjoy content creating.\n\n- **What is your offer?** - Base44 subscription, offer itself is free\n\n- **How much do you make MRR?** - 5-10k a month, nothing digital products though.\n\n- **How much do you make profit?** -  5-10k a month, nothing digital products though.\n\n- **What case-studies do you have?** - my personal brand, working with nba, speed, jake paul, arcangel, bam 83 night.\n\n- **What do promise your customers?** - guidance learning a camera, building relationships, get urself in bigger rooms, master editing and color grading, build ur personal brand, networking help",
+    "order": 2
+  },
+  {
+    "notionId": "e30e923a-64e2-8278-8eca-01091e76d35f",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Industry Identity Sheet",
+    "icon": null,
+    "markdown": ">\n> - **What industry do you operate in?** - entertainent/content/music industry\n> - **How would you describe the current state of your industry?** - im industry level right now, people know who i am but theres still room to grow.\n> - **What major trends are you seeing right now?** - personal branding content, streamers going viral.\n> - **How competitive is your industry?** - i would say this industry is the most competitive out of all. theres a lot of camera operators and videographers in this industry especially in highschool sports and college sports more than anything.",
+    "order": 3
+  },
+  {
+    "notionId": "6e2e923a-64e2-83c6-923e-01f00b9dc8c1",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Competitor Research Sheet",
+    "icon": null,
+    "markdown": "> **List down 5 of your main competitors and tell us 5 things that you like about their content and their brand.**\n\n---\n\n> **Competitor 1: lucaslee\n\nInstagram → lucaslee**\n> **YouTube** → n/a\n>\n> - Content - personal branding, camera smash with jake paul blew him up like 80k followers. niche videographer content.\n\n- Brand -\n\n> **Competitor 2: jun_yuh**\n> **Instagram → jun_yuh**\n>\n> **YouTube** → n/a\n\n- Content - he sells personal branding storytelling challenges\n\n- Brand -\n\n> **Competitor 3:  ebfilmz**\n> **Instagram → eb_filmz**\n>\n> **YouTube** → \n\n- Content - personal branding/giving tips helping videographers through reels.\n\n-Brand -\n\n> **Competitor 4: ethanjcoyne**\n> **Instagram → ethanjcoyne**\n>\n> **YouTube** → n/a\n\n- Content - personal branding content, higher level production gives tips etc.\n\n- Brand -\n\n> **Competitor 5: drewwall14**\n> **Instagram → drewwall14**\n>\n> **YouTube** → n/a\n\n- Content - lacys cameraman, makes personal branding content as well, twitch streams and hes pretty big in the streamer industry and making content.\n\n- Brand -",
+    "order": 4
+  },
+  {
+    "notionId": "b76e923a-64e2-83d9-b14b-81aa8c3eb863",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "New Opportunity Breakdown",
+    "icon": null,
+    "markdown": "---\n\n> **Important: Go into detail**\n\n**Describe one shocking or highly emotional moment on your journey (date, place, who was present).** - definitely being on speeds stream during the world cup was a highly shocking one. When I got called up for it, it felt unreal. to then being in the background on the stream with speed and jamal in the car. slipz was pointing the camera at us during the stream, parents watching the stream from home.. it felt pretty cool definitely.\n> \n\n**Paint a picture of your daily life before chasing today’s result (job, income, routine).** - \nmy daily life before this to be honest was no job, kind of just depending on my parents for everything financially till about 10th grade when i started. I wasn’t really making any money, I had a reselling business that I started but didnt go that far with it to pay for my own expenses. I would go to school and go back home, sleep, wake up and get on the video games to just repeat that 5 days a week. on weekends id play video games a lot on discord with my boys and hangout on weekends.\n\n**State the external goal you were pursuing and the internal fears you felt then.** -\n>\n> I wanted to shoot the big athletes and celebs in the world and be known for my work. inside though I was scared that I was wasting my time that I didn't know anybody so I'd never get in, and that everybody watching me try was gonna clown me.\n\n**What specific obstacle—or “wall”—proved your old approach was broken?** -\n>\n> i think when i first shot some university of miami basketball games i realized that this can be more than just a hobby or a side job.\n\n**How did that failure impact your finances, relationships, or self-worth? (Give concrete examples.)** - \n\nSo to be honest I havent really had any “failures” throughout this journey so far. Theres been low months and high months but something that can stand out was when I was going through a breakup and lowkey it was sad because I broke up with this girl I really liked coming back from a cruise with her and I was shooting at the heat arena that night and we broke up a few hours prior to the game. I thought of myself just like leveling myself up to be honest and how can I make my page go crazy. I had 3-5k followers at the time and I knew at my age and the access that I have, its nearly impossible. I knew i can use that to my advantage to build a social media following. So, that night I cooked up some ideas and I posted the next morning a reel that blew up and got like 2 million views. it was “16 years old and this is my job”, with cinematic audio. from then i think it really triggered me that this was the way to go about it. Posting personal brand content and work and just improving my life in general kind of distracted me from thinking about all the breakup situatuion to. at the time i didnt really have a good relationship with my parents either so I kind of just used content to distract myself a bit and build something.\n\n**Where were you when the breakthrough occurred, and who or what triggered it?** - \na few days after the breakup i saw my boy lucas posting personal branding content and I kind of liked the idea of it so I started hopping on it as well and started growing my page as is.\n\n**In one sentence, describe the New Opportunity you saw.** - I saw by me posting content, it will open doors because high level clients want high level videographers and social media people in their corner. I noticed that ever since I was doing good on the instagram, celebrities or brands start hitting me up more, Im getting recognized and its eventually making me more money.\n\n**List the first three actions you took immediately after that aha moment** - built a content strategy for reels, I would post at least 2 reels a day. I also tried to network and do outreach as I was growing my brand, Focus on bettering my craft so I can keep up with the clients im dealing with.\n\n**What major conflicts did you face after committing to the new path?** - Laziness is definitely a big one. Definitely when it came to posting content I tried to be as consistent as possible with 2-3 reels a day but at some point i run out of ideas and I would get a bit lazy to then only doing 1 reel a day or 0 at times to. i got drained a bit, but the content side of the brand is the only thing that will make you grow and consistency is key to success for this industry. Something i also struggled with was promising false delivery times to clients. for exmaple i would have a week that id be super busy and promise them deliverables within 48 hours when I couldnt get that done in 48 hours. \n\n**What measurable result did you finally achieve? (Numbers, time saved, etc.)** - \nwell i started seeing drastic growth in my social media numbers, getting millions and millions of views and traction on my page for being a 16 year old with nba access in the whole world. Doign work with celebs to gained me a lot of traction, to the point that ballerleague, the company i worked with for speed, druski and marlon and all these guys, they actually told me to stop posting personal brand content using the talent because i was getting more numbers than the ballerleague insta page lol. they told me that they were gonna fire me if i kept posting . they then wanted to meet with me to become the community manager and director of content.\n\n**What internal transformation did you experience (identity shift, confidence boost, outlook)?** - definitely a identity shift, i felt like i kind of found my passion for this. confidence definitely was boosted as well, people started recognizing me in public, kids at my school would start asking me for photos lol.\n\n---\n\n> **Skills you’ve mastered (rank your top three).** - Personal brand content, networking, photography/color grading\n\n**Do you already use frameworks, checklists?** - Yes\n\n**In one sentence, what future do you want your audience to experience? (The Goal)** - \nI want them to live off a camera and to be in rooms they used to watch through a screen\n**Why does that matter to you personally?** - bc i was watching therough the screen at one point and had no one to guide me or show me a path to get to what i wanted to do.\n\n**Five years from now, describe the movement you hope to lead in a tweet-length sentence** - i would want to lead a whole generation of camera people that networked their way up and took over the industry.\n\n**What old way(s) of doing things frustrate you most in your niche?** - people often gatekeeping gigs. for example if i cany make it to a gig ill send my boy to cover for me. some people just say their not available bc their scared they might steal their client.\n\n**What old way(s) of doing things frustrate you most in your niche?** - \n\n**List 3 common myths holding people back** - people think you need to know somebody when u get to know somebody by talking to them. ppl think u need expensive gear when really you just gotta put urself out there on the map with the gear you have is fine. \n\n**What tools / programs / gurus are folks currently using that leave them stuck?** - lowkey random youtube tutorials that may just confuse them more. and by far the biggest one that i experience first hand is school. Its so braindead, like you're in a classroom filled with kids with the same knowledge as you and you cant go on ur own pace. definitely film school and regular tv production classes in highschool are bullshit.\n\n**From your perspective, why do those vehicles fail?** - they fail because, yea u learn a bit of editing, how to use a camera, maybe some lighting but thats only like half of the whole operation. the otherhalf is the networking, personal brand, content, putting yourself out there and connecting with other professionals in the industry and haveing a portfolio.\n\n**Single biggest outcome you want your students/clients to achieve (make it concrete: money, time, health, etc.)** - I would want my client to first of all start making some more money, whether thats at least one retainer client or concurring gigs a month. That and a personal brand that they are posting every day face on the camera, name known in their city, to the point clients start coming to them\n\n**Time horizon you believe is realistic for that outcome (days, weeks, months).** - I would say it depends on how hard you go at it. for me it took around 3 months to really settle in and dial on the content side but i also had the access which boosted my stuff a lot. i think regularly it can go from 3 months-12 months to really get the content side going its all about consistency. regarding the retainer clients its just outreach. could take around 2 weeks.\n\n**Key milestones between day 1 and the outcome (bullet them).** - \n\n-master camera movements, audio, lighting, etc\n-editing a color grading locked in\n> -personal brand dialed in\n>\n> -Networking routine running on autopilot outreach, follow up, repeat\n>\n> -bigger rooms\n\n**Non-negotiables your program would require from clients (daily actions, tools, mindset).** - pick up the camera every day, post every day, outreach every day, show ur face, follow up with everybody u meet, deliver on time every time, and going hard at it all times even when things slow down",
+    "order": 5
+  },
+  {
+    "notionId": "9afe923a-64e2-826c-bd6b-0199bf099e17",
+    "parentNotionId": "ebce923a-64e2-8202-9afd-01c38d6ad62a",
+    "title": "Client Voice Kit",
+    "icon": null,
+    "markdown": "> **Important: Go into detail**\n\n**Is there anything else that makes your Brand unique?** - \n\n**Biggest win your clients get after working with you?** - they will get seen, grow their personal brand and gain access.\n\n**Which competitor’s marketing annoys you and why?** - lowkey ebfilmz marketing it isnt annoying but its overly silly like some videos he makes are just kind of whatever. im not to sure tho \n\n**Any brand docs we should know about? (mission, values, USP)** - take creatives from picking up the camera to getting in the rooms\n\n**Upload a sales call, webinar excerpt, or podcast clip (audio/video)** - n/a yet\n\n**Upload a raw loom selfie video (2-3 min) sharing a rant about your market (Something You Hate)** - n/a yet\n\n**Upload a raw loom selfie video (2-3 min) telling a recent win. -> Client Win** - n/a yet\n\n**Drop links to 3–5 posts or videos that best represent you?** - [https://www.instagram.com/p/DbMIXOYlGaJ/?img_index=1](https://www.instagram.com/p/DbMIXOYlGaJ/?img_index=1)\n\n[https://www.instagram.com/p/DWxBHi9lAfp/?img_index=1](https://www.instagram.com/p/DWxBHi9lAfp/?img_index=1)\n\n[https://www.instagram.com/p/DZVqf0-lCSs/?img_index=1](https://www.instagram.com/p/DZVqf0-lCSs/?img_index=1)\n\n**Any words or phrases you never want use?** - not really ( i would have to see in the moment but ill lyk)\n\n**List any phrases you say all the time (“catch-phrases”)** - talk to everyone, pick up that camera\n\n---\n\n> **Fill in the blank:**\n\n**Finish the line: ‘Everyone in my industry believes the work matters more, but they’re wrong because nobody can see it if u dont put urself out there*****.*** *-* \n\n**Most gurus will tell you perfect ur portfolio, yet the truth is a portfolio comes through conversations.** - \n\n**People think the fastest way to succeed is posting work and having quality gear; in reality, it’s posting ur face every day and following up with conversations.** - \n\n**The biggest myth about the entertianment industry is “u gotta know somebody”, and here’s what actually works:** - talking to everybody and climbing ur way up\n\n**If you ask my competitors, they’ll say it takes years of grinding to breach into big rooms but I’ve proven through conversations, being a good person, and networking you can achieve that in less than 2 years.** - \n\n**Common advice says avoid giving people gigs; I do the opposite and give other videographers gigs because u never know how they will repay you in the future.** - \n\n**Everyone obsesses over the follower count while the metric that matters is how many people youve outreached to this week.** - \n\n**They claim you need better gear to get results; my clients win with or without the best gear, just networking.** - \n\n**Industry “best practice” is staying behind the camera—I disagree because growing a personal brand nowadays will take you farther. people want to work with a personality and a real human not a robot with good work. .** - \n\n**The so-called rule in our space is all good things take time, but my experience shows when you put urself out there that time will be cut significantly.** - \n\n**In one sentence, what do you really do for clients.** - take creatives from picking up the camera to getting paid and in the rooms",
+    "order": 6
+  },
+  {
+    "notionId": "879e923a-64e2-8325-bc43-01299bfdf319",
+    "parentNotionId": "545e923a-64e2-83b0-966c-017998b0342d",
+    "title": "Competitor Funnel Research",
+    "icon": null,
+    "markdown": "| **Competitor 1:** | VSL Funnel | Webinar  | DM Funnel |\n| --- | --- | --- | --- |\n| **Competitor 1:** | VSL Funnel | Webinar  | DM Funnel |\n|  |  |  |  |\n|  |  |  |  |\n\n| **Competitor 2:** | VSL Funnel | Webinar  | DM Funnel |\n| --- | --- | --- | --- |\n| **Competitor 2:** | VSL Funnel | Webinar  | DM Funnel |\n|  |  |  |  |\n|  |  |  |  |\n\n| **Competitor 3:** | VSL Funnel | Webinar  | DM Funnel |\n| --- | --- | --- | --- |\n| **Competitor 3:** | VSL Funnel | Webinar  | DM Funnel |\n|  |  |  |  |\n|  |  |  |  |\n\n| **Competitor 4:** | VSL Funnel | Webinar  | DM Funnel |\n| --- | --- | --- | --- |\n| **Competitor 4:** | VSL Funnel | Webinar  | DM Funnel |\n|  |  |  |  |\n|  |  |  |  |\n\n| **Competitor 5:** | VSL Funnel | Webinar  | DM Funnel |\n| --- | --- | --- | --- |\n| **Competitor 5:** | VSL Funnel | Webinar  | DM Funnel |\n|  |  |  |  |\n|  |  |  |  |",
+    "order": 0
+  },
+  {
+    "notionId": "503e923a-64e2-82d9-b6cc-01a6ae7cf41f",
+    "parentNotionId": "fe5e923a-64e2-834d-b13d-810f4bc0e4f9",
+    "title": "Dialer",
+    "icon": null,
+    "markdown": "Click on the text for each one and a video SOP will pop up…\n\n- [ ] Have them fill out the onboarding form\n\n- Your onboarding form\n\n- [ ] Invite to Close\n\n- [ ] Invite to Slack\n\n- [ ] Add Full Name to “Setter Name (Radio Select)” Custom Field in GHL\n\n- [ ] Add Full Name to “Payments Tracking” Google Sheet Dropdowns\n\n- [ ] Add Name and Formulas in “Payouts” Section in “Payments Tracking” (Dialer)\n\n- [ ] Send dialer, the dialer hub\n\n- Your dialer hub\n\n- [ ] Send brand sheets",
+    "order": 0
+  },
+  {
+    "notionId": "90de923a-64e2-822f-8620-01a091f30ced",
+    "parentNotionId": "fe5e923a-64e2-834d-b13d-810f4bc0e4f9",
+    "title": "Closer",
+    "icon": null,
+    "markdown": "Click on the text for each one and a video SOP will pop up…\n\n- [ ] Have them fill out the onboarding form\n\n- Your onboarding form\n\n- [ ] Invite to Close\n\n- [ ] Invite to Slack\n\n- [ ] Invite to Fanbasis\n\n- [ ] Add Full Name to “Closer Name (Radio Select)” Custom Field in GHL\n\n- [ ] Add Full Name to “Payments Tracking” Google Sheet Dropdowns\n\n- [ ] Add Name and Formulas in “Payouts” Section in “Payments Tracking”\n\n- [ ] Invite to Calendly\n\n- [ ] Add to existing Calendly calendars\n\n- [ ] Create new 1-1 Calendly calendar\n\n- [ ] Send closer, the closer hub\n\n- Your closer hub\n\n- [ ] Send brand sheets\n\nFor Closer:\n\n[https://www.loom.com/share/6e0ffaeef72e4dc0af150c956afd3878?sid=38a92745-9896-422c-9e27-7294b13d6d3d](https://www.loom.com/share/6e0ffaeef72e4dc0af150c956afd3878?sid=38a92745-9896-422c-9e27-7294b13d6d3d)\n\n[https://www.loom.com/share/34e09be6ce4e40eb9548abc6cb58c161](https://www.loom.com/share/34e09be6ce4e40eb9548abc6cb58c161)\n\n[https://www.loom.com/share/ae21d231676a4eac94fae370fda66df4](https://www.loom.com/share/ae21d231676a4eac94fae370fda66df4)",
+    "order": 1
+  },
+  {
+    "notionId": "8a6e923a-64e2-832e-9e10-010b83fe1a34",
+    "parentNotionId": "1ace923a-64e2-82bd-aa33-81239e544803",
+    "title": "Software Subscriptions",
+    "icon": "⚙️",
+    "markdown": "*Subscribe monthly (not annual) unless noted. Start free trials where available before paying.*\n\n- **Zapier** — $29.99/mo (Starter, 750 tasks/mo)\n\n- **Typeform** — $59/mo (Basic, 1000 responses/mo)\n\n- **Calendly** — $20/mo (Team Plan, 1 seat)\n\n- **Close CRM** — $59/mo (Growth) — start with the 14-day free trial first\n\n- **Slack** — Free plan to start\n\n- **Domain Platform** — ~$12–15/yr per domain (one-time purchase, not a subscription)",
+    "order": 0
+  }
+]

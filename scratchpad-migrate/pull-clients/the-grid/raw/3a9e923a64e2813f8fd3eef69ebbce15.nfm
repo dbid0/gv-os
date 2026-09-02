@@ -1,0 +1,31 @@
+<page url="https://app.notion.com/p/3a9e923a64e2813f8fd3eef69ebbce15" icon="🗄️">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Close CRM SOP"}
+</properties>
+<content>
+<callout icon="🗄️" color="gray_bg">
+	Close is the source of truth. If it's not in Close, it didn't happen. Update the lead the moment anything changes, not at end of day.
+</callout>
+## Your smart views (org-shared, already built)
+Work them top to bottom, every day:
+- **New – needs first call** — fresh applications. Speed-to-lead 5 min.
+- **Booked – upcoming calls** — your calendar. Prep each (see Pre-Call Process).
+- **No-show – follow up** — run the no-show cadence.
+- **Follow-up – pending** — warm no-closes with a next step + date.
+## 🔄 Every call → update the lead
+1. Set the **status** to where they actually are (New → Contacted → Call Booked → Showed → Won / Lost / No-Show, etc.).
+2. Fill the **qualifier fields** from the iClosed booking (Business Type, Reach, Goal, Biggest Blocker, Budget, Timeline) if the sync didn't already.
+3. Log the **call outcome** in the activity + your notes.
+4. Closed? → status Won + submit the **New Deal Log**. Lost? → status Lost with the reason.
+<callout icon="🔔" color="blue_bg">
+	Booked calls, closes, and payments auto-post to the matching Slack channel (3-calls-booked, 5-payment-success). Don't double-post by hand, just keep Close accurate and the automations fire.
+</callout>
+<callout icon="🛡️" color="red_bg">
+	Clean data is compliance too. Log what was actually said and promised, nothing inflated. Never record a guarantee you didn't make, because we don't make them.
+</callout>
+</content>
+</page>

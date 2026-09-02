@@ -1,0 +1,30 @@
+<page url="https://app.notion.com/p/d29e923a64e282ea9933019adb651f3a" icon="📅">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Booking Links"}
+</properties>
+<content>
+<callout icon="📅" color="gray_bg">
+	Only book qualified leads. Urgency is everything — always book the closest available slot, never push to next week if today is open.
+</callout>
+## 🔗 Booking Links
+- Setter Booking Link: Calendly being built — link drops here + pinned in Slack 1-general the day it's live
+- Closer Calendars: added as closers are onboarded — one line per closer, kept current by Daniel
+Until links are live, no self-serve bookings happen — every call is booked live on the phone per the Sales Process page.
+---
+## 📋 Booking Rules
+- Only book qualified leads — see Fundamental Checklist before booking anyone
+- Book on the closest available time slot — urgency matters. Don't push them to next week if today is available.
+- Always confirm time zone with prospect before booking — do not assume
+- Send a calendar confirmation immediately after booking
+- Notify the closer via Slack within 5 minutes of every booking
+- Update lead status in Close CRM to "Booked" immediately after
+---
+<callout icon="⚡" color="yellow_bg">
+	Every booking must be followed by a Slack message to the closer AND a CRM status update within 5 minutes. No exceptions.
+</callout>
+</content>
+</page>

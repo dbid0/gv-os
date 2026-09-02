@@ -1,0 +1,84 @@
+<page url="https://app.notion.com/p/3a3e923a64e280858c15dee807bbf24b" icon="📋">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"EODs & Forms SOP"}
+</properties>
+<content>
+<callout icon="📋" color="gray_bg">
+	Forms are how we see the business. If it isn't logged, it didn't happen. Submit every form the same day, every day you work. No exceptions.<br><br>**TIMING STANDARDS:** BOD before your first dial/DM. EODs by 9 PM EST sharp — same day, every day. Set times, set standards.
+</callout>
+## 🌅 Sales Rep BOD Form (start of day — EVERYONE)
+<callout icon="⏰" color="orange_bg">
+	Fill this out BEFORE your first dial or DM of the day. Takes 60 seconds. The moment you submit is the moment the team knows you're on the clock.
+</callout>
+**Form link:** [Sales Rep BOD form](https://docs.google.com/forms/d/e/1FAIpQLSerd7CiWJycaf5P_eyFjkofqNy_0xBdm4EQzJLM17JvY0CBkg/viewform)
+What to report:
+- How you're feeling this morning (1–5, be honest — a low score gets you a call from your manager because we actually care, not to punish you)
+- Whether you completed your morning routine
+- Your ONE non-negotiable for today — specific, and you will be held to it
+- The skill you're sharpening today (pull it from what you wrote in yesterday's EOD)
+Why this exists: patterns show up in BODs before they show up in your numbers. Three low mornings in a row means something's off, and we'd rather fix it with you on Tuesday than see it in your close rate on Friday.
+---
+## 📲 Setter EOD Form
+Submit at the end of every day you set. This is how we track speed-to-lead and booking rate.
+**Form link:** [Setter EOD form](https://docs.google.com/forms/d/1eVH2l8hdObyVtmgmVCGOFWYrGI7DZhxejVAGKGiwRA4/viewform)
+What to report:
+- Total leads contacted
+- Total triage calls completed
+- Total calls booked today
+- Any leads flagged as high priority
+- Blockers or issues encountered
+- What you're going to do tomorrow to CRUSH (tomorrow's BOD asks you about this)
+---
+## 📱 DM Setter EOD Form
+Submit at the end of every single day you work the DMs. This is how we track pitch-to-book rate and show rate on DM-sourced calls.
+**Form link:** [DM Setter EOD form](https://docs.google.com/forms/d/e/1FAIpQLSckZ5cXYqvAvZIxkw0LZBMyaJyipUjcTy6KR1Y6Z3v_vl9Rmg/viewform)
+What to report:
+- Calls pitched and calls booked
+- Calls on calendar for today
+- Calls showed
+- Deals closed
+- Cash collected and revenue generated (no dollar signs or commas)
+- No-shows you successfully rebooked
+- Notes: problems, lead quality issues, anything blocking you
+- What you're going to do tomorrow to CRUSH (tomorrow's BOD asks you about this)
+---
+## 🎯 Closer EOD Form
+Submit at the end of every day you take calls.
+**Form link:** [Closer EOD form](https://docs.google.com/forms/d/1-fJjTqBYjdWLfLPEvRLbn2rHEdPv3h1D1vHIr0HosoM/viewform)
+What to report:
+- Total calls taken today
+- Total closes
+- Total no-closes (with reasons)
+- Total revenue collected
+- Top objection you hit today
+- What you're going to do tomorrow to CRUSH (tomorrow's BOD asks you about this)
+---
+## 📝 Closer Post-Call Notes Form
+<callout icon="⏱️" color="yellow_bg">
+	Fill this out IMMEDIATELY after every single call, closed or not. Do not wait until end of day. Your notes are the next rep's starting point and the whole team's memory of that lead.
+</callout>
+**Form link:** [Post-Call Notes / EOC](https://docs.google.com/forms/d/1S2YqKusAGk9cY6dXYKhaZgSYGr1K-1hiXLl84AXfsIA/viewform)
+- Lead name + contact info
+- Call outcome (Closed / No-Close / No-Show)
+- Main objections raised
+- Where the prospect is in their decision (hot / warm / cold, and why)
+- Follow-up plan if no-close (date + next step)
+---
+## 💰 New Deal Log
+<callout icon="🔔" color="green_bg">
+	Every time you close, log the deal here. This triggers the payment + onboarding flow and drops the win in Slack. Do it before you do anything else.
+</callout>
+**Form link:** [New Deal Log](https://docs.google.com/forms/d/1SnSkeMjO_0Oh7VddJDjrXxYki9LBhC3-MWGIHOymZn0/viewform)
+- Client name + contact
+- Tier sold + total investment
+- Payment structure (paid in full / plan)
+- Setter credited (for commission split)
+---
+<callout icon="🔗" color="gray_bg">
+	Slack posts for these forms trigger automatically off Close, don't double-post manually. Loom walkthroughs for each form get added here as they're recorded.
+</callout>
+</content>
+</page>

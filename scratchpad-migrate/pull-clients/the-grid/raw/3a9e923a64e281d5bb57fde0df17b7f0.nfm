@@ -1,0 +1,31 @@
+<page url="https://app.notion.com/p/3a9e923a64e281d5bb57fde0df17b7f0" icon="🚀">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Client Onboarding Process"}
+</properties>
+<content>
+<callout icon="🎉" color="green_bg">
+	You closed. Now make the handoff clean, the first 10 minutes after "yes" set the tone for the whole relationship. Do these steps in order, on the call if you can.
+</callout>
+## The moment they say yes
+1. **Collect payment** — send the Fanbasis payment link and get it done on the call. Don't hang up on "I'll pay later."
+2. **Send the agreement** — generate The Grid Program Agreement in PandaDoc and get it signed.
+3. **Log the New Deal** — submit the [New Deal Log](https://docs.google.com/forms/d/1SnSkeMjO_0Oh7VddJDjrXxYki9LBhC3-MWGIHOymZn0/viewform). This fires the payment-success flow and drops the win in Slack. Credit the setter.
+4. **Set status to Won** in Close.
+5. **Get them into Discord** — send [discord.gg/mbe](https://discord.gg/mbe) and make sure they join before you end the call.
+<empty-block/>
+## The handoff to fulfillment
+<callout icon="🔧" color="gray_bg">
+	The Grid is a done-with-you install, the fulfillment side builds out their phones, accounts, and distribution. Your job is a clean handoff so the build starts fast.
+</callout>
+- Confirm their contact and best communication channel and note it in Close.
+- Kit's Client Onboarding sequence auto-runs and walks them through first steps.
+- Flag the new client in the payments/onboarding Slack channel so fulfillment picks them up.
+<callout icon="💡" color="blue_bg">
+	First win = best proof. The moment this client hits an early result, capture it (screenshot + one line) and drop it in Slack so it feeds Case Studies.
+</callout>
+</content>
+</page>

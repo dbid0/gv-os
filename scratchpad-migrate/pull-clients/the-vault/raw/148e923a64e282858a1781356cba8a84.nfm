@@ -1,0 +1,29 @@
+<page url="https://app.notion.com/p/148e923a64e282858a1781356cba8a84" icon="🔄">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"No-Close Process"}
+</properties>
+<content>
+<callout icon="💡" color="blue_bg">
+	A no-close is NOT a no-forever. Most closes happen on the 2nd or 3rd touch. Log everything. Stay in the game. The money is in the follow-up.
+</callout>
+### Immediately After the Call
+1. **Log detailed CRM notes** — What they said, where they hesitated, exact objections raised, their financial situation, what they said success looks like
+2. **Update CRM status** to "No-Close — Follow Up"
+3. **Notify setter via Slack** to begin follow-up sequence
+4. **Set a follow-up task** for 24–48 hours out
+---
+### Follow-Up Sequence
+**Within 24 Hours (Setter SMS):**
+*"Hey \[Name\], \[Closer\] mentioned you two had a great call. Just following up — any questions after sitting on it?"*
+**48–72 Hours (Closer outreach):**
+*"Hey \[Name\] — I know the timing might not be perfect right now. I do have a spot that just opened up this week. Did you want to revisit the plan we built for you?"*
+**Day 5 (Value drop):**
+*Send a relevant case study: "Thought you'd find this useful — this is exactly what \[similar person\] did after being in your position."*
+**Day 10 (Final close attempt):**
+*"\[Name\], I want to be straight with you — I only have \[X\] spots left at this price point. After this, the next available slot is \[timeframe\]. If you want in, now is the time."*
+</content>
+</page>

@@ -1,0 +1,43 @@
+<page url="https://app.notion.com/p/d3ae923a64e282cd836b01f75ce17e5a" icon="📈">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Performance Standards"}
+</properties>
+<content>
+<callout icon="📌" color="gray_bg">
+	These are not suggestions — they are the standard. Hit these benchmarks consistently and you have a place here long-term. Miss them and we coach you. Keep missing them and we replace you.
+</callout>
+---
+## 📊 Setter Benchmarks
+- Booking rate: 70%+ (triage contacts to booked calls)
+- No-show rate: Under 20% on booked calls
+- Speed-to-contact: Under 5 minutes from application to first call attempt
+- CRM note quality: Every booked lead has structured, detailed notes — not one-liners
+- EOD submissions: 100% every single day you work
+---
+## 🎯 Closer Benchmarks
+- Close rate: 40%+ (calls taken to closed deals)
+- No-close follow-up rate: 100% — every no-close gets a follow-up sequence started same day
+- Post-call notes: Submitted within 30 minutes of every call, closed or not
+- CRM updated: Immediately after every call — no exceptions
+- EOD submissions: 100% every single day you work
+---
+## 📅 Weekly Review Schedule
+- Every Friday: Submit weekly metrics via EOD form
+- Every Monday: AM huddle — time TBD (being scheduled as the team is structured; announced in Slack 1-general) — mandatory
+- Monthly: Strategy call with management — metrics review + coaching
+---
+## ⚠️ Underperformance Protocol
+- First instance: Coaching call within 48 hours + 2-week improvement window
+- Second instance: Final warning + written performance improvement plan
+- Third instance: Removed from the team
+---
+## 🚨 Immediate Removal — No Warning Window
+<callout icon="🚫" color="red_bg">
+	Missing EODs consistently without notice<br>Not updating CRM after calls<br>Ghosting leads after they've booked<br>Lying about metrics or call outcomes<br>Disrespecting leads or creating legal liability
+</callout>
+*We celebrate wins loudly and address problems directly. If you're struggling, speak up — we coach people who want to improve. We remove people who stop caring.*
+</content>
+</page>

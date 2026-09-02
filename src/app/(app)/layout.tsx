@@ -14,6 +14,7 @@ import {
   unreadNotificationCount,
 } from "@/lib/notifications/count";
 import { getPrefs } from "@/lib/prefs";
+import { getViewerScope } from "@/lib/home/viewer-scope";
 import { shellUser } from "@/lib/auth/user";
 import { effectiveRole, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
@@ -30,13 +31,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // PARALLEL with the auth roundtrip instead of behind it — that auth wait was
   // on the critical path of every cold shell render. Only prefs + realRole need
   // the resolved email, so they wait in a second (tiny) batch.
-  const [user, monthCashCents, unreadCount, notifications, cookieStore] =
+  const [user, monthCashCents, unreadCount, notifications, cookieStore, scope] =
     await Promise.all([
       shellUser(),
       currentMonthCashCents(),
       unreadNotificationCount(),
       recentNotifications(),
       cookies(),
+      getViewerScope(),
     ]);
   const [prefs, realRole] = await Promise.all([
     getPrefs(user?.email ?? null, ["avatar", "display-name"]),
@@ -63,7 +65,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           user={user}
-          monthCashCents={monthCashCents}
+          monthCashCents={scope.restricted ? null : monthCashCents}
           unreadCount={unreadCount}
           notifications={notifications}
           avatarUrl={avatarUrl}

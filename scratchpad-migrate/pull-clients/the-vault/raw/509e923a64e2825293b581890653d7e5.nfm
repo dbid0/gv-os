@@ -1,0 +1,37 @@
+<page url="https://app.notion.com/p/509e923a64e2825293b581890653d7e5" icon="🚀">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Client Onboarding Process"}
+</properties>
+<content>
+<callout icon="✅" color="green_bg">
+	The close is not the finish line — it's the starting line. How you handle the first 48 hours after a close determines buyer's remorse, refund rate, and referrals.
+</callout>
+### Immediately After Close (First 5 Minutes)
+1. **Confirm payment collected** — verify in CRM and with payment processor
+2. **Send onboarding Slack DM** to client/client team: "Just closed \[Name\] at \[\$X\] on \[Tier\]. Sending them over now."
+3. **Update CRM status** to "Client — Onboarding"
+4. **Provide access links** — Discord invite + WHOP checkout/access. The Vault fulfillment sequence (kick it off before you hang up):
+	- Discord permissions upgraded to the **ACCELERATOR** role
+	- Discord name changed to **"NAME - XK/month"** format
+	- Member requests **Bootcamp access** on WHOP
+	- Confirm they're accepted on WHOP
+	- Full server access confirmed: brand deal board, private Friday calls, priority chat
+	- Point them to Module 1 (mindset/goals/time management) as their first assignment
+5. **Log all deal details in CRM notes** — tier, price paid, objections overcome, referral potential
+---
+### First 24 Hours
+- Welcome SMS sent from Brady or the team within 5 minutes of close
+- Onboarding email sequence begins automatically via automation
+- Setter notified of any early questions — route to closer if needed
+---
+### Closer's Responsibility Post-Close
+- **Monitor for buyer's remorse in first 48 hours** — be available to answer questions
+- **Check in via text after 3 days** — "Hey \[Name\], just checking in. How are you settling in? Have you posted your intro and started Module 1?"
+- **The first-deal path to reinforce:** finish the 3 modules → copy videos from their biggest tech brand deals as practice → Will & Dave approve or give feedback → apply on Sideshift daily while the team places them. Roughly 2 weeks in, they're on autopilot: chats, Friday calls, content reviews, deal announcements.
+- **Flag any issues immediately to management** via Slack
+</content>
+</page>

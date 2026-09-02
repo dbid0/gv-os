@@ -1,0 +1,61 @@
+<page url="https://app.notion.com/p/162e923a64e283fe89d8016b61d2ca5b" icon="💵">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Compensation & Pay Structure"}
+</properties>
+<content>
+<callout icon="💰" color="gray_bg">
+	This page covers exactly how you get paid, when, and what affects your check. Read it fully. If you have questions after reading this, ask management — don't assume.
+</callout>
+---
+## 📞 Setter Compensation
+<callout icon="🟢" color="green_bg">
+	Rate: 5% commission on every deal that closes from a call you booked and showed.<br><br>Example: You book a lead who closes a \$5,000 deal — you earn \$250.
+</callout>
+- You get paid when the deal closes — not when you book the call
+- If a lead no-shows or doesn't close, you do not earn on that booking
+- If a client refunds within the refund window, your commission is clawed back
+- Payment processed: weekly, every Friday, on deals verified in Close CRM
+- Payment method: confirmed with you individually at onboarding (Stripe, PayPal, or bank transfer)
+---
+## 🎯 Closer Compensation
+<callout icon="🟢" color="green_bg">
+	Rate: 10% commission on every deal you close, based on collected amount.<br><br>Example: \$5,000 deal = \$500. \$10,000 deal = \$1,000.
+</callout>
+- Commission is based on the collected amount — not the invoice amount
+- Payment plans: you earn on each installment as it collects, not upfront on the full value
+- If a client refunds within the refund window, your commission is clawed back
+- Payment processed: weekly, every Friday, on cash collected and verified in Close CRM
+- Payment method: confirmed with you individually at onboarding (Stripe, PayPal, or bank transfer)
+---
+## 📊 How Deals Get Tracked
+- All closed deals are tracked in Close CRM — this is the source of truth
+- Setter credit is assigned to the rep who booked the showing call (must be logged in CRM at time of booking)
+- Closer credit is assigned to the rep logged as the opportunity owner in CRM at time of close
+- Disputes must be raised within 48 hours of payment processing — contact Daniel directly by Slack DM
+<callout icon="⚠️" color="yellow_bg">
+	If CRM is not updated, we cannot verify and you will not be paid. CRM hygiene is non-negotiable.
+</callout>
+---
+## 🔄 Refunds & Chargebacks
+- Refund window: per the client agreement — confirm with Daniel before you ever quote refund terms on a call. Never improvise refund language.
+- If a client refunds: both setter and closer commissions on that deal are clawed back on the next payment cycle
+- If a chargeback is filed: commission is clawed back AND may result in a performance review
+- High refund rates (3+ in a month) trigger a mandatory coaching call and performance review
+---
+## 🎁 Performance Bonuses
+- Setter bonus: announced in Slack 1-general as monthly milestones go live (e.g., show-rate and booking-volume bonuses)
+- Closer bonus: announced in Slack 1-general as monthly milestones go live (e.g., close-rate and cash-collected milestones)
+- Bonuses are paid at end of month and are discretionary unless otherwise agreed in writing
+---
+## ⚖️ Pay Disputes
+- If you believe your commission was calculated incorrectly, message Daniel within 48 hours of receiving your payment summary
+- Include: deal name, close date, CRM link, and what you believe the discrepancy is
+- Disputes raised after 48 hours will be reviewed but are not guaranteed to be resolved in your favor
+<callout icon="🔇" color="red_bg">
+	Do NOT bring pay disputes into public Slack channels — DM management only.
+</callout>
+</content>
+</page>

@@ -5,6 +5,8 @@ import { Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { cents } from "@/lib/money";
 import { compactUsd } from "@/lib/revenue-chart";
+import { getViewerScope } from "@/lib/home/viewer-scope";
+import { scopeRowsToViewer } from "@/lib/home/visibility";
 import { getLeaderboard } from "@/lib/sales/queries";
 import { ROLE_LABEL } from "@/lib/sales/eod-fields";
 import { cn } from "@/lib/utils";
@@ -29,7 +31,12 @@ export default async function SalesLeaderboardPage({
 }) {
   const { role = "" } = await searchParams;
   const active = ROLE_TABS.some((t) => t.key === role) ? role : "";
-  const rows = await getLeaderboard(active || undefined);
+  const [scope, allRows] = await Promise.all([
+    getViewerScope(),
+    getLeaderboard(active || undefined),
+  ]);
+  // A rep's leaderboard is their own offer's floor, not every client's.
+  const rows = scopeRowsToViewer(allRows, (r) => r.clientId, scope.allowed);
   const ranked = rows.some(
     (r) => r.cashCents > 0 || r.dealsClosed > 0 || r.shows > 0 || r.dials > 0,
   );

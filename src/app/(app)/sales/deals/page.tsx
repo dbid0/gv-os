@@ -4,6 +4,8 @@ import { SummaryStrip, type OfferBreakdown } from "@/components/sales/summary-st
 import { Money } from "@/components/ui/metric";
 import { cents } from "@/lib/money";
 import { compactUsd } from "@/lib/revenue-chart";
+import { getViewerScope } from "@/lib/home/viewer-scope";
+import { scopeRowsToViewer } from "@/lib/home/visibility";
 import { listDeals } from "@/lib/sales/queries";
 
 export const metadata = {
@@ -11,7 +13,9 @@ export const metadata = {
 };
 
 export default async function SalesDealsPage() {
-  const deals = await listDeals();
+  const [scope, allDeals] = await Promise.all([getViewerScope(), listDeals()]);
+  // A rep sees only their own offer's deals, never the whole book.
+  const deals = scopeRowsToViewer(allDeals, (d) => d.clientId, scope.allowed);
 
   if (deals.length === 0) {
     return (

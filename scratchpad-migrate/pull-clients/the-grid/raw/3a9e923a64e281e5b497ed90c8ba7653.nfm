@@ -1,0 +1,55 @@
+<page url="https://app.notion.com/p/3a9e923a64e281e5b497ed90c8ba7653" icon="📝">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Scripts Hub"}
+</properties>
+<content>
+<callout icon="📝" color="gray_bg">
+	The exact scripts your setters and closers run on every call. The structure never changes, the words are yours. Don't recite, execute.
+</callout>
+---
+## 📞 Setter Script — The Grid
+<callout icon="🎯" color="gray_bg">
+	Objective: triage the lead, qualify intent + finances, build curiosity, and book the call. You're not the closer, your job is to qualify and get them on the calendar with great notes.
+</callout>
+**1. Greeting + curiosity** — "Hey \[Name\], it's \[You\] with The Grid, you just put in an application, that's why I'm calling. Caught you at an ok time?"
+**2. Frame the call** — "This'll be quick. I just wanna understand what you've got going on and see if it's even a fit, and if it is I'll get you locked in with \[Closer\] who walks you through the whole system. Sound good?"
+**3. Qualify** — "What are you running right now? … How are you getting reach today, one account, a few? … You ever been banned or watched an account just die on you?" (Listen for the real pain: got wiped, everything on one account, can't scale.)
+**4. Financial qualify (buckets, never a price)** — "This is an install-the-whole-system thing, people come in ready to invest in the setup to get it running. When you're serious about a project like this, are you in a spot to put real resources behind it, or would that be a stretch right now?"
+**5. Redirect** — if they push for price/details: "That's exactly what \[Closer\] walks you through, they map it to your exact situation. My job's just to make sure it's a fit and get you in front of them."
+**6. Rapport** — one genuine human beat. React to something they said.
+**7. Book** — "Alright, you're a fit. I'm putting you with \[Closer\] for \[day/time\], that work? You'll get a text + email confirmation. Show up on time, they block that slot just for you."
+<callout icon="📝" color="red_bg">
+	Log full notes in Close immediately after the call. Setter note quality = closer performance. Never quote a price, never promise a result or that they won't get banned.
+</callout>
+---
+## 🎯 Closer Script — The Grid
+<callout icon="🚨" color="red_bg">
+	Phase 2 (Perspective Shift) is the single most important step. Do it BEFORE you pitch. Skip it and the close dies.
+</callout>
+### Phase 1 — Rapport (5–10 min)
+- "Tell me about what you're running right now, what does your operation actually look like?"
+- "How's your reach been, you ever been banned or watched an account just die on you?"
+- "What made you book this call specifically?"
+Get them talking. Listen for the real pain (got wiped, everything on one account, scared it happens again), not the surface answer.
+### Phase 2 — Perspective Shift (2–3 min) · the most critical step
+"\[Name\], honest question. You've been thinking about not being one ban away from zero for a while now. What do you think has actually stopped you from fixing it? … And if you keep running everything through accounts you don't control, where are you when the next ban hits, same spot, starting over? … So the real question isn't whether you want this, you clearly do. It's whether you fix it now or wait until you get wiped again. I'm not judging, I just want to know who I'm talking to."
+### Phase 3 — Pitch Transition (1–2 min)
+"I appreciate you being real with me. Let me show you exactly what Kaden built and why it fixes the thing you've been stuck on."
+### Phase 4 — The Pitch
+- **What it is:** The Grid installs the whole system, the phone builds, the account-creation engine, and the AI distribution layer, so hundreds of accounts run on autopilot and your reach lives everywhere instead of on one account you could lose tomorrow.
+- **The proof (show it):** thousands of accounts posting daily, \~100M views/month on this exact system. Kaden rebuilt to \~\$100k/month after a ban wiped \~\$70k/month overnight.
+- **Tie it to them:** connect ONE proof point to their exact situation from discovery.
+- **The offer:** present the tier that fits their operation (see The Offer). Present the price confidently. Don't apologize for it.
+### Phase 5 — Close + Objections
+- "Based on everything we talked about, does this make sense for where you're at?"
+- "What's the one thing you'd need answered before you get started?"
+- Handle objections with the **Objection Handling Cheat Sheet** (Closers SOPs).
+- Final ask: "Alright \[Name\], let's get you set up, I'll send you the link right now."
+<callout icon="🛡️" color="red_bg">
+	Compliance: never say ban-proof, undetectable, or guaranteed. Never promise a prospect a dollar or that they won't get banned. Frame everything as resilience and distribution, no single ban touches your income. Every proof number is Kaden's or a verified client's. "Results vary."
+</callout>
+</content>
+</page>
