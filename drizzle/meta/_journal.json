@@ -330,6 +330,13 @@
       "when": 1788275798625,
       "tag": "0046_remove_notetaker",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788320967545,
+      "tag": "0047_call_recordings",
+      "breakpoints": true
     }
   ]
 }

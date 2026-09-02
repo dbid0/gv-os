@@ -104,6 +104,14 @@ export const PROVIDERS: Provider[] = [
   },
 
   {
+    value: "fathom",
+    label: "Fathom",
+    group: "Sales CRM",
+    credential: "api_key",
+    feeds: "Call recordings + transcripts, pulled after every closer call",
+  },
+
+  {
     value: "kit",
     label: "Kit",
     group: "Email",
