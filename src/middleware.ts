@@ -89,6 +89,20 @@ function guard(request: NextRequest, realRole: Role): NextResponse | null {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ALWAYS-AVAILABLE ESCAPE from a "View as" preview.
+  //
+  // The preview cookie narrows the effective role, and the guard below then
+  // redirects EVERY route to that role's home — so a preview left on (it used
+  // to last 24h) pins the owner inside one client workspace with no way back if
+  // they miss the exit banner. This runs before auth and before the guard, so
+  // nothing can intercept it: hitting /exit-preview always clears the preview.
+  if (pathname === "/exit-preview") {
+    const out = NextResponse.redirect(new URL("/dashboard", request.url));
+    out.cookies.set("gv-dev-role", "", { path: "/", maxAge: 0 });
+    out.cookies.set("gv-dev-client", "", { path: "/", maxAge: 0 });
+    return out;
+  }
+
   // Dev/preview only: devAuthBypass() is hard-fenced to never pass on the
   // production deployment (see src/lib/auth/dev-bypass.ts for the documented
   // verification path). In prod the login wall below always stands. With no

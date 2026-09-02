@@ -105,3 +105,35 @@ describe("home routing contract", () => {
     expect(canAccessRoute("admin", "/settings/integrations")).toBe(true);
   });
 });
+
+/**
+ * The "View as" preview trap.
+ *
+ * A preview cookie narrows the effective role, and `guardTarget` then bounces
+ * EVERY route to that role's home. Previewing a client therefore pins the owner
+ * inside one workspace — which is exactly what happened to Daniel: every route
+ * 307'd to /w/the-grid and he could not get back to the app. The escape hatch
+ * (/exit-preview, handled in the middleware before auth and before the guard)
+ * is what makes that recoverable, so it must never become guardable.
+ */
+describe("client preview traps every route (why /exit-preview exists)", () => {
+  it("bounces an admin previewing a client off admin routes to that workspace", () => {
+    expect(guardTarget("client", "/dashboard", "the-grid")).toBe("/w/the-grid");
+    expect(guardTarget("client", "/sales", "the-grid")).toBe("/w/the-grid");
+    expect(guardTarget("client", "/clients", "the-grid")).toBe("/w/the-grid");
+  });
+
+  it("lets the previewed workspace itself through", () => {
+    expect(guardTarget("client", "/w/the-grid", "the-grid")).toBeNull();
+    expect(guardTarget("client", "/w/the-grid/sales", "the-grid")).toBeNull();
+  });
+
+  it("never lets a client role wander into ANOTHER client's workspace", () => {
+    expect(guardTarget("client", "/w/the-vault", "the-grid")).toBe("/w/the-grid");
+  });
+
+  it("leaves a real admin (no preview) alone everywhere", () => {
+    expect(guardTarget("admin", "/dashboard", null)).toBeNull();
+    expect(guardTarget("admin", "/w/the-grid", null)).toBeNull();
+  });
+});

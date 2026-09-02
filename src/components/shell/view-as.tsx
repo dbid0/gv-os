@@ -33,7 +33,11 @@ function setCookie(name: string, value: string | null) {
   if (value === null) {
     document.cookie = `${name}=; path=/; max-age=0`;
   } else {
-    document.cookie = `${name}=${value}; path=/; max-age=86400`;
+    // NO max-age: a preview is a session cookie, so it dies with the browser
+    // session. It used to last 24h, which pinned the owner inside a previewed
+    // client workspace long after they meant to look. /exit-preview is the
+    // always-available way out.
+    document.cookie = `${name}=${value}; path=/`;
   }
 }
 
