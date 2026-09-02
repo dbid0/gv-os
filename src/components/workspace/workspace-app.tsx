@@ -34,6 +34,10 @@ import {
 } from "@/app/(app)/workspace/actions";
 import { ConfirmDeleteDialog } from "@/components/workspace/confirm-delete-dialog";
 import { PageEditor, type Crumb } from "@/components/workspace/page-editor";
+import {
+  OtherTeamspaces,
+  type OtherTeamspace,
+} from "@/components/workspace/other-teamspaces";
 import { PageIcon } from "@/components/workspace/page-icon";
 import { TeamspaceIcon } from "@/components/workspace/teamspace-icon";
 import {
@@ -100,6 +104,7 @@ export function WorkspaceApp({
   initialPageId,
   homeHref,
   agencyHref = null,
+  otherTeamspaces = [],
 }: {
   teamspace: TeamspaceView;
   initialPageId: string | null;
@@ -107,6 +112,11 @@ export function WorkspaceApp({
   homeHref: string;
   /** Optional link to the agency templates space, shown only in client views. */
   agencyHref?: string | null;
+  /**
+   * Every OTHER offer's docs, listed under this one. Only the agency workspace
+   * passes these — Daniel wants all the offers' Notion visible in one sidebar.
+   */
+  otherTeamspaces?: OtherTeamspace[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -562,6 +572,8 @@ export function WorkspaceApp({
               )}
             </div>
           )}
+
+          <OtherTeamspaces teamspaces={otherTeamspaces} />
 
           {agencyHref && (
             <div className="border-border/60 mt-4 border-t pt-3">
