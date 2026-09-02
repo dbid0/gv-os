@@ -3,16 +3,39 @@ import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
-import { Kpi } from "@/components/ui/metric";
+import { Kpi, Money } from "@/components/ui/metric";
+import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
-import { applications, clients } from "@/db/schema/app";
+import { applications, clients, reps as repsTable } from "@/db/schema/app";
 import { bucketByDay, chartColorForClient } from "@/lib/charts";
+import { getClientReport } from "@/lib/clients/report";
+import { cents } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
+import {
+  aggregateByRep,
+  compareRepStats,
+  dispositionLabel,
+  summarizeActivity,
+} from "@/lib/sales/call-activity";
+import { listCallLogs } from "@/lib/sales/call-queries";
+import { listDeals } from "@/lib/sales/queries";
 
 export const dynamic = "force-dynamic";
 
-/** Workspace Sales: this offer's funnel — applications now, calls/deals as
- * bookings and CRM data land. */
+/**
+ * Workspace → Sales: THIS offer's sales command center.
+ *
+ * Daniel's call: sales is per-offer and lives inside the client workspace, not
+ * as a separate top-level section. So this is the whole picture for one offer —
+ * cash, deals, the rep leaderboard, recent calls, and the application flow —
+ * rather than the applications-only view it used to be.
+ *
+ * Every figure is READ from an existing tested source and filtered to this
+ * client: cash from `getClientReport` (the same client-ledger figure the
+ * accounting page shows), deals from `listDeals`, calls from `listCallLogs`,
+ * and the leaderboard from the pure `aggregateByRep`. Nothing is recomputed
+ * here, so this page can never disagree with the pages beside it.
+ */
 export default async function WorkspaceSalesPage({
   params,
 }: {
@@ -28,95 +51,170 @@ export default async function WorkspaceSalesPage({
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
+  const clientId = row?.id ?? null;
+
   const now = new Date();
   const daysAgo30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const apps = row
-    ? await db
-        .select({
-          name: applications.name,
-          email: applications.email,
-          formName: applications.formName,
-          submittedAt: applications.submittedAt,
-          createdAt: applications.createdAt,
-        })
-        .from(applications)
-        .where(
-          and(
-            eq(applications.clientId, row.id),
-            gte(applications.createdAt, daysAgo30),
-          ),
-        )
-        .orderBy(desc(applications.createdAt))
-        .limit(100)
-    : [];
+
+  const [apps, allCalls, allDeals, report, repRows] = await Promise.all([
+    clientId
+      ? db
+          .select({
+            name: applications.name,
+            email: applications.email,
+            formName: applications.formName,
+            submittedAt: applications.submittedAt,
+            createdAt: applications.createdAt,
+          })
+          .from(applications)
+          .where(
+            and(
+              eq(applications.clientId, clientId),
+              gte(applications.createdAt, daysAgo30),
+            ),
+          )
+          .orderBy(desc(applications.createdAt))
+          .limit(100)
+      : Promise.resolve([]),
+    listCallLogs(500),
+    listDeals(),
+    getClientReport(slug, client.name).catch(() => null),
+    clientId
+      ? db
+          .select({ id: repsTable.id, name: repsTable.name })
+          .from(repsTable)
+          .where(eq(repsTable.clientId, clientId))
+      : Promise.resolve([]),
+  ]);
+
+  // Everything below is THIS offer only.
+  const calls = allCalls.filter((c) => c.clientId === clientId);
+  const deals = allDeals.filter((d) => d.clientId === clientId);
+  const stats = summarizeActivity(calls);
+  const repName = new Map(repRows.map((r) => [r.id, r.name]));
+  const board = aggregateByRep(calls).sort(compareRepStats).slice(0, 8);
 
   const perDay = bucketByDay(
     apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
     now,
   );
-  const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  const last7 = apps.filter(
-    (a) => (a.submittedAt ?? a.createdAt).getTime() > weekAgo,
-  ).length;
+  const color = chartColorForClient(slug);
+  const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Kpi label="Applications · 30d" value={String(apps.length)} tone="brand" />
-        <Kpi label="Last 7 days" value={String(last7)} />
-        <Kpi label="Calls & deals" value="—" />
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi
+          label="Cash collected — all time"
+          value={report ? <Money amount={cents(report.mirror.cashCents)} /> : "—"}
+          tone="brand"
+        />
+        <Kpi label="Deals" value={String(deals.length)} />
+        <Kpi label="Show rate" value={pct(stats.showRate)} />
+        <Kpi label="Close rate" value={pct(stats.closeRate)} />
       </div>
 
-      {apps.length > 0 && (
-        <Panel title="Applications per day">
-          <ColumnChart data={perDay} color={chartColorForClient(client.name)} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel
+          title="Leaderboard"
+          aside={<span className="text-faint text-xs">This offer</span>}
+        >
+          {board.length === 0 ? (
+            <p className="text-faint py-8 text-center text-sm">
+              No calls logged for this offer yet. The leaderboard fills in as reps log
+              activity.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {board.map((r, i) => (
+                <div key={r.repId} className="flex items-center gap-3 py-2.5">
+                  <span className="text-faint w-4 text-xs tabular-nums">{i + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {repName.get(r.repId) ?? "Unassigned"}
+                  </span>
+                  <span className="text-faint text-xs tabular-nums">
+                    {r.calls} calls · {r.sales} sold
+                  </span>
+                  <span className="w-12 text-right text-sm font-semibold tabular-nums">
+                    {pct(r.closeRate)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </Panel>
-      )}
 
-      {apps.length === 0 ? (
-        <Panel title="No applications yet">
+        <Panel title="Recent deals">
+          {deals.length === 0 ? (
+            <p className="text-faint py-8 text-center text-sm">
+              No deals logged for this offer yet.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {deals.slice(0, 8).map((d) => (
+                <div key={d.id} className="flex items-center gap-3 py-2.5">
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {d.customerName ?? "—"}
+                    {d.repName && <span className="text-faint"> · {d.repName}</span>}
+                  </span>
+                  <StatusPill tone={d.status === "signed" ? "live" : "pending"}>
+                    {d.status}
+                  </StatusPill>
+                  <span className="text-sm font-semibold tabular-nums">
+                    <Money amount={d.cashCollectedCents} />
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <Panel
+        title="Recent calls"
+        aside={<span className="text-faint text-xs">{calls.length} logged</span>}
+      >
+        {calls.length === 0 ? (
           <p className="text-faint py-8 text-center text-sm">
-            Applications flow in from the Typeform connection. Calls and closed deals
-            join as bookings and CRM data land.
+            No calls logged for this offer yet. They appear here as reps log them, with
+            the Fathom recording attached once that connection is live.
           </p>
-        </Panel>
-      ) : (
-        <Panel title="Recent applications">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-faint border-b text-left text-xs">
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Name</th>
-                  <th className="py-2 pr-3 font-medium">Email</th>
-                  <th className="py-2 font-medium">Form</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apps.slice(0, 30).map((a, i) => (
-                  <tr key={`${a.email}-${i}`} className="border-b last:border-0">
-                    <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
-                      {(a.submittedAt ?? a.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        timeZone: "America/Chicago",
-                      })}
-                    </td>
-                    <td className="py-2 pr-3">{a.name ?? "—"}</td>
-                    <td className="text-muted-foreground max-w-56 truncate py-2 pr-3">
-                      {a.email ?? "—"}
-                    </td>
-                    <td className="text-faint max-w-48 truncate py-2 text-xs">
-                      {a.formName ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        ) : (
+          <div className="divide-y">
+            {calls.slice(0, 10).map((c) => (
+              <div key={c.id} className="flex items-center gap-3 py-2.5">
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {c.customerName ?? "—"}
+                  {c.repName && <span className="text-faint"> · {c.repName}</span>}
+                </span>
+                <span className="text-faint text-xs">
+                  {dispositionLabel(c.disposition)}
+                </span>
+                <span className="text-faint w-24 text-right text-xs tabular-nums">
+                  {c.occurredAt.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            ))}
           </div>
-        </Panel>
-      )}
+        )}
+      </Panel>
+
+      <Panel
+        title="Applications — last 30 days"
+        aside={<span className="text-faint text-xs">{apps.length} in window</span>}
+      >
+        {apps.length === 0 ? (
+          <p className="text-faint py-8 text-center text-sm">
+            No applications in the last 30 days.
+          </p>
+        ) : (
+          <ColumnChart data={perDay} color={color} />
+        )}
+      </Panel>
     </div>
   );
 }

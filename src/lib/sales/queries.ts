@@ -132,6 +132,9 @@ async function cashByDeal(dealIds: string[]): Promise<CashByDeal> {
 /** A closed-deal row shaped for the Deals ledger view. */
 export interface DealListRow {
   id: string;
+  /** The offer this deal belongs to — lets a per-offer view filter reliably
+   * instead of string-matching the team NAME. Additive: no figure changes. */
+  clientId: string | null;
   closedAt: Date | null;
   customerName: string | null;
   repName: string | null;
@@ -148,6 +151,7 @@ export async function listDeals(): Promise<DealListRow[]> {
   const rows = await db
     .select({
       id: deals.id,
+      clientId: deals.clientId,
       closedAt: deals.closedAt,
       customerName: deals.customerName,
       repName: reps.name,
@@ -166,6 +170,7 @@ export async function listDeals(): Promise<DealListRow[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    clientId: r.clientId,
     closedAt: r.closedAt,
     customerName: r.customerName,
     repName: r.repName,
