@@ -27,6 +27,7 @@ import {
 } from "@/lib/funnel/speed-to-lead";
 import { listApplications } from "@/lib/funnel/queries";
 import { listCallLogs } from "@/lib/sales/call-queries";
+import { summarizeBodTimes } from "@/lib/brief/bod-times";
 import { getEodCompliance, listActivityReports, listDeals } from "@/lib/sales/queries";
 import { listQuotasWithPacing } from "@/lib/sales/quota-queries";
 import { getSettings } from "@/lib/settings";
@@ -69,6 +70,7 @@ export default async function BriefPage() {
     compliance,
     bodCompliance,
     eodReports,
+    bodReports,
     apps,
     calls,
     quotas,
@@ -80,6 +82,7 @@ export default async function BriefPage() {
     getEodCompliance("eod"),
     getEodCompliance("bod"),
     listActivityReports("eod"),
+    listActivityReports("bod"),
     listApplications(),
     listCallLogs(),
     listQuotasWithPacing(now.getTime()),
@@ -126,6 +129,19 @@ export default async function BriefPage() {
       mood: Number((r.metrics as Record<string, number>)?.mood ?? 0),
     }))
     .filter((r) => r.mood >= 1 && r.mood < 3);
+
+  // 3b) WHEN the BODs went in. The standard is a time ("before your first
+  // dial"), so the brief shows the clock and the day's typical time, not just
+  // who is missing.
+  const bodTimes = summarizeBodTimes(
+    bodReports
+      .filter((r) => dayKeyCT(new Date(r.reportDate)) === todayKey)
+      .map((r) => ({
+        repName: r.repName,
+        teamName: r.teamName,
+        submittedAt: new Date(r.submittedAt),
+      })),
+  );
 
   // 4) Speed to lead — real time-to-first-dial, matched by email. Agency-wide,
   // then broken out per offer over the exact same apps + calls (no extra query).
@@ -295,6 +311,38 @@ export default async function BriefPage() {
         <Panel title="Team check-ins">
           <div className="space-y-4">
             <div>
+              <p className="text-muted-foreground mb-1.5 flex items-center justify-between gap-2 text-xs font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Sunrise className="size-3.5" /> BOD filed today
+                </span>
+                {bodTimes.medianLabel && (
+                  <span className="text-faint">typical {bodTimes.medianLabel}</span>
+                )}
+              </p>
+              {bodTimes.filed.length === 0 ? (
+                <p className="text-faint text-sm">No BODs in yet today.</p>
+              ) : (
+                <div className="space-y-1">
+                  {bodTimes.filed.map((f) => (
+                    <div
+                      key={`${f.repName}-${f.minutes}`}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {f.repName ?? "A rep"}
+                        {f.teamName && (
+                          <span className="text-faint text-xs"> · {f.teamName}</span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        {f.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t pt-3">
               <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium">
                 <Sunrise className="size-3.5" /> BOD not in yet
               </p>
