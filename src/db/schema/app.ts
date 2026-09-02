@@ -1205,6 +1205,60 @@ export type OfferSettings = typeof offerSettings.$inferSelect;
  * import updates rather than duplicating. That importer is a stub behind the
  * go-live wall today — no row here is ever invented.
  */
+/**
+ * A call recording pulled from Fathom, with its transcript and (later) the
+ * read on WHY the call went the way it did.
+ *
+ * Kept separate from `activity_logs` for two reasons: a recording often lands
+ * BEFORE the rep logs the call, so it needs somewhere to live unattached; and a
+ * transcript is bulky, so it stays out of the row the call-log list scans.
+ * `activityLogId` is filled in once a recording is confidently matched to a
+ * logged call (see `matchRecordingToCall`, which returns nothing rather than
+ * guess). (provider, external_id) is unique, so re-running a pull is a no-op.
+ */
+export const callRecordings = appSchema.table(
+  "call_recordings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull().default("fathom"),
+    /** The provider's own recording id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    /** The offer this call belongs to. Null until it can be attributed. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** The logged call this recording belongs to, once confidently matched. */
+    activityLogId: uuid("activity_log_id").references(() => activityLogs.id, {
+      onDelete: "set null",
+    }),
+    title: text("title"),
+    recordingUrl: text("recording_url"),
+    transcript: text("transcript"),
+    summary: text("summary"),
+    durationSeconds: bigint("duration_seconds", { mode: "number" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    /** Display names / emails captured on the call. */
+    participants: jsonb("participants").$type<string[]>().notNull().default([]),
+    /** pending · done · failed · skipped — the state of the call read. */
+    analysisStatus: text("analysis_status").notNull().default("pending"),
+    /** The one-line read: why it did not close, or what won it. */
+    analysisOutcome: text("analysis_outcome"),
+    /** Structured coaching: objections raised, steps missed, what to do next. */
+    analysis: jsonb("analysis").$type<Record<string, unknown>>().notNull().default({}),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("call_recordings_provider_external_key").on(
+      table.provider,
+      table.externalId,
+    ),
+    index("call_recordings_client_idx").on(table.clientId),
+    index("call_recordings_activity_idx").on(table.activityLogId),
+    index("call_recordings_occurred_idx").on(table.occurredAt),
+  ],
+);
+
 export const activityLogs = appSchema.table(
   "activity_logs",
   {
@@ -1539,3 +1593,6 @@ export type WorkspaceDatabase = typeof workspaceDatabases.$inferSelect;
 export type NewWorkspaceDatabase = typeof workspaceDatabases.$inferInsert;
 export type WorkspaceDatabaseRow = typeof workspaceDatabaseRows.$inferSelect;
 export type NewWorkspaceDatabaseRow = typeof workspaceDatabaseRows.$inferInsert;
+
+export type CallRecording = typeof callRecordings.$inferSelect;
+export type NewCallRecording = typeof callRecordings.$inferInsert;

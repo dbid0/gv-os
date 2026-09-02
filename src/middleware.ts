@@ -38,6 +38,7 @@ const PUBLIC_PATHS = [
   "/api/sync/finance-sheet",
   "/api/sync/payments",
   "/api/sync/close",
+  "/api/sync/fathom",
   "/api/sync/kit",
   "/api/sync/all-pulls",
   "/api/sync/bookings",
