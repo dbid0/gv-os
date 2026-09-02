@@ -12,6 +12,7 @@ import { TopClock } from "@/components/shell/top-clock";
 import { signOut } from "@/lib/auth/actions";
 import type { BellNotification } from "@/lib/notifications/count";
 import type { ShellUser } from "@/lib/auth/user";
+import type { MonthCash } from "@/lib/accounting/sheet-sync";
 import { allNavItems } from "@/components/shell/nav-config";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsHydrated } from "@/lib/client-state";
@@ -37,14 +38,14 @@ const fmtMonthCash = (cents: number) =>
 
 export function Topbar({
   user,
-  monthCashCents = null,
+  monthCash = null,
   unreadCount = 0,
   notifications = [],
   avatarUrl = null,
 }: {
   user: ShellUser | null;
   /** Agency cash for the month; null hides the pill (a scoped viewer). */
-  monthCashCents?: number | null;
+  monthCash?: MonthCash | null;
   unreadCount?: number;
   notifications?: BellNotification[];
   avatarUrl?: string | null;
@@ -90,14 +91,26 @@ export function Topbar({
             book, not this viewer's offer. A rep or client must not read it,
             and re-pointing the same label at a smaller number would be a
             second definition of it, so the pill is simply absent for them. */}
-        {monthCashCents !== null && (
+        {monthCash !== null && (
           <span
             className="hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs sm:flex"
-            title="Cash collected this month, from the reconciled sheet"
+            title={
+              monthCash.status === "ok"
+                ? "Cash collected this month, from the reconciled sheet"
+                : monthCash.status === "never-synced"
+                  ? "The Master Finance Sheet hasn't synced yet — this is unknown, not zero."
+                  : "Couldn't read the finance sheet just now — this is unknown, not zero."
+            }
           >
-            <span className="numeric text-success font-semibold">
-              {fmtMonthCash(monthCashCents)}
-            </span>
+            {monthCash.status === "ok" ? (
+              <span className="numeric text-success font-semibold">
+                {fmtMonthCash(monthCash.cents)}
+              </span>
+            ) : (
+              // A dash, never $0: the sheet not having synced is not a claim
+              // that the agency collected nothing.
+              <span className="numeric text-faint font-semibold">—</span>
+            )}
             <span className="text-faint">this month</span>
           </span>
         )}

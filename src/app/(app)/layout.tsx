@@ -8,7 +8,7 @@ import { PageTransition } from "@/components/shell/page-transition";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { Topbar } from "@/components/shell/topbar";
-import { currentMonthCashCents } from "@/lib/accounting/sheet-sync";
+import { currentMonthCash } from "@/lib/accounting/sheet-sync";
 import {
   recentNotifications,
   unreadNotificationCount,
@@ -31,10 +31,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // PARALLEL with the auth roundtrip instead of behind it — that auth wait was
   // on the critical path of every cold shell render. Only prefs + realRole need
   // the resolved email, so they wait in a second (tiny) batch.
-  const [user, monthCashCents, unreadCount, notifications, cookieStore, scope] =
+  const [user, monthCash, unreadCount, notifications, cookieStore, scope] =
     await Promise.all([
       shellUser(),
-      currentMonthCashCents(),
+      currentMonthCash(),
       unreadNotificationCount(),
       recentNotifications(),
       cookies(),
@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           user={user}
-          monthCashCents={scope.restricted ? null : monthCashCents}
+          monthCash={scope.restricted ? null : monthCash}
           unreadCount={unreadCount}
           notifications={notifications}
           avatarUrl={avatarUrl}

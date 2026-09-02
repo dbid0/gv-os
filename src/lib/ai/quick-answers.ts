@@ -390,9 +390,23 @@ export function answerTeamStandings(input: {
 // ------------------------------------------------------------------ admin
 
 export function answerNetThisMonth(input: {
-  cents: number;
+  /** null when the figure is UNKNOWN — never conflate that with zero. */
+  cents: number | null;
   monthLabel: string;
+  reason?: "never-synced" | "unavailable";
 }): QuickAnswer {
+  if (input.cents === null) {
+    // Saying "$0 collected" because a sheet hasn't synced is a false claim
+    // about money. Say what is actually known instead.
+    return {
+      headline: `I can't read ${input.monthLabel}'s cash yet.`,
+      details: [
+        input.reason === "unavailable"
+          ? "The finance sheet couldn't be read just now — this is unknown, not zero."
+          : "The Master Finance Sheet hasn't synced yet — this is unknown, not zero.",
+      ],
+    };
+  }
   return {
     headline: `${usd(input.cents)} collected in ${input.monthLabel}.`,
     details:

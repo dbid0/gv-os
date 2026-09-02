@@ -33,7 +33,7 @@ import { getRepGamification, listRepMomentum } from "@/lib/gamification/queries"
 import {
   latestReconciliation,
   mirrorOutstanding,
-  currentMonthCashCents,
+  currentMonthCash,
 } from "@/lib/accounting/sheet-sync";
 import { listIntegrations } from "@/lib/integrations/queries";
 import { isFailureNote } from "@/lib/integrations/sync-note";
@@ -270,8 +270,12 @@ async function teamAnswer(
 /** Compute an admin (agency-wide) answer. */
 async function adminAnswer(toolId: string, now: Date): Promise<QuickAnswer> {
   if (toolId === "admin.net_month") {
-    const cents = await currentMonthCashCents();
-    return answerNetThisMonth({ cents, monthLabel: monthLabel(now) });
+    const month = await currentMonthCash();
+    return answerNetThisMonth({
+      cents: month.status === "ok" ? month.cents : null,
+      monthLabel: monthLabel(now),
+      reason: month.status === "ok" ? undefined : month.status,
+    });
   }
 
   if (toolId === "admin.whats_failing") {
