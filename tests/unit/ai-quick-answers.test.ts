@@ -373,6 +373,32 @@ describe("admin answers", () => {
     const net = answerNetThisMonth({ cents: 1_000_00, monthLabel: "August 2026" });
     expect(net.headline).toBe("$1,000.00 collected in August 2026.");
     expect(net.details[0]).toContain("every offer");
+
+    // A real zero still reads as a zero.
+    expect(answerNetThisMonth({ cents: 0, monthLabel: "August 2026" }).headline).toBe(
+      "$0.00 collected in August 2026.",
+    );
+  });
+
+  it("never reports UNKNOWN cash as $0", () => {
+    // The sheet not having synced is not a claim that nothing was collected.
+    const never = answerNetThisMonth({
+      cents: null,
+      monthLabel: "August 2026",
+      reason: "never-synced",
+    });
+    expect(never.headline).not.toContain("$");
+    expect(never.headline).toContain("can't read");
+    expect(never.details[0]).toContain("hasn't synced");
+    expect(never.details[0]).toContain("not zero");
+
+    const broken = answerNetThisMonth({
+      cents: null,
+      monthLabel: "August 2026",
+      reason: "unavailable",
+    });
+    expect(broken.headline).not.toContain("$");
+    expect(broken.details[0]).toContain("couldn't be read");
   });
 
   it("what's failing: clean vs failures", () => {

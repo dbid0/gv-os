@@ -227,7 +227,22 @@ export async function mirrorOutstanding(): Promise<{
  * evergreen top-bar figure. Fail-soft to 0: the shell must render even if
  * the mirror is empty or the read fails.
  */
-export async function currentMonthCashCents(): Promise<number> {
+/**
+ * This month's cash across every offer — or an honest "I don't know".
+ *
+ * This used to return a plain number and answered 0 in three different
+ * situations: a genuine zero, a finance sheet that has NEVER synced, and a
+ * read that threw. The topbar then printed "$0 this month" in green and the
+ * assistant said "Nothing recorded yet this month" — both stating, as fact,
+ * that the agency collected nothing. A missing number and a zero are not the
+ * same claim, so they no longer share a representation.
+ */
+export type MonthCash =
+  | { status: "ok"; cents: number }
+  | { status: "never-synced" }
+  | { status: "unavailable" };
+
+export async function currentMonthCash(): Promise<MonthCash> {
   try {
     const db = getDb();
     const [run] = await db
@@ -235,7 +250,7 @@ export async function currentMonthCashCents(): Promise<number> {
       .from(sheetSyncRuns)
       .orderBy(desc(sheetSyncRuns.createdAt))
       .limit(1);
-    if (!run) return 0;
+    if (!run) return { status: "never-synced" };
     const rows = await db
       .select({
         dateClosed: sheetMirrorDeals.dateClosed,
@@ -243,8 +258,8 @@ export async function currentMonthCashCents(): Promise<number> {
       })
       .from(sheetMirrorDeals)
       .where(eq(sheetMirrorDeals.runId, run.id));
-    return monthCashAllCents(rows, new Date());
+    return { status: "ok", cents: monthCashAllCents(rows, new Date()) };
   } catch {
-    return 0;
+    return { status: "unavailable" };
   }
 }
