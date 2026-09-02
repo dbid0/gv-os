@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { ArrowRight, Camera, Check, Pencil, Settings2, X } from "lucide-react";
+import { ArrowRight, Camera, Check, Pencil, X } from "lucide-react";
 
 import { saveClientSummary } from "@/app/(app)/clients/[slug]/actions";
 import { saveWorkspaceLogo } from "@/app/w/[slug]/logo-actions";
@@ -223,18 +223,15 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
         )}
       </div>
 
+      {/* ONE door. This card used to offer "Open workspace" AND "Manage",
+          with no way to tell which held what; the owner-only surfaces are now
+          tabs inside the workspace itself. */}
       <div className="mt-auto flex items-center gap-2 border-t p-3">
         <Link
           href={`/w/${client.slug}`}
           className="bg-secondary/60 hover:bg-secondary text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
         >
           Open workspace <ArrowRight className="size-3" />
-        </Link>
-        <Link
-          href={`/clients/${client.slug}`}
-          className="text-muted-foreground hover:text-foreground hover:bg-secondary/60 inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors"
-        >
-          <Settings2 className="size-3.5" /> Manage
         </Link>
       </div>
     </div>
