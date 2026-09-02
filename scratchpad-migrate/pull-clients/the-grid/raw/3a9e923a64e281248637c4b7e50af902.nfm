@@ -1,0 +1,29 @@
+<page url="https://app.notion.com/p/3a9e923a64e281248637c4b7e50af902" icon="🔄">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"No-Close Process"}
+</properties>
+<content>
+<callout icon="🔄" color="blue_bg">
+	A no-close is not a no. It's a not-yet. Most people who don't buy on the call buy later IF you run the follow-up right. The fortune is in the follow-up, and the follow-up starts the second the call ends.
+</callout>
+## The second the call ends
+1. **Log it in Close immediately** — status to **No-Close / Follow-Up**, not left as "Showed."
+2. **Fill Post-Call Notes** while it's fresh: the REAL objection (money / trust / "will it work for me"), where their head's at, and the exact next step + date.
+3. **Set the follow-up task** in Close with a due date. If it's not scheduled, it won't happen.
+## The follow-up cadence
+- **Same day:** a short human text. "Hey \[Name\], really enjoyed the call. No pressure at all, I just think this actually fixes the thing you're stuck on. What's the one thing still on your mind?" (Re-open, don't chase.)
+- **Day 2–3:** send a piece of proof that matches THEIR situation (a case study, a screen recording), not a "you still interested?" text.
+- **Day 4–7:** call again. Isolate the real objection and handle it with the Objection Handling Cheat Sheet.
+- **Ongoing:** if they go quiet, they drop into the **Kit Follow-Up sequence** which keeps nurturing for weeks. Your job is to keep the human touches going on the warm ones.
+<callout icon="🧠" color="gray_bg">
+	Diagnose before you follow up: was it vehicle ("does this work?"), self ("will it work for me?"), or trust ("do I believe you?")? Your follow-up should attack the ACTUAL root, not just "circle back." (See Objection Handling Cheat Sheet.)
+</callout>
+<callout icon="🛡️" color="red_bg">
+	Never invent urgency or fake a "price goes up tonight" to force a no-close. And never promise a result or that they won't get banned to save a deal. We close on truth or we don't close.
+</callout>
+</content>
+</page>

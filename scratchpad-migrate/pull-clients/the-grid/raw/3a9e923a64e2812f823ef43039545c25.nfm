@@ -1,0 +1,45 @@
+<page url="https://app.notion.com/p/3a9e923a64e2812f823ef43039545c25" icon="📞">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e2801d9a4bc2970cf5dd1d" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Setter Playbook & Triage Script"}
+</properties>
+<content>
+<callout icon="⚡" color="red_bg">
+	**Speed-to-lead is the whole job. 5 minutes from application, every time.** A lead that applies and hears nothing for an hour is a dead lead. Double-dial, then text. Your note quality IS the closer's performance, write it like the closer is reading your mind.
+</callout>
+## Your role
+Applications come in through the funnel ([mbemultiaccounting.com/apply](http://mbemultiaccounting.com/apply) → iClosed). You call fast, qualify, and get them booked and SHOWN onto the closer's calendar. You are the first human they talk to. Calm, sharp, on their side.
+## 🔁 The daily rhythm
+1. Work the Close smart view "New – needs first call" top to bottom.
+2. New application → call within **5 minutes**. No answer → call again (double-dial). Still no answer → text using the speed-to-lead template, then log and set a follow-up.
+3. Every touch gets logged in Close. Every booked call gets full notes.
+4. End of day → submit the **Setter EOD form**.
+## 🎯 The triage call — 7 steps
+<callout icon="🗣️" color="gray_bg">
+	Spoken, not read. Contractions, short lines, \[Name\], real pauses. You're a person who's curious about their situation, not a robot reading a form.
+</callout>
+**1. Greeting** — "Hey \[Name\], it's \[You\] with The Grid, you just put in an application, that's why I'm calling. Caught you at an ok time?"
+**2. Frame** — "Cool, so this'll be quick. I just wanna understand what you've got going on and see if this is even a fit, and if it is I'll get you locked in with \[Closer\] who'll walk you through the whole system. Sound good?"
+**3. Qualify** — "So what are you running right now? … How are you getting reach today, one account, a few? … You ever been banned or watched an account just die on you?" (Listen for the real pain: got wiped, everything on one account, can't scale.)
+**4. Financial qualify** — done with buckets, never a price. "This is an install-the-whole-system thing, people usually come in ready to invest in the setup to get it running. When you're serious about a project like this, are you in a spot to put real resources behind it, or would that be a stretch right now?" (Gauge, don't quote. Closer owns price.)
+**5. Redirect** — if they push for price/details: "Totally get it, that's exactly what \[Closer\] walks you through on the call, they'll map it to your exact situation. My job's just to make sure it's a fit and get you in front of them."
+**6. Rapport** — one genuine human beat. React to something they said. Make them feel understood, not processed.
+**7. Book** — "Alright, you're a fit. I'm putting you in with \[Closer\] for \[day/time\], that work? … You'll get a text and email confirmation. Do me a favor and actually show up on time, \[Closer\] blocks this time just for you. Anything comes up, hit me and we'll move it."
+<callout icon="🚫" color="red_bg">
+	Never quote a price. Never promise a result or that they won't get banned. Never say ban-proof / guaranteed. You qualify and book, the closer sells.
+</callout>
+## 📝 Note quality standard (non-negotiable)
+After every triage call, the closer should be able to read your notes and know exactly who's walking in. Log:
+- What they run now + how they get reach today
+- Their real pain (the thing that actually stings, in their words)
+- Financial read (bucket, not a number) + urgency
+- Any objection or hesitation you already heard
+- One personal detail for rapport
+<callout icon="🔗" color="gray_bg">
+	Weak notes = the closer walks in blind = the deal dies. This is the single highest-leverage thing you do. Speed-to-lead templates + no-show follow-up cadence live in the Closers SOPs → No-Show Process page.
+</callout>
+</content>
+</page>

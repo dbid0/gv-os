@@ -1,0 +1,44 @@
+<page url="https://app.notion.com/p/560e923a64e282cfa427012d0ed6f218" icon="⚙️">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Sales Process"}
+</properties>
+<content>
+<callout icon="🔥" color="red_bg">
+	This is the 4-step process you follow every single time a lead books. No shortcuts. Your note quality directly determines the closer's performance — this is non-negotiable.
+</callout>
+<span color="red">**\[INSERT LOOM TRAINING VIDEO HERE\]**</span>
+---
+### Step 1: CALL BOOKED / TRIAGE
+<callout icon="⏱️" color="yellow_bg">
+	Speed-to-Lead: Minute 1 → SMS fires automatically. Minute 5 → YOU call. Same day → Closer call. Every minute you wait, intent drops.
+</callout>
+**Triage call objective:** Qualify further, gauge intent, confirm finances, get verbal commitment to show, send pre-call assets.
+**7-Step Setter Framework:**
+1. **Greeting + Curiosity** — "Hey \[Name\], how'd you find Brady? What made you reach out today?"
+2. **Frame the Call** — "Quick call to make sure you're a good fit before your call with our closer."
+3. **Basic Qualification** — Situation, current results, goals, timeline
+4. **Financial Qualification** — Indirect: "Are you in a position to invest in yourself right now?" ICP note: good leads are making \$1–5K/month already — dead broke is a DQ. Never quote the program price; the closer owns the number.
+5. **Redirect** — Move past early objections smoothly. "I get that — let me explain how the process works..."
+6. **Filler / Rapport** — "What's the #1 thing you're hoping to change in the next 3 months?"
+7. **Book the Call** — Confirm date/time, timezone, send calendar confirmation. "Locked you in for \[time\] with \[Closer\]."
+---
+### Step 2: OPTIMIZE NOTES WITH CHATGPT
+After the triage call, immediately type your raw notes and paste into ChatGPT with this prompt:
+*"Clean up these setter notes into structured CRM format. Include: situation, pain point, goal, financial capacity, objections raised, intent level (1-10), and spouse/decision-maker status."*
+Review the output and edit for accuracy before copying.
+---
+### Step 3: COPY INTO CLOSE CRM
+- Paste optimized notes into the contact's Notes field in Close CRM
+- Update lead status to "Booked"
+- Assign to the correct closer
+---
+### Step 4: HANDOFF TO CLOSER
+Send closer a Slack message immediately:
+*"Hey \[Closer\], just booked \[Name\] for \[time/date\]. \[1–2 sentence summary of situation and intent level\]. Full notes in CRM."*
+Your job as setter is done at this point. The closer takes it from here.
+</content>
+</page>

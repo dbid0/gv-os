@@ -1,0 +1,26 @@
+<page url="https://app.notion.com/p/3a9e923a64e2816c85d4fba968d7da6e" icon="📞">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e28075b3a9c02eb0dd1340" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"No-Show Process"}
+</properties>
+<content>
+<callout icon="⚡" color="red_bg">
+	A no-show is not a lost lead, it's a lead you haven't reached yet. Most no-shows rebook if you move fast and stay human. Work the "No-show – follow up" smart view every day.
+</callout>
+## The cadence (run it fast)
+**T + 2 min (missed the call):** call them. "Hey \[Name\], it's \[You\] with The Grid, we were set for right now, everything ok? I've got you, let's just find another time."
+**T + 5 min:** no answer → text. "Hey \[Name\], \[You\] from The Grid, we had our call booked for \[time\], I know things come up. Want me to grab you the next open slot today? Here's the link: [mbemultiaccounting.com/apply](http://mbemultiaccounting.com/apply)"
+**Same day, +3–4 hrs:** second call + text if still nothing.
+**Day 2:** one more call + a value/proof text (send a case study, not pressure).
+**Day 3–4:** final text, then drop to the long-term follow-up / Kit nurture.
+<callout icon="🗣️" color="gray_bg">
+	Tone: never guilt-trip. "I know things come up" beats "you missed our call." You're the person making it easy for them to show up, not scolding them.
+</callout>
+<callout icon="🔁" color="blue_bg">
+	Every attempt gets logged in Close. Rebook → status back to Call Booked. Gone cold after the full cadence → mark it and let the Kit No-Show sequence carry them.
+</callout>
+</content>
+</page>

@@ -1,0 +1,27 @@
+<page url="https://app.notion.com/p/3a9e923a64e28117be5ac907bb787cd5" icon="📖">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Multi-Accounting Terminology"}
+</properties>
+<content>
+<callout icon="📖" color="gray_bg">
+	Speak the language. If you sound like you actually understand the operation, prospects trust you. If you fumble the terms, you lose them. Learn these cold.
+</callout>
+## Core terms
+- **Phone farm** — a rack of physical devices running many accounts at once to post and distribute content at scale.
+- **Multi-accounting** — running many accounts in parallel instead of one, so reach and risk are spread out.
+- **The network / the grid** — the full set of accounts an operator runs together as one distribution machine.
+- **Distribution** — getting the same content out across many accounts and platforms at once. The whole game. Reach you own, not reach you rent.
+- **Account warming** — aging and building trust on a new account before pushing volume, so it survives longer.
+- **Aged accounts** — older, established accounts that are more resilient and reach further than fresh ones.
+- **Ban / wipe** — when a platform takes down an account or many at once. The risk the whole system is built to make survivable.
+- **Single point of failure** — when everything rides on one account, so one ban ends you. The exact problem The Grid solves.
+- **Autopilot** — the AI distribution layer posting across the network without the operator posting manually.
+- **Proxies** — tools that give accounts separate network identities so the farm runs cleanly at scale.
+<callout icon="🛡️" color="red_bg">
+	How to talk about bans: always as resilience, never immunity. "No single ban touches your income," never "you won't get banned" or "ban-proof." That framing is both the honest truth and the compliance line.
+</callout>
+</content>
+</page>

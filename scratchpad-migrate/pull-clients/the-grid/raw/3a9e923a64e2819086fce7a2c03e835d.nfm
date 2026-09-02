@@ -1,0 +1,27 @@
+<page url="https://app.notion.com/p/3a9e923a64e2819086fce7a2c03e835d" icon="☎️">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e2801d9a4bc2970cf5dd1d" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Dialer & Call Cadence"}
+</properties>
+<content>
+<callout icon="⚡" color="red_bg">
+	Speed is the whole job. A lead is hottest the minute they apply and cools fast. 5 minutes, not 50.
+</callout>
+## The cadence on a new application
+1. **Call within 5 minutes.** No answer →
+2. **Double-dial** (call right back, back-to-back often gets picked up). No answer →
+3. **Text** the speed-to-lead template (see SMS Templates), then log + set a callback task.
+4. **Same day:** 1–2 more attempts spaced out. Mix call + text.
+5. **Days 2–4:** keep attempting with a value angle, then let the Kit nurture carry the cold ones.
+## Reps
+- Watch the time zone before you dial, don't call at 6am their time.
+- Leave a short, warm voicemail on the first miss: who you are, why, and that you'll text.
+- Log **every** attempt in Close. Attempts you don't log don't count.
+<callout icon="🔗" color="gray_bg">
+	Full no-show follow-up cadence lives in Closers SOPs → No-Show Process. Text templates live in SMS Templates.
+</callout>
+</content>
+</page>

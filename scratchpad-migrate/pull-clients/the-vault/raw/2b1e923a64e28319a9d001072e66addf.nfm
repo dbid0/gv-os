@@ -1,0 +1,38 @@
+<page url="https://app.notion.com/p/2b1e923a64e28319a9d001072e66addf" icon="📊">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Close CRM SOPs (Setters)"}
+</properties>
+<content>
+<callout icon="📊" color="gray_bg">
+	CRM is your accountability tool. Bad notes = bad handoffs = lost deals. Every lead you touch must be logged before you log off.
+</callout>
+## 🔄 Status Workflow
+**New Lead → Triage Call → Booked → Showed / No-Show**
+---
+## ☀️ Your Daily Starting Point
+- Open Smart View: "My New Leads" — work this list before anything else
+- Open Smart View: "My Booked Calls" — confirm today's scheduled calls
+- Open Smart View: "No-Show Follow-Up" — re-engage leads who missed their calls
+---
+## 📋 Required After Every Triage Call
+1. Update lead status immediately
+2. Paste ChatGPT-optimized notes into contact Notes field (see Sales Process for prompt)
+3. Assign lead to a closer
+4. Set a follow-up task if the lead didn't book
+---
+## 📁 Required Fields on Every Contact
+- Name, phone, email, Instagram handle
+- Their situation + main goal
+- Financial capacity (indirect qualification notes)
+- Objections raised on triage call
+- Intent level (Low / Medium / High)
+---
+<callout icon="⚡" color="yellow_bg">
+	EOD Rule: Every lead you touched today must have an updated status and notes before you log off. CRM hygiene is non-negotiable.
+</callout>
+</content>
+</page>

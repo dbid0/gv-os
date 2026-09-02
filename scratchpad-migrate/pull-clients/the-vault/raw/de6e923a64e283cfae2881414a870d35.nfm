@@ -1,0 +1,38 @@
+<page url="https://app.notion.com/p/de6e923a64e283cfae2881414a870d35" icon="📞">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Pre Call Sales Process"}
+</properties>
+<content>
+<callout icon="🎯" color="blue_bg">
+	Your pre-call process has one job: increase your show rate and increase your close rate. A 10-minute call before the main event can make or break the deal.
+</callout>
+### How It Works
+Every booked call gets a setter triage call immediately after booking. The setter qualifies further, gauges intent, confirms finances, gets verbal commitment to show, and sends pre-call assets (VSL, case studies).
+Your job as the closer: Call the lead within minutes of booking to introduce yourself, surface hidden objections, and build anticipation for the gameplan call.
+### 3 Objectives of Your Pre-Call
+1. **Increase close rate** by introducing yourself and building rapport before the main call
+2. **Increase show rate** with a second confirmation touchpoint and building curiosity around their gameplan
+3. **Handle hidden objections** before they derail the main close call
+---
+### Pre-Call Script
+**Opener:**
+*"Hey \[Name\], it's \[Closer\] from Brady's team at The Vault — I see we have a call booked for \[date\]. Just calling to quickly introduce myself and see if you have any questions before we hop on."*
+<span color="red">**If they haven't watched pre-call material:**</span>
+*"No problem — I'll shoot that over via text right now. Go through it before our call, it's required so you understand what we stand for. Sound good?"*
+**Closing the pre-call:**
+*"Perfect — I'll see you on the call. Looking forward to it. I'll text you my direct number so you can reach me if anything comes up before then."*
+---
+### Morning-Of: Voice Note
+Send a voice note the morning of the call:
+*"Hey \[Name\], super excited for our call today. Based on what I know about your situation, I've already built out a gameplan I think you're going to like. Just shoot me a text confirming you're still good for \[time\]."*
+**If no reply within 2 hours:**
+*"Hey \[Name\], all good for our call today — just drop me a thumbs up so I know we're on."*
+<callout icon="❌" color="red_bg">
+	If the prospect hasn't responded to any confirmation (setter, you, or the dialer) within 24 hours — the call is cancelled from your calendar. Do not hold time for ghosts.
+</callout>
+</content>
+</page>

@@ -37,13 +37,14 @@ const fmtMonthCash = (cents: number) =>
 
 export function Topbar({
   user,
-  monthCashCents = 0,
+  monthCashCents = null,
   unreadCount = 0,
   notifications = [],
   avatarUrl = null,
 }: {
   user: ShellUser | null;
-  monthCashCents?: number;
+  /** Agency cash for the month; null hides the pill (a scoped viewer). */
+  monthCashCents?: number | null;
   unreadCount?: number;
   notifications?: BellNotification[];
   avatarUrl?: string | null;
@@ -85,15 +86,21 @@ export function Topbar({
 
       <div className="ml-auto flex items-center gap-3">
         <TopClock />
-        <span
-          className="hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs sm:flex"
-          title="Cash collected this month, from the reconciled sheet"
-        >
-          <span className="numeric text-success font-semibold">
-            {fmtMonthCash(monthCashCents)}
+        {/* Agency cash comes from the reconciled finance sheet — the whole
+            book, not this viewer's offer. A rep or client must not read it,
+            and re-pointing the same label at a smaller number would be a
+            second definition of it, so the pill is simply absent for them. */}
+        {monthCashCents !== null && (
+          <span
+            className="hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs sm:flex"
+            title="Cash collected this month, from the reconciled sheet"
+          >
+            <span className="numeric text-success font-semibold">
+              {fmtMonthCash(monthCashCents)}
+            </span>
+            <span className="text-faint">this month</span>
           </span>
-          <span className="text-faint">this month</span>
-        </span>
+        )}
         <div className="flex items-center gap-1">
           <ViewAsMenu />
           <NotificationBell unreadCount={unreadCount} preview={notifications} />

@@ -1,0 +1,18 @@
+<page url="https://app.notion.com/p/3b6e923a64e2815c829bd5638e5a896d" icon="📊">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" title="Closers SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"📊 Master Sales Tracker (make a copy)"}
+</properties>
+<content>
+The Vault sales tracker, pre-configured for this offer. Make your own copy and start logging.
+**How to use:** open the sheet below, then **File → Make a Copy**, save it to your Drive, share edit access to Daniel, and paste your copy's link here in the teamspace.
+[**➡️ Open The Vault Master Sales Tracker**](https://docs.google.com/spreadsheets/d/1z5hA65GRci504mYtDGMu1_k5M-KCftXKOwP5wgR4jVo/edit)
+## What's inside
+- **Follow-Up Pipeline** - chase everyone who hasn't bought yet. Log the objection, deal size, and next follow-up date. Rows due today auto-highlight red.
+- **Upsell / Ascension Board** - ascend everyone who HAS bought. Pick their current tier and the sheet auto-shows the next upsell, price, and when they're due.
+- **CONFIG tab** - filled for The Vault (sources, objections, UGC niches). NOTE: the tier ladder and ascension map are placeholders ("The Vault" to "Vault Elite") pending Daniel's confirmation of Brady's real upsell path.
+</content>
+</page>

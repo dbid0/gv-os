@@ -1,0 +1,27 @@
+<page url="https://app.notion.com/p/3a9e923a64e281aeaf48ef5822f5a0b0" icon="💬">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e2801d9a4bc2970cf5dd1d" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"SMS Templates"}
+</properties>
+<content>
+<callout icon="💬" color="gray_bg">
+	Text like a human, not a broadcast. Short, lowercase-casual, one idea. Speed beats polish. Never quote a price, never promise a result, never say ban-proof / guaranteed.
+</callout>
+## Speed-to-lead (no answer on first call)
+"hey \[Name\], it's \[You\] with The Grid, just tried you, you applied to get the system set up. got 2 min for a quick call so I can see if it's a fit?"
+## Second attempt (still no answer, same day)
+"\[Name\] didn't catch you, no worries. when's better today, i'll call you then? this is the one where we map the whole thing to your setup."
+## Booked confirmation
+"locked you in with \[Closer\] for \[day/time\]. you'll get a calendar invite. do me a favor and actually show up on time, they block that slot just for you. anything comes up, text me."
+## No-show (see the No-Show Process for the full cadence)
+"hey \[Name\], we were set for right now, everything good? i got you, want me to grab the next open slot today? here's the link: [mbemultiaccounting.com/apply](http://mbemultiaccounting.com/apply)"
+## Reschedule
+"all good, life happens. i've got \[option 1\] or \[option 2\], which works and i'll move you right now."
+<callout icon="🔗" color="blue_bg">
+	Send prospects to the funnel ([mbemultiaccounting.com/apply](https://mbemultiaccounting.com/apply)) and the community ([discord.gg/mbe](https://discord.gg/mbe)). Log every text in Close. Always text from the team's registered sending number.
+</callout>
+</content>
+</page>

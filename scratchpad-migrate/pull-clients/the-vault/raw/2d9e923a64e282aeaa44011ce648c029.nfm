@@ -1,0 +1,72 @@
+<page url="https://app.notion.com/p/2d9e923a64e282aeaa44011ce648c029" icon="📝">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Scripts Hub"}
+</properties>
+<content>
+<callout icon="📝" color="gray_bg">
+	Your scripts live here. These are the exact frameworks your setters and closers use on every call. Customize the specifics per client — the structure never changes.
+</callout>
+---
+## 📞 Setter Script — The Vault (Brady)
+<callout icon="🎯" color="gray_bg">
+	Objective: Triage the lead, qualify intent and finances, build curiosity, and book the call. You are not the closer — your job is to qualify and get them on the calendar.
+</callout>
+### Step 1: Greeting + Curiosity
+*"Hey \[Name\], this is \[Setter\] from Brady's team at The Vault. How did you find out about Brady?"*
+- Warm, genuine tone. You are not reading — you are having a conversation.
+### Step 2: Frame the Call
+*"Quick call to make sure we are a fit before your appointment. I have just a few questions — shouldn't take more than 5–10 minutes. Sound good?"*
+### Step 3: Basic Qualification
+- "Where are you at with UGC right now — are you already doing deals, or just getting started?"
+- "What are you making per month right now — from your job, UGC, everything?"
+- "What are you trying to achieve in the next 3–6 months?"
+- "How long have you been trying to figure this out?"
+### Step 4: Financial Qualification
+*"Just so I know we are on the same page — people who work with Brady typically invest somewhere around \$1,000–\$1,500 to get started. Is that a range you are able to work with?"*
+- Indirect approach. Let them answer. Do not fill the silence.
+### Step 5: Redirect
+- If they pause on money: "I get it — it's a big decision. That's exactly why the call exists, so you can ask directly whether it makes sense for you."
+- If they ask too many questions: "Great question — that's actually what the call is for. Our closer will walk you through everything, including exactly how placement works."
+- If they ask "are brand deals guaranteed?": "Great question for the call — what I can tell you is the team actively places members, and the average member is around \$6.5K/month after about 45 days. Nobody here will tell you deals are guaranteed — anyone who does is lying to you."
+### Step 6: Filler + Rapport
+- "What made you actually fill out the application? What was the thing that pushed you to do it?"
+- "How long has making UGC your full income been on your mind?"
+- "What have you tried before? Why didn't that work?"
+### Step 7: Book the Call
+*"Perfect — I'm going to book you in with \[Closer\] for \[DATE/TIME\]. You'll get a confirmation text and email. Show up 5 minutes early, have somewhere quiet, and come ready to take action. Sound good?"*
+- Confirm name, phone, email, and time zone before hanging up.
+- **Log detailed notes in Close CRM immediately after the call. Note quality = closer performance.**
+---
+## 🎯 Closer Script — The Vault (Brady)
+<callout icon="🎯" color="gray_bg">
+	Objective: Build genuine trust, create the perspective shift, present the offer with confidence, and close. Every phase has a purpose. Execute all five.
+</callout>
+<callout icon="🚨" color="red_bg">
+	CRITICAL: The Perspective Shift (Phase 2) is the single most important step. Skipping it kills the close. No exceptions — always do it before pitching.
+</callout>
+### Phase 1: Rapport Building (5–10 min)
+- "Tell me a bit about yourself — what do you do right now?"
+- "What has your experience with UGC been like so far?"
+- "What made you book this call specifically?"
+- Goal: get them talking. The more they talk, the more you learn. Listen for their real pain, not just their surface answer.
+### Phase 2: Perspective Shift (2–3 min) — THE MOST CRITICAL STEP
+*"\[Name\], I want to ask you something honest. You said you have been thinking about \[GOAL\] for \[X months/years\]. What do you think has been stopping you from getting there? … And if you keep doing exactly what you are doing now, where do you think you will be in 12 months? Same place? … So the question is not really whether you want this — you clearly do. The question is: are you going to do something different this time, or sit on it again? I am not judging — I just want to know who I am talking to."*
+### Phase 3: Pitch Transition (1–2 min)
+*"Okay. I appreciate you being real with me. So here is what we have been building — and I think it directly addresses what you have been missing. Let me walk you through it."*
+### Phase 4: The Pitch (The Vault Accelerator)
+- Walk the stack through THEIR pain: the 3-module course (mindset → content → business/negotiation), Friday group calls, 24/7 priority chat, content feedback from top-100 creators (Will & Dave approve your content before your first deal), and active brand deal placement through Sideshift while the team works its brand relationships.
+- Expected timeline: realistic 45–90 days — first deal → \$5K months → \$10K+. Average member is \~\$6.5K/month after about 45 days. \$200K+ already paid out to creators.
+- One relevant proof point tied to their specific situation (see Case Studies page).
+- Investment: \$1,497 one-time, lifetime access. Present confidently, do not apologize for the price. Anchor it against one decent brand deal paying it back.
+- The guarantee: they make \$5K/month at some point — no time bound. NEVER say "guaranteed brand deals."
+- Urgency: real only — the space is early, brands are locking in creators now, CPM-only is what waiting looks like. No fake scarcity, ever.
+### Phase 5: Post-Pitch + Final Commitment
+- "So based on everything we talked about — does this make sense for where you're at?"
+- "What questions do you have before we get you started?"
+- Handle all objections using the Objection Handling Cheat Sheet in Closing Team SOPs
+- **Final ask: "Alright \[Name\] — are you ready to get started?"**
+</content>
+</page>

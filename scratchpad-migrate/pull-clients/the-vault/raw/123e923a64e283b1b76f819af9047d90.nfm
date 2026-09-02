@@ -1,0 +1,22 @@
+<page url="https://app.notion.com/p/123e923a64e283b1b76f819af9047d90" icon="💲">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Closers SOPs"}
+</properties>
+<content>
+<callout icon="💼" color="gray_bg">
+	Every process a closer needs is in here. Read everything once before your first call. Then use it as your daily reference.
+</callout>
+Navigate to each sub-page using the sidebar or the links below:
+<page url="https://app.notion.com/p/81ce923a64e283cea3f601b6edf94c08">Objection Handling Cheat Sheet</page>
+<page url="https://app.notion.com/p/de6e923a64e283cfae2881414a870d35">Pre Call Sales Process</page>
+<page url="https://app.notion.com/p/b67e923a64e28336bf3001011a5a2789">No-Show Process</page>
+<page url="https://app.notion.com/p/148e923a64e282858a1781356cba8a84">No-Close Process</page>
+<page url="https://app.notion.com/p/509e923a64e2825293b581890653d7e5">Client Onboarding Process</page>
+<page url="https://app.notion.com/p/57fe923a64e2825f8dfe815fa19977dc">Close CRM SOPs</page>
+<page url="https://app.notion.com/p/bf5e923a64e2829fa50c81900fa7f1bc">Sales Calls Recordings</page>
+<page url="https://app.notion.com/p/3b6e923a64e2815c829bd5638e5a896d">📊 Master Sales Tracker (make a copy)</page>
+</content>
+</page>

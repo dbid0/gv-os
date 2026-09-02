@@ -1,0 +1,63 @@
+<page url="https://app.notion.com/p/31ae923a64e28240b48e8140ecb16e12" icon="💬">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/c11e923a64e283ba9b450130c3a66157" title="Appointment Setters SOPs"/>
+<ancestor-2-page url="https://app.notion.com/p/63de923a64e282d29885811e421a0c8d" title="Vault UGC Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"SMS Templates"}
+</properties>
+<content>
+<callout icon="📋" color="gray_bg">
+	Copy-paste templates for every dial outcome. Do NOT freestyle these. Consistent messaging = consistent results. Personalize the \[brackets\] only.
+</callout>
+<callout icon="⚡" color="yellow_bg">
+	**RULE: Every call attempt gets followed by an SMS within 60 seconds. No exceptions.**
+</callout>
+---
+## 📞 Setter SMS Templates
+### Speed to Lead — Minute 1 (Send BEFORE calling)
+*"Hey \[Name\]! Saw your application just came through for Brady's program — I'm reaching out now. Calling you in 2 minutes, keep an eye out!"*
+### No Answer — Attempt 1
+*"Hey \[Name\], this is \[Your Name\] from Brady's team — just tried calling about your application. When's a good time to connect real quick?"*
+### No Answer — Attempt 2 (1 hour later)
+*"Hey \[Name\], tried you again — no worries! Drop me a time that works and I'll call you then. Takes 5 minutes, just want to make sure you have everything you need."*
+### No Answer — Attempt 3 (Same day, final)
+*"Hey \[Name\], last try for today — I don't want your application to just sit here. If you're still interested in \[OUTCOME\], just reply and I'll make it work around your schedule."*
+### Booking Confirmed (Send immediately after booking)
+*"You're locked in, \[Name\]! 🔥 Your call with \[CLOSER NAME\] is set for \[DATE\] at \[TIME\]. Check your email for the calendar invite. Before the call, make sure you watch \[PRE-CALL MATERIAL LINK\] — it's required."*
+### 24-Hour Reminder
+*"Hey \[Name\], quick reminder — your call with \[CLOSER NAME\] is tomorrow at \[TIME\]. Make sure you've watched the pre-call video so you get the most out of it. See you then!"*
+### 2-Hour Reminder
+*"Hey \[Name\]! Just a heads up — your call is in 2 hours at \[TIME\]. \[CLOSER NAME\] is prepping your gameplan now. Reply 'confirmed' so we know you're good to go!"*
+### Day-Before Re-Confirmation (No reply to 2-hour reminder)
+*"Hey \[Name\] — still on for \[TIME\]? Just drop a thumbs up so we don't give your spot away. 👍"*
+---
+## 👻 No-Show Sequence
+### No-Show — Minute 5
+*"Hey \[Name\], we had you scheduled right now with \[CLOSER NAME\]. Everything okay? If something came up, no worries — just let me know and I'll get you rescheduled."*
+### No-Show — Hour 1
+*"Hey \[Name\] — missed you earlier. Life happens. Still interested in \[OUTCOME\]? I can get you back on the calendar today if there's a spot."*
+### No-Show — Day 2 (Value drop)
+*"\[Name\], wanted to send this over — \[STUDENT NAME\] just \[RESULT\] using Brady's exact system. This is exactly what we were going to talk about. Still want to get on a call? \[BOOKING LINK\]"*
+### No-Show — Day 5 (Final touch)
+*"Hey \[Name\], last follow-up from me. I know timing isn't always right, but if \[OUTCOME\] is still on your mind, Brady's team is here when you're ready. Here's the link to book: \[BOOKING LINK\]. No pressure."*
+---
+## 🔄 Re-Engagement Templates
+### Cold Re-Engage — 2 to 4 Weeks
+*"Hey \[Name\], it's been a minute! Wanted to check in — are you still working toward \[OUTCOME\]? Things have been moving fast on our end and I didn't want you to miss what's new."*
+### Cold Re-Engage — 1+ Month
+*"\[Name\], random but I was going through my pipeline and thought of you. A few people in similar situations to yours have had \[RESULT\] recently. Still something you're interested in? Happy to jump on a quick call."*
+---
+## 🎯 Closer SMS Templates
+### Pre-Call Intro (Same day as booking)
+*"Hey \[Name\], it's \[CLOSER NAME\] — I'll be on your call \[DATE\] at \[TIME\]. Just wanted to introduce myself early. Looking forward to it — this is my number if you need anything before then."*
+### Morning Of (2–3 hours before call)
+*"Morning \[Name\]! Our call is at \[TIME\] today. I've looked through your notes and I've got a real gameplan built out for your situation. Just reply 'ready' so I know we're locked in."*
+### Post-Call — No-Close (Send within 30 min)
+*"\[Name\], really enjoyed our conversation today. I know it's a big decision — take the time you need. I'm here if any questions come up. Don't sit on it too long though — spots genuinely do move."*
+### No-Close Follow-Up — Day 2
+*"Hey \[Name\], \[CLOSER NAME\] here. Just checking in — any questions after sitting on it? Sometimes things get clearer after a night. Happy to hop on a quick 10-min call if it helps."*
+### No-Close Follow-Up — Day 5 (Final)
+*"\[Name\], last one from me. A spot opened up this week — if the timing's better now, I'd love to revisit the plan we built. If not, totally fine. Either way, rooting for you."*
+</content>
+</page>

@@ -1,0 +1,25 @@
+<page url="https://app.notion.com/p/3a9e923a64e281ffb49aec9c4b3bbc50" icon="💰">
+<ancestor-path>
+<parent-page url="https://app.notion.com/p/3a3e923a64e280ceb668d07f1edae498" title="The Grid Teamspace"/>
+</ancestor-path>
+<properties>
+{"title":"Compensation & Pay Structure"}
+</properties>
+<content>
+<callout icon="💰" color="gray_bg">
+	Straight and transparent. You're a 1099 contractor. You get paid on results, cash that's actually collected. The better you perform, the more you make. No caps.
+</callout>
+## The splits
+- **Setters: 5%** of collected revenue on deals you booked that close.
+- **Closers: 10%** of collected revenue on deals you close.
+- Paid on **cash collected**, not contracted. On a payment plan, you're paid as the client actually pays.
+## How it's tracked
+- Every close is logged in the **New Deal Log** with the setter credited, that's how commission is attributed. Log it right or you don't get credited.
+- Payments run through Fanbasis, and the tracking sheet auto-calculates the 5% / 10% commission on collected cash.
+- Commissions pay out on the team's regular payout schedule.
+- Attribution disputes: raise it in Slack the same day, we settle it off the New Deal Log and Close records.
+<callout icon="🔗" color="blue_bg">
+	Your comp is a direct function of the standards on the Performance Standards page. Hit the activity, hit the pay.
+</callout>
+</content>
+</page>
