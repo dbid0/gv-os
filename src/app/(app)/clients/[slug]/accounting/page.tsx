@@ -123,7 +123,7 @@ export default async function ClientAccountingPage({
             </span>
           </span>
         }
-        description="This client's book — cash collected, fees, and the rev-share GV is owed. Every figure reconciles to the cent with the main accounting; it reads the same computed numbers, never its own."
+        description="This client's book — cash collected, fees, and the rev-share GV is owed."
         actions={
           <Link
             href={`/clients/${slug}`}
@@ -295,15 +295,6 @@ export default async function ClientAccountingPage({
           </div>
         </Panel>
       )}
-
-      <p className="text-faint text-xs">
-        Cash and deals read from the unified transactions backlog through the same
-        client ledger as{" "}
-        <span className="text-muted-foreground">/accounting/clients</span>; rev-share is
-        rated by the same engine as{" "}
-        <span className="text-muted-foreground">/accounting/revshare</span>. This page
-        computes nothing of its own.
-      </p>
     </div>
   );
 }

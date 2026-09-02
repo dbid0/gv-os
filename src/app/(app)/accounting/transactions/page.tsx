@@ -52,7 +52,7 @@ export default async function TransactionsPage({
       <PageHeader
         title="The"
         highlight="backlog."
-        description="Every dollar in or out, both layers, one row each — appended forever, corrected by reversing rows, never edited. Every ledger and dashboard is a filtered read of this table."
+        description="Every dollar in or out, both layers, one row each — appended forever, corrected by reversing rows, never edited."
         status={
           <StatusPill tone={rows.length ? "live" : "muted"}>
             {rows.length} rows
