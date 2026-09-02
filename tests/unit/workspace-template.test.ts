@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   copiedParentId,
+  hasOnboardingSpace,
+  onboardingRootIcon,
+  onboardingSpaceTitle,
   planTemplateCopy,
   remapPageLinks,
   type TemplatePage,
@@ -99,5 +102,79 @@ describe("copiedParentId", () => {
   it("re-roots to top level when the parent was not copied", () => {
     expect(copiedParentId(page("a", "outside"), new Map())).toBeNull();
     expect(copiedParentId(page("a", null), new Map())).toBeNull();
+  });
+});
+
+describe("onboardingSpaceTitle", () => {
+  it("names the section after the client", () => {
+    expect(onboardingSpaceTitle("The Grid")).toBe("The Grid Onboarding");
+  });
+
+  it("matches the convention The Visionary already uses", () => {
+    expect(onboardingSpaceTitle("The Visionary")).toBe("The Visionary Onboarding");
+  });
+
+  it("trims stray whitespace from the client name", () => {
+    expect(onboardingSpaceTitle("  Racks Closes ")).toBe("Racks Closes Onboarding");
+  });
+});
+
+describe("hasOnboardingSpace", () => {
+  it("is false for a teamspace holding only imported Notion pages", () => {
+    // The Grid's real import: 13 SOP pages, no onboarding section. This
+    // returning TRUE (because pages existed at all) is why it never got one.
+    const grid = ["Start Here", "Closers SOPs", "Scripts Hub", "Kaden's Story"];
+    expect(hasOnboardingSpace(grid, "The Grid")).toBe(false);
+  });
+
+  it("is true once the client-named section exists", () => {
+    expect(hasOnboardingSpace(["The Grid Onboarding"], "The Grid")).toBe(true);
+  });
+
+  it("still recognises a section seeded under the OLD factory title", () => {
+    // Racks Closes was seeded before the rename — it must not get a second copy.
+    expect(hasOnboardingSpace(["Client Template"], "Racks Closes")).toBe(true);
+  });
+
+  it("ignores case and surrounding whitespace", () => {
+    expect(hasOnboardingSpace(["  the grid onboarding  "], "The Grid")).toBe(true);
+  });
+
+  it("does not match another client's section", () => {
+    expect(hasOnboardingSpace(["The Vault Onboarding"], "The Grid")).toBe(false);
+  });
+
+  it("is false for an empty teamspace", () => {
+    expect(hasOnboardingSpace([], "The Grid")).toBe(false);
+  });
+});
+
+describe("onboardingRootIcon", () => {
+  const TEMPLATE = "https://cdn.example.com/gv-logo.png";
+
+  it("prefers the client's own mark when it is a real image URL", () => {
+    const logo = "https://cdn.example.com/grid.png";
+    expect(onboardingRootIcon(logo, TEMPLATE)).toBe(logo);
+  });
+
+  it("REFUSES a base64 data URL, which the icon renderer cannot draw", () => {
+    // Client logos are stored as data: URLs. isImageIcon matches only http(s)
+    // and app-relative paths, so passing one through would render ~38KB of
+    // base64 as the icon's visible label.
+    const dataUrl = "data:image/png;base64," + "A".repeat(200);
+    expect(onboardingRootIcon(dataUrl, TEMPLATE)).toBe(TEMPLATE);
+  });
+
+  it("accepts an app-relative logo path", () => {
+    expect(onboardingRootIcon("/logos/grid.png", TEMPLATE)).toBe("/logos/grid.png");
+  });
+
+  it("falls back to the template icon when the client has no logo", () => {
+    expect(onboardingRootIcon(null, TEMPLATE)).toBe(TEMPLATE);
+  });
+
+  it("returns null when neither is usable", () => {
+    expect(onboardingRootIcon(null, null)).toBeNull();
+    expect(onboardingRootIcon("data:image/png;base64,AAAA", null)).toBeNull();
   });
 });

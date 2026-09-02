@@ -11,6 +11,8 @@
  */
 
 /** The title of the agency page that seeds every new client teamspace. */
+import { isImageIcon } from "@/lib/workspace/emoji-data";
+
 export const CLIENT_TEMPLATE_TITLE = "Client Template";
 
 /** The subset of a page row this module needs. */
@@ -78,4 +80,52 @@ export function copiedParentId(
 ): string | null {
   if (!page.parentId) return null;
   return idMap.get(page.parentId) ?? null;
+}
+
+/**
+ * What a client's copy of the agency template is CALLED in their teamspace.
+ *
+ * The copy used to keep the template's own title, so Racks Closes opened on a
+ * page literally named "Client Template" — the client's workspace wearing the
+ * factory label. It takes the client's name, matching the convention The
+ * Visionary already uses ("The Visionary Onboarding").
+ */
+export function onboardingSpaceTitle(clientName: string): string {
+  return `${clientName.trim()} Onboarding`;
+}
+
+/**
+ * Does this teamspace already have its onboarding section?
+ *
+ * Matches BOTH the old factory title and the client-specific one, so a client
+ * seeded before the rename is never given a second copy.
+ *
+ * This is the question the seeder should have been asking. It used to ask
+ * "does this client have ANY page at all", which meant the two clients whose
+ * real Notion was imported first (The Grid, The Vault) were treated as already
+ * seeded and never got an onboarding section — the exact gap Daniel hit.
+ */
+export function hasOnboardingSpace(rootTitles: string[], clientName: string): boolean {
+  const wanted = onboardingSpaceTitle(clientName).toLowerCase();
+  return rootTitles.some((raw) => {
+    const title = raw.trim().toLowerCase();
+    return title === wanted || title === CLIENT_TEMPLATE_TITLE.toLowerCase();
+  });
+}
+
+/**
+ * The icon on a client's onboarding section.
+ *
+ * Prefers the CLIENT's own mark over the agency template's, so their space
+ * doesn't wear GV's logo — but only when that mark is something the icon
+ * renderer can actually draw. Client logos are stored as base64 `data:` URLs,
+ * and `isImageIcon` recognises only `http(s)://` and app-relative paths, so
+ * handing one straight through would print ~38KB of base64 as the icon's
+ * label. When the logo isn't renderable the template's icon stands.
+ */
+export function onboardingRootIcon(
+  clientLogo: string | null,
+  templateIcon: string | null,
+): string | null {
+  return isImageIcon(clientLogo) ? clientLogo : templateIcon;
 }
