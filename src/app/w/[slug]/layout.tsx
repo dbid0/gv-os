@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import { clients as clientsTable } from "@/db/schema/app";
 import { eq } from "drizzle-orm";
 import { WorkspaceNav } from "@/components/workspace/workspace-nav";
+import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientBySlug, clientInitial } from "@/lib/roster";
 
 /**
@@ -36,6 +37,9 @@ export default async function WorkspaceLayout({
   const cookieStore = await cookies();
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
   const clientPreview = previewRole === "client";
+  // One door: an owner sees this client's admin surfaces from inside the
+  // workspace, so there is no second "Manage" entry point to guess between.
+  const admin = await viewerIsAdmin();
   const db = getDb();
   const [row] = await db
     .select({ logo: clientsTable.logo })
@@ -78,7 +82,7 @@ export default async function WorkspaceLayout({
         </div>
       </header>
       <div className="border-b px-4 py-2 md:px-6">
-        <WorkspaceNav slug={slug} />
+        <WorkspaceNav slug={slug} admin={admin} />
       </div>
       <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       <TabKeepWarm />
