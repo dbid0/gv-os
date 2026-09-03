@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
 import type { TabScan } from "@/lib/tracking/scan";
+import { buildLeadSummaries, LEAD_TABS, type LeadSummary } from "@/lib/tracking/leads";
 import type { TrackingTab } from "@/lib/tracking/tabs";
 
 export interface TrackingSnapshot {
@@ -116,4 +117,49 @@ export async function rowCountsByTab(syncId: string): Promise<Record<string, num
     .where(eq(clientTrackingRows.syncId, syncId))
     .groupBy(clientTrackingRows.tab);
   return Object.fromEntries(rows.map((r) => [r.tab, r.n]));
+}
+
+/**
+ * Every lead in the current snapshot, stitched across the lead-bearing tabs.
+ *
+ * Reads only the tabs that carry a lead email; the BOD/EOD tabs describe a
+ * rep's day and are excluded at the query so they can't be joined by accident.
+ */
+export async function leadsForClient(syncId: string): Promise<LeadSummary[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      tab: clientTrackingRows.tab,
+      rowIndex: clientTrackingRows.rowIndex,
+      occurredAt: clientTrackingRows.occurredAt,
+      email: clientTrackingRows.email,
+      name: clientTrackingRows.name,
+      rep: clientTrackingRows.rep,
+      status: clientTrackingRows.status,
+      outcome: clientTrackingRows.outcome,
+      cashCents: clientTrackingRows.cashCents,
+      revenueCents: clientTrackingRows.revenueCents,
+      recordingUrl: clientTrackingRows.recordingUrl,
+      notes: clientTrackingRows.notes,
+      payload: clientTrackingRows.payload,
+    })
+    .from(clientTrackingRows)
+    .where(
+      and(
+        eq(clientTrackingRows.syncId, syncId),
+        isNotNull(clientTrackingRows.email),
+        inArray(clientTrackingRows.tab, LEAD_TABS),
+      ),
+    );
+  return buildLeadSummaries(rows);
+}
+
+/** One lead's full journey, or null when that email isn't in the snapshot. */
+export async function leadByEmail(
+  syncId: string,
+  email: string,
+): Promise<LeadSummary | null> {
+  const leads = await leadsForClient(syncId);
+  const wanted = email.trim().toLowerCase();
+  return leads.find((l) => l.email === wanted) ?? null;
 }

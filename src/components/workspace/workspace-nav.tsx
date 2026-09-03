@@ -12,6 +12,7 @@ const SECTIONS = [
   { label: "Marketing", path: "/marketing" },
   { label: "Email", path: "/email" },
   { label: "CRM", path: "/crm" },
+  { label: "Leads", path: "/leads" },
   { label: "Tracking", path: "/tracking" },
   { label: "Onboarding", path: "/onboarding" },
 ] as const;
