@@ -9,6 +9,7 @@ import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
 import { clientBySlug } from "@/lib/roster";
+import { transcriptByShareUrl } from "@/lib/calls/share-transcripts";
 import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,19 @@ export default async function LeadDetailPage({
   const snapshot = await currentSnapshot(row.id);
   const lead = snapshot ? await leadByEmail(snapshot.syncId, email) : null;
   if (!lead) notFound();
+
+  // The transcript behind each recording link, when it has been pulled. Keyed
+  // by URL so an event can show the call itself, not just a link away to it.
+  const transcripts = new Map(
+    (
+      await Promise.all(
+        lead.events
+          .map((e) => e.recordingUrl)
+          .filter((u): u is string => Boolean(u))
+          .map(async (u) => [u, await transcriptByShareUrl(u)] as const),
+      )
+    ).filter(([, v]) => v !== null),
+  );
 
   return (
     <div className="space-y-6">
@@ -132,14 +146,49 @@ export default async function LeadDetailPage({
                 )}
 
                 {e.recordingUrl && (
-                  <a
-                    href={e.recordingUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-brand mt-1 inline-block text-xs hover:underline"
-                  >
-                    Recording →
-                  </a>
+                  <div className="mt-1.5 space-y-1.5">
+                    <a
+                      href={e.recordingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand inline-block text-xs hover:underline"
+                    >
+                      Recording →
+                    </a>
+                    {(() => {
+                      const call = transcripts.get(e.recordingUrl!);
+                      if (!call) {
+                        return (
+                          // Honest: the link is known, the transcript is not
+                          // here yet. No summary is invented in its place.
+                          <p className="text-faint text-xs">
+                            Transcript not pulled yet — run it from Tracking.
+                          </p>
+                        );
+                      }
+                      return (
+                        <details className="bg-card/50 rounded-md border p-2.5">
+                          <summary className="cursor-pointer text-xs font-medium">
+                            {call.title ?? "Call transcript"}
+                            {call.durationSeconds
+                              ? ` · ${Math.round(call.durationSeconds / 60)} min`
+                              : ""}
+                          </summary>
+                          {call.analysisStatus === "done" && call.analysisOutcome ? (
+                            <p className="mt-2 text-sm">{call.analysisOutcome}</p>
+                          ) : (
+                            <p className="text-faint mt-2 text-xs">
+                              The AI read of this call unlocks when the model provider
+                              is connected. The transcript below is the full call.
+                            </p>
+                          )}
+                          <pre className="text-muted-foreground mt-2 max-h-96 overflow-auto text-xs whitespace-pre-wrap">
+                            {call.transcript}
+                          </pre>
+                        </details>
+                      );
+                    })()}
+                  </div>
                 )}
 
                 {Object.keys(e.payload).length > 0 && (
