@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
-import { SyncTrackingButton } from "@/components/tracking/sync-button";
+import {
+  PullTranscriptsButton,
+  SyncTrackingButton,
+} from "@/components/tracking/sync-button";
 import { TabScanTable } from "@/components/tracking/tab-scan-table";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
@@ -136,6 +139,7 @@ export default async function WorkspaceTrackingPage({
               })}
             </span>
             <SyncTrackingButton slug={slug} label="Sync now" />
+            {(eoc?.withRecording ?? 0) > 0 && <PullTranscriptsButton slug={slug} />}
           </div>
         }
       >
