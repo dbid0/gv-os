@@ -5,12 +5,14 @@ import {
   PullTranscriptsButton,
   SyncTrackingButton,
 } from "@/components/tracking/sync-button";
+import { CallReads } from "@/components/tracking/call-reads";
 import { TabScanTable } from "@/components/tracking/tab-scan-table";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
+import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { clientBySlug } from "@/lib/roster";
 import { currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
 import { scanWarnings } from "@/lib/tracking/scan";
@@ -93,7 +95,11 @@ export default async function WorkspaceTrackingPage({
   const warnings = scanWarnings(snapshot.tabs);
   const eoc = snapshot.tabs.find((t) => t.tab === "eoc");
   const applications = snapshot.tabs.find((t) => t.tab === "applications");
-  const recent = await rowsForTab(snapshot.syncId, "eoc", 8);
+  const [recent, reads, counts] = await Promise.all([
+    rowsForTab(snapshot.syncId, "eoc", 8),
+    callReadsForClient(row.id, 12),
+    readCounts(row.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -145,6 +151,21 @@ export default async function WorkspaceTrackingPage({
       >
         <TabScanTable tabs={snapshot.tabs} />
       </Panel>
+
+      {(counts.done > 0 || counts.pending > 0) && (
+        <Panel
+          title="Why calls went the way they did"
+          aside={
+            <span className="text-faint text-xs">
+              {counts.done} read
+              {counts.pending > 0 ? ` · ${counts.pending} waiting` : ""}
+              {counts.failed > 0 ? ` · ${counts.failed} unusable` : ""}
+            </span>
+          }
+        >
+          <CallReads reads={reads} slug={slug} />
+        </Panel>
+      )}
 
       <Panel
         title="Latest end-of-call reports"
