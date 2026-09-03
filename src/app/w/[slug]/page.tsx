@@ -14,6 +14,9 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
+import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
+import { buildOfferFunnel } from "@/lib/tracking/funnel";
+import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { getClientReport } from "@/lib/clients/report";
 import { rowsForClient } from "@/lib/clients/attribution";
 import { cents } from "@/lib/money";
@@ -69,12 +72,18 @@ export default async function WorkspacePage({
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
-  const [report, drive, { rows: backlog }, visibility] = await Promise.all([
+  const [report, drive, { rows: backlog }, visibility, snapshot] = await Promise.all([
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
     listTransactions({}),
     portalVisibility(slug),
+    clientIdForFunnel(slug),
   ]);
+  // The offer's own funnel, from its tracking sheet. Absent until the sheet is
+  // linked and synced — no sheet, no funnel, rather than an empty chart.
+  const funnel = snapshot
+    ? buildOfferFunnel(await leadsForClient(snapshot.syncId))
+    : null;
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
   const show = (key: string, fallback: boolean) =>
@@ -218,6 +227,15 @@ export default async function WorkspacePage({
         </Panel>
       )}
 
+      {funnel && funnel.totalLeads > 0 && (
+        <Panel
+          title="Funnel"
+          aside={<span className="text-faint text-xs">from the tracking sheet</span>}
+        >
+          <OfferFunnelPanel funnel={funnel} slug={slug} />
+        </Panel>
+      )}
+
       {showCash && <RecentTransactions rows={offerRecent} />}
 
       {/* A client sees their files; the folder link itself is GV's setup, so
@@ -256,4 +274,15 @@ async function portalVisibility(slug: string): Promise<Record<string, boolean>> 
   } catch {
     return {};
   }
+}
+
+/** The current tracking snapshot for a slug, or null when there is none. */
+async function clientIdForFunnel(slug: string) {
+  const db = getDb();
+  const [row] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(eq(clients.slug, slug))
+    .limit(1);
+  return row ? currentSnapshot(row.id) : null;
 }
