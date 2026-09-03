@@ -116,6 +116,32 @@ export async function readSheetValues(
 }
 
 /**
+ * The tab titles of any sheet the agency credential can open.
+ *
+ * Client tracking sheets carry emoji in their tab names ("📥 Applications")
+ * and differ in WHICH tabs exist — Racks has no BOD tab — so the reader
+ * discovers them instead of assuming a fixed list.
+ */
+export async function readSheetTitles(sheetId: string): Promise<string[]> {
+  const token = await googleAccessToken();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      sheetId,
+    )}?fields=sheets(properties(title))`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Sheets metadata read failed: ${res.status} ${await res.text()}`);
+  }
+  const body = (await res.json()) as {
+    sheets?: { properties?: { title?: string } }[];
+  };
+  return (body.sheets ?? [])
+    .map((s) => s.properties?.title)
+    .filter((t): t is string => typeof t === "string" && t.trim() !== "");
+}
+
+/**
  * Append one row to the finance sheet's Raw Data tab — the WRITE side of the
  * two-way sync (a deal logged in GV OS lands in the sheet). USER_ENTERED so the
  * date/number cells are interpreted exactly as if typed by hand (matching the

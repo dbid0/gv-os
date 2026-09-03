@@ -1596,3 +1596,88 @@ export type NewWorkspaceDatabaseRow = typeof workspaceDatabaseRows.$inferInsert;
 
 export type CallRecording = typeof callRecordings.$inferSelect;
 export type NewCallRecording = typeof callRecordings.$inferInsert;
+
+/**
+ * A pull of one client's Master Tracking Sheet.
+ *
+ * Every GV client runs the same sheet (Applications · Calls Log · Payment Log ·
+ * New Deals · AR · BOD/EOD forms · EOC reports). Each sync is a SNAPSHOT: rows
+ * are written fresh against a new run and the latest run is what the app reads,
+ * the same shape the finance-sheet mirror already uses. That makes a sync
+ * atomic to the reader and keeps history for drift.
+ *
+ * `tabs` records what each tab looked like on this pull — how many rows, how
+ * many carried a date or an email, and which columns this app did not
+ * recognise. That is the deep-scan signal: The Grid's Calls Log holds 109 rows
+ * of which only 7 have any date, and a sync that silently imported them would
+ * hide it.
+ */
+export const clientTrackingSyncs = appSchema.table(
+  "client_tracking_syncs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    spreadsheetId: text("spreadsheet_id").notNull(),
+    /** ok | failed */
+    status: text("status").notNull().default("ok"),
+    note: text("note"),
+    rowCount: integer("row_count").notNull().default(0),
+    /** Per-tab scan stats; see the type in lib/tracking/sync. */
+    tabs: jsonb("tabs").$type<Record<string, unknown>[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("client_tracking_syncs_client_idx").on(table.clientId, table.createdAt),
+  ],
+);
+
+/**
+ * One mirrored row from a client's tracking sheet.
+ *
+ * NOTHING HERE IS MONEY. `cashCents` / `revenueCents` are the sheet's own
+ * tracking figures, mirrored so funnel and rep-activity metrics can be read;
+ * they never reach the ledger. `import-new-deals` stays the only writer of
+ * client cash, and where the two disagree that is a drift to show — never a
+ * number to silently choose between.
+ *
+ * Columns this app doesn't model stay verbatim in `payload`, keyed by the
+ * sheet's own header text, so a client adding a column loses nothing.
+ */
+export const clientTrackingRows = appSchema.table(
+  "client_tracking_rows",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    syncId: uuid("sync_id")
+      .notNull()
+      .references(() => clientTrackingSyncs.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    /** applications | calls | payments | deals | ar | bod | *_eod | eoc */
+    tab: text("tab").notNull(),
+    /** 1-based row number in the sheet, so a figure can be traced to its source. */
+    rowIndex: integer("row_index").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    email: text("email"),
+    name: text("name"),
+    phone: text("phone"),
+    rep: text("rep"),
+    status: text("status"),
+    outcome: text("outcome"),
+    cashCents: bigint("cash_cents", { mode: "number" }),
+    revenueCents: bigint("revenue_cents", { mode: "number" }),
+    /** The EOC report's call recording link — the Fathom transcript's front door. */
+    recordingUrl: text("recording_url"),
+    notes: text("notes"),
+    payload: jsonb("payload").$type<Record<string, string>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("client_tracking_rows_sync_idx").on(table.syncId, table.tab),
+    index("client_tracking_rows_client_tab_idx").on(table.clientId, table.tab),
+    index("client_tracking_rows_email_idx").on(table.clientId, table.email),
+    index("client_tracking_rows_occurred_idx").on(table.clientId, table.occurredAt),
+  ],
+);
