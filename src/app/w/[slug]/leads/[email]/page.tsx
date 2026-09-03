@@ -157,35 +157,14 @@ export default async function LeadDetailPage({
                     </a>
                     {(() => {
                       const call = transcripts.get(e.recordingUrl!);
-                      if (!call) {
-                        return (
-                          // Honest: the link is known, the transcript is not
-                          // here yet. No summary is invented in its place.
-                          <p className="text-faint text-xs">
-                            Transcript not pulled yet — run it from Tracking.
-                          </p>
-                        );
-                      }
-                      return (
-                        <details className="bg-card/50 rounded-md border p-2.5">
-                          <summary className="cursor-pointer text-xs font-medium">
-                            {call.title ?? "Call transcript"}
-                            {call.durationSeconds
-                              ? ` · ${Math.round(call.durationSeconds / 60)} min`
-                              : ""}
-                          </summary>
-                          {call.analysisStatus === "done" && call.analysisOutcome ? (
-                            <p className="mt-2 text-sm">{call.analysisOutcome}</p>
-                          ) : (
-                            <p className="text-faint mt-2 text-xs">
-                              The AI read of this call unlocks when the model provider
-                              is connected. The transcript below is the full call.
-                            </p>
-                          )}
-                          <pre className="text-muted-foreground mt-2 max-h-96 overflow-auto text-xs whitespace-pre-wrap">
-                            {call.transcript}
-                          </pre>
-                        </details>
+                      // Honest: the link is known, the transcript is not here
+                      // yet. No summary is invented in its place.
+                      return call ? (
+                        <CallRead call={call} />
+                      ) : (
+                        <p className="text-faint text-xs">
+                          Transcript not pulled yet — run it from Tracking.
+                        </p>
                       );
                     })()}
                   </div>
@@ -211,6 +190,99 @@ export default async function LeadDetailPage({
           ))}
         </ol>
       </Panel>
+    </div>
+  );
+}
+
+/**
+ * The read on one call: why it went the way it did, then the transcript.
+ *
+ * The outcome sits OUTSIDE the fold and the transcript inside it, because the
+ * answer is the reason a manager opened this — the 50,000-character transcript
+ * is the evidence, not the answer. A call whose read failed says so; nothing
+ * is summarised on its behalf.
+ */
+function CallRead({
+  call,
+}: {
+  call: {
+    title: string | null;
+    transcript: string | null;
+    durationSeconds: number | null;
+    analysisStatus: string;
+    analysisOutcome: string | null;
+    analysis: Record<string, unknown>;
+  };
+}) {
+  const read = call.analysis as {
+    objections?: string[];
+    missedSteps?: string[];
+    coaching?: string[];
+    nextStep?: string | null;
+  };
+  const done = call.analysisStatus === "done" && call.analysisOutcome;
+
+  return (
+    <div className="bg-card/50 space-y-2.5 rounded-md border p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-xs font-medium">
+          {call.title ?? "Call"}
+          {call.durationSeconds
+            ? ` · ${Math.round(call.durationSeconds / 60)} min`
+            : ""}
+        </span>
+        {call.analysisStatus === "failed" && (
+          <span className="text-warning text-xs">read failed</span>
+        )}
+      </div>
+
+      {done ? (
+        <>
+          <p className="text-sm">{call.analysisOutcome}</p>
+          <ReadList label="Objections raised" items={read.objections} />
+          <ReadList label="Steps missed" items={read.missedSteps} />
+          <ReadList label="Coaching" items={read.coaching} />
+          {read.nextStep && (
+            <p className="text-muted-foreground text-xs">
+              <span className="text-faint">Next step: </span>
+              {read.nextStep}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-faint text-xs">
+          {call.analysisStatus === "failed"
+            ? "The read did not come back usable, so nothing is shown for it. The transcript is below."
+            : "Not read yet. The transcript is below."}
+        </p>
+      )}
+
+      {call.transcript && (
+        <details>
+          <summary className="text-faint cursor-pointer text-xs">
+            Full transcript
+          </summary>
+          <pre className="text-muted-foreground mt-2 max-h-96 overflow-auto text-xs whitespace-pre-wrap">
+            {call.transcript}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ReadList({ label, items }: { label: string; items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-faint text-xs">{label}</p>
+      <ul className="mt-0.5 space-y-1">
+        {items.map((item) => (
+          <li key={item} className="text-muted-foreground text-xs">
+            · {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

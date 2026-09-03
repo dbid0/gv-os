@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { callRecordings, clientTrackingRows } from "@/db/schema/app";
@@ -189,6 +189,7 @@ export async function transcriptByShareUrl(url: string) {
       durationSeconds: callRecordings.durationSeconds,
       analysisStatus: callRecordings.analysisStatus,
       analysisOutcome: callRecordings.analysisOutcome,
+      analysis: callRecordings.analysis,
     })
     .from(callRecordings)
     .where(
@@ -196,4 +197,51 @@ export async function transcriptByShareUrl(url: string) {
     )
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The most recent call READS for one offer — the manager's view.
+ *
+ * A manager should not have to open twenty lead pages to find out why last
+ * week went the way it did. Ordered newest first, and only calls that produced
+ * a usable read: a failed one has nothing to say and padding the list with it
+ * would suggest otherwise.
+ */
+export async function callReadsForClient(clientId: string, limit = 20) {
+  const db = getDb();
+  return db
+    .select({
+      id: callRecordings.id,
+      title: callRecordings.title,
+      occurredAt: callRecordings.occurredAt,
+      participants: callRecordings.participants,
+      outcome: callRecordings.analysisOutcome,
+      analysis: callRecordings.analysis,
+    })
+    .from(callRecordings)
+    .where(
+      and(
+        eq(callRecordings.clientId, clientId),
+        eq(callRecordings.analysisStatus, "done"),
+        isNotNull(callRecordings.analysisOutcome),
+      ),
+    )
+    .orderBy(desc(callRecordings.occurredAt))
+    .limit(limit);
+}
+
+/** How many calls are read, waiting, or came back unusable. */
+export async function readCounts(clientId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({ status: callRecordings.analysisStatus, n: count() })
+    .from(callRecordings)
+    .where(eq(callRecordings.clientId, clientId))
+    .groupBy(callRecordings.analysisStatus);
+  const by = Object.fromEntries(rows.map((r) => [r.status, Number(r.n)]));
+  return {
+    done: by.done ?? 0,
+    pending: by.pending ?? 0,
+    failed: by.failed ?? 0,
+  };
 }
