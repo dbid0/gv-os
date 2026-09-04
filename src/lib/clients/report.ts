@@ -36,7 +36,21 @@ export interface ClientReport {
     takenAt: Date;
   } | null;
   captures: { crm: number; payments: number; bookings: number; signedDocs: number };
-  mirror: { deals: number; netCents: number; cashCents: number; revenueCents: number };
+  mirror: {
+    deals: number;
+    netCents: number;
+    cashCents: number;
+    revenueCents: number;
+    /**
+     * Whether this offer HAS a line in the client ledger.
+     *
+     * False means no money could be attributed to it at all — a slug the
+     * roster does not carry, say — which is a different fact from "this offer
+     * has collected nothing". Callers render "—" for the first and "$0.00"
+     * only for the second.
+     */
+    attributed: boolean;
+  };
   target: { monthlyTargetCents: number | null; mtdCashCents: number };
 }
 
@@ -60,7 +74,7 @@ export async function getClientReport(
     apps30d: 0,
     kit: null,
     captures: { crm: 0, payments: 0, bookings: 0, signedDocs: 0 },
-    mirror: { deals: 0, netCents: 0, cashCents: 0, revenueCents: 0 },
+    mirror: { deals: 0, netCents: 0, cashCents: 0, revenueCents: 0, attributed: false },
   };
 
   const [appRows, [kitRow], [crm], [pay], [book], [signed]] = clientId
@@ -122,6 +136,7 @@ export async function getClientReport(
         cashCents: line.cashCents,
         revenueCents: line.revenueCents,
         netCents: line.afterFeesCents,
+        attributed: true,
       }
     : empty.mirror;
 
