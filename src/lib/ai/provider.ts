@@ -1,14 +1,18 @@
 /**
- * The LLM provider adapter — STUBBED for Phase 1.
+ * The LLM provider adapter — no hosted model, by design.
  *
- * The whole assistant is deliberately key-free until go-live: no API keys, no
- * network calls, no external SDK. But the seam the real provider will slot into
- * exists now, behind a clean interface, so wiring a live model later is a swap
- * of `getAiProvider()` and nothing else.
+ * GV OS runs on Vercel; the model that reads calls runs LOCALLY through Claude
+ * Code (see scripts/analyze-calls). That works for batch work — claim the
+ * pending rows, think, write the answers back — but it cannot serve an
+ * interactive chat request, which has to answer inside the request itself.
  *
- * The stub is honest: when a question doesn't map to a deterministic answer, it
- * returns the "full AI chat unlocks at go-live" state rather than pretending to
- * think. It never reaches the network, so it is fully testable and safe to ship.
+ * So the starter questions do the useful half without a model at all: they
+ * resolve to deterministic answers computed from live data. Anything
+ * open-ended returns the honest message below rather than pretending to think.
+ * It never reaches the network, so it is fully testable and safe to ship.
+ *
+ * The seam is real: wiring a hosted model later is a swap of `getAiProvider()`
+ * and nothing else.
  *
  * Pure — no `server-only`, no imports with side effects. Coverable to 100%.
  */
@@ -30,18 +34,26 @@ export interface AiCompletionRequest {
 export interface AiCompletionResult {
   /** Whether a real completion was produced. Always false while stubbed. */
   ok: boolean;
-  /** Whether the live provider is wired. Always false in Phase 1. */
+  /** Whether a hosted model is wired. False while answers stay deterministic. */
   unlocked: boolean;
   /** The text to show the user. */
   text: string;
-  /** Which provider answered — "stub" until go-live. */
+  /** Which provider answered — "stub" while there is no hosted model. */
   provider: string;
 }
 
-/** The honest degraded message shown when there's no deterministic answer. */
-export const GO_LIVE_MESSAGE =
-  "Full AI chat unlocks at go-live. For now, tap one of the starter questions — " +
-  "those pull straight from your live numbers with no AI needed.";
+/**
+ * The honest message when a question has no deterministic answer.
+ *
+ * It names the actual reason rather than a date: there is no hosted model
+ * behind this box. Saying "unlocks at go-live" implied someone was waiting on
+ * a launch, when the real answer is that the model runs locally and does batch
+ * work — the call reads — not live chat.
+ */
+export const NO_MODEL_MESSAGE =
+  "Open-ended chat isn't wired up here — the model that reads your calls runs " +
+  "locally, not inside this app. Tap a starter question instead: those are " +
+  "computed straight from your live numbers, no model needed.";
 
 export interface AiProvider {
   readonly id: string;
@@ -51,7 +63,7 @@ export interface AiProvider {
 
 /**
  * The Phase-1 provider. Produces no completion and touches nothing external;
- * every call resolves to the go-live state.
+ * every call resolves to the no-model state.
  */
 export class StubProvider implements AiProvider {
   readonly id = "stub";
@@ -62,7 +74,7 @@ export class StubProvider implements AiProvider {
     return {
       ok: false,
       unlocked: false,
-      text: GO_LIVE_MESSAGE,
+      text: NO_MODEL_MESSAGE,
       provider: this.id,
     };
   }

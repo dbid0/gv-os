@@ -201,26 +201,3 @@ export async function pullFathomRecordings(): Promise<FathomPullResult[]> {
 
   return results;
 }
-
-/** Recordings still waiting on a call read — what the analysis step consumes. */
-export async function listRecordingsAwaitingAnalysis(limit = 20) {
-  const db = getDb();
-  return db
-    .select({
-      id: callRecordings.id,
-      clientId: callRecordings.clientId,
-      activityLogId: callRecordings.activityLogId,
-      title: callRecordings.title,
-      transcript: callRecordings.transcript,
-      occurredAt: callRecordings.occurredAt,
-    })
-    .from(callRecordings)
-    .where(
-      and(
-        eq(callRecordings.analysisStatus, "pending"),
-        isNotNull(callRecordings.transcript),
-      ),
-    )
-    .orderBy(desc(callRecordings.occurredAt))
-    .limit(limit);
-}

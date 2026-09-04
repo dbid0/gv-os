@@ -108,7 +108,7 @@ export interface LeadSummary {
  * happens to test. Within one stage, real time orders the rows, and sheet row
  * order settles the rest.
  */
-export function orderEvents(events: LeadEvent[]): LeadEvent[] {
+function orderEvents(events: LeadEvent[]): LeadEvent[] {
   return [...events].sort((a, b) => {
     if (a.stage !== b.stage) return a.stage - b.stage;
     if (a.occurredAt && b.occurredAt) {

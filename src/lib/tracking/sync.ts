@@ -122,18 +122,6 @@ function empty(error: string): TrackingSyncResult {
   return { syncId: null, rowCount: 0, tabs: [], error };
 }
 
-/** The current snapshot for a client, or null when it has never synced. */
-export async function latestTrackingSync(clientId: string) {
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(clientTrackingSyncs)
-    .where(eq(clientTrackingSyncs.clientId, clientId))
-    .orderBy(desc(clientTrackingSyncs.createdAt))
-    .limit(1);
-  return row ?? null;
-}
-
 /**
  * Drop this client's oldest snapshots.
  *
