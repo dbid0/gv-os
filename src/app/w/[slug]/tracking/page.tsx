@@ -136,6 +136,18 @@ export default async function WorkspaceTrackingPage({
         title="Tabs"
         aside={
           <div className="flex items-center gap-3">
+            {/* Which sheet is feeding this workspace, always visible and always
+                clickable. When an offer moves to a new sheet, the only way to
+                be sure the dashboard followed is to see the source. */}
+            <a
+              href={`https://docs.google.com/spreadsheets/d/${snapshot.spreadsheetId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-faint hover:text-foreground font-mono text-[11px]"
+              title={snapshot.spreadsheetId}
+            >
+              sheet …{snapshot.spreadsheetId.slice(-6)}
+            </a>
             <span className="text-faint text-xs">
               synced{" "}
               {snapshot.syncedAt.toLocaleString("en-US", {

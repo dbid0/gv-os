@@ -10,6 +10,11 @@ import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { parseTargetDollars } from "@/lib/clients/targets";
 import { driveFolderIdValid } from "@/lib/google/drive-kind";
+import {
+  conflictingOwner,
+  looksLikeSheetId,
+  normalizeSheetId,
+} from "@/lib/tracking/sheet-link";
 
 async function requireUser() {
   // Dev/preview bypass only — never passes in production.
@@ -56,18 +61,46 @@ export async function importOfferDeals(slug: string) {
   return result;
 }
 
-const SHEET_ID = /^[A-Za-z0-9_-]{20,60}$/;
-
-/** Point this offer at its tracking sheet (the New Deals feed). Empty clears it. */
+/**
+ * Point this offer at its tracking sheet. Empty clears it.
+ *
+ * Two guards, because this one field decides whose numbers fill a workspace:
+ *
+ *   • a pasted URL is accepted and reduced to the id, so the stored value is
+ *     never a URL that silently fails every sync;
+ *   • a sheet already linked to ANOTHER offer is refused by name. Sharing one
+ *     sheet between two offers would put one client's prospects, deals and
+ *     recordings inside another client's workspace, and nothing on screen
+ *     would look wrong — the numbers would simply be somebody else's.
+ */
 export async function saveTrackingSheet(slug: string, rawSheetId: string) {
   await requireUser();
-  const sheetId = rawSheetId.trim();
-  if (sheetId && !SHEET_ID.test(sheetId)) {
+  const sheetId = normalizeSheetId(rawSheetId);
+  if (sheetId && !looksLikeSheetId(sheetId)) {
     throw new Error(
       "That doesn't look like a Google Sheet id — copy it from the sheet's URL (the part after /d/).",
     );
   }
   const db = getDb();
+
+  const roster = await db
+    .select({
+      clientId: clients.id,
+      slug: clients.slug,
+      name: clients.name,
+      trackingSheetId: clients.trackingSheetId,
+    })
+    .from(clients);
+  const me = roster.find((r) => r.slug === slug);
+  if (!me) throw new Error("No client row for this slug yet — sync creates it.");
+
+  const clash = conflictingOwner(sheetId, me.clientId, roster);
+  if (clash) {
+    throw new Error(
+      `That sheet is already linked to ${clash.name}. One sheet feeds one offer — using it here would show ${clash.name}'s leads and deals in this workspace.`,
+    );
+  }
+
   const updated = await db
     .update(clients)
     .set({ trackingSheetId: sheetId || null })
