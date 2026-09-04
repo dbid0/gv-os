@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -98,30 +98,35 @@ export async function reviewQueue(
   return orderReviews(candidates);
 }
 
-/** Recording URL → the closer's status, from each client's newest snapshot. */
+/**
+ * Recording URL → the closer's status, from each client's CURRENT snapshot.
+ *
+ * Scoped to the current snapshots rather than scanning every historical one.
+ * A sync writes a fresh copy of the whole sheet, so "all snapshots" grows by
+ * hundreds of rows every run: after four syncs this was reading 118 EOC rows
+ * to use 25, and it never stopped growing. The old rows could only ever be
+ * shadowed by newer ones anyway, so reading them was pure waste.
+ */
 async function eocStatusByRecordingUrl(): Promise<Map<string, string>> {
   const db = getDb();
+  const current = await currentSyncIds();
+  if (current.length === 0) return new Map();
+
   const rows = await db
     .select({
       recordingUrl: clientTrackingRows.recordingUrl,
       status: clientTrackingRows.status,
-      createdAt: clientTrackingSyncs.createdAt,
     })
     .from(clientTrackingRows)
-    .innerJoin(
-      clientTrackingSyncs,
-      eq(clientTrackingRows.syncId, clientTrackingSyncs.id),
-    )
     .where(
       and(
+        inArray(clientTrackingRows.syncId, current),
         eq(clientTrackingRows.tab, "eoc"),
         isNotNull(clientTrackingRows.recordingUrl),
         isNotNull(clientTrackingRows.status),
       ),
-    )
-    .orderBy(desc(clientTrackingSyncs.createdAt));
+    );
 
-  // Newest snapshot wins; older ones only fill gaps.
   const out = new Map<string, string>();
   for (const r of rows) {
     if (r.recordingUrl && r.status && !out.has(r.recordingUrl)) {
@@ -129,6 +134,23 @@ async function eocStatusByRecordingUrl(): Promise<Map<string, string>> {
     }
   }
   return out;
+}
+
+/** The newest snapshot id for each client — what every read should use. */
+async function currentSyncIds(): Promise<string[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: clientTrackingSyncs.id, clientId: clientTrackingSyncs.clientId })
+    .from(clientTrackingSyncs)
+    .orderBy(desc(clientTrackingSyncs.createdAt));
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const r of rows) {
+    if (seen.has(r.clientId)) continue;
+    seen.add(r.clientId);
+    ids.push(r.id);
+  }
+  return ids;
 }
 
 async function slugById(): Promise<Map<string, string>> {

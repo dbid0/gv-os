@@ -154,12 +154,45 @@ export async function leadsForClient(syncId: string): Promise<LeadSummary[]> {
   return buildLeadSummaries(rows);
 }
 
-/** One lead's full journey, or null when that email isn't in the snapshot. */
+/**
+ * One lead's full journey, or null when that email isn't in the snapshot.
+ *
+ * Queries only THAT lead's rows. It used to build summaries for every lead on
+ * the offer and then pick one out — 435 people's journeys assembled to render
+ * a single page.
+ */
 export async function leadByEmail(
   syncId: string,
   email: string,
 ): Promise<LeadSummary | null> {
-  const leads = await leadsForClient(syncId);
   const wanted = email.trim().toLowerCase();
-  return leads.find((l) => l.email === wanted) ?? null;
+  if (wanted === "") return null;
+  const db = getDb();
+  const rows = await db
+    .select({
+      tab: clientTrackingRows.tab,
+      rowIndex: clientTrackingRows.rowIndex,
+      occurredAt: clientTrackingRows.occurredAt,
+      email: clientTrackingRows.email,
+      name: clientTrackingRows.name,
+      rep: clientTrackingRows.rep,
+      status: clientTrackingRows.status,
+      outcome: clientTrackingRows.outcome,
+      cashCents: clientTrackingRows.cashCents,
+      revenueCents: clientTrackingRows.revenueCents,
+      recordingUrl: clientTrackingRows.recordingUrl,
+      notes: clientTrackingRows.notes,
+      payload: clientTrackingRows.payload,
+    })
+    .from(clientTrackingRows)
+    .where(
+      and(
+        eq(clientTrackingRows.syncId, syncId),
+        eq(clientTrackingRows.email, wanted),
+        inArray(clientTrackingRows.tab, LEAD_TABS),
+      ),
+    );
+  // The same builder as the list, so one lead's page and their row in the
+  // table can never disagree.
+  return buildLeadSummaries(rows)[0] ?? null;
 }

@@ -1,11 +1,12 @@
 import "server-only";
 
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
 import { readSheetTitles, readSheetValues } from "@/lib/google/sheets";
 import { parseTrackingTab, type TrackingRow } from "@/lib/tracking/parse";
+import { snapshotsToPrune } from "@/lib/tracking/retention";
 import { scanTab, type TabScan } from "@/lib/tracking/scan";
 import { tabFromTitle } from "@/lib/tracking/tabs";
 
@@ -112,6 +113,8 @@ export async function syncClientTrackingSheet(
     );
   }
 
+  await pruneOldSnapshots(clientId);
+
   return { syncId: run.id, rowCount: parsed.length, tabs: scans, error: null };
 }
 
@@ -129,4 +132,28 @@ export async function latestTrackingSync(clientId: string) {
     .orderBy(desc(clientTrackingSyncs.createdAt))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Drop this client's oldest snapshots.
+ *
+ * A sync writes a fresh copy of the whole sheet, so without this the mirror
+ * grows by hundreds of rows every run and never shrinks. Rows cascade with
+ * their snapshot. Runs AFTER the new snapshot is written, so a failure here
+ * costs disk, never the data anyone is about to read.
+ */
+async function pruneOldSnapshots(clientId: string): Promise<void> {
+  try {
+    const db = getDb();
+    const snapshots = await db
+      .select({ id: clientTrackingSyncs.id })
+      .from(clientTrackingSyncs)
+      .where(eq(clientTrackingSyncs.clientId, clientId))
+      .orderBy(desc(clientTrackingSyncs.createdAt));
+    const stale = snapshotsToPrune(snapshots);
+    if (stale.length === 0) return;
+    await db.delete(clientTrackingSyncs).where(inArray(clientTrackingSyncs.id, stale));
+  } catch {
+    // Housekeeping must never fail a sync that already succeeded.
+  }
 }
