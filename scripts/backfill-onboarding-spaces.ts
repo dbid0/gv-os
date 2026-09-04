@@ -38,6 +38,14 @@ async function main() {
   const client = postgres(url!, { max: 4, prepare: false });
   const db = drizzle(client, { schema });
 
+  // The agency Client Template's own icon — what a seeded section wears.
+  const [template] = await db
+    .select({ icon: workspacePages.icon })
+    .from(workspacePages)
+    .where(eq(workspacePages.title, CLIENT_TEMPLATE_TITLE))
+    .limit(1);
+  const templateIcon = template?.icon ?? null;
+
   const roster = await db
     .select({ id: clients.id, slug: clients.slug, name: clients.name })
     .from(clients)
@@ -88,6 +96,31 @@ async function main() {
     }
 
     if (hasOnboardingSpace(titles, c.name)) {
+      // It exists — but the two clients whose sections were renamed in place,
+      // or pulled from their own Notion, never picked up an icon, while the
+      // two seeded from the template did. Four client workspaces, two of them
+      // wearing a mark and two blank, is exactly the kind of inconsistency
+      // that makes a product look unfinished.
+      const existing = roots.find((r) => hasOnboardingSpace([r.title], c.name));
+      if (existing && !existing.icon) {
+        const icon = onboardingRootIcon(clientRow?.logo ?? null, templateIcon);
+        if (icon) {
+          if (dry) {
+            console.log(
+              `  [dry] ${c.slug} — would give "${existing.title}" the template icon`,
+            );
+          } else {
+            await db
+              .update(workspacePages)
+              .set({ icon })
+              .where(eq(workspacePages.id, existing.id));
+            console.log(
+              `  ICON  ${c.slug} — "${existing.title}" now carries the template icon`,
+            );
+          }
+          continue;
+        }
+      }
       console.log(`  skip  ${c.slug} — already has its onboarding section`);
       continue;
     }
