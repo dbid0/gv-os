@@ -12,10 +12,12 @@ import {
   sheetSyncRuns,
   signedDocs,
 } from "@/db/schema/app";
+import { reviewQueue } from "@/lib/calls/review-queue";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import {
   bodReminderRule,
+  callReviewRule,
   bodRule,
   driftRule,
   eodReminderRule,
@@ -174,6 +176,10 @@ export async function evaluateNotifications(): Promise<{
   // Sync-failure + staleness alerts are OFF until integrations carry real
   // traffic (Daniel: the placeholder "Kit sync failing" note is meaningless
   // noise). Re-enable both — with human-readable copy — once real keys land.
+  // Calls the read says need a manager. Read here rather than in the rule so
+  // the rule itself stays pure and testable.
+  const reviews = await reviewQueue({ limit: 50 });
+
   const candidates = [
     ...driftRule(latestRun ?? null),
     ...spineDriftRule(driftRows),
@@ -182,6 +188,15 @@ export async function evaluateNotifications(): Promise<{
     ...repWellbeingRule(wellbeingRows),
     ...bodReminderRule(bodCompliance, now, todayKey),
     ...eodReminderRule(eodCompliance, now, todayKey),
+    ...callReviewRule(
+      reviews.map((r) => ({
+        recordingId: r.recordingId,
+        clientId: r.clientId,
+        rep: r.rep,
+        reason: r.decision.reason ?? "Needs a look",
+        priority: r.decision.priority,
+      })),
+    ),
   ];
 
   let created = 0;

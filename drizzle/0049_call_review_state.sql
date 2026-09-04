@@ -1,0 +1,1 @@
+ALTER TABLE "app"."call_recordings" ADD COLUMN "reviewed_at" timestamp with time zone;

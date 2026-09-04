@@ -1244,6 +1244,12 @@ export const callRecordings = appSchema.table(
     /** Structured coaching: objections raised, steps missed, what to do next. */
     analysis: jsonb("analysis").$type<Record<string, unknown>>().notNull().default({}),
     analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    /**
+     * When a manager cleared this call from the review queue. Null = still in
+     * the inbox. Kept as a timestamp rather than a boolean so "who is behind
+     * on reviews" stays answerable later.
+     */
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
