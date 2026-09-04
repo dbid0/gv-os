@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
@@ -53,6 +54,11 @@ export default async function LeadDetailPage({
   // No client record yet: a 404 is the honest answer for a specific lead,
   // since there is genuinely no such person to show.
   if (!row) notFound();
+
+  // The client's own view of their workspace. They see the call; they do not
+  // see how GV coached the rep who ran it.
+  const cookieStore = await cookies();
+  const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
   const snapshot = await currentSnapshot(row.id);
   const lead = snapshot ? await leadByEmail(snapshot.syncId, email) : null;
@@ -162,7 +168,7 @@ export default async function LeadDetailPage({
                       // Honest: the link is known, the transcript is not here
                       // yet. No summary is invented in its place.
                       return call ? (
-                        <CallRead call={call} />
+                        <CallRead call={call} coaching={!portalView} />
                       ) : (
                         <p className="text-faint text-xs">
                           Transcript not pulled yet — run it from Tracking.
@@ -206,7 +212,18 @@ export default async function LeadDetailPage({
  */
 function CallRead({
   call,
+  coaching,
 }: {
+  /**
+   * Whether to show the coaching half of the read.
+   *
+   * False in the client-facing portal. The outcome and the transcript are the
+   *客 call itself and fine for a client to see; the objections, the steps
+   * missed and the coaching are notes on how GV's own rep handled it —
+   * "should have dug more pain in this guy" is written for a sales manager,
+   * not for the client whose offer is being sold.
+   */
+  coaching: boolean;
   call: {
     title: string | null;
     transcript: string | null;
@@ -241,9 +258,13 @@ function CallRead({
       {done ? (
         <>
           <p className="text-sm">{call.analysisOutcome}</p>
-          <ReadList label="Objections raised" items={read.objections} />
-          <ReadList label="Steps missed" items={read.missedSteps} />
-          <ReadList label="Coaching" items={read.coaching} />
+          {coaching && (
+            <>
+              <ReadList label="Objections raised" items={read.objections} />
+              <ReadList label="Steps missed" items={read.missedSteps} />
+              <ReadList label="Coaching" items={read.coaching} />
+            </>
+          )}
           {read.nextStep && (
             <p className="text-muted-foreground text-xs">
               <span className="text-faint">Next step: </span>

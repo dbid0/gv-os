@@ -13,6 +13,7 @@ import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
+import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientBySlug } from "@/lib/roster";
 import { possessive } from "@/lib/text";
 import { currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
@@ -40,6 +41,12 @@ export default async function WorkspaceTrackingPage({
   const { slug } = await params;
   const client = clientBySlug(slug);
   if (!client) notFound();
+
+  // Hiding the tab is not enough — the URL is guessable, and this page is GV's
+  // sync console: mirrored row counts, the sheet id, and a running critique of
+  // the client's own data hygiene. A client asking for it gets a 404, the same
+  // answer as any other page that is not theirs.
+  if (!(await viewerIsAdmin())) notFound();
 
   const db = getDb();
   const [row] = await db
