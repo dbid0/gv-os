@@ -39,7 +39,13 @@ export default async function SalesPage() {
   for (const team of teams) {
     try {
       const report = await getClientReport(team.slug, team.name);
-      cashByTeam.set(team.slug, report.mirror.cashCents);
+      // Only record cash the ledger could actually attribute to this offer.
+      // An unattributable team used to render "$0.00", which reads as "they
+      // have collected nothing" when the truth is that nothing could be
+      // matched to them at all.
+      if (report.mirror.attributed) {
+        cashByTeam.set(team.slug, report.mirror.cashCents);
+      }
     } catch {
       // A reporting hiccup shows "—", never a broken card.
     }

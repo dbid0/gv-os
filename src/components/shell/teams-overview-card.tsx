@@ -18,11 +18,18 @@ export function TeamsOverviewCard({ overview }: { overview: TeamsOverview }) {
   return (
     <section className="card-grad elev-card relative overflow-hidden rounded-xl border p-5">
       <AmbientBackdrop bars={40} className="opacity-[0.08]" />
-      <div className="relative mb-4 flex items-center gap-2">
+      <div className="relative mb-4 flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold tracking-tight">All teams overview</h2>
         <StatusPill tone={teams.length ? "live" : "muted"}>
           {teams.length} {teams.length === 1 ? "team" : "teams"}
         </StatusPill>
+        {/* The window, named once for all four figures. Without it the page
+            carried two different numbers both labelled "Cash collected" — the
+            range picker's total above, and this all-time one — and nothing
+            said which was which. */}
+        <span className="text-faint text-[11px] tracking-wide uppercase">
+          all time · offer cash
+        </span>
       </div>
 
       <div className="relative grid grid-cols-2 gap-4 lg:grid-cols-4">
