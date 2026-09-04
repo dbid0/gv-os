@@ -167,8 +167,12 @@ export default async function WorkspacePage({
                 </p>
                 <p className="numeric text-success text-4xl font-bold tracking-tight">
                   <CountUpMoney cents={report.mirror.cashCents} />{" "}
+                  {/* Reads as one sentence: the big number is all-time, the
+                      note says the chosen window was quiet. Without the
+                      separator this rendered as "$183,550.00 nothing
+                      collected in last 30 days". */}
                   <span className="text-muted-foreground text-sm font-normal">
-                    nothing collected in {bounds.label.toLowerCase()}
+                    · none in the {bounds.label.toLowerCase()}
                   </span>
                 </p>
               </div>
@@ -206,16 +210,24 @@ export default async function WorkspacePage({
           portal never sees cash or revenue at a glance unless the admin turns
           it on (the v2 §6 "money off by default" rule; previously this row
           leaked both figures regardless of the toggle). */}
+      {/* Every label here names its window. These are ALL-TIME mirror figures
+          sitting directly beneath a hero showing the selected range, so an
+          unqualified "Cash collected" put two different numbers under one name
+          a few pixels apart. */}
       {showCash && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Kpi label="Deals" value={String(report.mirror.deals)} tone="brand" />
           <Kpi
-            label="Cash collected"
+            label="Deals — all time"
+            value={String(report.mirror.deals)}
+            tone="brand"
+          />
+          <Kpi
+            label="Cash collected — all time"
             value={<CountUpMoney cents={report.mirror.cashCents} />}
             tone="success"
           />
           <Kpi
-            label="Revenue generated"
+            label="Revenue booked — all time"
             value={<CountUpMoney cents={report.mirror.revenueCents} />}
           />
         </div>

@@ -8,6 +8,7 @@ import { getDb } from "@/db/client";
 import { applications, clients, crmActivity, integrations } from "@/db/schema/app";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
 import { clientBySlug } from "@/lib/roster";
+import { possessive } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 
@@ -128,8 +129,8 @@ export default async function WorkspaceCrmPage({
           aside={<StatusPill tone="pending">Not connected</StatusPill>}
         >
           <p className="text-muted-foreground text-sm">
-            {client.name}&apos;s Close account isn&apos;t connected yet. Once its API
-            key is added in Integrations, this page fills in on the next sync: rep
+            {possessive(client.name)} Close account isn&apos;t connected yet. Once its
+            API key is added in Integrations, this page fills in on the next sync: rep
             dials, texts and emails, how fast new applications get called, and which
             leads answered.
           </p>

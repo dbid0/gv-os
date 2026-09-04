@@ -41,7 +41,21 @@ export default async function WorkspaceLeadsPage({
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
-  if (!row) notFound();
+
+  // A roster client with no database row yet is a real state (it appears
+  // before the first sync creates one). It used to render a BLANK page —
+  // status 200 with nothing on it, which reads as broken rather than as empty.
+  if (!row) {
+    return (
+      <Panel title="Leads" aside={<StatusPill tone="pending">Not set up</StatusPill>}>
+        <p className="text-muted-foreground text-sm">
+          {client.name} doesn&apos;t have a client record yet, so there is nothing to
+          stitch leads from. It appears here once the offer is set up and its tracking
+          sheet has synced.
+        </p>
+      </Panel>
+    );
+  }
 
   const snapshot = await currentSnapshot(row.id);
   if (!snapshot) {

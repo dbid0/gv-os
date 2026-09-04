@@ -5,6 +5,7 @@ import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { latestKitOverview } from "@/lib/email/queries";
 import { clientBySlug } from "@/lib/roster";
+import { possessive } from "@/lib/text";
 import { clientIdBySlug } from "@/lib/clients/id";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +47,8 @@ export default async function WorkspaceMarketingPage({
           aside={<StatusPill tone="pending">Not connected</StatusPill>}
         >
           <p className="text-muted-foreground text-sm">
-            {client.name}&apos;s Kit account isn&apos;t connected yet. Once its API key
-            is added in Integrations, this fills in on the next sync: the list size,
+            {possessive(client.name)} Kit account isn&apos;t connected yet. Once its API
+            key is added in Integrations, this fills in on the next sync: the list size,
             every sequence running, and how the list is growing.
           </p>
           <p className="text-faint mt-2 text-xs">

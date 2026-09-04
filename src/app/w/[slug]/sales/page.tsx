@@ -110,7 +110,13 @@ export default async function WorkspaceSalesPage({
           value={report ? <Money amount={cents(report.mirror.cashCents)} /> : "—"}
           tone="brand"
         />
-        <Kpi label="Deals" value={String(deals.length)} />
+        {/* The mirror's own count, not the deals table's. This KPI sits
+            beside "Cash collected — all time", which IS the mirror, and the
+            dashboard reports the same pair — a count from one source next to
+            cash from another, under one label, is two definitions of the same
+            word on two tabs of the same offer. Logged deals still appear in
+            the list below, where they are labelled as such. */}
+        <Kpi label="Deals" value={report ? String(report.mirror.deals) : "—"} />
         <Kpi label="Show rate" value={pct(stats.showRate)} />
         <Kpi label="Close rate" value={pct(stats.closeRate)} />
       </div>
