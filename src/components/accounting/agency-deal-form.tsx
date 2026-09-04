@@ -40,6 +40,9 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
+  // Set when the sheet already holds this exact deal; cleared on a success.
+  const [duplicate, setDuplicate] = useState<string | null>(null);
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
 
   const today = "";
   const [dateClosed, setDateClosed] = useState(today);
@@ -63,20 +66,39 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
     }
     start(async () => {
       try {
-        await logAgencyDeal({
-          dateClosed,
-          client,
-          dealType,
-          offer,
-          revenueDollars: Number(revenue) || 0,
-          cashDollars: Number(cash) || 0,
-          method,
-          pctEntered: pct === "" ? null : Number(pct),
-          feeOverrideDollars: fee === "" ? null : Number(fee),
-          agreement,
-          notes,
-          payoutStatus: payout,
-        });
+        const res = await logAgencyDeal(
+          {
+            dateClosed,
+            client,
+            dealType,
+            offer,
+            revenueDollars: Number(revenue) || 0,
+            cashDollars: Number(cash) || 0,
+            method,
+            pctEntered: pct === "" ? null : Number(pct),
+            feeOverrideDollars: fee === "" ? null : Number(fee),
+            agreement,
+            notes,
+            payoutStatus: payout,
+          },
+          allowDuplicate,
+        );
+
+        // An identical deal is already on the sheet. Say which row, and make
+        // the second attempt a deliberate act rather than a repeated reflex —
+        // the same client really can pay the same amount twice in a day.
+        if (!res.ok && res.duplicate) {
+          setDuplicate(res.message);
+          toast({
+            tone: "error",
+            title: "That deal is already on the sheet",
+            detail: res.message,
+          });
+          return;
+        }
+
+        setDuplicate(null);
+        setAllowDuplicate(false);
         toast({
           tone: "success",
           title: `${client.trim()} logged to the finance sheet`,
@@ -230,7 +252,22 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
           />
         </Field>
         <div className="sm:col-span-2 lg:col-span-3">
-          <Button type="submit" disabled={pending} className="gap-2">
+          {duplicate && (
+            <label className="text-warning flex max-w-xl items-start gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={allowDuplicate}
+                onChange={(e) => setAllowDuplicate(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>{duplicate} Tick to log it anyway.</span>
+            </label>
+          )}
+          <Button
+            type="submit"
+            disabled={pending || (duplicate !== null && !allowDuplicate)}
+            className="gap-2"
+          >
             <Plus className="size-3.5" />
             {pending ? "Logging…" : "Log to finance sheet"}
           </Button>
