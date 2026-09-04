@@ -108,6 +108,11 @@ export default async function AccountingPage() {
           />
         </div>
       ) : (
+        /* Every deduction is named. "Net" used to appear with no label for
+           what came off between it and "After team" — $17,410 of other
+           outgoing rows vanished between two figures, so the chain could not
+           be followed or checked. Each step now states its own subtraction,
+           and the four figures multiply out to the last cent. */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="Total cash collected"
@@ -123,7 +128,7 @@ export default async function AccountingPage() {
             value={<Money amount={cents(chain.afterTeamCents)} />}
           />
           <Kpi
-            label="Net"
+            label={`Net (−${(chain.otherOutCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} costs)`}
             value={<Money amount={cents(chain.netCents)} />}
             tone="success"
           />

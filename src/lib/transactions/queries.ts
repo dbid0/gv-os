@@ -3,6 +3,7 @@ import "server-only";
 import { and, desc, eq, gte, lte, type SQL } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
+import { summarizeBacklog } from "@/lib/transactions/summary";
 import { transactions, clients } from "@/db/schema/app";
 
 /** Filtered read of the backlog — every accounting view is one of these. */
@@ -44,14 +45,7 @@ export async function listTransactions(filters: BacklogFilters) {
     .orderBy(desc(transactions.occurredOn), desc(transactions.recordedAt))
     .limit(500);
 
-  const sum = (pick: (r: (typeof rows)[number]) => number) =>
-    rows.reduce((total, r) => total + pick(r), 0);
-  return {
-    rows,
-    totals: {
-      revenueCents: sum((r) => r.revenueCents),
-      cashCents: sum((r) => r.cashCents),
-      processorFeeCents: sum((r) => r.processorFeeCents),
-    },
-  };
+  // Direction is respected by `summarizeBacklog`, not here: money in and money
+  // out are different directions and adding them is not a total of anything.
+  return { rows, totals: summarizeBacklog(rows) };
 }

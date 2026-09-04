@@ -77,15 +77,27 @@ export default async function TransactionsPage({
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* In and out are shown apart. They used to be summed into one "Cash
+          collected", so every expense row inflated the figure it sat under. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
-          label="Revenue (filtered)"
+          label="Revenue booked"
           value={<Money amount={cents(totals.revenueCents)} />}
         />
         <Kpi
-          label="Cash collected"
-          value={<Money amount={cents(totals.cashCents)} />}
+          label="Cash in"
+          value={<Money amount={cents(totals.cashInCents)} />}
           tone="success"
+        />
+        <Kpi
+          label="Cash out"
+          value={
+            totals.cashOutCents === 0 ? (
+              "—"
+            ) : (
+              <Money amount={cents(totals.cashOutCents)} />
+            )
+          }
         />
         <Kpi
           label="Processor fees"
