@@ -240,6 +240,81 @@ export const partnerSplits = appSchema.table(
  * This is the rep-money layer, distinct from the partner (Daniel/Gus) split:
  * one deal, two split layers, on the same agreement.
  */
+/**
+ * An offer a client sells. Until now "offer" was free text on a deal, which made
+ * per-offer compensation impossible to express: a $49/mo subscription, a $997
+ * course and a $10K mastermind cannot share one commission model.
+ *
+ * Offers are a catalogue, not a ledger — editing one does not restate history,
+ * because every deal snapshots its own rate at the time it is written.
+ */
+export const offers = appSchema.table(
+  "offers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    name: text("name").notNull(),
+    /** Stable machine key, unique per client: "operation-room", "mastermind". */
+    slug: text("slug").notNull(),
+    /** List price in cents. Informational — a deal records what was actually paid. */
+    priceCents: bigint("price_cents", { mode: "number" }),
+    /** subscription | one_time | high_ticket | other — shapes the sensible comp basis. */
+    kind: text("kind").notNull().default("one_time"),
+    active: boolean("active").notNull().default(true),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("offers_client_idx").on(table.clientId),
+    uniqueIndex("offers_client_slug_key").on(table.clientId, table.slug),
+  ],
+);
+
+/**
+ * How a role is paid ON ONE OFFER. The missing piece: `reps.commission_bps` is a
+ * single rate per rep, so a rep selling two offers could only ever have one rate.
+ *
+ * Effective-dated and never edited in place — changing a rate writes a new row and
+ * closes the old one, so a payout computed last month still recomputes to the same
+ * number forever. Same discipline as `partner_splits`.
+ *
+ * Precedence, most specific first: rep override > offer default. Within that, the
+ * row whose effective window contains the deal date wins.
+ */
+export const repCompRules = appSchema.table(
+  "rep_comp_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    offerId: uuid("offer_id")
+      .notNull()
+      .references(() => offers.id),
+    /** closer · setter · dm_setter · manager */
+    role: text("role").notNull(),
+    /** Null = the default for this role on this offer. Set = an override for one rep. */
+    repId: uuid("rep_id").references(() => reps.id),
+    /** cash_collected | deal_revenue | per_booking | per_close | base */
+    basis: text("basis").notNull(),
+    /** For percentage bases. 1250 = 12.5%. */
+    rateBps: bigint("rate_bps", { mode: "number" }),
+    /** For per_booking / per_close / base. */
+    flatCents: bigint("flat_cents", { mode: "number" }),
+    /** Optional: rate steps up once the rep passes this much in a period. */
+    tierThresholdCents: bigint("tier_threshold_cents", { mode: "number" }),
+    tierRateBps: bigint("tier_rate_bps", { mode: "number" }),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
+    /** Null = still current. */
+    effectiveTo: timestamp("effective_to", { withTimezone: true }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("rep_comp_rules_offer_idx").on(table.offerId),
+    index("rep_comp_rules_rep_idx").on(table.repId),
+  ],
+);
+
 export const commissionSplits = appSchema.table(
   "commission_splits",
   {
@@ -934,6 +1009,10 @@ export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Deal = typeof deals.$inferSelect;
 export type NewDeal = typeof deals.$inferInsert;
+export type Offer = typeof offers.$inferSelect;
+export type NewOffer = typeof offers.$inferInsert;
+export type RepCompRule = typeof repCompRules.$inferSelect;
+export type NewRepCompRule = typeof repCompRules.$inferInsert;
 export type PartnerSplit = typeof partnerSplits.$inferSelect;
 export type NewPartnerSplit = typeof partnerSplits.$inferInsert;
 export type Rep = typeof reps.$inferSelect;
