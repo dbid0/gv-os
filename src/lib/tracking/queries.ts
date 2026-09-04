@@ -222,3 +222,23 @@ export async function leadByEmail(
   // table can never disagree.
   return buildLeadSummaries(rows)[0] ?? null;
 }
+
+/** EOD rows from the current snapshot, for the floor's activity picture. */
+export async function eodRowsForClient(syncId: string) {
+  const db = getDb();
+  return db
+    .select({
+      tab: clientTrackingRows.tab,
+      rep: clientTrackingRows.rep,
+      occurredAt: clientTrackingRows.occurredAt,
+      payload: clientTrackingRows.payload,
+    })
+    .from(clientTrackingRows)
+    .where(
+      and(
+        eq(clientTrackingRows.syncId, syncId),
+        inArray(clientTrackingRows.tab, ["setter_eod", "dm_setter_eod", "closer_eod"]),
+      ),
+    )
+    .orderBy(desc(clientTrackingRows.occurredAt));
+}

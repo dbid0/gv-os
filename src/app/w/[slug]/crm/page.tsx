@@ -7,6 +7,13 @@ import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { applications, clients, crmActivity, integrations } from "@/db/schema/app";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import { ActivityTable } from "@/components/tracking/activity-table";
+import {
+  aggregateActivity,
+  floorTotals,
+  nearDuplicateRepNames,
+} from "@/lib/tracking/activity";
+import { currentSnapshot, eodRowsForClient } from "@/lib/tracking/queries";
 import { clientBySlug } from "@/lib/roster";
 import { possessive } from "@/lib/text";
 
@@ -96,6 +103,52 @@ export default async function WorkspaceCrmPage({
 
   const connected = connection[0]?.status === "connected";
 
+  // The floor's own numbers, from the EOD forms already on the tracking sheet.
+  // These exist whether or not Close is connected, and they are SELF-REPORTED —
+  // a rep's count of their dials and a dialler's count of them are different
+  // measurements, so they are labelled as such and never blended.
+  const snapshot = clientId ? await currentSnapshot(clientId) : null;
+  const eodRows = snapshot ? await eodRowsForClient(snapshot.syncId) : [];
+  const reps = aggregateActivity(eodRows);
+  const totals = floorTotals(reps);
+  const dupes = nearDuplicateRepNames(
+    eodRows.map((r) => r.rep ?? "").filter((n) => n !== ""),
+  );
+  const reportedDays = new Set(
+    eodRows.map((r) => r.occurredAt?.toISOString().slice(0, 10)).filter(Boolean),
+  ).size;
+
+  const floorPanel =
+    reps.length > 0 ? (
+      <Panel
+        title="The floor — from the EOD forms"
+        aside={
+          <span className="text-faint text-xs">
+            {reps.length} rep{reps.length === 1 ? "" : "s"} · {reportedDays} day
+            {reportedDays === 1 ? "" : "s"} reported
+          </span>
+        }
+      >
+        <ActivityTable reps={reps} totals={totals} />
+        {/* Not merged, reported. A single character also separates two real
+            people, and crediting one rep with another's dials is worse than
+            showing two rows — the sheet is the only place to fix it properly. */}
+        {dupes.length > 0 && (
+          <p className="text-warning mt-3 text-xs">
+            {dupes.map(([a, b]) => `“${a}” and “${b}”`).join("; ")} look like the same
+            person typed two ways, so their numbers are split across rows. Fixing the
+            spelling on the sheet merges them.
+          </p>
+        )}
+        <p className="text-faint mt-3 text-xs">
+          Self-reported by each rep on their end-of-day form, not pulled from a dialler.
+          A dash means the form does not ask for that number, which is not the same as a
+          zero. When Close is connected its own counts appear above, beside these rather
+          than replacing them.
+        </p>
+      </Panel>
+    ) : null;
+
   const calls = activity.filter((a) => a.kind === "call");
   const sms = activity.filter((a) => a.kind === "sms");
   const emails = activity.filter((a) => a.kind === "email");
@@ -124,6 +177,9 @@ export default async function WorkspaceCrmPage({
   if (!connected) {
     return (
       <div className="space-y-6">
+        {/* The floor first: it has real numbers today. The missing CRM is
+            stated underneath rather than being the whole page. */}
+        {floorPanel}
         <Panel
           title="Close CRM"
           aside={<StatusPill tone="pending">Not connected</StatusPill>}
@@ -163,8 +219,10 @@ export default async function WorkspaceCrmPage({
         <Kpi label={`Activity · ${WINDOW_DAYS}d`} value={String(activity.length)} />
       </div>
 
+      {floorPanel}
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title={`Activity — last ${WINDOW_DAYS} days`}>
+        <Panel title={`Close activity — last ${WINDOW_DAYS} days`}>
           <div className="divide-y">
             {[
               { label: "Calls", n: calls.length },
