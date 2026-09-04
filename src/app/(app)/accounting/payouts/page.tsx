@@ -95,8 +95,13 @@ export default async function PayoutsPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
+        {/* "Undistributed", not just "net": distributions that have been paid
+            are already subtracted out of this figure, which is exactly why the
+            monthly run can split the all-time number without ever paying the
+            same profit twice. Calling it "Agency net" invited the opposite
+            reading — that a full year's profit was about to be drafted again. */}
         <Kpi
-          label="Agency net (all time)"
+          label="Undistributed net (all time)"
           value={<Money amount={cents(chain.netCents)} />}
         />
         <Kpi
