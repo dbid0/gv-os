@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Headphones,
   ClipboardList,
   FileText,
   Inbox,
@@ -34,6 +35,7 @@ const tabs = [
   { label: "Commissions", href: "/sales/commissions", icon: BarChart3 },
   { label: "Leaderboard", href: "/sales/leaderboard", icon: Trophy },
   { label: "Call Log", href: "/sales/call-log", icon: Phone },
+  { label: "Call Reviews", href: "/sales/call-reviews", icon: Headphones },
   { label: "Quotas", href: "/sales/quotas", icon: Target },
   { label: "Applications", href: "/sales/applications", icon: Inbox },
   { label: "Templates", href: "/sales/templates", icon: ClipboardList },

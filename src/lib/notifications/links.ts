@@ -14,6 +14,8 @@ export function notificationHref(kind: string, clientSlug: string | null): strin
       return clientSlug ? `/w/${clientSlug}` : "/clients";
     case "bod_digest":
       return clientSlug ? `/w/${clientSlug}` : "/dashboard";
+    case "call_review":
+      return "/sales/call-reviews";
     case "rep_wellbeing":
     case "eod_missing":
     case "bod_missing":

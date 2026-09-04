@@ -285,3 +285,36 @@ export function bodReminderRule(
     },
   ];
 }
+
+/** A call the read says a manager should look at. */
+export interface CallReviewState {
+  recordingId: string;
+  clientId: string | null;
+  rep: string | null;
+  /** One line naming why it is in the queue. */
+  reason: string;
+  /** Higher = more recoverable. Only the top band is severe enough to ping. */
+  priority: number;
+}
+
+/**
+ * A ping per call that needs the sales manager.
+ *
+ * One alert per RECORDING, deduped on its id, so re-evaluating never
+ * double-pings and each call keeps its own alert. Severity follows
+ * recoverability: a still-open deal with steps missed is a warning because it
+ * can still be saved today; a lost one is information.
+ *
+ * Deliberately not batched into a digest. A manager acts on "Lorenzo left a
+ * live deal without a follow-up time", not on "6 calls were analysed".
+ */
+export function callReviewRule(calls: CallReviewState[]): Candidate[] {
+  return calls.map((c) => ({
+    kind: "call_review",
+    severity: c.priority >= 10 ? ("warning" as const) : ("info" as const),
+    title: `${c.rep ?? "A rep"}: call needs a review`,
+    body: c.reason,
+    clientId: c.clientId,
+    dedupeKey: `call-review:${c.recordingId}`,
+  }));
+}
