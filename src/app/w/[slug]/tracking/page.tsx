@@ -14,6 +14,7 @@ import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { clientBySlug } from "@/lib/roster";
+import { possessive } from "@/lib/text";
 import { currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
 import { scanWarnings } from "@/lib/tracking/scan";
 
@@ -65,7 +66,7 @@ export default async function WorkspaceTrackingPage({
         aside={<StatusPill tone="pending">Not linked</StatusPill>}
       >
         <p className="text-muted-foreground text-sm">
-          {client.name}&apos;s Master Tracking Sheet isn&apos;t linked yet. Add its
+          {possessive(client.name)} Master Tracking Sheet isn&apos;t linked yet. Add its
           Sheet ID under Setup and this fills in on the next sync: applications, booked
           calls, EOC reports with their recordings, the BOD/EOD forms, payments and AR.
         </p>

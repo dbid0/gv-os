@@ -50,6 +50,8 @@ export default async function LeadDetailPage({
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
+  // No client record yet: a 404 is the honest answer for a specific lead,
+  // since there is genuinely no such person to show.
   if (!row) notFound();
 
   const snapshot = await currentSnapshot(row.id);
