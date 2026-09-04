@@ -158,8 +158,3 @@ async function slugById(): Promise<Map<string, string>> {
   const rows = await db.select({ id: clients.id, slug: clients.slug }).from(clients);
   return new Map(rows.map((r) => [r.id, r.slug]));
 }
-
-/** How many calls are waiting on the manager. */
-export async function reviewQueueCount(clientId?: string): Promise<number> {
-  return (await reviewQueue({ clientId })).length;
-}

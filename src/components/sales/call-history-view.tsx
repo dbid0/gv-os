@@ -235,28 +235,28 @@ export function CallHistoryView({
     },
   ];
 
-  // A clearly-marked stub behind the go-live wall — no keys, no external calls.
-  // TODO(go-live): wire Fathom auto-import — pull recordings via the sealed
-  // per-client Fathom credential, map each to an activity_logs row keyed on the
-  // recording id (external_ref) for idempotency. Disabled until keys land.
+  // Transcripts already arrive — through the share link a closer pastes on the
+  // end-of-call form, no Fathom key involved. This panel used to say "waiting
+  // on go-live", which stopped being true the day that shipped. What a Fathom
+  // API key would still add is calls nobody pasted a link for.
   const fathomStub = (
     <Panel
-      title="Auto-import from Fathom"
-      aside={<StatusPill tone="pending">Waiting on go-live</StatusPill>}
+      title="Call recordings"
+      aside={<StatusPill tone="good">Arriving from EOC reports</StatusPill>}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-muted-foreground max-w-xl text-sm">
-          Connect Fathom to pull call recordings automatically and log each one here
-          without the manual form. Built and waiting on processor keys — nothing is
-          imported, and no call is invented, until a connection is live.
+          Every end-of-call report with a Fathom share link has its transcript pulled
+          and read — see Call Reviews. Connecting a Fathom API key would add the calls
+          nobody pasted a link for; until then, nothing is imported and no call is
+          invented.
         </p>
-        <button
-          type="button"
-          disabled
+        <Link
+          href="/sales/call-reviews"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
         >
-          <Sparkles className="size-3.5" /> Import from Fathom
-        </button>
+          <Sparkles className="size-3.5" /> Open call reviews
+        </Link>
       </div>
     </Panel>
   );

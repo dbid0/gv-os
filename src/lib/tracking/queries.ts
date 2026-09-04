@@ -107,45 +107,6 @@ export async function rowsForTab(
 }
 
 /**
- * EOC reports carrying a recording link — the queue for transcript analysis.
- * Ordered oldest-first so a backlog is worked in the order it happened.
- */
-export async function eocWithRecordings(syncId: string, limit = 500) {
-  const db = getDb();
-  return db
-    .select({
-      rowIndex: clientTrackingRows.rowIndex,
-      occurredAt: clientTrackingRows.occurredAt,
-      email: clientTrackingRows.email,
-      rep: clientTrackingRows.rep,
-      status: clientTrackingRows.status,
-      notes: clientTrackingRows.notes,
-      recordingUrl: clientTrackingRows.recordingUrl,
-    })
-    .from(clientTrackingRows)
-    .where(
-      and(
-        eq(clientTrackingRows.syncId, syncId),
-        eq(clientTrackingRows.tab, "eoc"),
-        isNotNull(clientTrackingRows.recordingUrl),
-      ),
-    )
-    .orderBy(clientTrackingRows.occurredAt)
-    .limit(limit);
-}
-
-/** How many rows the snapshot holds per tab. */
-export async function rowCountsByTab(syncId: string): Promise<Record<string, number>> {
-  const db = getDb();
-  const rows = await db
-    .select({ tab: clientTrackingRows.tab, n: sql<number>`count(*)::int` })
-    .from(clientTrackingRows)
-    .where(eq(clientTrackingRows.syncId, syncId))
-    .groupBy(clientTrackingRows.tab);
-  return Object.fromEntries(rows.map((r) => [r.tab, r.n]));
-}
-
-/**
  * Every lead in the current snapshot, stitched across the lead-bearing tabs.
  *
  * Reads only the tabs that carry a lead email; the BOD/EOD tabs describe a

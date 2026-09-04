@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GO_LIVE_MESSAGE, StubProvider, getAiProvider } from "@/lib/ai/provider";
+import { NO_MODEL_MESSAGE, StubProvider, getAiProvider } from "@/lib/ai/provider";
 
 describe("ai provider (stubbed for Phase 1)", () => {
   it("getAiProvider returns the locked stub", () => {
@@ -19,7 +19,9 @@ describe("ai provider (stubbed for Phase 1)", () => {
     expect(result.ok).toBe(false);
     expect(result.unlocked).toBe(false);
     expect(result.provider).toBe("stub");
-    expect(result.text).toBe(GO_LIVE_MESSAGE);
-    expect(GO_LIVE_MESSAGE).toContain("go-live");
+    expect(result.text).toBe(NO_MODEL_MESSAGE);
+    // It names the real reason, not a launch date nobody is waiting on.
+    expect(NO_MODEL_MESSAGE).not.toContain("go-live");
+    expect(NO_MODEL_MESSAGE).toContain("starter question");
   });
 });

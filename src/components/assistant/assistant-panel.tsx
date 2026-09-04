@@ -212,8 +212,9 @@ export function AssistantPanel({
         {previewing && repIsFallback && repName
           ? `Previewing as ${repName}'s numbers. `
           : ""}
-        Starter questions read your live numbers with no AI needed. Full AI chat unlocks
-        at go-live.
+        Starter questions read your live numbers with no model needed. Open-ended chat
+        isn&apos;t wired up here — the model that reads your calls runs locally, not
+        inside this app.
       </p>
     </Panel>
   );

@@ -156,26 +156,6 @@ async function get(url: string, accept = "text/html"): Promise<string> {
   }
 }
 
-/** Transcripts held for one offer, newest first. */
-export async function transcriptsForClient(clientId: string) {
-  const db = getDb();
-  return db
-    .select({
-      id: callRecordings.id,
-      title: callRecordings.title,
-      recordingUrl: callRecordings.recordingUrl,
-      occurredAt: callRecordings.occurredAt,
-      durationSeconds: callRecordings.durationSeconds,
-      participants: callRecordings.participants,
-      analysisStatus: callRecordings.analysisStatus,
-      analysisOutcome: callRecordings.analysisOutcome,
-    })
-    .from(callRecordings)
-    .where(
-      and(eq(callRecordings.clientId, clientId), eq(callRecordings.provider, PROVIDER)),
-    );
-}
-
 /** One stored transcript by its share URL, for the lead timeline. */
 export async function transcriptByShareUrl(url: string) {
   const token = parseShareToken(url);

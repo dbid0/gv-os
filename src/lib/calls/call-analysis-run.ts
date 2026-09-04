@@ -154,36 +154,3 @@ export async function analyzePendingCalls(limit = 10): Promise<AnalysisRunResult
 
   return result;
 }
-
-/** Reads worth a manager's attention: a lost or stalled call with coaching on it. */
-export async function listEscalatedCallReads(limit = 20) {
-  const db = getDb();
-  const rows = await db
-    .select({
-      id: callRecordings.id,
-      clientId: callRecordings.clientId,
-      title: callRecordings.title,
-      outcome: callRecordings.analysisOutcome,
-      analysis: callRecordings.analysis,
-      occurredAt: callRecordings.occurredAt,
-      disposition: activityLogs.disposition,
-      customerName: activityLogs.customerName,
-      repId: activityLogs.repId,
-    })
-    .from(callRecordings)
-    .leftJoin(activityLogs, eq(callRecordings.activityLogId, activityLogs.id))
-    .where(eq(callRecordings.analysisStatus, "done"))
-    .orderBy(desc(callRecordings.occurredAt))
-    .limit(limit);
-
-  return rows.filter((r) => {
-    const a = r.analysis as { objections?: unknown; coaching?: unknown } | null;
-    return shouldEscalate(r.disposition ?? null, {
-      outcome: r.outcome ?? "",
-      objections: Array.isArray(a?.objections) ? (a!.objections as string[]) : [],
-      missedSteps: [],
-      coaching: Array.isArray(a?.coaching) ? (a!.coaching as string[]) : [],
-      nextStep: null,
-    });
-  });
-}
