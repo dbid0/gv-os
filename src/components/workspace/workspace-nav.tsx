@@ -5,7 +5,15 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-/** The workspace command-center sections (v2 §4, Phase 4). */
+/**
+ * The workspace command-center sections.
+ *
+ * `adminOnly` marks the ones that are GV's view of the offer rather than the
+ * client's. Tracking is the sync console — mirrored row counts, the sheet id,
+ * which columns this app did not recognise, and a running critique of the
+ * client's own data hygiene ("105 of 112 call rows have no date"). Useful to
+ * us, and not something to hand a client inside their own workspace.
+ */
 const SECTIONS = [
   { label: "Dashboard", path: "" },
   { label: "Sales", path: "/sales" },
@@ -13,7 +21,7 @@ const SECTIONS = [
   { label: "Email", path: "/email" },
   { label: "CRM", path: "/crm" },
   { label: "Leads", path: "/leads" },
-  { label: "Tracking", path: "/tracking" },
+  { label: "Tracking", path: "/tracking", adminOnly: true },
   { label: "Onboarding", path: "/onboarding" },
 ] as const;
 
@@ -45,7 +53,7 @@ export function WorkspaceNav({
 
   return (
     <nav className="flex flex-wrap items-center gap-1" aria-label="Workspace sections">
-      {SECTIONS.map((s) => {
+      {SECTIONS.filter((s) => admin || !("adminOnly" in s && s.adminOnly)).map((s) => {
         const href = `${base}${s.path}`;
         const active = s.path === "" ? pathname === base : pathname.startsWith(href);
         return (
