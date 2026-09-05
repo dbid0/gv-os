@@ -96,3 +96,90 @@ export function findDuplicateDeal(
   }
   return null;
 }
+
+/* ------------------------------------------------------------------------ *
+ * The same guard for deals logged INSIDE GV OS.
+ *
+ * A rep logging their own sale writes a `deals` row plus append-only ledger
+ * events. The idempotency key on those events is derived from the freshly
+ * created deal id, so it protects a REPLAY of one record and does nothing
+ * about two records for one real sale — the exact gap the finance sheet had.
+ * Correcting it afterwards is harder here, because the ledger is append-only
+ * and a mistake has to be reversed rather than deleted.
+ * ------------------------------------------------------------------------ */
+
+export interface LoggedDeal {
+  clientId: string;
+  customerName: string | null;
+  dealType: string | null;
+  /**
+   * Cents — typed as number but accepted as a string too.
+   *
+   * These columns are `bigint` in Postgres. Drizzle maps them with
+   * `mode: "number"`, but a driver reading the same column directly hands back
+   * a STRING, and `"750000" !== 750000` fails silently: the guard finds no
+   * duplicate and the deal is written twice. Comparing numerically means the
+   * check cannot be broken by a change in how the row was fetched.
+   */
+  contractValueCents: number | string;
+  cashCents: number | string;
+  closedAt: Date | null;
+}
+
+export interface LoggedDealIdentity {
+  clientId: string;
+  customerName: string | null;
+  dealType: string;
+  contractValueCents: number;
+  cashCents: number;
+}
+
+/**
+ * Two cent amounts, compared as numbers whichever way they arrived.
+ *
+ * Returns false when either side is unreadable — an amount nobody can parse is
+ * not evidence of a duplicate, and blocking a real deal over it would be the
+ * worse failure.
+ */
+export function sameCents(a: number | string, b: number | string): boolean {
+  const x = typeof a === "number" ? a : Number(a);
+  const y = typeof b === "number" ? b : Number(b);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  return x === y;
+}
+
+/** How recently an identical deal counts as the same one being logged twice. */
+export const DEAL_DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * An identical deal on the same offer, logged within the window.
+ *
+ * A customer name is part of identity when BOTH sides have one. Two unnamed
+ * deals of the same size on the same day are still treated as the same sale —
+ * that is the shape a double-submit takes, since the form was filled once.
+ */
+export function findRecentDuplicateDeal(
+  existing: LoggedDeal[],
+  deal: LoggedDealIdentity,
+  now: Date,
+  windowMs = DEAL_DUPLICATE_WINDOW_MS,
+): LoggedDeal | null {
+  return (
+    existing.find((row) => {
+      if (row.clientId !== deal.clientId) return false;
+      if (!sameCents(row.contractValueCents, deal.contractValueCents)) return false;
+      if (!sameCents(row.cashCents, deal.cashCents)) return false;
+      if (norm(row.dealType ?? "") !== norm(deal.dealType)) return false;
+      const a = row.customerName?.trim();
+      const b = deal.customerName?.trim();
+      if (a && b && norm(a) !== norm(b)) return false;
+      if (!row.closedAt) return false;
+      // Distance, not age. Two clocks are involved — the deal is stamped by
+      // the DATABASE and the window is measured against the APP's clock — so a
+      // row inserted a millisecond ago can read as microseconds in the future
+      // and an "age >= 0" test rejects the very duplicate it exists to catch.
+      // A deal deliberately dated ahead is a duplicate on the same reasoning.
+      return Math.abs(now.getTime() - row.closedAt.getTime()) <= windowMs;
+    }) ?? null
+  );
+}
