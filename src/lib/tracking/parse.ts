@@ -1,4 +1,4 @@
-import { mapFields, type FieldMap } from "@/lib/tracking/fields";
+import { mapFields, type FieldMap, type LearnedAlias } from "@/lib/tracking/fields";
 import { normalizeHeading, type TrackingTab } from "@/lib/tracking/tabs";
 
 /**
@@ -166,9 +166,11 @@ export function parseEmail(raw: string | null): string | null {
 export function parseTrackingTab(
   tab: TrackingTab,
   values: string[][],
+  /** Column meanings this client's sheet has taught us. */
+  learned: LearnedAlias[] = [],
 ): { rows: TrackingRow[]; fields: FieldMap; unmapped: string[] } {
   const [headerRow = [], ...body] = values;
-  const fields = mapFields(headerRow);
+  const fields = mapFields(headerRow, learned);
   const claimed = new Set(Object.values(fields).flat());
   const unmapped = headerRow
     .map((h, i) => (claimed.has(i) || normalizeHeading(h) === "" ? null : h))

@@ -6,12 +6,13 @@ import {
   SyncTrackingButton,
 } from "@/components/tracking/sync-button";
 import { CallReads } from "@/components/tracking/call-reads";
+import { ColumnProposals } from "@/components/tracking/column-proposals";
 import { TabScanTable } from "@/components/tracking/tab-scan-table";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
-import { clients } from "@/db/schema/app";
+import { clientColumnMap, clients } from "@/db/schema/app";
 import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientBySlug } from "@/lib/roster";
@@ -103,6 +104,18 @@ export default async function WorkspaceTrackingPage({
   const warnings = scanWarnings(snapshot.tabs);
   const eoc = snapshot.tabs.find((t) => t.tab === "eoc");
   const applications = snapshot.tabs.find((t) => t.tab === "applications");
+  const proposals = await db
+    .select({
+      id: clientColumnMap.id,
+      tab: clientColumnMap.tab,
+      header: clientColumnMap.header,
+      field: clientColumnMap.field,
+      reason: clientColumnMap.reason,
+      approvedAt: clientColumnMap.approvedAt,
+    })
+    .from(clientColumnMap)
+    .where(eq(clientColumnMap.clientId, row.id));
+
   const [recent, reads, counts] = await Promise.all([
     rowsForTab(snapshot.syncId, "eoc", 8),
     callReadsForClient(row.id, 12),
@@ -124,6 +137,29 @@ export default async function WorkspaceTrackingPage({
         <Kpi label="EOC reports" value={eoc ? String(eoc.rows) : "—"} />
         <Kpi label="With a recording" value={eoc ? String(eoc.withRecording) : "—"} />
       </div>
+
+      {proposals.length > 0 && (
+        <Panel
+          title="Columns this sheet uses its own words for"
+          aside={
+            <span className="text-faint text-xs">
+              {proposals.filter((p) => !p.approvedAt).length} waiting on you
+            </span>
+          }
+        >
+          <ColumnProposals
+            slug={slug}
+            proposals={proposals.map((p) => ({
+              id: p.id,
+              tab: p.tab,
+              header: p.header,
+              field: p.field,
+              reason: p.reason,
+              approved: p.approvedAt !== null,
+            }))}
+          />
+        </Panel>
+      )}
 
       {warnings.length > 0 && (
         <Panel title="What this sheet is missing">

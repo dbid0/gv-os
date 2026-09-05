@@ -291,3 +291,58 @@ describe("parseRecordingUrl", () => {
     expect(parseRecordingUrl(null)).toBeNull();
   });
 });
+
+describe("mapFields with learned aliases", () => {
+  it("reads a column this app was never shipped knowing about", () => {
+    // A new client names their own columns. Without a learned alias the
+    // figure is kept but never counted, which looks like a quiet week.
+    const headers = ["Date", "Assigned Rep", "Deal Owner"];
+    // Shipped knowledge finds "Assigned Rep" and nothing else.
+    expect(mapFields(headers).rep).toEqual([1]);
+    // Taught that this client calls it "Deal Owner", that column is preferred
+    // and the built-in match stays behind it as a fallback.
+    const m = mapFields(headers, [{ header: "Deal Owner", field: "rep" }]);
+    expect(m.rep[0]).toBe(2);
+    expect(m.rep).toContain(1);
+  });
+
+  it("prefers what it was TAUGHT over a built-in guess", () => {
+    // Both columns could be a date; the client says which one means the event.
+    const headers = ["Timestamp", "Logged On"];
+    const learned = [{ header: "Logged On", field: "occurredAt" as const }];
+    expect(mapFields(headers, learned).occurredAt[0]).toBe(1);
+  });
+
+  it("ignores a learned alias for a column that is not on this sheet", () => {
+    const headers = ["Timestamp", "Email"];
+    const m = mapFields(headers, [{ header: "Nowhere To Be Seen", field: "cash" }]);
+    expect(m.cash).toEqual([]);
+    expect(m.email).toEqual([1]);
+  });
+
+  it("still resolves everything else normally", () => {
+    const m = mapFields(GRID_EOC, [{ header: "Offer Pitched", field: "outcome" }]);
+    expect(m.email).toEqual([5]);
+    expect(m.recordingUrl).toEqual([12]);
+    expect(m.outcome).toEqual([8]);
+  });
+
+  it("never lets a learned alias steal a column another field already took", () => {
+    // Exclusive claiming still holds: one column, one meaning.
+    const m = mapFields(
+      ["Lead's Email", "Notes"],
+      [
+        { header: "Lead's Email", field: "email" },
+        { header: "Lead's Email", field: "name" },
+      ],
+    );
+    expect(m.email).toEqual([0]);
+    expect(m.name).toEqual([]);
+  });
+
+  it("ignores a blank or unknown header safely", () => {
+    expect(() =>
+      mapFields(["", "Email"], [{ header: "  ", field: "cash" }]),
+    ).not.toThrow();
+  });
+});

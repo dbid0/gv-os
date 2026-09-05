@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients } from "@/db/schema/app";
+import { clientColumnMap, clients } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -75,4 +75,28 @@ export async function pullTranscripts(slug: string) {
         ? "No EOC rows carry a recording link."
         : `${res.fetched} pulled, ${res.alreadyHad} already held${res.failed ? `, ${res.failed} failed` : ""}.`,
   };
+}
+
+/**
+ * Approve or discard a proposed column meaning.
+ *
+ * Approving is what makes a mapping real: until then the sync ignores it
+ * entirely, so nothing a model suggested can move a number on its own. This
+ * is the whole safety argument for letting a model read the sheet at all.
+ */
+export async function decideColumnMapping(slug: string, id: string, approve: boolean) {
+  await requireUser();
+  const db = getDb();
+  if (approve) {
+    await db
+      .update(clientColumnMap)
+      .set({ approvedAt: new Date() })
+      .where(eq(clientColumnMap.id, id));
+  } else {
+    // Discarding removes the row so the proposer can look again later with
+    // better sample data, rather than leaving a permanent "no".
+    await db.delete(clientColumnMap).where(eq(clientColumnMap.id, id));
+  }
+  revalidatePath(`/w/${slug}/tracking`);
+  return { ok: true };
 }
