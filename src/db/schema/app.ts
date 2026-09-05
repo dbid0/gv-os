@@ -1687,3 +1687,49 @@ export const clientTrackingRows = appSchema.table(
     index("client_tracking_rows_occurred_idx").on(table.clientId, table.occurredAt),
   ],
 );
+
+/**
+ * A column this app was TAUGHT to understand on one client's sheet.
+ *
+ * The parser ships with alias lists covering the sheets we have seen. A new
+ * client names things their own way, and a header nobody anticipated is kept
+ * but not understood — the figure it holds silently does not count, which
+ * looks exactly like a quiet week.
+ *
+ * A mapping is a decision about SCHEMA, not about data: "on this sheet, the
+ * column called X means the lead's email". That is the part worth having a
+ * model propose, because it is a judgement about wording that a person can
+ * check in a second and that never invents a value. Once stored, reading is
+ * deterministic — the model is not consulted again for that column.
+ *
+ * `source` records who decided. An AI proposal stays unapproved until someone
+ * confirms it, so nothing a model guessed can move a number on its own.
+ */
+export const clientColumnMap = appSchema.table(
+  "client_column_map",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    /** Canonical tab: applications | calls | eoc | … */
+    tab: text("tab").notNull(),
+    /** The header exactly as it appears on that client's sheet. */
+    header: text("header").notNull(),
+    /** The canonical field it means; see lib/tracking/fields. */
+    field: text("field").notNull(),
+    /** ai | human — who decided. */
+    source: text("source").notNull().default("human"),
+    /** The model's own words on why, kept so a person can judge the proposal. */
+    reason: text("reason"),
+    /** Null until a person confirms. An unapproved row never affects a read. */
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One meaning per column per tab, so a re-proposal updates rather than
+    // stacking two contradictory mappings.
+    uniqueIndex("client_column_map_key").on(table.clientId, table.tab, table.header),
+    index("client_column_map_client_idx").on(table.clientId),
+  ],
+);

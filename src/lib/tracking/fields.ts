@@ -101,13 +101,42 @@ export type FieldMap = Record<TrackingField, number[]>;
  * the rep, and letting both fields take it would be right, but two DIFFERENT
  * fields must never fight over one column and silently swap meaning.
  */
-export function mapFields(headers: string[]): FieldMap {
+/**
+ * A column mapping this app was TAUGHT, rather than shipped with.
+ *
+ * The built-in alias lists cover the sheets we have seen. A new client names
+ * things their own way — "Total Dials Today", "Booked Calls (net)" — and a
+ * header nobody anticipated is currently kept but not understood, so the
+ * figure it holds silently does not count. Learned aliases close that without
+ * a code change per client.
+ */
+export interface LearnedAlias {
+  /** The header exactly as it appears on that client's sheet. */
+  header: string;
+  field: TrackingField;
+}
+
+export function mapFields(headers: string[], learned: LearnedAlias[] = []): FieldMap {
   const clean = headers.map(normalizeHeading);
+  // Learned mappings are consulted FIRST, so a client who calls a column
+  // something unusual is read correctly even when the built-in aliases would
+  // have matched a different column for that field.
+  const taught = new Map<string, TrackingField>();
+  for (const alias of learned) {
+    const key = normalizeHeading(alias.header);
+    if (key !== "" && !taught.has(key)) taught.set(key, alias.field);
+  }
   const map = {} as FieldMap;
   const taken = new Set<number>();
 
   for (const field of TRACKING_FIELDS) {
     const candidates: number[] = [];
+    // What this client's sheet was taught to mean, in header order.
+    clean.forEach((header, i) => {
+      if (taught.get(header) === field && !taken.has(i) && !candidates.includes(i)) {
+        candidates.push(i);
+      }
+    });
     for (const alias of ALIASES[field]) {
       clean.forEach((header, i) => {
         if (header === alias && !taken.has(i) && !candidates.includes(i)) {

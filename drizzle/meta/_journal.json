@@ -351,6 +351,13 @@
       "when": 1788465314841,
       "tag": "0049_call_review_state",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1788625156817,
+      "tag": "0050_client_column_map",
+      "breakpoints": true
     }
   ]
 }

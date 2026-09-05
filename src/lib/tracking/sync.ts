@@ -1,10 +1,16 @@
 import "server-only";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
+import {
+  clientColumnMap,
+  clients,
+  clientTrackingRows,
+  clientTrackingSyncs,
+} from "@/db/schema/app";
 import { readSheetTitles, readSheetValues } from "@/lib/google/sheets";
+import type { LearnedAlias } from "@/lib/tracking/fields";
 import { parseTrackingTab, type TrackingRow } from "@/lib/tracking/parse";
 import { snapshotsToPrune } from "@/lib/tracking/retention";
 import { scanTab, type TabScan } from "@/lib/tracking/scan";
@@ -59,6 +65,29 @@ export async function syncClientTrackingSheet(
     );
   }
 
+  // What this client's sheet has taught us, so a column nobody anticipated is
+  // read correctly instead of being kept and ignored. Only APPROVED mappings
+  // count: a model's proposal never moves a number on its own.
+  const learned = await db
+    .select({
+      tab: clientColumnMap.tab,
+      header: clientColumnMap.header,
+      field: clientColumnMap.field,
+    })
+    .from(clientColumnMap)
+    .where(
+      and(
+        eq(clientColumnMap.clientId, clientId),
+        isNotNull(clientColumnMap.approvedAt),
+      ),
+    );
+  const learnedByTab = new Map<string, LearnedAlias[]>();
+  for (const row of learned) {
+    const list = learnedByTab.get(row.tab) ?? [];
+    list.push({ header: row.header, field: row.field as LearnedAlias["field"] });
+    learnedByTab.set(row.tab, list);
+  }
+
   const scans: TabScan[] = [];
   const parsed: TrackingRow[] = [];
   for (const title of titles) {
@@ -71,7 +100,11 @@ export async function syncClientTrackingSheet(
       // One unreadable tab must not lose the other nine.
       continue;
     }
-    const { rows, fields, unmapped } = parseTrackingTab(tab, values);
+    const { rows, fields, unmapped } = parseTrackingTab(
+      tab,
+      values,
+      learnedByTab.get(tab) ?? [],
+    );
     scans.push(scanTab(tab, rows, fields, unmapped));
     parsed.push(...rows);
   }
