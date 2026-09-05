@@ -51,6 +51,8 @@ export function DealForm({ teams, reps }: { teams: TeamOption[]; reps: RepOption
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<string | null>(null);
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
   const [f, setF] = useState({
     clientId: teams[0]?.id ?? "",
     customer: "",
@@ -98,16 +100,30 @@ export function DealForm({ teams, reps }: { teams: TeamOption[]; reps: RepOption
 
     start(async () => {
       try {
-        await logDeal({
-          clientId: f.clientId,
-          customerName: f.customer || undefined,
-          closingRepId: f.closingRepId || undefined,
-          source: f.source || undefined,
-          recurrence: f.recurrence,
-          contractValue: f.contractValue,
-          cashCollected: f.cashCollected,
-          splits: clean,
-        });
+        const res = await logDeal(
+          {
+            clientId: f.clientId,
+            customerName: f.customer || undefined,
+            closingRepId: f.closingRepId || undefined,
+            source: f.source || undefined,
+            recurrence: f.recurrence,
+            contractValue: f.contractValue,
+            cashCollected: f.cashCollected,
+            splits: clean,
+          },
+          allowDuplicate,
+        );
+
+        // An identical deal was already logged on this offer today. Refuse and
+        // explain — the ledger is append-only, so a double-logged sale has to
+        // be reversed rather than deleted — but let a real second sale through
+        // on a deliberate second action.
+        if (!res.ok && res.duplicate) {
+          setDuplicate(res.message);
+          setErr(null);
+          return;
+        }
+
         router.push("/sales/commissions");
         router.refresh();
       } catch (error) {
@@ -291,7 +307,23 @@ export function DealForm({ teams, reps }: { teams: TeamOption[]; reps: RepOption
 
         {err && <p className="text-destructive text-xs">{err}</p>}
 
-        <Button type="submit" disabled={pending || !f.clientId} className="gap-2">
+        {duplicate && (
+          <label className="text-warning flex max-w-xl items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={allowDuplicate}
+              onChange={(e) => setAllowDuplicate(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>{duplicate} Tick to log it anyway.</span>
+          </label>
+        )}
+
+        <Button
+          type="submit"
+          disabled={pending || !f.clientId || (duplicate !== null && !allowDuplicate)}
+          className="gap-2"
+        >
           <Plus className="size-3.5" /> Log deal
         </Button>
       </form>

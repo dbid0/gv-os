@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   findDuplicateDeal,
+  findRecentDuplicateDeal,
+  type LoggedDeal,
+  type LoggedDealIdentity,
   isSameDeal,
   rawDealRow,
   type DealIdentity,
@@ -91,5 +94,114 @@ describe("findDuplicateDeal", () => {
   it("survives short rows without throwing", () => {
     // A half-filled row in the sheet must not break logging a deal.
     expect(findDuplicateDeal([[], ["x"], ["a", "b"]], deal)).toBeNull();
+  });
+});
+
+describe("findRecentDuplicateDeal", () => {
+  const now = new Date("2026-09-04T15:00:00Z");
+  const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000);
+
+  const logged = (over: Partial<LoggedDeal> = {}): LoggedDeal => ({
+    clientId: "client-grid",
+    customerName: "Julian Schiederer",
+    dealType: "One Call Close",
+    contractValueCents: 750_000,
+    cashCents: 250_000,
+    closedAt: minutesAgo(3),
+    ...over,
+  });
+
+  const identity: LoggedDealIdentity = {
+    clientId: "client-grid",
+    customerName: "Julian Schiederer",
+    dealType: "One Call Close",
+    contractValueCents: 750_000,
+    cashCents: 250_000,
+  };
+
+  it("catches the same sale submitted twice minutes apart", () => {
+    expect(findRecentDuplicateDeal([logged()], identity, now)).not.toBeNull();
+  });
+
+  it("does not catch the same customer on a DIFFERENT offer", () => {
+    // Two offers can genuinely sell the same person.
+    expect(
+      findRecentDuplicateDeal([logged({ clientId: "client-vault" })], identity, now),
+    ).toBeNull();
+  });
+
+  it("does not catch a different amount or deal type", () => {
+    expect(
+      findRecentDuplicateDeal([logged({ cashCents: 1 })], identity, now),
+    ).toBeNull();
+    expect(
+      findRecentDuplicateDeal([logged({ contractValueCents: 1 })], identity, now),
+    ).toBeNull();
+    expect(
+      findRecentDuplicateDeal([logged({ dealType: "Payment Plan" })], identity, now),
+    ).toBeNull();
+  });
+
+  it("does not catch a different customer", () => {
+    expect(
+      findRecentDuplicateDeal(
+        [logged({ customerName: "Someone Else" })],
+        identity,
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  it("still catches two UNNAMED deals of the same size", () => {
+    // A double-submit of a form filled once looks exactly like this.
+    expect(
+      findRecentDuplicateDeal(
+        [logged({ customerName: null })],
+        { ...identity, customerName: null },
+        now,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("catches a duplicate even when the driver returned cents as STRINGS", () => {
+    // bigint columns come back as strings from a raw driver, and "750000"
+    // !== 750000 fails silently — no duplicate found, deal written twice.
+    const asStrings = logged({
+      contractValueCents: "750000" as unknown as number,
+      cashCents: "250000" as unknown as number,
+    });
+    expect(findRecentDuplicateDeal([asStrings], identity, now)).not.toBeNull();
+  });
+
+  it("does not treat an unreadable amount as a match", () => {
+    const bad = logged({ contractValueCents: "not-a-number" as unknown as number });
+    expect(findRecentDuplicateDeal([bad], identity, now)).toBeNull();
+  });
+
+  it("catches a deal the database stamped microseconds into the future", () => {
+    // Real failure: the row is stamped by the DB and the window is measured
+    // against the app's clock, so a just-inserted deal read as future-dated
+    // and slipped straight past the guard.
+    const skewed = logged({ closedAt: new Date(now.getTime() + 25) });
+    expect(findRecentDuplicateDeal([skewed], identity, now)).not.toBeNull();
+  });
+
+  it("lets the same deal through once it is genuinely old", () => {
+    // A month later, the same client buying the same package again is a
+    // second sale, not a mis-click.
+    const old = logged({
+      closedAt: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
+    });
+    expect(findRecentDuplicateDeal([old], identity, now)).toBeNull();
+  });
+
+  it("ignores a deal with no close date rather than guessing its age", () => {
+    expect(
+      findRecentDuplicateDeal([logged({ closedAt: null })], identity, now),
+    ).toBeNull();
+  });
+
+  it("is null for an empty book", () => {
+    expect(findRecentDuplicateDeal([], identity, now)).toBeNull();
   });
 });

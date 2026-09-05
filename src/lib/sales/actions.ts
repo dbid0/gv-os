@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
+import {
+  DEAL_DUPLICATE_WINDOW_MS,
+  findRecentDuplicateDeal,
+} from "@/lib/accounting/deal-dedupe";
 import { seedClientWorkspaceFromTemplate } from "@/lib/workspace/seed-client";
 import {
   activityReports,
@@ -187,13 +191,64 @@ const dealInput = z.object({
   splits: z.array(splitInput).default([]),
 });
 
-export async function logDeal(raw: z.input<typeof dealInput>) {
+export async function logDeal(
+  raw: z.input<typeof dealInput>,
+  /** Log it even though an identical deal was logged on this offer today. */
+  allowDuplicate = false,
+) {
   await requireUser();
   const input = dealInput.parse(raw);
   const db = getDb();
   const contractCents = fromDollars(input.contractValue);
   const cashCents = fromDollars(input.cashCollected);
   const feeCents = await processorFeeForClient(db, input.clientId, cashCents);
+
+  // The idempotency keys below are derived from the deal row created in this
+  // very call, so they protect a REPLAY of one record and do nothing about two
+  // records for one real sale. That gap matters more here than on the finance
+  // sheet: these events are append-only, so a double-logged deal has to be
+  // reversed rather than deleted.
+  if (!allowDuplicate) {
+    const now = new Date();
+    const recent = await db
+      .select({
+        clientId: deals.clientId,
+        customerName: deals.customerName,
+        dealType: deals.dealType,
+        contractValueCents: deals.contractValueCents,
+        closedAt: deals.closedAt,
+        cashCents: sql<number>`coalesce((
+          select sum(m.amount_cents)::int from ledger.money_events m
+          where m.deal_id = ${deals.id} and m.event_type = 'payment_received'
+        ), 0)`,
+      })
+      .from(deals)
+      .where(
+        and(
+          eq(deals.clientId, input.clientId),
+          gte(deals.closedAt, new Date(now.getTime() - DEAL_DUPLICATE_WINDOW_MS)),
+        ),
+      );
+
+    const clash = findRecentDuplicateDeal(
+      recent,
+      {
+        clientId: input.clientId,
+        customerName: input.customerName ?? null,
+        dealType: input.dealType,
+        contractValueCents: contractCents,
+        cashCents,
+      },
+      now,
+    );
+    if (clash) {
+      return {
+        ok: false as const,
+        duplicate: true as const,
+        message: `An identical deal was already logged on this offer today${clash.customerName ? ` for ${clash.customerName}` : ""} — same type and the same amounts. Log it again only if this really is a second sale.`,
+      };
+    }
+  }
 
   const dealId = await db.transaction(async (tx) => {
     const [deal] = await tx
@@ -257,7 +312,7 @@ export async function logDeal(raw: z.input<typeof dealInput>) {
   revalidatePath("/sales/deals");
   revalidatePath("/sales/commissions");
   revalidatePath("/sales");
-  return { id: dealId };
+  return { ok: true as const, duplicate: false as const, id: dealId };
 }
 
 // ---------------------------------------------------------------- EOD Templates
