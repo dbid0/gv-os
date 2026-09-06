@@ -588,14 +588,35 @@
    zeroes the duration, leaving the finished line. */
 @keyframes gv-draw {
   from {
+    stroke-dasharray: 1;
     stroke-dashoffset: 1;
   }
+  99% {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
   to {
+    /* Finish with NO dash pattern at all — see below. */
+    stroke-dasharray: none;
     stroke-dashoffset: 0;
   }
 }
+/*
+ * The dash pattern exists only WHILE the line draws itself in.
+ *
+ * It used to sit on the resting state as `stroke-dasharray: 1`, on the
+ * reasoning above that pathLength="1" makes the dash math
+ * resolution-independent. It does — until `vector-effect: non-scaling-stroke`
+ * is also on the element, which resolves the stroke and its dashes in DEVICE
+ * space and so ignores that normalisation. Inside an svg stretched by
+ * `preserveAspectRatio="none"`, the two together left the curve visibly broken:
+ * lit at each end, missing through the middle.
+ *
+ * Keeping the pattern in the keyframes means the finished line is simply a
+ * solid stroke, whatever the element's scale or vector-effect.
+ */
 .spark-draw {
-  stroke-dasharray: 1;
+  stroke-dasharray: none;
   stroke-dashoffset: 0;
   animation: gv-draw 1.15s cubic-bezier(0.16, 1, 0.3, 1);
 }

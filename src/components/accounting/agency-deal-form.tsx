@@ -8,13 +8,16 @@ import { logAgencyDeal } from "@/app/(app)/accounting/log-deal/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
+import { methodsByKind } from "@/lib/accounting/payment-methods";
 import { useToast } from "@/components/ui/toast";
 
 const selectClass =
   "border-input bg-transparent h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-// The methods the sheet's fee formula knows (sheet-mirror SHEET_FEE_RATES_BPS).
-const METHODS = ["Stripe", "Fanbasis", "Whop", "Wire", "PayPal", "Cash", "Other"];
+// Every method the fee formula prices, grouped so a fee-free bank transfer is
+// never logged as something that costs 3%. The old list left out Zelle and ACH
+// entirely — 9 of the deals on the live sheet — so they had to go in as
+// "Other", which charges the catch-all fee on money that cost nothing to take.
 const PAYOUT = ["", "Pending", "Paid"];
 const AGREEMENT = ["", "Signed", "Sent", "None"];
 
@@ -51,7 +54,7 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
   const [offer, setOffer] = useState("");
   const [revenue, setRevenue] = useState("");
   const [cash, setCash] = useState("");
-  const [method, setMethod] = useState("Stripe");
+  const [method, setMethod] = useState("Fanbasis");
   const [pct, setPct] = useState("");
   const [fee, setFee] = useState("");
   const [agreement, setAgreement] = useState("");
@@ -190,10 +193,14 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
             value={method}
             onChange={(e) => setMethod(e.target.value)}
           >
-            {METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
+            {methodsByKind().map((group) => (
+              <optgroup key={group.kind} label={group.label}>
+                {group.methods.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name} — {m.note}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </Field>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -105,7 +106,15 @@ export function HomeHeadline({
               <span className="dot-brand inline-block size-1.5 rounded-full" />
               {monthLabel}
             </p>
-            <div className="mt-2 flex flex-wrap items-end gap-x-10 gap-y-3">
+            {/* Dimmed while a mode switch is in flight: these are still the
+                OLD mode's figures, and showing them at full strength reads as
+                the new answer having arrived. */}
+            <div
+              className={cn(
+                "mt-2 flex flex-wrap items-end gap-x-10 gap-y-3 transition-opacity duration-200",
+                pending && "opacity-40",
+              )}
+            >
               <div>
                 <p className="text-muted-foreground text-xs font-medium">
                   Cash collected
@@ -140,6 +149,10 @@ export function HomeHeadline({
                 <button
                   key={m}
                   type="button"
+                  // Disabled while a switch is in flight: the click writes a
+                  // preference and re-renders the page server-side, and queuing
+                  // three of those behind each other is what made it feel stuck.
+                  disabled={pending}
                   onClick={() => {
                     setOptimisticMode(m);
                     start(async () => {
@@ -156,13 +169,20 @@ export function HomeHeadline({
                     });
                   }}
                   className={cn(
-                    "rounded-md px-3 py-1 text-xs transition-colors",
+                    "relative rounded-md px-3 py-1 text-xs transition-colors",
                     m === activeMode
                       ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
                       : "text-muted-foreground hover:text-foreground",
+                    pending && "cursor-wait",
                   )}
                 >
                   {MODE_LABELS[m]}
+                  {/* The switch is a server round-trip. Showing it working on
+                      the pill you just pressed is the difference between "slow"
+                      and "broken". */}
+                  {pending && m === activeMode && (
+                    <Loader2 className="text-brand absolute top-1/2 -right-1 size-3 -translate-y-1/2 animate-spin" />
+                  )}
                 </button>
               ))}
             </div>
@@ -176,6 +196,8 @@ export function HomeHeadline({
           </div>
         </div>
 
+        {/* While the switch is in flight the figures are the OLD mode's, so
+            they are dimmed rather than left looking like the new answer. */}
         {sections.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {sections.map((s) => (
