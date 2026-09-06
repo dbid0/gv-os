@@ -6,6 +6,8 @@ import {
   SyncTrackingButton,
 } from "@/components/tracking/sync-button";
 import { CallReads } from "@/components/tracking/call-reads";
+import { CashReconciliationPanel } from "@/components/tracking/cash-reconciliation";
+import { reconcileCash } from "@/lib/tracking/cash-reconcile";
 import { ColumnProposals } from "@/components/tracking/column-proposals";
 import { TabScanTable } from "@/components/tracking/tab-scan-table";
 import { Kpi } from "@/components/ui/metric";
@@ -17,7 +19,7 @@ import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientBySlug } from "@/lib/roster";
 import { possessive } from "@/lib/text";
-import { currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
+import { cashRowsForClient, currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
 import { scanWarnings } from "@/lib/tracking/scan";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +118,9 @@ export default async function WorkspaceTrackingPage({
     .from(clientColumnMap)
     .where(eq(clientColumnMap.clientId, row.id));
 
+  const cash = await cashRowsForClient(snapshot.syncId);
+  const reconciliation = reconcileCash(cash.deals, cash.payments);
+
   const [recent, reads, counts] = await Promise.all([
     rowsForTab(snapshot.syncId, "eoc", 8),
     callReadsForClient(row.id, 12),
@@ -137,6 +142,17 @@ export default async function WorkspaceTrackingPage({
         <Kpi label="EOC reports" value={eoc ? String(eoc.rows) : "—"} />
         <Kpi label="With a recording" value={eoc ? String(eoc.withRecording) : "—"} />
       </div>
+
+      {(reconciliation.dealsCents > 0 || reconciliation.processorCents > 0) && (
+        <Panel
+          title="Cash — sold versus arrived"
+          aside={
+            <span className="text-faint text-xs">from this offer&apos;s own sheet</span>
+          }
+        >
+          <CashReconciliationPanel r={reconciliation} />
+        </Panel>
+      )}
 
       {proposals.length > 0 && (
         <Panel
