@@ -207,3 +207,40 @@ export async function eodRowsForClient(syncId: string) {
     )
     .orderBy(desc(clientTrackingRows.occurredAt));
 }
+
+/** The deal and payment rows behind an offer's cash, for reconciliation. */
+export async function cashRowsForClient(syncId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      tab: clientTrackingRows.tab,
+      email: clientTrackingRows.email,
+      cashCents: clientTrackingRows.cashCents,
+      occurredAt: clientTrackingRows.occurredAt,
+      payload: clientTrackingRows.payload,
+    })
+    .from(clientTrackingRows)
+    .where(
+      and(
+        eq(clientTrackingRows.syncId, syncId),
+        inArray(clientTrackingRows.tab, ["deals", "payments"]),
+      ),
+    );
+  return {
+    deals: rows
+      .filter((r) => r.tab === "deals")
+      .map((r) => ({
+        email: r.email,
+        cashCents: r.cashCents,
+        program: r.payload?.["Program Sold"] ?? null,
+        occurredAt: r.occurredAt,
+      })),
+    payments: rows
+      .filter((r) => r.tab === "payments")
+      .map((r) => ({
+        email: r.email,
+        cashCents: r.cashCents,
+        processor: r.payload?.["Processor"] ?? null,
+      })),
+  };
+}
