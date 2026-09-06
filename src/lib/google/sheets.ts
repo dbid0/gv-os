@@ -16,8 +16,28 @@ import { open } from "@/lib/crypto/secretbox";
  * request; the plaintext never leaves this module.
  */
 
-/** The GV Master Finance Sheet. The ID is not a secret; the data is. */
-export const FINANCE_SHEET_ID = "1wTGqP2UQXsfOgfh6XoQB6dtDrn78zRcZ5lRtvkbJvWE";
+/**
+ * The GV Master Finance Sheet.
+ *
+ * This used to be a literal here, on the reasoning that "the ID is not a
+ * secret; the data is". That holds in a private repository and stops holding
+ * the moment one is public: the id is the address of the single most sensitive
+ * document in the business, and publishing it means any future slip in that
+ * sheet's sharing is immediately exploitable by anyone who read the source.
+ *
+ * It comes from the environment now. Absent, the finance surfaces fail with a
+ * clear message rather than silently reading nothing — a mirror that quietly
+ * returns no rows would show the agency earning nothing.
+ */
+export function financeSheetId(): string {
+  const id = process.env.FINANCE_SHEET_ID?.trim();
+  if (!id) {
+    throw new Error(
+      "FINANCE_SHEET_ID is not set — the finance mirror cannot run without it.",
+    );
+  }
+  return id;
+}
 
 const RAW_RANGE = "Raw Data!A2:M200";
 const COMPUTED_RANGE = "'💰 New Deals'!A2:Q200";
@@ -156,7 +176,7 @@ export async function appendFinanceSheetRow(row: (string | number)[]): Promise<s
     insertDataOption: "INSERT_ROWS",
   });
   const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${FINANCE_SHEET_ID}/values/${encodeURIComponent(
+    `https://sheets.googleapis.com/v4/spreadsheets/${financeSheetId()}/values/${encodeURIComponent(
       "Raw Data!A:M",
     )}:append?${params}`,
     {
@@ -193,7 +213,7 @@ export async function fetchFinanceSheet(): Promise<FinanceSheetData> {
   params.append("ranges", RAW_RANGE);
   params.append("ranges", COMPUTED_RANGE);
   const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${FINANCE_SHEET_ID}/values:batchGet?${params}`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${financeSheetId()}/values:batchGet?${params}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
   if (!res.ok) {

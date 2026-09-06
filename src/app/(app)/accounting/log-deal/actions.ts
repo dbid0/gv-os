@@ -8,7 +8,7 @@ import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import {
   appendFinanceSheetRow,
-  FINANCE_SHEET_ID,
+  financeSheetId,
   readSheetValues,
 } from "@/lib/google/sheets";
 import { findDuplicateDeal } from "@/lib/accounting/deal-dedupe";
@@ -66,7 +66,7 @@ export async function logAgencyDeal(
   // happens — a request that succeeded but looked like it failed, logged again.
   if (!allowDuplicate) {
     try {
-      const existing = await readSheetValues(FINANCE_SHEET_ID, "Raw Data!A2:M200");
+      const existing = await readSheetValues(financeSheetId(), "Raw Data!A2:M200");
       const at = findDuplicateDeal(existing, {
         dateClosed: i.dateClosed,
         client: i.client.trim(),

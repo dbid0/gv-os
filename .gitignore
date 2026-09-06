@@ -44,3 +44,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .supabase-token
+
+# Migration and working scratchpads. These held pulled CLIENT content —
+# onboarding docs naming their Google account and referring to their logins —
+# which has no reason to be in source control at all: the same content lives
+# in the database, which is where it belongs.
+scratchpad-migrate/
+scratchpad*/
