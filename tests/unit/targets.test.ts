@@ -13,17 +13,18 @@ const ROWS = [
   { client: "Kaden (AI)", dateClosed: "2026-08-06", cashCents: 100_000 },
   { client: "Kaden (AI)", dateClosed: "2026-08-20", cashCents: 250_000 },
   { client: "Kaden (AI)", dateClosed: "2026-07-31", cashCents: 999_999 }, // last month
-  { client: "Brady Stein", dateClosed: "2026-08-10", cashCents: 400_000 }, // other client
+  { client: "Tico", dateClosed: "2026-08-10", cashCents: 400_000 }, // other client
   { client: "Sean Casey", dateClosed: "2026-08-12", cashCents: 777_777 }, // unmatched
 ];
 
 describe("monthToDateCashCents", () => {
   it("sums only this client's deals closed in the current CT month", () => {
     expect(monthToDateCashCents(ROWS, "the-grid", NOW)).toBe(350_000);
-    expect(monthToDateCashCents(ROWS, "the-vault", NOW)).toBe(400_000);
+    expect(monthToDateCashCents(ROWS, "the-visionary", NOW)).toBe(400_000);
   });
 
   it("is zero for a client with no deals this month", () => {
+    // A retired offer attributes nothing, even from its historical rows.
     expect(monthToDateCashCents(ROWS, "racks-closes", NOW)).toBe(0);
     expect(monthToDateCashCents([], "the-grid", NOW)).toBe(0);
   });
