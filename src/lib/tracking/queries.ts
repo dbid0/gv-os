@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
 import type { TabScan } from "@/lib/tracking/scan";
 import { buildLeadSummaries, LEAD_TABS, type LeadSummary } from "@/lib/tracking/leads";
+import type { FactSource } from "@/lib/tracking/sources";
 import type { TrackingTab } from "@/lib/tracking/tabs";
 
 export interface TrackingSnapshot {
@@ -32,6 +33,8 @@ export interface TrackingSnapshot {
  */
 export async function currentSnapshot(
   clientId: string,
+  /** Which system's snapshot. The sheet is the default and, today, the only one. */
+  source: FactSource = "sheet",
 ): Promise<TrackingSnapshot | null> {
   const db = getDb();
   const [client] = await db
@@ -48,6 +51,7 @@ export async function currentSnapshot(
     .where(
       and(
         eq(clientTrackingSyncs.clientId, clientId),
+        eq(clientTrackingSyncs.source, source),
         eq(clientTrackingSyncs.spreadsheetId, client.sheet),
       ),
     )

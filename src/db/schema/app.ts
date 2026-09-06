@@ -1625,6 +1625,17 @@ export const clientTrackingSyncs = appSchema.table(
     clientId: uuid("client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "cascade" }),
+    /**
+     * Which system this pull came from — see lib/tracking/sources.
+     *
+     * The sheet is one source among several. When Close, Calendly or Stripe
+     * are connected, their pulls write here too, and reads merge the current
+     * snapshot of EACH source with the live system winning any fact it owns.
+     * Keeping them in one spine means a new integration is an adapter, not a
+     * second pipeline with its own idea of what a lead is.
+     */
+    source: text("source").notNull().default("sheet"),
+    /** The sheet id for a sheet pull; the account/connection id otherwise. */
     spreadsheetId: text("spreadsheet_id").notNull(),
     /** ok | failed */
     status: text("status").notNull().default("ok"),
@@ -1636,6 +1647,11 @@ export const clientTrackingSyncs = appSchema.table(
   },
   (table) => [
     index("client_tracking_syncs_client_idx").on(table.clientId, table.createdAt),
+    index("client_tracking_syncs_source_idx").on(
+      table.clientId,
+      table.source,
+      table.createdAt,
+    ),
   ],
 );
 
@@ -1663,6 +1679,8 @@ export const clientTrackingRows = appSchema.table(
       .references(() => clients.id, { onDelete: "cascade" }),
     /** applications | calls | payments | deals | ar | bod | *_eod | eoc */
     tab: text("tab").notNull(),
+    /** Denormalised from the sync so a read can filter by source cheaply. */
+    source: text("source").notNull().default("sheet"),
     /** 1-based row number in the sheet, so a figure can be traced to its source. */
     rowIndex: integer("row_index").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }),
@@ -1685,6 +1703,11 @@ export const clientTrackingRows = appSchema.table(
     index("client_tracking_rows_client_tab_idx").on(table.clientId, table.tab),
     index("client_tracking_rows_email_idx").on(table.clientId, table.email),
     index("client_tracking_rows_occurred_idx").on(table.clientId, table.occurredAt),
+    index("client_tracking_rows_source_idx").on(
+      table.clientId,
+      table.source,
+      table.tab,
+    ),
   ],
 );
 
