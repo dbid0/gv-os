@@ -11,8 +11,8 @@ import {
 } from "@/db/schema/app";
 import { readSheetTitles, readSheetValues } from "@/lib/google/sheets";
 import type { LearnedAlias } from "@/lib/tracking/fields";
+import { writeSourceSnapshot } from "@/lib/tracking/ingest";
 import { parseTrackingTab, type TrackingRow } from "@/lib/tracking/parse";
-import { snapshotsToPrune } from "@/lib/tracking/retention";
 import { scanTab, type TabScan } from "@/lib/tracking/scan";
 import { tabFromTitle } from "@/lib/tracking/tabs";
 
@@ -109,72 +109,20 @@ export async function syncClientTrackingSheet(
     parsed.push(...rows);
   }
 
-  const [run] = await db
-    .insert(clientTrackingSyncs)
-    .values({
-      clientId,
-      spreadsheetId: client.sheet,
-      status: "ok",
-      rowCount: parsed.length,
-      tabs: scans as unknown as Record<string, unknown>[],
-    })
-    .returning({ id: clientTrackingSyncs.id });
+  // The sheet is one adapter among several: it turns its own payload into
+  // rows, and the shared spine handles the snapshot, the chunking and this
+  // source's retention. Close, Calendly and Stripe will write the same way.
+  const { syncId } = await writeSourceSnapshot({
+    clientId,
+    source: "sheet",
+    connectionRef: client.sheet,
+    rows: parsed,
+    tabs: scans,
+  });
 
-  // Chunked: a single insert of several thousand rows exceeds the parameter
-  // limit postgres-js will accept.
-  for (let i = 0; i < parsed.length; i += 500) {
-    const chunk = parsed.slice(i, i + 500);
-    await db.insert(clientTrackingRows).values(
-      chunk.map((r) => ({
-        syncId: run.id,
-        clientId,
-        tab: r.tab,
-        rowIndex: r.rowIndex,
-        occurredAt: r.occurredAt,
-        email: r.email,
-        name: r.name,
-        phone: r.phone,
-        rep: r.rep,
-        status: r.status,
-        outcome: r.outcome,
-        cashCents: r.cashCents,
-        revenueCents: r.revenueCents,
-        recordingUrl: r.recordingUrl,
-        notes: r.notes,
-        payload: r.payload,
-      })),
-    );
-  }
-
-  await pruneOldSnapshots(clientId);
-
-  return { syncId: run.id, rowCount: parsed.length, tabs: scans, error: null };
+  return { syncId, rowCount: parsed.length, tabs: scans, error: null };
 }
 
 function empty(error: string): TrackingSyncResult {
   return { syncId: null, rowCount: 0, tabs: [], error };
-}
-
-/**
- * Drop this client's oldest snapshots.
- *
- * A sync writes a fresh copy of the whole sheet, so without this the mirror
- * grows by hundreds of rows every run and never shrinks. Rows cascade with
- * their snapshot. Runs AFTER the new snapshot is written, so a failure here
- * costs disk, never the data anyone is about to read.
- */
-async function pruneOldSnapshots(clientId: string): Promise<void> {
-  try {
-    const db = getDb();
-    const snapshots = await db
-      .select({ id: clientTrackingSyncs.id })
-      .from(clientTrackingSyncs)
-      .where(eq(clientTrackingSyncs.clientId, clientId))
-      .orderBy(desc(clientTrackingSyncs.createdAt));
-    const stale = snapshotsToPrune(snapshots);
-    if (stale.length === 0) return;
-    await db.delete(clientTrackingSyncs).where(inArray(clientTrackingSyncs.id, stale));
-  } catch {
-    // Housekeeping must never fail a sync that already succeeded.
-  }
 }
