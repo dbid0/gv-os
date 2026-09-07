@@ -52,6 +52,8 @@ interface MemberOption {
   id: string;
   name: string;
   role: string;
+  roleKey: string | null;
+  repKind: string | null;
 }
 
 const selectClass =
@@ -702,7 +704,7 @@ export function MemberBoard({
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} — {roleLabel(m.role)}
+                {m.name} — {memberRoleLabel(m)}
               </option>
             ))}
           </select>

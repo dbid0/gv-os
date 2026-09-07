@@ -89,11 +89,26 @@ export async function listTeamMembers(): Promise<TeamMemberRow[]> {
 
 /** Active members only, for assignee pickers. */
 export async function listActiveMembers(): Promise<
-  { id: string; name: string; role: string }[]
+  {
+    id: string;
+    name: string;
+    role: string;
+    roleKey: string | null;
+    repKind: string | null;
+  }[]
 > {
   const db = getDb();
+  // The full role shape, so surfaces can render the COMPOSED role label —
+  // the raw job column alone shows "Operator" for someone whose platform
+  // role is Sales Manager, a different word for the same person one panel up.
   return db
-    .select({ id: teamMembers.id, name: teamMembers.name, role: teamMembers.role })
+    .select({
+      id: teamMembers.id,
+      name: teamMembers.name,
+      role: teamMembers.role,
+      roleKey: teamMembers.roleKey,
+      repKind: teamMembers.repKind,
+    })
     .from(teamMembers)
     .where(eq(teamMembers.status, "active"))
     .orderBy(asc(teamMembers.name));
