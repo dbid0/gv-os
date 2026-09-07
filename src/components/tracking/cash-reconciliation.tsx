@@ -24,7 +24,11 @@ export function CashReconciliationPanel({ r }: { r: CashReconciliation }) {
         <Figure
           label="Processors recorded"
           value={formatUSD(cents(r.processorCents))}
-          note="Payment Log"
+          note={
+            r.refundedCents > 0
+              ? `${formatUSD(cents(r.processorGrossCents))} taken, ${formatUSD(cents(r.refundedCents))} refunded`
+              : "Payment Log"
+          }
           tone="text-success"
         />
         <Figure
@@ -69,6 +73,23 @@ export function CashReconciliationPanel({ r }: { r: CashReconciliation }) {
             ))}
           </ul>
         </div>
+      )}
+
+      {(r.refundedCount > 0 || r.failedCents > 0) && (
+        <p className="text-faint text-xs">
+          {r.refundedCount > 0 && (
+            <>
+              {r.refundedCount} refund{r.refundedCount === 1 ? "" : "s"} worth{" "}
+              {formatUSD(cents(r.refundedCents))} subtracted.{" "}
+            </>
+          )}
+          {r.failedCents > 0 && (
+            <>
+              {formatUSD(cents(r.failedCents))} of charges never completed and count in
+              neither total.
+            </>
+          )}
+        </p>
       )}
 
       {r.unmatchedPaymentCount > 0 && (

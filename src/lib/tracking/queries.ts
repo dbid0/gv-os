@@ -216,6 +216,7 @@ export async function cashRowsForClient(syncId: string) {
       tab: clientTrackingRows.tab,
       email: clientTrackingRows.email,
       cashCents: clientTrackingRows.cashCents,
+      status: clientTrackingRows.status,
       occurredAt: clientTrackingRows.occurredAt,
       payload: clientTrackingRows.payload,
     })
@@ -241,6 +242,9 @@ export async function cashRowsForClient(syncId: string) {
         email: r.email,
         cashCents: r.cashCents,
         processor: r.payload?.["Processor"] ?? null,
+        // The processor's own word for what happened — succeeded, refunded,
+        // failed. Without it a refunded charge counts as cash collected.
+        status: r.status ?? r.payload?.["Status"] ?? null,
       })),
   };
 }
