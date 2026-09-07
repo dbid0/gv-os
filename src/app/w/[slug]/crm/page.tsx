@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
+import { StatCard } from "@/components/ui/stat-card";
 import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
@@ -102,6 +103,7 @@ export default async function WorkspaceCrmPage({
   ]);
 
   const connected = connection[0]?.status === "connected";
+  const accent = clientBySlug(slug)?.accent;
 
   // The floor's own numbers, from the EOD forms already on the tracking sheet.
   // These exist whether or not Close is connected, and they are SELF-REPORTED —
@@ -202,21 +204,32 @@ export default async function WorkspaceCrmPage({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
+        <StatCard
           label="Speed to lead — median"
           value={stl.medianMinutes === null ? "—" : `${stl.medianMinutes}m`}
+          hint="application → first dial"
+          accent={accent}
           tone="brand"
         />
-        <Kpi
+        <StatCard
           label="Dialled within 5 min"
           value={stl.slaPct === null ? "—" : `${Math.round(stl.slaPct * 100)}%`}
+          hint="the 5-minute standard"
+          accent={accent}
           tone={stl.slaPct !== null && stl.slaPct >= 0.8 ? "success" : "warning"}
         />
-        <Kpi
+        <StatCard
           label="Leads responded"
           value={responsePct === null ? "—" : `${responsePct}%`}
+          hint="anything inbound came back"
+          accent={accent}
         />
-        <Kpi label={`Activity · ${WINDOW_DAYS}d`} value={String(activity.length)} />
+        <StatCard
+          label={`Activity · ${WINDOW_DAYS}d`}
+          value={String(activity.length)}
+          hint="calls, texts and emails"
+          accent={accent}
+        />
       </div>
 
       {floorPanel}

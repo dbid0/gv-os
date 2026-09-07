@@ -713,3 +713,69 @@
   animation: gv-pop 0.16s ease-out;
   transform-origin: top right;
 }
+
+/* Staggered row entrance for data tables — server-rendered, CSS-only.
+   Rows fade-rise in sequence; capped at the 14th so a 200-row table doesn't
+   take seconds to settle. Off entirely under prefers-reduced-motion. */
+@keyframes gv-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.gv-rows > tr,
+.gv-rows > div {
+  animation: gv-row-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.gv-rows > :nth-child(1) {
+  animation-delay: 0.02s;
+}
+.gv-rows > :nth-child(2) {
+  animation-delay: 0.05s;
+}
+.gv-rows > :nth-child(3) {
+  animation-delay: 0.08s;
+}
+.gv-rows > :nth-child(4) {
+  animation-delay: 0.11s;
+}
+.gv-rows > :nth-child(5) {
+  animation-delay: 0.14s;
+}
+.gv-rows > :nth-child(6) {
+  animation-delay: 0.17s;
+}
+.gv-rows > :nth-child(7) {
+  animation-delay: 0.2s;
+}
+.gv-rows > :nth-child(8) {
+  animation-delay: 0.23s;
+}
+.gv-rows > :nth-child(9) {
+  animation-delay: 0.26s;
+}
+.gv-rows > :nth-child(10) {
+  animation-delay: 0.29s;
+}
+.gv-rows > :nth-child(11) {
+  animation-delay: 0.32s;
+}
+.gv-rows > :nth-child(12) {
+  animation-delay: 0.35s;
+}
+.gv-rows > :nth-child(13) {
+  animation-delay: 0.38s;
+}
+.gv-rows > :nth-child(14) {
+  animation-delay: 0.41s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gv-rows > tr,
+  .gv-rows > div {
+    animation: none;
+  }
+}
