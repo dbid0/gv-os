@@ -1,9 +1,11 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients } from "@/db/schema/app";
+import { clients, integrations } from "@/db/schema/app";
+import { open } from "@/lib/crypto/secretbox";
+import { serverEnv } from "@/env.server";
 import { writeSourceSnapshot } from "@/lib/tracking/ingest";
 import { mapFields } from "@/lib/tracking/fields";
 import { scanTab } from "@/lib/tracking/scan";
@@ -18,8 +20,10 @@ import { normalizeStripeCharges, type StripeCharge } from "@/lib/tracking/stripe
  * this runs the dashboard stops depending on someone remembering to log a
  * $49 renewal by hand.
  *
- * The key is read per client from the environment and never stored in the
- * database, so a repo or a table leak cannot carry a live processor key.
+ * The key comes from the Integrations vault — connected in the UI, sealed
+ * with the credentials key, per client. Nothing is hard-coded per machine:
+ * connect Stripe for an offer on the Integrations page and this adapter
+ * starts pulling on the next sync.
  */
 
 /** Charges older than this are not pulled. Stripe paginates from newest. */
@@ -40,14 +44,31 @@ function empty(error: string): StripeSyncResult {
 }
 
 /**
- * The env var holding a client's Stripe key.
+ * The client's Stripe key, from the Integrations vault.
  *
  * Per client, because each offer collects into its own Stripe account, and a
  * single shared key would attribute every client's cash to whichever account
- * the key belonged to.
+ * the key belonged to. Returns null when no connected Stripe integration
+ * exists for the client — the caller renders that as an honest empty state.
  */
-export function stripeKeyEnvVar(slug: string): string {
-  return `STRIPE_SECRET_KEY_${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+async function stripeKeyFor(clientId: string): Promise<string | null> {
+  const credentialsKey = serverEnv().CREDENTIALS_KEY;
+  if (!credentialsKey) return null;
+  const db = getDb();
+  const [conn] = await db
+    .select({ secretBox: integrations.secretBox })
+    .from(integrations)
+    .where(
+      and(
+        eq(integrations.provider, "stripe"),
+        eq(integrations.clientId, clientId),
+        eq(integrations.status, "connected"),
+        isNotNull(integrations.secretBox),
+      ),
+    )
+    .limit(1);
+  if (!conn?.secretBox) return null;
+  return open(conn.secretBox as string, credentialsKey);
 }
 
 /** Fetch every charge since `since`, newest first, following Stripe's cursor. */
@@ -94,13 +115,12 @@ export async function syncClientStripe(
 
   if (!client) return empty("No such client.");
 
-  const envVar = stripeKeyEnvVar(client.slug);
-  const key = process.env[envVar];
+  const key = await stripeKeyFor(client.id);
   if (!key) {
-    // Honest empty state. A missing key means we do not know this client's
-    // Stripe position — it does not mean the position is zero.
+    // Honest empty state. A missing connection means we do not know this
+    // client's Stripe position — it does not mean the position is zero.
     return empty(
-      `No Stripe key for ${client.name}. Set ${envVar} to pull its payments.`,
+      `Stripe isn't connected for ${client.name} — connect it on the Integrations page to pull its payments.`,
     );
   }
 
@@ -117,7 +137,7 @@ export async function syncClientStripe(
   const { syncId } = await writeSourceSnapshot({
     clientId,
     source: "stripe",
-    connectionRef: envVar,
+    connectionRef: "integrations:stripe",
     rows,
     // An API source has no sheet columns, so the field map is empty by
     // construction rather than by failing to find headers.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchStripeCharges, stripeKeyEnvVar } from "@/lib/tracking/stripe-sync";
+import { fetchStripeCharges } from "@/lib/tracking/stripe-sync";
 
 function page(ids: string[], hasMore: boolean) {
   return {
@@ -11,17 +11,6 @@ function page(ids: string[], hasMore: boolean) {
     }),
   } as unknown as Response;
 }
-
-describe("stripeKeyEnvVar", () => {
-  it("names a key per client, so one offer's cash is never read from another's account", () => {
-    expect(stripeKeyEnvVar("the-grid")).toBe("STRIPE_SECRET_KEY_THE_GRID");
-    expect(stripeKeyEnvVar("the-visionary")).toBe("STRIPE_SECRET_KEY_THE_VISIONARY");
-  });
-
-  it("collapses any punctuation a slug might carry", () => {
-    expect(stripeKeyEnvVar("mbe.grid v2")).toBe("STRIPE_SECRET_KEY_MBE_GRID_V2");
-  });
-});
 
 describe("fetchStripeCharges", () => {
   it("follows the cursor until has_more is false", async () => {
