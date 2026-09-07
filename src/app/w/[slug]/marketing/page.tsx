@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+
+import { ConnectKitCard } from "@/components/email/connect-kit-card";
 
 import { Panel } from "@/components/ui/panel";
 import { Kpi } from "@/components/ui/metric";
@@ -40,6 +43,16 @@ export default async function WorkspaceMarketingPage({
   const mine = overview.filter((k) => clientId !== null && k.clientId === clientId);
 
   if (mine.length === 0) {
+    // GV's own view can authenticate Kit right here; a client's portal never
+    // sees a credential form.
+    const portalView = (await cookies()).get("gv-dev-role")?.value === "client";
+    if (!portalView && clientId !== null) {
+      return (
+        <div className="space-y-6">
+          <ConnectKitCard clientId={clientId} clientName={client.name} />
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <Panel
@@ -47,9 +60,7 @@ export default async function WorkspaceMarketingPage({
           aside={<StatusPill tone="pending">Not connected</StatusPill>}
         >
           <p className="text-muted-foreground text-sm">
-            {possessive(client.name)} Kit account isn&apos;t connected yet. Once its API
-            key is added in Integrations, this fills in on the next sync: the list size,
-            every sequence running, and how the list is growing.
+            {possessive(client.name)} email engine isn&apos;t wired up yet.
           </p>
           <p className="text-faint mt-2 text-xs">
             Nothing is estimated here — an unconnected account shows nothing rather than
