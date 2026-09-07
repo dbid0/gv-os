@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull, ne, or } from "drizzle-orm";
 
 import {
   NotificationsPanel,
@@ -30,6 +30,9 @@ export default async function NotificationsPage() {
     })
     .from(notifications)
     .leftJoin(clients, eq(notifications.clientId, clients.id))
+    // History for an archived client is noise here — the rows stay in the
+    // table, they just stop occupying the inbox.
+    .where(or(isNull(notifications.clientId), ne(clients.status, "archived")))
     .orderBy(desc(notifications.createdAt))
     .limit(200);
 

@@ -76,7 +76,9 @@ export function driftRule(run: DriftRunState | null): Candidate[] {
   return [
     {
       kind: "sheet_drift",
-      severity: "critical",
+      // Eight cents of drift is rounding, not an incident. It still surfaces
+      // (drift must never pass silently) but only real money pages anyone.
+      severity: run.totalAbsDriftCents >= 10_000 ? "critical" : "warning",
       title: `Sheet drift: ${run.driftRowCount} rows, $${(run.totalAbsDriftCents / 100).toFixed(2)}`,
       body: "The reconciliation found NEW drift above the accepted 5-cent baseline. Open Accounting → Reconciliation.",
       clientId: null,
@@ -206,7 +208,12 @@ export function bodRule(
     .map((o) => ({
       kind: "bod_digest",
       severity: "info" as const,
-      title: `BOD — ${o.name}: $${Math.round(o.mtdCashCents / 100).toLocaleString("en-US")} month to date`,
+      // A figure only when there IS one. "$0 month to date" every morning
+      // reads as an accusation and buries the digests that carry real money.
+      title:
+        o.mtdCashCents > 0
+          ? `BOD — ${o.name}: $${Math.round(o.mtdCashCents / 100).toLocaleString("en-US")} month to date`
+          : `BOD — ${o.name}: start-of-day check-in`,
       body: "Start-of-day check-in: review overnight applications, bookings, and yesterday's EODs.",
       clientId: o.clientId,
       dedupeKey: `bod:${o.slug}:${todayKey}`,

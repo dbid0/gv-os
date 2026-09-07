@@ -53,6 +53,50 @@ describe("stalenessRule", () => {
   });
 });
 
+describe("driftRule severity", () => {
+  it("still SURFACES cents of drift, but as a warning, never a page", () => {
+    // Production fired a CRITICAL alert over $0.08 of drift. Drift must never
+    // pass silently — but rounding noise must not page like an incident.
+    const [n] = driftRule({ id: "r", driftRowCount: 8, totalAbsDriftCents: 8 });
+    expect(n.severity).toBe("warning");
+  });
+
+  it("warns between the baseline and $100", () => {
+    const [n] = driftRule({ id: "r", driftRowCount: 8, totalAbsDriftCents: 800 });
+    expect(n.severity).toBe("warning");
+  });
+
+  it("stays critical at $100 and above", () => {
+    const [n] = driftRule({ id: "r", driftRowCount: 3, totalAbsDriftCents: 10_000 });
+    expect(n.severity).toBe("critical");
+  });
+});
+
+describe("bodRule title", () => {
+  const offer = {
+    clientId: "c1",
+    slug: "grid",
+    name: "The Grid",
+    bodAlertTime: "00:00",
+    timezone: "America/Chicago",
+    mtdCashCents: 0,
+  };
+
+  it("omits the figure when month-to-date is zero", () => {
+    const [n] = bodRule([offer], new Date(), "2026-09-07");
+    expect(n.title).toBe("BOD — The Grid: start-of-day check-in");
+  });
+
+  it("names the figure when there is one", () => {
+    const [n] = bodRule(
+      [{ ...offer, mtdCashCents: 480_000 }],
+      new Date(),
+      "2026-09-07",
+    );
+    expect(n.title).toBe("BOD — The Grid: $4,800 month to date");
+  });
+});
+
 describe("driftRule", () => {
   it("fires only above the 5-cent baseline, keyed per run", () => {
     expect(driftRule(null)).toEqual([]);
@@ -62,7 +106,8 @@ describe("driftRule", () => {
     const out = driftRule({ id: "r2", driftRowCount: 6, totalAbsDriftCents: 105 });
     expect(out[0]).toMatchObject({
       kind: "sheet_drift",
-      severity: "critical",
+      // $1.05 surfaces as a warning; critical is reserved for >= $100.
+      severity: "warning",
       dedupeKey: "drift:r2",
     });
     expect(out[0].title).toContain("$1.05");

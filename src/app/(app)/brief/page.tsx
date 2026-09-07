@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import {
   AlertTriangle,
   ArrowRight,
@@ -97,7 +97,14 @@ export default async function BriefPage() {
       })
       .from(notifications)
       .leftJoin(clients, eq(notifications.clientId, clients.id))
-      .where(isNull(notifications.readAt))
+      // Unread only, and never for an archived client — their history is
+      // not "needs attention".
+      .where(
+        and(
+          isNull(notifications.readAt),
+          or(isNull(notifications.clientId), ne(clients.status, "archived")),
+        ),
+      )
       .orderBy(desc(notifications.createdAt))
       .limit(60),
   ]);

@@ -187,7 +187,7 @@ export function WorkBoard({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder='e.g. "Rewrite the Vault VSL hook"'
+              placeholder='e.g. "Rewrite the VSL hook"'
             />
           </label>
           <label className="space-y-1.5">
