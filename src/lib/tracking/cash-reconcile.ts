@@ -71,11 +71,20 @@ export function reconcileCash(
   deals: DealRow[],
   payments: PaymentRow[],
 ): CashReconciliation {
+  // Only money that ARRIVED backs a deal. A failed charge is not a payment —
+  // counting it here hid exactly the deals dying on declined cards, because
+  // the failed attempt made them look backed. A refunded charge does not back
+  // a deal either: the money came and left, and the deal stands uncovered NOW.
   const paidByEmail = new Map<string, number>();
   for (const p of payments) {
     const key = norm(p.email);
     if (key === "") continue;
-    paidByEmail.set(key, (paidByEmail.get(key) ?? 0) + (p.cashCents ?? 0));
+    const outcome = classifyPayment({
+      cashCents: p.cashCents,
+      status: p.status ?? null,
+    });
+    if (outcome !== "collected") continue;
+    paidByEmail.set(key, (paidByEmail.get(key) ?? 0) + Math.abs(p.cashCents ?? 0));
   }
 
   const dealsCents = deals.reduce((s, d) => s + (d.cashCents ?? 0), 0);
@@ -97,8 +106,14 @@ export function reconcileCash(
     .sort((a, b) => b.cashCents - a.cashCents);
 
   const dealEmails = new Set(deals.map((d) => norm(d.email)).filter((e) => e !== ""));
+  // Unmatched money is COLLECTED money with no deal behind it. A failed
+  // charge with no deal is not "$5,000 of unmatched payments" — nothing
+  // arrived; it belongs to the failed bucket, which is reported separately.
   const unmatched = payments.filter(
-    (p) => norm(p.email) === "" || !dealEmails.has(norm(p.email)),
+    (p) =>
+      classifyPayment({ cashCents: p.cashCents, status: p.status ?? null }) ===
+        "collected" &&
+      (norm(p.email) === "" || !dealEmails.has(norm(p.email))),
   );
 
   // Per processor, NET: a refund on Stripe reduces Stripe's own figure rather
@@ -127,7 +142,10 @@ export function reconcileCash(
     failedCents: totals.failedCents,
     unbackedDeals: unbacked,
     unbackedCents: unbacked.reduce((s, d) => s + d.cashCents, 0),
-    unmatchedPaymentCents: unmatched.reduce((s, p) => s + (p.cashCents ?? 0), 0),
+    unmatchedPaymentCents: unmatched.reduce(
+      (s, p) => s + Math.abs(p.cashCents ?? 0),
+      0,
+    ),
     unmatchedPaymentCount: unmatched.length,
     byProcessor: [...byProcessor.entries()]
       .map(([processor, v]) => ({ processor, ...v }))
