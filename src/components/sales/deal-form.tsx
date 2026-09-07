@@ -141,8 +141,8 @@ export function DealForm({ teams, reps }: { teams: TeamOption[]; reps: RepOption
               // A rep with no lane yet. "Add a team first" is admin language —
               // they can't add teams; their manager assigns them.
               <p className="border-input text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-                You&apos;re not assigned to an offer yet — ask your manager to add you to
-                one.
+                You&apos;re not assigned to an offer yet — ask your manager to add you
+                to one.
               </p>
             ) : teams.length === 1 ? (
               // One lane — the rep's own offer. A picker with one option reads
