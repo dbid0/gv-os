@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { actionItems, clients, teamMembers } from "@/db/schema/app";
@@ -41,6 +41,9 @@ export async function listWorkItems(): Promise<WorkItem[]> {
       .from(actionItems)
       .leftJoin(clients, eq(actionItems.clientId, clients.id))
       .leftJoin(teamMembers, eq(actionItems.assigneeId, teamMembers.id))
+      // An archived client's tasks leave the board with the client. Agency
+      // items (no client) always show.
+      .where(or(isNull(actionItems.clientId), ne(clients.status, "archived")))
       .orderBy(desc(actionItems.createdAt))
       .limit(500);
     return rows.map(({ legacyAssignee, ...r }) => ({
