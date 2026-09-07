@@ -2,10 +2,10 @@
  * MONEY THAT CAME BACK.
  *
  * A payment log that cannot express a refund overstates cash by whatever has
- * been refunded, permanently and invisibly. The Grid's sheet is in exactly
- * that state today: 77 payment rows, zero negatives, no "refunded" status,
- * and about $2,497 known to have gone back out — $1,500 on Shopify and $997
- * on Stripe — with nowhere to record it.
+ * been refunded, permanently and invisibly. A live client sheet was found in
+ * exactly that state: payment rows with zero negatives, no "refunded" status,
+ * and several thousand dollars known to have gone back out across two
+ * processors, with nowhere to record it.
  *
  * No convention has been settled for how a refund gets written down, so this
  * accepts every shape one plausibly takes rather than forcing a choice:
