@@ -34,17 +34,27 @@ export interface TrackingSnapshot {
  */
 export async function currentSnapshot(
   clientId: string,
-  /** Which system's snapshot. The sheet is the default and, today, the only one. */
+  /** Which system's snapshot. The sheet is the default. */
   source: FactSource = "sheet",
 ): Promise<TrackingSnapshot | null> {
   const db = getDb();
-  const [client] = await db
-    .select({ sheet: clients.trackingSheetId })
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
-  // No sheet linked: nothing is current, whatever history exists.
-  if (!client?.sheet) return null;
+
+  // The connection-ref guard is a SHEET rule: it stops the app reading a
+  // snapshot of a previously-linked, different spreadsheet after a swap. An
+  // API source's ref is its integration, not the sheet — filtering Stripe's
+  // snapshot by the sheet id made it unfindable by construction, and a
+  // sheet-less offer (Base 44 through a processor) could never read at all.
+  let connectionRef: string | null = null;
+  if (source === "sheet") {
+    const [client] = await db
+      .select({ sheet: clients.trackingSheetId })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1);
+    // No sheet linked: no sheet snapshot is current, whatever history exists.
+    if (!client?.sheet) return null;
+    connectionRef = client.sheet;
+  }
 
   const [row] = await db
     .select()
@@ -53,7 +63,9 @@ export async function currentSnapshot(
       and(
         eq(clientTrackingSyncs.clientId, clientId),
         eq(clientTrackingSyncs.source, source),
-        eq(clientTrackingSyncs.spreadsheetId, client.sheet),
+        ...(connectionRef !== null
+          ? [eq(clientTrackingSyncs.spreadsheetId, connectionRef)]
+          : []),
       ),
     )
     .orderBy(desc(clientTrackingSyncs.createdAt))
@@ -66,6 +78,36 @@ export async function currentSnapshot(
     rowCount: row.rowCount,
     tabs: (row.tabs ?? []) as unknown as TabScan[],
   };
+}
+
+/** The latest snapshot per source that has EVER written for this client. */
+export async function latestSnapshotsBySource(
+  clientId: string,
+): Promise<{ source: FactSource; snapshot: TrackingSnapshot }[]> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(clientTrackingSyncs)
+    .where(eq(clientTrackingSyncs.clientId, clientId))
+    .orderBy(desc(clientTrackingSyncs.createdAt))
+    .limit(50);
+  const seen = new Set<string>();
+  const out: { source: FactSource; snapshot: TrackingSnapshot }[] = [];
+  for (const row of rows) {
+    if (seen.has(row.source)) continue;
+    seen.add(row.source);
+    out.push({
+      source: row.source as FactSource,
+      snapshot: {
+        syncId: row.id,
+        spreadsheetId: row.spreadsheetId,
+        syncedAt: row.createdAt,
+        rowCount: row.rowCount,
+        tabs: (row.tabs ?? []) as unknown as TabScan[],
+      },
+    });
+  }
+  return out;
 }
 
 export interface TabRow {

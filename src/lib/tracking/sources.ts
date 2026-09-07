@@ -187,3 +187,41 @@ export const SOURCE_LABEL: Record<FactSource, string> = {
   typeform: "Typeform",
   fathom: "Fathom",
 };
+
+/** One source's net payment figure, for the cross-source comparison. */
+export interface PaymentSourceEntry {
+  source: FactSource;
+  netCents: number;
+}
+
+export interface PaymentSourceGap {
+  /** The source whose record wins the payment fact (highest rank present). */
+  authority: FactSource;
+  /** The other source being compared against it. */
+  other: FactSource;
+  /** authority − other. Positive: the other source is missing money. */
+  gapCents: number;
+}
+
+/**
+ * How far each lesser source's payment record sits from the authoritative
+ * one's. Null until two sources actually report — one record has nothing to
+ * disagree with. The authority is decided by the same ownership table the
+ * whole precedence layer uses, never by which number is bigger.
+ */
+export function paymentSourceGaps(
+  entries: PaymentSourceEntry[],
+): PaymentSourceGap[] | null {
+  const reporting = entries.filter((e) => canSupply("payment", e.source));
+  if (reporting.length < 2) return null;
+  const authority = [...reporting].sort(
+    (a, b) => sourceRank("payment", b.source) - sourceRank("payment", a.source),
+  )[0];
+  return reporting
+    .filter((e) => e.source !== authority.source)
+    .map((e) => ({
+      authority: authority.source,
+      other: e.source,
+      gapCents: authority.netCents - e.netCents,
+    }));
+}

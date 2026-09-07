@@ -6,6 +6,7 @@ import {
   resolveFact,
   sourceRank,
   type Candidate,
+  paymentSourceGaps,
 } from "@/lib/tracking/sources";
 
 const d = (iso: string) => new Date(iso);
@@ -163,5 +164,41 @@ describe("collectConflicts", () => {
   it("is empty when everything agrees", () => {
     const r = resolveFact("payment", [{ source: "stripe", value: 1 }]);
     expect(collectConflicts([{ kind: "payment", field: "x", result: r }])).toEqual([]);
+  });
+});
+
+describe("paymentSourceGaps", () => {
+  it("is null until a second source reports — one record has nothing to disagree with", () => {
+    expect(paymentSourceGaps([{ source: "sheet", netCents: 100 }])).toBeNull();
+    expect(paymentSourceGaps([])).toBeNull();
+  });
+
+  it("the processor is the authority whatever the numbers say", () => {
+    // The sheet showing MORE money must not make it the authority — rank
+    // decides, not size.
+    const gaps = paymentSourceGaps([
+      { source: "sheet", netCents: 999_999 },
+      { source: "stripe", netCents: 500_000 },
+    ]);
+    expect(gaps).toEqual([{ authority: "stripe", other: "sheet", gapCents: -499_999 }]);
+  });
+
+  it("positive gap = the lesser source is missing money", () => {
+    const gaps = paymentSourceGaps([
+      { source: "stripe", netCents: 4_870_500 },
+      { source: "sheet", netCents: 4_388_200 },
+    ]);
+    expect(gaps?.[0].gapCents).toBe(482_300);
+  });
+
+  it("a source with no standing on payments is ignored", () => {
+    // Fathom knows recordings, not money — its presence must not create a
+    // fake disagreement.
+    expect(
+      paymentSourceGaps([
+        { source: "stripe", netCents: 100 },
+        { source: "fathom", netCents: 0 },
+      ]),
+    ).toBeNull();
   });
 });
