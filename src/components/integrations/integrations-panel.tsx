@@ -44,6 +44,8 @@ interface ConnectionRow {
   label: string;
   clientId: string | null;
   clientName: string | null;
+  /** "archived" when the client is retired — muted, sunk to the end. */
+  clientStatus: string | null;
   secretHint: string | null;
   status: string;
   lastSyncAt: string | null;
@@ -179,6 +181,7 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
         )}
       >
         {row.clientName ?? "Agency"}
+        {row.clientStatus === "archived" && " · archived"}
       </span>
 
       <StatusPill tone={revoked ? "muted" : "live"}>
@@ -441,9 +444,19 @@ export function IntegrationsPanel({
           <h2 className="text-muted-foreground px-1 text-xs font-medium tracking-wide uppercase">
             Connections
           </h2>
-          {connections.map((row) => (
-            <ConnectionCard key={row.id} row={row} />
-          ))}
+          {/* A retired client's connections sink to the end, muted — live
+              offers first. gv-rows staggers the cards in. */}
+          <div className="gv-rows space-y-2">
+            {[...connections]
+              .sort(
+                (a, b) =>
+                  Number(a.clientStatus === "archived") -
+                  Number(b.clientStatus === "archived"),
+              )
+              .map((row) => (
+                <ConnectionCard key={row.id} row={row} />
+              ))}
+          </div>
         </div>
       )}
     </div>

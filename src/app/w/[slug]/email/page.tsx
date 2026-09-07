@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+
+import { ConnectKitCard } from "@/components/email/connect-kit-card";
 
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
@@ -36,14 +39,20 @@ export default async function WorkspaceEmailPage({
     : [];
 
   if (!account) {
+    // GV's own view gets the key form right here; a client's portal states
+    // the fact plainly and never shows a credential input.
+    const portalView = (await cookies()).get("gv-dev-role")?.value === "client";
     return (
       <div className="mx-auto w-full max-w-7xl">
-        <Panel title="No Kit account connected">
-          <p className="text-faint py-8 text-center text-sm">
-            Connect this client&apos;s Kit key under Settings → Integrations and the
-            email engine appears here after the first sync.
-          </p>
-        </Panel>
+        {portalView || clientId === null ? (
+          <Panel title="No Kit account connected">
+            <p className="text-faint py-8 text-center text-sm">
+              Email isn&apos;t wired up for this offer yet.
+            </p>
+          </Panel>
+        ) : (
+          <ConnectKitCard clientId={clientId} clientName={client.name} />
+        )}
       </div>
     );
   }

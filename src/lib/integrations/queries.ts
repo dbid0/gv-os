@@ -13,6 +13,8 @@ export interface IntegrationRow {
   label: string;
   clientId: string | null;
   clientName: string | null;
+  /** "archived" when the client is retired — shown muted, sunk to the end. */
+  clientStatus: string | null;
   secretHint: string | null;
   status: string;
   lastSyncAt: Date | null;
@@ -35,6 +37,7 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
       label: integrations.label,
       clientId: integrations.clientId,
       clientName: clients.name,
+      clientStatus: clients.status,
       secretHint: integrations.secretHint,
       status: integrations.status,
       lastSyncAt: integrations.lastSyncAt,
