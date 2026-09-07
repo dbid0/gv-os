@@ -105,3 +105,52 @@ describe("reconcileCash", () => {
     expect(r.unbackedDeals.map((d) => d.email)).toEqual(["b@x.com", "s@x.com"]);
   });
 });
+
+describe("failed charges in the reconciliation", () => {
+  const failed = (email: string, cents: number): PaymentRow => ({
+    email,
+    cashCents: cents,
+    processor: "Stripe",
+    status: "failed",
+  });
+
+  it("a FAILED charge does not back a deal — that's the declined-card blind spot", () => {
+    // The deal died on a declined card. The failed attempt used to make it
+    // look backed, hiding exactly the money worth chasing.
+    const r = reconcileCash([deal("a@x.com", 500_000)], [failed("a@x.com", 500_000)]);
+    expect(r.unbackedDeals).toHaveLength(1);
+    expect(r.unbackedCents).toBe(500_000);
+  });
+
+  it("a REFUNDED charge does not back a deal — the money came and left", () => {
+    const r = reconcileCash(
+      [deal("a@x.com", 99_700)],
+      [
+        {
+          email: "a@x.com",
+          cashCents: 99_700,
+          processor: "Stripe",
+          status: "refunded",
+        },
+      ],
+    );
+    expect(r.unbackedDeals).toHaveLength(1);
+  });
+
+  it("a failed charge with no deal is NOT unmatched money — nothing arrived", () => {
+    const r = reconcileCash([], [failed("ghost@x.com", 500_000)]);
+    expect(r.unmatchedPaymentCents).toBe(0);
+    expect(r.unmatchedPaymentCount).toBe(0);
+    // It still shows in the failed bucket, reported separately.
+    expect(r.failedCents).toBe(500_000);
+  });
+
+  it("collected money still backs and still matches", () => {
+    const r = reconcileCash(
+      [deal("a@x.com", 100_000)],
+      [pay("a@x.com", 100_000), pay("extra@x.com", 4_900)],
+    );
+    expect(r.unbackedDeals).toHaveLength(0);
+    expect(r.unmatchedPaymentCents).toBe(4_900);
+  });
+});
