@@ -92,7 +92,7 @@ describe("platform roles", () => {
   });
 
   it("exposes rep-kind and member sub-type vocabularies", () => {
-    expect(REP_KIND_VALUES).toEqual(["setter", "closer", "dm_setter"]);
+    expect(REP_KIND_VALUES).toEqual(["setter", "closer", "dm_setter", "full_cycle"]);
     expect(new Set(REP_KIND_VALUES).size).toBe(REP_KINDS.length);
     expect(repKindLabel("dm_setter")).toBe("DM setter");
     expect(repKindLabel("mystery")).toBe("mystery");
@@ -205,6 +205,35 @@ describe("isSalesRole", () => {
     expect(isSalesRole({ role: "operator", roleKey: "admin", repKind: null })).toBe(
       false,
     );
+  });
+});
+
+describe("full-cycle sales rep", () => {
+  it("stores as a sales_rep with the full_cycle kind", () => {
+    expect(
+      memberRoleColumns({ platformRole: "sales_rep", repKind: "full_cycle" }),
+    ).toEqual({
+      role: "full_cycle",
+      roleKey: "sales_rep",
+      repKind: "full_cycle",
+    });
+  });
+
+  it("resolves a legacy row by job title alone", () => {
+    // A row written before role_key existed must still read as a sales rep.
+    expect(platformRoleOf({ role: "full_cycle", roleKey: null, repKind: null })).toBe(
+      "sales_rep",
+    );
+  });
+
+  it("displays as Sales Rep · Full Cycle", () => {
+    expect(
+      memberRoleLabel({
+        role: "full_cycle",
+        roleKey: "sales_rep",
+        repKind: "full_cycle",
+      }),
+    ).toBe("Sales Rep · Full Cycle");
   });
 });
 

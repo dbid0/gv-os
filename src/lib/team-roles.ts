@@ -12,6 +12,7 @@ export const TEAM_ROLES = [
   { value: "setter", label: "Setter" },
   { value: "closer", label: "Closer" },
   { value: "dm_setter", label: "DM setter" },
+  { value: "full_cycle", label: "Full cycle" },
 ] as const;
 
 export type TeamRole = (typeof TEAM_ROLES)[number]["value"];
@@ -91,6 +92,9 @@ export const REP_KINDS = [
   { value: "setter", label: "Setter" },
   { value: "closer", label: "Closer" },
   { value: "dm_setter", label: "DM setter" },
+  // One rep runs the whole cycle — sets AND closes. The Base 44 play's rep
+  // model: no setter/closer split, tracking through new-sale forms.
+  { value: "full_cycle", label: "Full Cycle" },
 ] as const;
 
 export type RepKind = (typeof REP_KINDS)[number]["value"];
@@ -133,7 +137,12 @@ export interface MemberRoleShape {
 export function platformRoleOf(m: MemberRoleShape): PlatformRole {
   if (m.roleKey && isPlatformRole(m.roleKey)) return m.roleKey;
   if (m.role === "manager") return "sales_manager";
-  if (m.role === "setter" || m.role === "closer" || m.role === "dm_setter") {
+  if (
+    m.role === "setter" ||
+    m.role === "closer" ||
+    m.role === "dm_setter" ||
+    m.role === "full_cycle"
+  ) {
     return "sales_rep";
   }
   if (m.role === "operator") return "admin";
