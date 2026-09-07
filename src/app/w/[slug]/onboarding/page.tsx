@@ -1,13 +1,20 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { CheckCircle2, Circle, CircleDashed } from "lucide-react";
 
 import { Panel } from "@/components/ui/panel";
 import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
-import { applications, clients, deals, integrations } from "@/db/schema/app";
+import {
+  applications,
+  clients,
+  clientTrackingRows,
+  deals,
+  integrations,
+} from "@/db/schema/app";
+import { currentSnapshot } from "@/lib/tracking/queries";
 import { listTeamspaceTodos } from "@/lib/workspace/queries";
 import { clientBySlug } from "@/lib/roster";
 import { cn } from "@/lib/utils";
@@ -47,7 +54,12 @@ export default async function WorkspaceOnboardingPage({
     .limit(1);
   const clientId = row?.id ?? null;
 
-  const [todos, connected, apps, closed] = await Promise.all([
+  // The sheet mirror is evidence too: an offer whose applications live on
+  // its tracking sheet has a live funnel, whatever the synced tables hold.
+  // Without this, the milestone said "0 applications" beside a funnel page
+  // proving hundreds.
+  const snapshot = clientId ? await currentSnapshot(clientId) : null;
+  const [todos, connected, apps, closed, mirror] = await Promise.all([
     clientId ? listTeamspaceTodos(clientId) : Promise.resolve([]),
     clientId
       ? db
@@ -69,7 +81,23 @@ export default async function WorkspaceOnboardingPage({
     clientId
       ? db.select({ n: count() }).from(deals).where(eq(deals.clientId, clientId))
       : Promise.resolve([{ n: 0 }]),
+    snapshot
+      ? db
+          .select({ tab: clientTrackingRows.tab, n: count() })
+          .from(clientTrackingRows)
+          .where(
+            and(
+              eq(clientTrackingRows.syncId, snapshot.syncId),
+              inArray(clientTrackingRows.tab, ["applications", "deals"]),
+            ),
+          )
+          .groupBy(clientTrackingRows.tab)
+      : Promise.resolve([] as { tab: string; n: number }[]),
   ]);
+  const mirrorN = (tab: string) => Number(mirror.find((m) => m.tab === tab)?.n ?? 0);
+  // Max, never a sum — the same person often exists in both records.
+  const appCount = Math.max(Number(apps[0]?.n ?? 0), mirrorN("applications"));
+  const dealCount = Math.max(Number(closed[0]?.n ?? 0), mirrorN("deals"));
 
   const done = todos.filter((t) => t.status === "Done").length;
   const inProgress = todos.filter((t) => t.status === "In progress").length;
@@ -85,14 +113,14 @@ export default async function WorkspaceOnboardingPage({
     {
       title: "Funnel live",
       detail: "The application has taken its first real submission",
-      done: (apps[0]?.n ?? 0) > 0,
-      value: `${apps[0]?.n ?? 0} applications`,
+      done: appCount > 0,
+      value: `${appCount} applications`,
     },
     {
       title: "First deal",
       detail: "A deal has been logged against this offer",
-      done: (closed[0]?.n ?? 0) > 0,
-      value: `${closed[0]?.n ?? 0} deals`,
+      done: dealCount > 0,
+      value: `${dealCount} deals`,
     },
   ];
 
