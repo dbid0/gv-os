@@ -365,6 +365,13 @@
       "when": 1788676063107,
       "tag": "0051_tracking_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1788739134430,
+      "tag": "0052_offer_model",
+      "breakpoints": true
     }
   ]
 }

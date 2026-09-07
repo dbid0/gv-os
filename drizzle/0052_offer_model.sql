@@ -1,0 +1,1 @@
+ALTER TABLE "app"."clients" ADD COLUMN "offer_model" text DEFAULT 'high_ticket' NOT NULL;

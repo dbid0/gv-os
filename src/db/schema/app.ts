@@ -75,6 +75,16 @@ export const clients = appSchema.table(
     /** This offer's tracking-sheet id — the Google Sheet whose `🤝 New Deals`
      * tab feeds the new-deal importer. Null = not connected yet. */
     trackingSheetId: text("tracking_sheet_id"),
+    /**
+     * What KIND of offer this is — see lib/clients/offer-model.
+     *
+     * high_ticket runs applications, calls, closers and end-of-call reports.
+     * base44 is sold without a call ever happening, so its tracking is the
+     * new-sale forms and nothing else. Showing an offer the surfaces it does
+     * not use renders a funnel permanently zero through the middle, which
+     * reads as a broken floor rather than a different shape of business.
+     */
+    offerModel: text("offer_model").notNull().default("high_ticket"),
 
     /**
      * Team commission defaults, by role, in basis points. Applied to a deal

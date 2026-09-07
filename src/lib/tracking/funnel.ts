@@ -70,19 +70,28 @@ export function stagesFor(lead: LeadSummary): Set<FunnelStageKey> {
   return reached;
 }
 
-export function buildOfferFunnel(leads: LeadSummary[]): OfferFunnel {
+export function buildOfferFunnel(
+  leads: LeadSummary[],
+  /**
+   * The stages THIS offer has. A Base 44 offer never books a call, so showing
+   * "call booked" and "call held" at zero would report a 0% show rate on a
+   * business that does not work that way.
+   */
+  stageKeys: FunnelStageKey[] = ORDER,
+): OfferFunnel {
   const reached = leads.map(stagesFor);
+  const ORDER_FOR_OFFER = ORDER.filter((k) => stageKeys.includes(k));
 
-  const stages: FunnelStage[] = ORDER.map((key) => ({
+  const stages: FunnelStage[] = ORDER_FOR_OFFER.map((key) => ({
     key,
     label: STAGE_LABELS[key],
     leads: reached.filter((r) => r.has(key)).length,
   }));
 
   const steps: FunnelStep[] = [];
-  for (let i = 0; i < ORDER.length - 1; i += 1) {
-    const from = ORDER[i];
-    const to = ORDER[i + 1];
+  for (let i = 0; i < ORDER_FOR_OFFER.length - 1; i += 1) {
+    const from = ORDER_FOR_OFFER[i];
+    const to = ORDER_FOR_OFFER[i + 1];
     const eligible = reached.filter((r) => r.has(from)).length;
     const advanced = reached.filter((r) => r.has(from) && r.has(to)).length;
     steps.push({
@@ -103,11 +112,11 @@ export function buildOfferFunnel(leads: LeadSummary[]): OfferFunnel {
   // hasn't progressed yet (applied, booked, no further) is NOT a skip.
   const skipped = reached.filter((r) => {
     let highest = -1;
-    ORDER.forEach((s, i) => {
+    ORDER_FOR_OFFER.forEach((s, i) => {
       if (r.has(s)) highest = i;
     });
     if (highest === -1) return false;
-    return ORDER.slice(0, highest + 1).some((s) => !r.has(s));
+    return ORDER_FOR_OFFER.slice(0, highest + 1).some((s) => !r.has(s));
   }).length;
 
   return { stages, steps, skipped, totalLeads: leads.length };

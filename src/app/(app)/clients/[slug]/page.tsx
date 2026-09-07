@@ -14,6 +14,7 @@ import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { AdSpendField } from "@/components/clients/ad-spend-field";
 import { CashAuthorityField } from "@/components/clients/cash-authority-field";
 import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
+import { OfferModelField } from "@/components/clients/offer-model-field";
 import { TrackingSheetField } from "@/components/clients/tracking-sheet-field";
 import { PageHeader } from "@/components/shell/page-header";
 import { TeamConfig } from "@/components/sales/team-config";
@@ -303,6 +304,7 @@ export default async function ClientPage({
               cash and drives rep commissions). Keys seal on save.
             </p>
           </div>
+          <OfferModelField slug={slug} model={team.offerModel ?? null} />
           <TrackingSheetField slug={slug} sheetId={team.trackingSheetId} />
           <CashAuthorityField
             slug={slug}

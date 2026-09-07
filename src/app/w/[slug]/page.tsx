@@ -15,6 +15,7 @@ import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
+import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
 import { buildOfferFunnel } from "@/lib/tracking/funnel";
 import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { getClientReport } from "@/lib/clients/report";
@@ -72,17 +73,20 @@ export default async function WorkspacePage({
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
-  const [report, drive, { rows: backlog }, visibility, snapshot] = await Promise.all([
+  const [report, drive, { rows: backlog }, visibility, shape] = await Promise.all([
     getClientReport(slug, client.name),
     getClientDriveAssets(slug),
     listTransactions({}),
     portalVisibility(slug),
-    clientIdForFunnel(slug),
+    offerShapeFor(slug),
   ]);
   // The offer's own funnel, from its tracking sheet. Absent until the sheet is
   // linked and synced — no sheet, no funnel, rather than an empty chart.
-  const funnel = snapshot
-    ? buildOfferFunnel(await leadsForClient(snapshot.syncId))
+  const funnel = shape.snapshot
+    ? buildOfferFunnel(
+        await leadsForClient(shape.snapshot.syncId),
+        stagesForModel(shape.model),
+      )
     : null;
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
@@ -288,13 +292,17 @@ async function portalVisibility(slug: string): Promise<Record<string, boolean>> 
   }
 }
 
-/** The current tracking snapshot for a slug, or null when there is none. */
-async function clientIdForFunnel(slug: string) {
+/** The offer's current snapshot and its model — the funnel needs both. */
+async function offerShapeFor(slug: string) {
   const db = getDb();
   const [row] = await db
-    .select({ id: clients.id })
+    .select({ id: clients.id, offerModel: clients.offerModel })
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
-  return row ? currentSnapshot(row.id) : null;
+  if (!row) return { snapshot: null, model: offerModelOf(null) };
+  return {
+    snapshot: await currentSnapshot(row.id),
+    model: offerModelOf(row.offerModel),
+  };
 }
