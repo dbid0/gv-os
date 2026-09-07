@@ -220,9 +220,12 @@ export function HomeHeadline({
                 <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
                   {fmtUsd(s.cashCents)}
                 </p>
+                {/* Same vocabulary as the headline above — "still due", the
+                    gap itself. "of $X booked" made the reader do the math and
+                    left "booked" unexplained. */}
                 {s.revenueCents > s.cashCents && (
                   <p className="text-faint text-[11px]">
-                    of {fmtUsd(s.revenueCents)} booked
+                    {fmtUsd(s.revenueCents - s.cashCents)} still due
                   </p>
                 )}
               </Link>
