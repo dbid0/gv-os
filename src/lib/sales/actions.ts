@@ -142,7 +142,7 @@ export async function createTeam(raw: z.input<typeof teamInput>) {
 const repInput = z.object({
   clientId: z.string().uuid(),
   name: z.string().min(1, "A rep needs a name."),
-  role: z.enum(["closer", "setter", "dm_setter", "manager"]),
+  role: z.enum(["closer", "setter", "dm_setter", "full_cycle", "manager"]),
   commissionPct: z.number().min(0).max(100).optional(),
   basePay: z.string().optional(),
   topLineSkimPct: z.number().min(0).max(100).optional(),
@@ -173,7 +173,7 @@ export async function createRep(raw: z.input<typeof repInput>) {
 
 const splitInput = z.object({
   repId: z.string().uuid(),
-  role: z.enum(["closer", "setter", "dm_setter", "manager"]),
+  role: z.enum(["closer", "setter", "dm_setter", "full_cycle", "manager"]),
   ratePct: z.number().min(0).max(100),
   bonus: z.string().optional(),
 });
@@ -336,7 +336,7 @@ const calcFieldInput = z.object({
 const eodTemplateInput = z.object({
   clientId: z.string().uuid(),
   name: z.string().min(1, "A template needs a name."),
-  role: z.enum(["closer", "setter", "dm_setter", "manager"]),
+  role: z.enum(["closer", "setter", "dm_setter", "full_cycle", "manager"]),
   cadence: z.enum(["eod", "bod"]).default("eod"),
   baseFields: z.array(z.string()).default([]),
   customFields: z.array(customFieldInput).default([]),
@@ -465,7 +465,9 @@ export async function submitEod(raw: z.input<typeof submitEodInput>) {
     // the same way RepVision turns a closer's EOD into a deal. The cash lives in
     // the ledger, never on the deal, so the derived numbers can't drift.
     const cashCents =
-      !input.dayOff && rep.role === "closer" && input.cashCollected?.trim()
+      !input.dayOff &&
+      (rep.role === "closer" || rep.role === "full_cycle") &&
+      input.cashCollected?.trim()
         ? fromDollars(input.cashCollected)
         : 0;
     if (cashCents > 0) {

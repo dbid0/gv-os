@@ -29,7 +29,13 @@ export function baseFieldLabel(key: string): string {
   return BASE_EOD_FIELDS.find((f) => f.key === key)?.label ?? key;
 }
 
-export const EOD_ROLES = ["closer", "setter", "dm_setter", "manager"] as const;
+export const EOD_ROLES = [
+  "closer",
+  "setter",
+  "dm_setter",
+  "full_cycle",
+  "manager",
+] as const;
 export type EodRole = (typeof EOD_ROLES)[number];
 
 // GV runs only two cadences: the end-of-day report and the beginning-of-day
@@ -46,5 +52,6 @@ export const ROLE_LABEL: Record<string, string> = {
   closer: "Closer",
   setter: "Setter",
   dm_setter: "DM Setter",
+  full_cycle: "Full Cycle",
   manager: "Manager",
 };

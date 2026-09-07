@@ -47,6 +47,24 @@ export function defaultTemplateForRole(role: string): DefaultTemplate {
         baseFields: ["dials", "connects", "sets_booked", "follow_up_calls"],
         calcFields: [pct("set_rate", "Set rate", "sets_booked", "dials")],
       };
+    case "full_cycle":
+      // The whole cycle in one seat: prospecting AND the close, so the form
+      // is the union of the setter's and the closer's days.
+      return {
+        baseFields: [
+          "dials",
+          "connects",
+          "sets_booked",
+          "calls_taken",
+          "shows",
+          "no_shows",
+          "follow_up_calls",
+        ],
+        calcFields: [
+          pct("set_rate", "Set rate", "sets_booked", "dials"),
+          pct("show_rate", "Show rate", "shows", "calls_taken"),
+        ],
+      };
     case "dm_setter":
       return {
         baseFields: ["dms_sent", "connects", "sets_booked", "follow_up_calls"],

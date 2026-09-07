@@ -21,7 +21,7 @@ export const ROLES = [
 export type Role = (typeof ROLES)[number];
 
 /** Sales reps subdivide; the sub-kind never widens route access. */
-export type RepKind = "setter" | "closer";
+export type RepKind = "setter" | "closer" | "full_cycle";
 
 /**
  * Route prefixes each role may open. Checked by prefix on the pathname, most
