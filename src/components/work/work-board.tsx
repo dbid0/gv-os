@@ -94,6 +94,11 @@ export function WorkBoard({
   const [clientId, setClientId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [due, setDue] = useState("");
+  const [cadence, setCadence] = useState("weekly");
+  // How the board is run: daily standing work, weekly pushes, monthly plays.
+  const [cadenceTab, setCadenceTab] = useState<"all" | "daily" | "weekly" | "monthly">(
+    "all",
+  );
 
   const act = (fn: () => Promise<unknown>, onOk?: () => void) =>
     start(async () => {
@@ -119,6 +124,7 @@ export function WorkBoard({
           clientId: clientId || null,
           assigneeId: assigneeId || null,
           dueDate: due || null,
+          cadence: cadence as "daily" | "weekly" | "monthly",
         }),
       () => {
         setTitle("");
@@ -131,14 +137,20 @@ export function WorkBoard({
   // Group by client (null clientId → agency), preserving the roster order and
   // always showing an offer even with no open work — that's the "how's it
   // going per client" read.
+  const visible = useMemo(
+    () =>
+      cadenceTab === "all" ? items : items.filter((i) => i.cadence === cadenceTab),
+    [items, cadenceTab],
+  );
+
   const byClient = useMemo(() => {
     const map = new Map<string, WorkItem[]>();
-    for (const it of items) {
+    for (const it of visible) {
       const key = it.clientId ?? "agency";
       map.set(key, [...(map.get(key) ?? []), it]);
     }
     return map;
-  }, [items]);
+  }, [visible]);
 
   const groups: { id: string; name: string; accent: string; items: WorkItem[] }[] = [
     ...clients.map((c) => ({
@@ -153,17 +165,49 @@ export function WorkBoard({
       accent: "var(--brand)",
       items: byClient.get("agency") ?? [],
     },
-  ].filter((g) => g.items.length > 0 || g.id !== "agency");
+  ].filter((g) =>
+    // On "all", every offer shows even when quiet — that's the per-client
+    // health read. On a cadence tab, an empty group is just noise.
+    cadenceTab === "all" ? g.items.length > 0 || g.id !== "agency" : g.items.length > 0,
+  );
 
-  const open = items.filter((i) => i.status !== "completed").length;
-  const inProgress = items.filter((i) => i.status === "in_progress").length;
-  const done = items.filter((i) => i.status === "completed").length;
+  const open = visible.filter((i) => i.status !== "completed").length;
+  const inProgress = visible.filter((i) => i.status === "in_progress").length;
+  const done = visible.filter((i) => i.status === "completed").length;
+  const cadenceCount = (c: string) => items.filter((i) => i.cadence === c).length;
 
   const count = (list: WorkItem[], status: string) =>
     list.filter((i) => i.status === status).length;
 
   return (
     <div className="space-y-6">
+      {/* The operating rhythm: daily tasks, weekly tasks, monthly tasks. */}
+      <div className="bg-secondary/50 inline-flex items-center gap-1 rounded-lg border p-1">
+        {(
+          [
+            ["all", "All", items.length],
+            ["daily", "Daily", cadenceCount("daily")],
+            ["weekly", "Weekly", cadenceCount("weekly")],
+            ["monthly", "Monthly", cadenceCount("monthly")],
+          ] as const
+        ).map(([key, label, n]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setCadenceTab(key)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm transition-colors",
+              cadenceTab === key
+                ? "bg-card text-foreground border shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+            <span className="text-faint ml-1.5 text-[11px] tabular-nums">{n}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Panel>
           <p className="text-muted-foreground text-xs">Open work</p>
@@ -218,6 +262,18 @@ export function WorkBoard({
                   {m.name}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-muted-foreground text-xs font-medium">Cadence</span>
+            <select
+              className={cn(selectClass, "w-28")}
+              value={cadence}
+              onChange={(e) => setCadence(e.target.value)}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
             </select>
           </label>
           <label className="space-y-1.5">
@@ -279,6 +335,16 @@ export function WorkBoard({
                         )}
                       >
                         {it.title}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase",
+                          it.cadence === "daily" && "text-brand border-brand/30",
+                          it.cadence === "monthly" && "text-warning border-warning/30",
+                          it.cadence === "weekly" && "text-faint",
+                        )}
+                      >
+                        {it.cadence}
                       </span>
                       {it.dueDate && (
                         <span className="text-faint text-[11px] whitespace-nowrap">

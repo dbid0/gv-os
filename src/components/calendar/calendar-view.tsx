@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { monthGrid, monthLabel, stepMonth } from "@/lib/calendar/month-grid";
+import { groupByDay } from "@/lib/calendar/expand";
 import type { CalendarItem } from "@/lib/calendar/queries";
 import { clientBySlug } from "@/lib/roster";
 import { cn } from "@/lib/utils";
@@ -90,13 +91,12 @@ export function CalendarView({
   const isThisMonth = year === ty && month === tm;
 
   const tasksByDate = useMemo(() => {
-    const m = new Map<string, CalendarItem[]>();
-    for (const it of items) {
-      if (!it.dueDate || it.dueDate.slice(0, 7) !== monthKey) continue;
-      m.set(it.dueDate, [...(m.get(it.dueDate) ?? []), it]);
-    }
-    return m;
-  }, [items, monthKey]);
+    // Dated items land on their day; undated ones land on their cadence's
+    // rhythm (daily / Mondays / the 1st) — the work board and the calendar
+    // stay in sync without anyone scheduling standing tasks by hand.
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return groupByDay(items, `${monthKey}-01`, `${monthKey}-${pad(last)}`);
+  }, [items, monthKey, year, month]);
 
   const weeks = useMemo(
     () => monthGrid(year, month, todayKey),
