@@ -83,9 +83,12 @@ function StatusToggle({ member }: { member: TeamMemberRow }) {
 export function TeamRoster({
   members,
   teams,
+  canManageAllRoles = true,
 }: {
   members: TeamMemberRow[];
   teams: TeamOption[];
+  /** False for a sales manager: they add sales reps, nothing else. */
+  canManageAllRoles?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -202,7 +205,9 @@ export function TeamRoster({
                 What they do
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
-                {PLATFORM_ROLES.map((r) => {
+                {PLATFORM_ROLES.filter(
+                  (r) => canManageAllRoles || r.value === "sales_rep",
+                ).map((r) => {
                   const on = platformRole === r.value;
                   return (
                     <button

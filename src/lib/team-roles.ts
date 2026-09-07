@@ -209,3 +209,31 @@ export function memberRoleColumns(form: MemberRoleForm): MemberRoleColumns {
       return { role: "operator", roleKey: "admin", repKind: null };
   }
 }
+
+// ------------------------------------------------------------- Roster writing
+//
+// Who may write the roster, per role. Pure so the server action and the tests
+// speak the same rule; the action supplies the writer's lane and the target.
+
+export interface RosterWriteTarget {
+  platformRole: string;
+  clientId: string | null;
+}
+
+/**
+ * A sales manager's remit: SALES REPS, in their own lane. A lane-less
+ * (agency-wide) manager covers every offer. Throws with a human message the
+ * form can surface verbatim.
+ */
+export function assertManagerMayWrite(
+  writer: { role: "admin" | "sales_manager"; clientId: string | null },
+  target: RosterWriteTarget,
+): void {
+  if (writer.role === "admin") return;
+  if (target.platformRole !== "sales_rep") {
+    throw new Error("A sales manager can only manage sales reps.");
+  }
+  if (writer.clientId !== null && target.clientId !== writer.clientId) {
+    throw new Error("You can only manage reps on your own offer.");
+  }
+}

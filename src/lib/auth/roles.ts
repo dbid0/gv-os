@@ -32,6 +32,9 @@ const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
   sales_manager: [
     "/home/manager",
     "/sales",
+    // Managers staff their own floor: the roster page, where the server
+    // actions cap them to sales reps in their lane.
+    "/team",
     "/assistant",
     "/notifications",
     "/profile",
