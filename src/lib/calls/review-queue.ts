@@ -136,12 +136,21 @@ async function eocStatusByRecordingUrl(): Promise<Map<string, string>> {
   return out;
 }
 
-/** The newest snapshot id for each client — what every read should use. */
+/**
+ * The newest SHEET snapshot id for each client.
+ *
+ * The closer's end-of-call status is a sheet fact, so only sheet snapshots
+ * may answer for it. Without the source filter, the first processor snapshot
+ * written for a client (which has no EOC rows) would shadow the sheet as
+ * "newest", every call's result would read unknown, and won calls would
+ * start escalating for review.
+ */
 async function currentSyncIds(): Promise<string[]> {
   const db = getDb();
   const rows = await db
     .select({ id: clientTrackingSyncs.id, clientId: clientTrackingSyncs.clientId })
     .from(clientTrackingSyncs)
+    .where(eq(clientTrackingSyncs.source, "sheet"))
     .orderBy(desc(clientTrackingSyncs.createdAt));
   const seen = new Set<string>();
   const ids: string[] = [];
