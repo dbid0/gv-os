@@ -19,7 +19,14 @@ import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientBySlug } from "@/lib/roster";
 import { possessive } from "@/lib/text";
-import { cashRowsForClient, currentSnapshot, rowsForTab } from "@/lib/tracking/queries";
+import {
+  cashRowsForClient,
+  currentSnapshot,
+  latestSnapshotsBySource,
+  rowsForTab,
+} from "@/lib/tracking/queries";
+import { paymentSourceGaps } from "@/lib/tracking/sources";
+import { totalPayments } from "@/lib/tracking/refunds";
 import { scanWarnings } from "@/lib/tracking/scan";
 
 export const dynamic = "force-dynamic";
@@ -121,6 +128,30 @@ export default async function WorkspaceTrackingPage({
   const cash = await cashRowsForClient(snapshot.syncId);
   const reconciliation = reconcileCash(cash.deals, cash.payments);
 
+  // Every system that has ever written a snapshot for this offer, with its
+  // net payment figure — the buried precedence layer, made visible. The
+  // ownership table (not the bigger number) decides whose record wins.
+  const sourceSnapshots = await latestSnapshotsBySource(row.id);
+  const sourceSummaries = await Promise.all(
+    sourceSnapshots.map(async ({ source, snapshot: snap }) => {
+      const { payments } = await cashRowsForClient(snap.syncId);
+      const totals = totalPayments(
+        payments.map((p) => ({ cashCents: p.cashCents, status: p.status })),
+      );
+      return {
+        source,
+        syncedAt: snap.syncedAt,
+        rowCount: snap.rowCount,
+        paymentsNetCents: payments.length > 0 ? totals.netCents : null,
+      };
+    }),
+  );
+  const gaps = paymentSourceGaps(
+    sourceSummaries
+      .filter((x) => x.paymentsNetCents !== null)
+      .map((x) => ({ source: x.source, netCents: x.paymentsNetCents as number })),
+  );
+
   const [recent, reads, counts] = await Promise.all([
     rowsForTab(snapshot.syncId, "eoc", 8),
     callReadsForClient(row.id, 12),
@@ -142,6 +173,65 @@ export default async function WorkspaceTrackingPage({
         <Kpi label="EOC reports" value={eoc ? String(eoc.rows) : "—"} />
         <Kpi label="With a recording" value={eoc ? String(eoc.withRecording) : "—"} />
       </div>
+
+      <Panel
+        title="Sources"
+        aside={<span className="text-faint text-xs">who supplies what</span>}
+      >
+        <div className="gv-rows space-y-1.5">
+          {sourceSummaries.map((src) => (
+            <div
+              key={src.source}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-2.5 text-sm"
+            >
+              <span className="font-medium capitalize">{src.source}</span>
+              <span className="text-faint text-xs">
+                synced{" "}
+                {src.syncedAt.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                · {src.rowCount.toLocaleString("en-US")} rows
+              </span>
+              <span className="numeric ml-auto text-xs tabular-nums">
+                {src.paymentsNetCents === null
+                  ? "no payment rows"
+                  : `payments net $${(src.paymentsNetCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+              </span>
+            </div>
+          ))}
+        </div>
+        {gaps && gaps.length > 0 ? (
+          <div className="mt-3 space-y-1">
+            {gaps.map((g) => (
+              <p key={g.other} className="text-warning text-xs">
+                <span className="capitalize">{g.authority}</span>&apos;s own record
+                differs from the <span className="capitalize">{g.other}</span> by{" "}
+                <span className="numeric font-medium">
+                  $
+                  {(Math.abs(g.gapCents) / 100).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>{" "}
+                on payments —{" "}
+                {g.gapCents > 0
+                  ? "money the lesser record is missing"
+                  : "money only the lesser record claims"}
+                . The processor&apos;s record wins money facts.
+              </p>
+            ))}
+          </div>
+        ) : (
+          sourceSummaries.length === 1 && (
+            <p className="text-faint mt-3 text-xs">
+              Only the {sourceSummaries[0].source} reports today. Connect this
+              offer&apos;s payment processor in Integrations and its own record appears
+              beside the sheet&apos;s — disagreements get named here, and the processor
+              wins money facts.
+            </p>
+          )
+        )}
+      </Panel>
 
       {(reconciliation.dealsCents > 0 || reconciliation.processorCents > 0) && (
         <Panel
