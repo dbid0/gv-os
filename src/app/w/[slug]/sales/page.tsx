@@ -3,7 +3,8 @@ import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
-import { Kpi, Money } from "@/components/ui/metric";
+import { Money } from "@/components/ui/metric";
+import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { applications, clients, reps as repsTable } from "@/db/schema/app";
@@ -105,20 +106,37 @@ export default async function WorkspaceSalesPage({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
+        <StatCard
           label="Cash collected — all time"
           value={report ? <Money amount={cents(report.mirror.cashCents)} /> : "—"}
-          tone="brand"
+          hint="the mirror's figure"
+          accent={client.accent}
+          tone="success"
         />
-        {/* The mirror's own count, not the deals table's. This KPI sits
+        {/* The mirror's own count, not the deals table's. This card sits
             beside "Cash collected — all time", which IS the mirror, and the
             dashboard reports the same pair — a count from one source next to
             cash from another, under one label, is two definitions of the same
             word on two tabs of the same offer. Logged deals still appear in
             the list below, where they are labelled as such. */}
-        <Kpi label="Deals" value={report ? String(report.mirror.deals) : "—"} />
-        <Kpi label="Show rate" value={pct(stats.showRate)} />
-        <Kpi label="Close rate" value={pct(stats.closeRate)} />
+        <StatCard
+          label="Deals"
+          value={report ? String(report.mirror.deals) : "—"}
+          hint="all time, same source as the cash"
+          accent={client.accent}
+        />
+        <StatCard
+          label="Show rate"
+          value={pct(stats.showRate)}
+          hint="from logged calls"
+          accent={client.accent}
+        />
+        <StatCard
+          label="Close rate"
+          value={pct(stats.closeRate)}
+          hint="closes ÷ calls held"
+          accent={client.accent}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
