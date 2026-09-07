@@ -1,3 +1,4 @@
+import { displayName } from "@/lib/text";
 import { isFailureNote } from "@/lib/integrations/sync-note";
 
 /**
@@ -319,7 +320,7 @@ export function callReviewRule(calls: CallReviewState[]): Candidate[] {
   return calls.map((c) => ({
     kind: "call_review",
     severity: c.priority >= 10 ? ("warning" as const) : ("info" as const),
-    title: `${c.rep ?? "A rep"}: call needs a review`,
+    title: `${c.rep ? displayName(c.rep) : "A rep"}: call needs a review`,
     body: c.reason,
     clientId: c.clientId,
     dedupeKey: `call-review:${c.recordingId}`,
