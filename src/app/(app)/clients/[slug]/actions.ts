@@ -8,6 +8,7 @@ import { clientAdSpend, clients } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
+import { isOfferModel } from "@/lib/clients/offer-model";
 import { parseTargetDollars } from "@/lib/clients/targets";
 import { driveFolderIdValid } from "@/lib/google/drive-kind";
 import {
@@ -229,6 +230,29 @@ export async function saveMonthlyTarget(slug: string, rawDollars: string) {
   if (updated.length === 0) {
     throw new Error("No client row for this slug yet — sync creates it.");
   }
+  revalidatePath(`/clients/${slug}`);
+  revalidatePath(`/w/${slug}`);
+  return { saved: true };
+}
+
+/**
+ * Set what KIND of offer this is.
+ *
+ * The choice decides which surfaces the offer shows at all: a Base 44 offer is
+ * sold without a call, so its funnel runs applied → closed → paid and the call
+ * tabs are not part of it. Showing those at zero would report a floor doing
+ * nothing on a business that never books a call.
+ */
+export async function saveOfferModel(slug: string, raw: string) {
+  await requireUser();
+  if (!isOfferModel(raw)) throw new Error("Unknown offer model.");
+  const db = getDb();
+  const updated = await db
+    .update(clients)
+    .set({ offerModel: raw })
+    .where(eq(clients.slug, slug))
+    .returning({ id: clients.id });
+  if (updated.length === 0) throw new Error("No client row for this slug yet.");
   revalidatePath(`/clients/${slug}`);
   revalidatePath(`/w/${slug}`);
   return { saved: true };

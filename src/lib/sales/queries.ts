@@ -55,6 +55,8 @@ export interface TeamConfig {
   summary: string | null;
   cashAuthority: string;
   trackingSheetId: string | null;
+  /** What kind of offer this is — see lib/clients/offer-model. */
+  offerModel: string | null;
   defaultCloserBps: number | null;
   defaultSetterBps: number | null;
   defaultDmSetterBps: number | null;
@@ -93,6 +95,7 @@ export async function getTeamBySlug(slug: string): Promise<TeamConfig | null> {
     summary: c.summary,
     cashAuthority: c.cashAuthority,
     trackingSheetId: c.trackingSheetId,
+    offerModel: c.offerModel,
     slug: c.slug,
     defaultCloserBps: c.defaultCloserBps,
     defaultSetterBps: c.defaultSetterBps,

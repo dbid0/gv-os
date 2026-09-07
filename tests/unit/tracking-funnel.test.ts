@@ -117,3 +117,44 @@ describe("formatRate", () => {
     expect(formatRate(1)).toBe("100%");
   });
 });
+
+describe("an offer's funnel follows its own shape", () => {
+  it("a Base 44 funnel goes applied → closed → paid, with no call stages", () => {
+    // The offer never books a call. Showing those stages at zero would report
+    // a 0% show rate on a business that does not run calls.
+    const f = buildOfferFunnel(
+      [lead({ applied: true, paymentsCents: 4_000 })],
+      ["applied", "closed", "paid"],
+    );
+    expect(f.stages.map((s) => s.key)).toEqual(["applied", "closed", "paid"]);
+    expect(f.steps.map((s) => `${s.from}->${s.to}`)).toEqual([
+      "applied->closed",
+      "closed->paid",
+    ]);
+  });
+
+  it("does not count a Base 44 buyer as having skipped the calls they never had", () => {
+    // Applied then paid is the whole journey on that offer, not a gap.
+    const f = buildOfferFunnel(
+      [lead({ applied: true, paymentsCents: 4_000 })],
+      ["applied", "closed", "paid"],
+    );
+    expect(f.skipped).toBe(1); // skipped "closed", which IS a real gap
+    const clean = buildOfferFunnel(
+      [lead({ applied: true, deals: 1, paymentsCents: 4_000 })],
+      ["applied", "closed", "paid"],
+    );
+    expect(clean.skipped).toBe(0);
+  });
+
+  it("still gives a high-ticket offer every stage by default", () => {
+    const f = buildOfferFunnel([lead({ applied: true })]);
+    expect(f.stages.map((s) => s.key)).toEqual([
+      "applied",
+      "booked",
+      "held",
+      "closed",
+      "paid",
+    ]);
+  });
+});
