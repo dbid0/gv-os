@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertManagerMayWrite,
   MEMBER_SUBTYPES,
   MEMBER_SUBTYPE_VALUES,
   PLATFORM_ROLES,
@@ -289,5 +290,50 @@ describe("dm_setter is a known job title", () => {
   it("labels and ranks it like the other roles", () => {
     expect(roleLabel("dm_setter")).toBe("DM setter");
     expect(roleRank("dm_setter")).toBeLessThan(TEAM_ROLES.length);
+  });
+});
+
+describe("assertManagerMayWrite", () => {
+  const laneManager = { role: "sales_manager" as const, clientId: "grid" };
+  const agencyManager = { role: "sales_manager" as const, clientId: null };
+  const admin = { role: "admin" as const, clientId: null };
+
+  it("admin writes anything", () => {
+    expect(() =>
+      assertManagerMayWrite(admin, { platformRole: "admin", clientId: null }),
+    ).not.toThrow();
+  });
+
+  it("a manager may staff their own lane with reps", () => {
+    expect(() =>
+      assertManagerMayWrite(laneManager, {
+        platformRole: "sales_rep",
+        clientId: "grid",
+      }),
+    ).not.toThrow();
+  });
+
+  it("a manager cannot mint an admin — the escalation this closes", () => {
+    expect(() =>
+      assertManagerMayWrite(laneManager, { platformRole: "admin", clientId: "grid" }),
+    ).toThrow(/only manage sales reps/);
+  });
+
+  it("a manager cannot reach into another offer's lane", () => {
+    expect(() =>
+      assertManagerMayWrite(laneManager, {
+        platformRole: "sales_rep",
+        clientId: "vault",
+      }),
+    ).toThrow(/your own offer/);
+  });
+
+  it("an agency-wide manager covers every lane", () => {
+    expect(() =>
+      assertManagerMayWrite(agencyManager, {
+        platformRole: "sales_rep",
+        clientId: "vault",
+      }),
+    ).not.toThrow();
   });
 });

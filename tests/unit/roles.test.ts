@@ -137,3 +137,31 @@ describe("client preview traps every route (why /exit-preview exists)", () => {
     expect(guardTarget("admin", "/w/the-grid", null)).toBeNull();
   });
 });
+
+describe("route denies inside granted sections", () => {
+  it("a rep is granted /sales but NOT its admin corners", () => {
+    expect(canAccessRoute("sales_rep", "/sales")).toBe(true);
+    expect(canAccessRoute("sales_rep", "/sales/deals")).toBe(true);
+    expect(canAccessRoute("sales_rep", "/sales/leaderboard")).toBe(true);
+    for (const admin_only of [
+      "/sales/templates",
+      "/sales/call-reviews",
+      "/sales/quotas",
+      "/sales/teams/abc/config",
+      "/sales/cockpit",
+      "/sales/pipeline",
+    ]) {
+      expect(canAccessRoute("sales_rep", admin_only)).toBe(false);
+    }
+  });
+
+  it("a manager runs the floor but does not own the template library", () => {
+    expect(canAccessRoute("sales_manager", "/sales/call-reviews")).toBe(true);
+    expect(canAccessRoute("sales_manager", "/sales/quotas")).toBe(true);
+    expect(canAccessRoute("sales_manager", "/sales/templates")).toBe(false);
+  });
+
+  it("admin passes everything, denies included", () => {
+    expect(canAccessRoute("admin", "/sales/templates")).toBe(true);
+  });
+});

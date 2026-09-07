@@ -32,6 +32,9 @@ const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
   sales_manager: [
     "/home/manager",
     "/sales",
+    // Managers staff their own floor: the roster page, where the server
+    // actions cap them to sales reps in their lane.
+    "/team",
     "/assistant",
     "/notifications",
     "/profile",
@@ -47,9 +50,31 @@ const ROUTE_GRANTS: Record<Exclude<Role, "admin">, string[]> = {
 /** Where a denied navigation lands: every role's safe home. */
 export const ROLE_HOME = "/dashboard";
 
+/**
+ * Admin-side corners inside an otherwise granted section. A rep is granted
+ * /sales for their own numbers, but Templates, the review inbox, quotas and
+ * the org views are the manager's/admin's command center, not theirs.
+ */
+const ROUTE_DENIES: Partial<Record<Exclude<Role, "admin">, string[]>> = {
+  sales_rep: [
+    "/sales/templates",
+    "/sales/call-reviews",
+    "/sales/quotas",
+    "/sales/teams",
+    "/sales/cockpit",
+    "/sales/pipeline",
+  ],
+  // Managers run the floor but don't own the template library.
+  sales_manager: ["/sales/templates"],
+};
+
 export function canAccessRoute(role: Role, pathname: string): boolean {
   if (role === "admin") return true;
   const path = pathname.split("?")[0];
+  const denied = (ROUTE_DENIES[role] ?? []).some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+  if (denied) return false;
   return ROUTE_GRANTS[role].some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );

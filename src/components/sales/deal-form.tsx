@@ -137,21 +137,36 @@ export function DealForm({ teams, reps }: { teams: TeamOption[]; reps: RepOption
       <form onSubmit={submit} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Team">
-            <select
-              className={selectClass}
-              value={f.clientId}
-              onChange={(e) => {
-                setF({ ...f, clientId: e.target.value, closingRepId: "" });
-                setSplits([{ repId: "", role: "closer", ratePct: "" }]);
-              }}
-            >
-              {teams.length === 0 && <option value="">— add a team first —</option>}
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            {teams.length === 0 ? (
+              // A rep with no lane yet. "Add a team first" is admin language —
+              // they can't add teams; their manager assigns them.
+              <p className="border-input text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+                You&apos;re not assigned to an offer yet — ask your manager to add you to
+                one.
+              </p>
+            ) : teams.length === 1 ? (
+              // One lane — the rep's own offer. A picker with one option reads
+              // as a broken control; name the book they're logging into.
+              <p className="border-input bg-secondary/40 text-foreground rounded-md border px-3 py-2 text-sm">
+                {teams[0].name}
+              </p>
+            ) : (
+              <select
+                className={selectClass}
+                value={f.clientId}
+                onChange={(e) => {
+                  setF({ ...f, clientId: e.target.value, closingRepId: "" });
+                  setSplits([{ repId: "", role: "closer", ratePct: "" }]);
+                }}
+              >
+                {teams.length === 0 && <option value="">— add a team first —</option>}
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </Field>
           <Field label="Customer">
             <Input
