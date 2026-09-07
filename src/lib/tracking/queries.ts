@@ -1,3 +1,4 @@
+import { dedupePaymentRows } from "@/lib/tracking/payment-dedupe";
 import "server-only";
 
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
@@ -236,15 +237,15 @@ export async function cashRowsForClient(syncId: string) {
         program: r.payload?.["Program Sold"] ?? null,
         occurredAt: r.occurredAt,
       })),
-    payments: rows
-      .filter((r) => r.tab === "payments")
-      .map((r) => ({
-        email: r.email,
-        cashCents: r.cashCents,
-        processor: r.payload?.["Processor"] ?? null,
-        // The processor's own word for what happened — succeeded, refunded,
-        // failed. Without it a refunded charge counts as cash collected.
-        status: r.status ?? r.payload?.["Status"] ?? null,
-      })),
+    // Duplicate transaction ids collapse to one row — a hand-kept log
+    // repeating a charge must not double the month.
+    payments: dedupePaymentRows(rows.filter((r) => r.tab === "payments")).map((r) => ({
+      email: r.email,
+      cashCents: r.cashCents,
+      processor: r.payload?.["Processor"] ?? null,
+      // The processor's own word for what happened — succeeded, refunded,
+      // failed. Without it a refunded charge counts as cash collected.
+      status: r.status ?? r.payload?.["Status"] ?? null,
+    })),
   };
 }

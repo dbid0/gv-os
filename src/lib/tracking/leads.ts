@@ -1,3 +1,5 @@
+import { dedupePaymentRows } from "@/lib/tracking/payment-dedupe";
+import { totalPayments } from "@/lib/tracking/refunds";
 import type { TrackingTab } from "@/lib/tracking/tabs";
 
 /**
@@ -174,9 +176,14 @@ export function buildLeadSummaries(rows: LeadEventInput[]): LeadSummary[] {
       eocReports: events.filter((e) => e.tab === "eoc").length,
       recordings: events.filter((e) => e.tab === "eoc" && e.recordingUrl).length,
       deals: events.filter((e) => e.tab === "deals").length,
-      paymentsCents: events
-        .filter((e) => e.tab === "payments")
-        .reduce((sum, e) => sum + (e.cashCents ?? 0), 0),
+      // One row per charge (duplicate transaction ids collapse), refunds
+      // subtract, failed charges count nowhere — the lead's NET money.
+      paymentsCents: totalPayments(
+        dedupePaymentRows(events.filter((e) => e.tab === "payments")).map((e) => ({
+          cashCents: e.cashCents,
+          status: e.status ?? null,
+        })),
+      ).netCents,
       latestStatus: latest?.status ?? latest?.outcome ?? null,
       events,
     });
