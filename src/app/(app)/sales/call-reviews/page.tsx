@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { ReviewActions } from "@/components/sales/review-actions";
 import { Kpi } from "@/components/ui/metric";
+import { displayName } from "@/lib/text";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill, type StatusTone } from "@/components/ui/status";
 import { getDb } from "@/db/client";
@@ -120,7 +121,7 @@ export default async function CallReviewsPage({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <span className="text-sm font-medium">
-                          {r.rep ?? "Unknown rep"}
+                          {r.rep ? displayName(r.rep) : "Unknown rep"}
                         </span>
                         <StatusPill tone={RESULT_TONE[r.result]}>
                           {r.result === "unknown" ? "no outcome" : r.result}

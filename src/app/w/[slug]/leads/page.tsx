@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
 import { Kpi } from "@/components/ui/metric";
+import { displayName } from "@/lib/text";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusChip } from "@/components/tracking/status-chip";
@@ -161,7 +162,7 @@ export default async function WorkspaceLeadsPage({
                       </Link>
                     </td>
                     <td className="text-muted-foreground py-2 pr-4">
-                      {l.reps[0] ?? "—"}
+                      {l.reps[0] ? displayName(l.reps[0]) : "—"}
                     </td>
                     <td className="py-2 pr-4 text-center">{l.applied ? "✓" : "—"}</td>
                     <td className="numeric py-2 pr-4 text-right">
