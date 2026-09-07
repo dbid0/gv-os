@@ -48,7 +48,7 @@ export function ActivityTable({
             <th className="py-2 pr-4 text-right font-medium">Close</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="gv-rows">
           {reps.map((r) => {
             const rates = activityRates(r.totals);
             return (

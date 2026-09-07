@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
+import { StatCard } from "@/components/ui/stat-card";
+import { StatusChip } from "@/components/tracking/status-chip";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
@@ -78,16 +80,31 @@ export default async function WorkspaceLeadsPage({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
+        <StatCard
           label="Leads tracked"
           value={all.length.toLocaleString("en-US")}
+          hint="every person on the sheet"
+          accent={client.accent}
           tone="brand"
         />
-        <Kpi label="Reached a call" value={String(withCalls)} />
-        <Kpi label="With a recording" value={String(withRecordings)} />
-        <Kpi
+        <StatCard
+          label="Reached a call"
+          value={String(withCalls)}
+          hint="had at least one end-of-call report"
+          accent={client.accent}
+        />
+        <StatCard
+          label="With a recording"
+          value={String(withRecordings)}
+          hint="a call you can replay"
+          accent={client.accent}
+        />
+        <StatCard
           label="Payments logged"
           value={formatUSD(cents(all.reduce((s, l) => s + l.paymentsCents, 0)))}
+          hint="from the sheet's payment log"
+          accent={client.accent}
+          tone="success"
         />
       </div>
 
@@ -126,7 +143,7 @@ export default async function WorkspaceLeadsPage({
                   <th className="py-2 pr-4 text-right font-medium">Last seen</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="gv-rows">
                 {leads.slice(0, 200).map((l) => (
                   <tr
                     key={l.email}
@@ -156,8 +173,12 @@ export default async function WorkspaceLeadsPage({
                         <span className="text-faint ml-1 text-xs">▶{l.recordings}</span>
                       )}
                     </td>
-                    <td className="text-muted-foreground max-w-56 truncate py-2 pr-4">
-                      {l.latestStatus ?? "—"}
+                    <td className="max-w-56 truncate py-2 pr-4">
+                      {l.latestStatus ? (
+                        <StatusChip status={l.latestStatus} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="numeric py-2 pr-4 text-right">
                       {l.paymentsCents > 0 ? formatUSD(cents(l.paymentsCents)) : "—"}
