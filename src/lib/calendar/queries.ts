@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { actionItems, clients, teamMembers } from "@/db/schema/app";
@@ -54,9 +54,9 @@ const shape = (rows: Row[]): CalendarItem[] =>
     });
 
 /**
- * Every action item due within [fromKey, toKey] (inclusive YYYY-MM-DD), minus
- * the internal software-dev backlog. Undated items are intentionally left off
- * the calendar — they live on the Work board until someone schedules them.
+ * Every action item due within [fromKey, toKey] (inclusive YYYY-MM-DD), plus
+ * every undated item — cadence places those on the grid (see
+ * lib/calendar/expand) — minus the internal software-dev backlog.
  */
 export async function listCalendarItems(
   fromKey: string,
@@ -69,7 +69,18 @@ export async function listCalendarItems(
       .from(actionItems)
       .leftJoin(clients, eq(actionItems.clientId, clients.id))
       .leftJoin(teamMembers, eq(actionItems.assigneeId, teamMembers.id))
-      .where(and(gte(actionItems.dueDate, fromKey), lte(actionItems.dueDate, toKey)))
+      .where(
+        and(
+          // Dated items inside the window, plus UNDATED ones — their cadence
+          // places them on the grid (lib/calendar/expand). An archived
+          // client's work never paints the calendar.
+          or(
+            and(gte(actionItems.dueDate, fromKey), lte(actionItems.dueDate, toKey)),
+            isNull(actionItems.dueDate),
+          ),
+          or(isNull(actionItems.clientId), ne(clients.status, "archived")),
+        ),
+      )
       .orderBy(asc(actionItems.dueDate));
     return shape(rows);
   } catch {
