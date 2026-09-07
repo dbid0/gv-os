@@ -1,3 +1,5 @@
+import { classifyPayment, totalPayments } from "@/lib/tracking/refunds";
+
 /**
  * WHAT WAS SOLD versus WHAT ACTUALLY ARRIVED.
  *
@@ -33,13 +35,26 @@ export interface PaymentRow {
   email: string | null;
   cashCents: number | null;
   processor: string | null;
+  /** succeeded · refunded · failed — see lib/tracking/refunds. */
+  status?: string | null;
 }
 
 export interface CashReconciliation {
   /** Total the closers logged as collected. */
   dealsCents: number;
-  /** Total the processors actually recorded. */
+  /**
+   * What the processors NETTED — gross taken, less anything refunded.
+   *
+   * A payment log that cannot express a refund overstates cash by whatever
+   * went back, permanently and invisibly, so the net is what a month is
+   * judged on and the parts are shown beside it.
+   */
   processorCents: number;
+  processorGrossCents: number;
+  refundedCents: number;
+  refundedCount: number;
+  /** Charges that never completed — counted in neither total. */
+  failedCents: number;
   /** Deals whose money no processor shows — wires, Zelle, or not yet paid. */
   unbackedDeals: { email: string; cashCents: number; program: string | null }[];
   unbackedCents: number;
@@ -64,7 +79,11 @@ export function reconcileCash(
   }
 
   const dealsCents = deals.reduce((s, d) => s + (d.cashCents ?? 0), 0);
-  const processorCents = payments.reduce((s, p) => s + (p.cashCents ?? 0), 0);
+  // Refunds subtract; failed charges count nowhere.
+  const totals = totalPayments(
+    payments.map((p) => ({ cashCents: p.cashCents, status: p.status ?? null })),
+  );
+  const processorCents = totals.netCents;
 
   // A deal with no payment behind it. Matched on the lead's email, which is
   // the only identifier both tabs carry.
@@ -82,11 +101,19 @@ export function reconcileCash(
     (p) => norm(p.email) === "" || !dealEmails.has(norm(p.email)),
   );
 
+  // Per processor, NET: a refund on Stripe reduces Stripe's own figure rather
+  // than appearing nowhere.
   const byProcessor = new Map<string, { cents: number; count: number }>();
   for (const p of payments) {
     const key = (p.processor ?? "Unrecorded").trim() || "Unrecorded";
     const entry = byProcessor.get(key) ?? { cents: 0, count: 0 };
-    entry.cents += p.cashCents ?? 0;
+    const outcome = classifyPayment({
+      cashCents: p.cashCents,
+      status: p.status ?? null,
+    });
+    if (outcome === "failed") continue;
+    const amount = Math.abs(p.cashCents ?? 0);
+    entry.cents += outcome === "refunded" ? -amount : amount;
     entry.count += 1;
     byProcessor.set(key, entry);
   }
@@ -94,6 +121,10 @@ export function reconcileCash(
   return {
     dealsCents,
     processorCents,
+    processorGrossCents: totals.grossCents,
+    refundedCents: totals.refundedCents,
+    refundedCount: totals.refundedCount,
+    failedCents: totals.failedCents,
     unbackedDeals: unbacked,
     unbackedCents: unbacked.reduce((s, d) => s + d.cashCents, 0),
     unmatchedPaymentCents: unmatched.reduce((s, p) => s + (p.cashCents ?? 0), 0),
