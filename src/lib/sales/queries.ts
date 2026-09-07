@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 
+import { dayKeyCT } from "@/lib/charts";
 import { getDb } from "@/db/client";
 import {
   type EodCalcField,
@@ -268,7 +269,7 @@ export async function getSalesOverview(): Promise<SalesOverviewStats> {
   };
 }
 
-/** EOD compliance for the most recent submission day. */
+/** EOD compliance for TODAY (Central time). */
 export interface EodCompliance {
   asOf: Date | null;
   submitted: number;
@@ -277,47 +278,49 @@ export interface EodCompliance {
 }
 
 /**
- * Who filed their EOD on the latest day anyone did. RepVision's compliance
- * widget: a submitted/total count plus the names still missing, so a manager
- * sees the gap at a glance. Purely derived from submitted reports.
+ * Who has filed their report TODAY — Central time, the agency's clock.
+ *
+ * This used to anchor on the most recent day anyone filed, which made every
+ * surface reading it dishonest at once: the brief said "BODs in today: 3"
+ * while the list below it truthfully said nobody had filed yet (the 3 were
+ * from an earlier day), and the evening "EOD not in" nudge credited reps for
+ * yesterday's paperwork. An honest 0/N this morning beats a stale 3/N.
+ *
+ * Reps whose client is archived are out of the denominator — a rep can't be
+ * "missing" from an offer the agency no longer runs. Agency-wide reps (no
+ * client) always count.
  */
 export async function getEodCompliance(
   kind: "eod" | "bod" = "eod",
+  now: Date = new Date(),
 ): Promise<EodCompliance> {
   const db = getDb();
   const activeReps = await db
     .select({ id: reps.id, name: reps.name })
     .from(reps)
-    .where(eq(reps.status, "active"));
-  const total = activeReps.length;
-
-  const [latest] = await db
-    .select({ d: sql<string | null>`max(${activityReports.reportDate})` })
-    .from(activityReports)
-    .where(eq(activityReports.kind, kind));
-  if (!latest?.d) {
-    return { asOf: null, submitted: 0, total, missing: activeReps.map((r) => r.name) };
-  }
-
-  const asOf = new Date(latest.d);
-  const dayStart = new Date(asOf);
-  dayStart.setUTCHours(0, 0, 0, 0);
-  const dayEnd = new Date(asOf);
-  dayEnd.setUTCHours(23, 59, 59, 999);
-
-  const submittedRows = await db
-    .select({ repId: activityReports.repId })
-    .from(activityReports)
+    .leftJoin(clients, eq(reps.clientId, clients.id))
     .where(
       and(
-        eq(activityReports.kind, kind),
-        gte(activityReports.reportDate, dayStart),
-        lte(activityReports.reportDate, dayEnd),
+        eq(reps.status, "active"),
+        or(isNull(reps.clientId), ne(clients.status, "archived")),
       ),
     );
-  const submittedSet = new Set(submittedRows.map((r) => r.repId));
+  const total = activeReps.length;
+
+  // A 48h window bucketed by CT day key — immune to the UTC-midnight trap
+  // and to DST, because dayKeyCT owns the timezone math in one place.
+  const todayKey = dayKeyCT(now);
+  const since = new Date(now.getTime() - 48 * 3600 * 1000);
+  const recent = await db
+    .select({ repId: activityReports.repId, reportDate: activityReports.reportDate })
+    .from(activityReports)
+    .where(and(eq(activityReports.kind, kind), gte(activityReports.reportDate, since)));
+
+  const submittedSet = new Set(
+    recent.filter((r) => dayKeyCT(r.reportDate) === todayKey).map((r) => r.repId),
+  );
   const missing = activeReps.filter((r) => !submittedSet.has(r.id)).map((r) => r.name);
-  return { asOf, submitted: total - missing.length, total, missing };
+  return { asOf: now, submitted: total - missing.length, total, missing };
 }
 
 /** Overall close rate = deals closed ÷ total shows, from real activity + deals. */
