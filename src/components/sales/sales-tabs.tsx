@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { canAccessRoute, type Role } from "@/lib/auth/roles";
 import { snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +42,12 @@ const tabs = [
   { label: "Templates", href: "/sales/templates", icon: ClipboardList },
 ];
 
-export function SalesTabs() {
+export function SalesTabs({ role = "admin" }: { role?: Role }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
+  // One source of truth: a tab shows exactly when the route would let the
+  // role through — no second list to drift out of step with the guard.
+  const visible = tabs.filter((t) => canAccessRoute(role, t.href));
 
   return (
     <div
@@ -51,7 +55,7 @@ export function SalesTabs() {
       aria-label="Sales views"
       className="bg-secondary/60 inline-flex items-center gap-1 rounded-xl border p-1"
     >
-      {tabs.map((tab) => {
+      {visible.map((tab) => {
         const active = pathname === tab.href;
 
         return (

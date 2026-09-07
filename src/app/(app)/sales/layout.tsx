@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ClipboardList, Plus } from "lucide-react";
 
 import { SalesTabs } from "@/components/sales/sales-tabs";
+import { viewerRole } from "@/lib/auth/viewer";
 import { getViewerScope } from "@/lib/home/viewer-scope";
 import { PageHeader } from "@/components/shell/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,13 +20,21 @@ import { cn } from "@/lib/utils";
  * behind it is real.
  */
 export default async function SalesLayout({ children }: { children: ReactNode }) {
-  const scope = await getViewerScope();
+  const [scope, role] = await Promise.all([getViewerScope(), viewerRole()]);
   const laneless = scope.restricted && scope.allowed?.length === 0;
+  // The command center is the admin's room. A manager runs a floor; a rep
+  // sees their own numbers — the header should say whose room they're in.
+  const heading =
+    role === "sales_rep"
+      ? (["My", "sales"] as const)
+      : role === "sales_manager"
+        ? (["Sales", "floor"] as const)
+        : (["Sales", "command center"] as const);
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       <PageHeader
-        title="Sales"
-        highlight="command center"
+        title={heading[0]}
+        highlight={heading[1]}
         status={
           scope.restricted ? (
             // Say plainly whose book this is. A rep seeing smaller numbers
@@ -56,7 +65,7 @@ export default async function SalesLayout({ children }: { children: ReactNode })
         }
       />
 
-      <SalesTabs />
+      <SalesTabs role={role} />
 
       {/* A scoped viewer with no offer on their roster row is a DATA GAP, not
           a zero. Saying so beats rendering $0 tables that read as real. */}
