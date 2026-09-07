@@ -32,6 +32,7 @@ import {
   getSalesOverview,
 } from "@/lib/sales/queries";
 import { getSettings } from "@/lib/settings";
+import { homeSections } from "@/lib/home/sections";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
   customBounds,
@@ -128,19 +129,15 @@ export default async function DashboardPage({
   const series = homeRangeSeries(backlog, mode, bounds);
 
   // Sections: only who actually has money in the range, in the current mode.
+  // Agency pinned far left, clients to the right — see lib/home/sections.
   const monthRows = homeRangeRows(backlog, mode, bounds);
-  const sections: HomeSection[] = clientLedger(
-    monthRows,
-    roster.map((c) => ({ slug: c.slug, name: c.name })),
-    matchesSheetClient,
-  )
-    .filter((l) => l.cashCents > 0 || l.revenueCents > 0)
-    .map((l) => ({
-      slug: l.slug,
-      name: l.slug ? l.name : "Agency — direct",
-      cashCents: l.cashCents,
-      revenueCents: l.revenueCents,
-    }));
+  const sections: HomeSection[] = homeSections(
+    clientLedger(
+      monthRows,
+      roster.map((c) => ({ slug: c.slug, name: c.name })),
+      matchesSheetClient,
+    ),
+  );
 
   const recentRows = backlog.slice(0, 8).map((r) => ({
     id: r.id,
