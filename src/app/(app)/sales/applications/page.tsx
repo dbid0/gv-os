@@ -132,9 +132,13 @@ export default async function ApplicationsPage() {
         )}
       </Panel>
 
-      <Panel title="Applications per day — last 30">
-        <ColumnChart data={perDay} />
-      </Panel>
+      {/* A chart of thirty zeros is an empty promise wearing axes — the
+          Applications-in panel below already says plainly nothing is captured. */}
+      {apps.length > 0 && (
+        <Panel title="Applications per day — last 30">
+          <ColumnChart data={perDay} />
+        </Panel>
+      )}
 
       <Panel title="Applications in">
         {apps.length === 0 ? (
