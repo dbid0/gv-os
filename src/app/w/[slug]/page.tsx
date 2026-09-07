@@ -192,7 +192,7 @@ export default async function WorkspacePage({
                     {rangeRevenue > rangeCash && (
                       <>
                         {" "}
-                        of <Money amount={cents(rangeRevenue)} /> booked
+                        · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
                       </>
                     )}
                   </span>
@@ -234,6 +234,39 @@ export default async function WorkspacePage({
             label="Revenue booked — all time"
             value={<CountUpMoney cents={report.mirror.revenueCents} />}
           />
+        </div>
+      )}
+
+      {/* The high-level read — the first thing a client should see. Counts,
+          not cash, so it renders whatever the money toggle says; each figure
+          is a distinct-lead count from the offer's own funnel. */}
+      {funnel && funnel.totalLeads > 0 && (
+        <div
+          className={
+            funnel.stages.length >= 5
+              ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
+              : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          }
+        >
+          {funnel.stages.map((stage) => (
+            <div
+              key={stage.key}
+              className="card-grad hover-lift relative overflow-hidden rounded-xl border p-4"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-0.5"
+                style={{ background: client.accent }}
+              />
+              <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                {stage.label}
+              </p>
+              <p className="numeric mt-1 text-3xl font-bold tracking-tight">
+                {stage.leads.toLocaleString("en-US")}
+              </p>
+              <p className="text-faint mt-0.5 text-[11px]">people, all time</p>
+            </div>
+          ))}
         </div>
       )}
 
