@@ -56,6 +56,21 @@ export function OfferFunnelPanel({
         Counted in people, not rows — one lead with three end-of-call reports is one
         call held. Each rate is measured only on the leads who reached the stage before
         it.
+        {funnel.paidWithoutDeal > 0 && (
+          <>
+            {" "}
+            <span className="text-foreground font-medium">
+              Two motions inside &ldquo;Paid&rdquo;:
+            </span>{" "}
+            {funnel.paidViaDeal} paid through the pipeline (a logged deal), and{" "}
+            {funnel.paidWithoutDeal} paid with no deal row — $
+            {(funnel.paidWithoutDealCents / 100).toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            })}{" "}
+            net, mostly the low-ticket front end buying direct. More paid than closed is
+            the OFFER&apos;s shape, not broken tracking.
+          </>
+        )}
         {funnel.skipped > 0 && (
           <>
             {" "}
