@@ -30,6 +30,12 @@ export interface OfferStl {
   /** Share dialled within 5 minutes, 0..1, or null when unmeasurable. */
   slaPct: number | null;
   measured: number;
+  /** Applications in the window that carry a join key at all. */
+  applications: number;
+  /** Of those, how many were EVER dialled in the CRM (any window). Zero with
+   * applications present names the operational disconnect: the floor's dials
+   * are not touching the application list. */
+  everDialed: number;
 }
 
 const WINDOW_DAYS = 30;
@@ -45,7 +51,14 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     .limit(1);
   const connected = conn?.status === "connected";
   if (!connected) {
-    return { connected: false, medianMinutes: null, slaPct: null, measured: 0 };
+    return {
+      connected: false,
+      medianMinutes: null,
+      slaPct: null,
+      measured: 0,
+      applications: 0,
+      everDialed: 0,
+    };
   }
 
   // eslint-disable-next-line prefer-const -- apps is reassigned by the sheet fallback below
@@ -69,11 +82,9 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       })
       .from(crmActivity)
       .where(
-        and(
-          eq(crmActivity.clientId, clientId),
-          eq(crmActivity.kind, "call"),
-          gte(crmActivity.occurredAt, since),
-        ),
+        // All captured calls, not just the window — everDialed asks whether an
+        // applicant was EVER dialled, and the capture horizon is the real limit.
+        and(eq(crmActivity.clientId, clientId), eq(crmActivity.kind, "call")),
       )
       .limit(1000),
   ]);
@@ -129,10 +140,30 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         occurredAtMs: c.occurredAt!.getTime(),
       })),
   );
+  // The disconnect check: did ANY applicant ever get dialled?
+  const callEmails = new Set(
+    calls.map((c) => c.leadEmail).filter((e): e is string => Boolean(e)),
+  );
+  const callPhones = new Set(
+    calls.map((c) => c.leadPhone).filter((p): p is string => Boolean(p)),
+  );
+  const joinable = apps.filter(
+    (a) => a.email || phoneKey((a as { phone?: string | null }).phone ?? null),
+  );
+  const everDialed = joinable.filter((a) => {
+    const phone = phoneKey((a as { phone?: string | null }).phone ?? null);
+    return (
+      (a.email !== null && callEmails.has(a.email.trim().toLowerCase())) ||
+      (phone !== null && callPhones.has(phone))
+    );
+  }).length;
+
   return {
     connected: true,
     medianMinutes: stl.medianMinutes,
     slaPct: stl.slaPct,
     measured: stl.matched,
+    applications: joinable.length,
+    everDialed,
   };
 }
