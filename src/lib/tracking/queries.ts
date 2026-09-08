@@ -260,6 +260,7 @@ export async function cashRowsForClient(syncId: string) {
       email: clientTrackingRows.email,
       phone: clientTrackingRows.phone,
       cashCents: clientTrackingRows.cashCents,
+      revenueCents: clientTrackingRows.revenueCents,
       status: clientTrackingRows.status,
       occurredAt: clientTrackingRows.occurredAt,
       payload: clientTrackingRows.payload,
@@ -277,7 +278,15 @@ export async function cashRowsForClient(syncId: string) {
       .map((r) => ({
         email: r.email,
         cashCents: r.cashCents,
+        revenueCents: r.revenueCents,
         program: r.payload?.["Program Sold"] ?? null,
+        // The sheet's own wording for the close/deal type, whichever header
+        // it used — feeds the paid-in-full / split / deposit classifier.
+        closeType:
+          r.payload?.["Deal Type"] ??
+          r.payload?.["Close Type"] ??
+          r.payload?.["Type"] ??
+          null,
         occurredAt: r.occurredAt,
       })),
     // Duplicate transaction ids collapse to one row — a hand-kept log
