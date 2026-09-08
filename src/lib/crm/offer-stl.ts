@@ -12,7 +12,11 @@ import {
   integrations,
 } from "@/db/schema/app";
 import { phoneKey } from "@/lib/crm/close-normalize";
-import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import {
+  computeSpeedToLead,
+  computeSpeedToLeadByRep,
+  type RepSpeedToLead,
+} from "@/lib/funnel/speed-to-lead";
 import { currentSnapshot } from "@/lib/tracking/queries";
 
 /**
@@ -36,6 +40,8 @@ export interface OfferStl {
    * applications present names the operational disconnect: the floor's dials
    * are not touching the application list. */
   everDialed: number;
+  /** The same engine re-cut per rep — attribution goes to the FIRST dial. */
+  byRep: RepSpeedToLead[];
 }
 
 const WINDOW_DAYS = 30;
@@ -58,6 +64,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       measured: 0,
       applications: 0,
       everDialed: 0,
+      byRep: [],
     };
   }
 
@@ -79,6 +86,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         occurredAt: crmActivity.occurredAt,
         leadEmail: crmActivity.leadEmail,
         leadPhone: crmActivity.leadPhone,
+        userName: crmActivity.userName,
       })
       .from(crmActivity)
       .where(
@@ -140,6 +148,23 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         occurredAtMs: c.occurredAt!.getTime(),
       })),
   );
+  const appsForJoin = apps.map((a) => ({
+    email: a.email,
+    phone: phoneKey((a as { phone?: string | null }).phone ?? null),
+    submittedAtMs: (a.submittedAt ?? a.createdAt).getTime(),
+  }));
+  const byRep = computeSpeedToLeadByRep(
+    appsForJoin,
+    calls
+      .filter((c) => c.occurredAt)
+      .map((c) => ({
+        email: c.leadEmail,
+        phone: c.leadPhone,
+        occurredAtMs: c.occurredAt!.getTime(),
+        rep: c.userName,
+      })),
+  );
+
   // The disconnect check: did ANY applicant ever get dialled?
   const callEmails = new Set(
     calls.map((c) => c.leadEmail).filter((e): e is string => Boolean(e)),
@@ -165,5 +190,6 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     measured: stl.matched,
     applications: joinable.length,
     everDialed,
+    byRep,
   };
 }

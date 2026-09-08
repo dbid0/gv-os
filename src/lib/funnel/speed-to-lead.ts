@@ -184,3 +184,84 @@ export function computeSpeedToLeadByClient(
   );
   return groups;
 }
+
+/** A dial tagged with who made it, for the per-rep cut. */
+export interface SpeedToLeadRepCall extends SpeedToLeadCall {
+  rep: string | null;
+}
+
+export interface RepSpeedToLead {
+  rep: string;
+  matched: number;
+  medianMinutes: number | null;
+  within5: number;
+  /** within5 / matched, or null when nothing matched. */
+  slaPct: number | null;
+}
+
+/**
+ * Speed to lead PER REP — the accountability cut.
+ *
+ * Each matched application is attributed to the rep who made its FIRST dial:
+ * the 5-minute standard is about who picked the lead up, and the first dial
+ * is the pickup. Reps are keyed case-insensitively (sheets and diallers type
+ * the same person two ways); a first dial with no rep recorded lands under
+ * "Unattributed" rather than vanishing. The rows always sum to the overall
+ * matched count — one engine, re-cut per rep.
+ */
+export function computeSpeedToLeadByRep(
+  apps: SpeedToLeadApp[],
+  calls: SpeedToLeadRepCall[],
+): RepSpeedToLead[] {
+  interface First {
+    at: number;
+    rep: string | null;
+  }
+  const keep = (
+    map: Map<string, First>,
+    key: string,
+    at: number,
+    rep: string | null,
+  ) => {
+    const prev = map.get(key);
+    if (prev === undefined || at < prev.at) map.set(key, { at, rep });
+  };
+  const byEmail = new Map<string, First>();
+  const byPhone = new Map<string, First>();
+  for (const c of calls) {
+    const email = c.email?.trim().toLowerCase();
+    if (email) keep(byEmail, email, c.occurredAtMs, c.rep);
+    if (c.phone) keep(byPhone, c.phone, c.occurredAtMs, c.rep);
+  }
+
+  const durationsByRep = new Map<string, { rep: string; durations: number[] }>();
+  for (const a of apps) {
+    const email = a.email?.trim().toLowerCase();
+    const first =
+      (email ? byEmail.get(email) : undefined) ??
+      (a.phone ? byPhone.get(a.phone) : undefined);
+    if (first === undefined) continue;
+    const delta = first.at - a.submittedAtMs;
+    if (delta < 0) continue;
+    const repName = first.rep?.trim() || "Unattributed";
+    const key = repName.toLowerCase();
+    const entry = durationsByRep.get(key) ?? { rep: repName, durations: [] };
+    entry.durations.push(delta);
+    durationsByRep.set(key, entry);
+  }
+
+  return [...durationsByRep.values()]
+    .map(({ rep, durations }) => {
+      durations.sort((x, y) => x - y);
+      const med = median(durations);
+      const within5 = durations.filter((d) => d <= 5 * MINUTE).length;
+      return {
+        rep,
+        matched: durations.length,
+        medianMinutes: med === null ? null : Math.round(med / MINUTE),
+        within5,
+        slaPct: durations.length ? within5 / durations.length : null,
+      };
+    })
+    .sort((a, b) => b.matched - a.matched || a.rep.localeCompare(b.rep));
+}

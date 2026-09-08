@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeSpeedToLeadByRep,
   computeSpeedToLead,
   computeSpeedToLeadByClient,
   type SpeedToLeadApp,
@@ -212,5 +213,56 @@ describe("phone-fallback matching", () => {
     );
     expect(stats.dialableApps).toBe(1);
     expect(stats.matched).toBe(0);
+  });
+});
+
+describe("computeSpeedToLeadByRep", () => {
+  const app = (email: string, at = 0) => ({ email, submittedAtMs: at });
+  const call = (email: string, at: number, rep: string | null) => ({
+    email,
+    occurredAtMs: at,
+    rep,
+  });
+
+  it("attributes each application to the rep who made the FIRST dial", () => {
+    const rows = computeSpeedToLeadByRep(
+      [app("a@x.com")],
+      [
+        call("a@x.com", 10 * 60_000, "Later Rep"),
+        call("a@x.com", 3 * 60_000, "First Rep"),
+      ],
+    );
+    expect(rows).toEqual([
+      { rep: "First Rep", matched: 1, medianMinutes: 3, within5: 1, slaPct: 1 },
+    ]);
+  });
+
+  it("merges case-variant rep names — one person, one row", () => {
+    const rows = computeSpeedToLeadByRep(
+      [app("a@x.com"), app("b@x.com")],
+      [call("a@x.com", 60_000, "lorenzo rep"), call("b@x.com", 60_000, "Lorenzo Rep")],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].matched).toBe(2);
+  });
+
+  it("a first dial with no rep lands under Unattributed, never vanishes", () => {
+    const rows = computeSpeedToLeadByRep(
+      [app("a@x.com")],
+      [call("a@x.com", 1000, null)],
+    );
+    expect(rows[0].rep).toBe("Unattributed");
+  });
+
+  it("rep rows sum to the overall matched count", () => {
+    const apps = [app("a@x.com"), app("b@x.com"), app("c@x.com")];
+    const calls = [
+      call("a@x.com", 60_000, "R1"),
+      call("b@x.com", 60_000, "R2"),
+      call("c@x.com", 60_000, "R1"),
+    ];
+    const overall = computeSpeedToLead(apps, calls);
+    const byRep = computeSpeedToLeadByRep(apps, calls);
+    expect(byRep.reduce((s, r) => s + r.matched, 0)).toBe(overall.matched);
   });
 });
