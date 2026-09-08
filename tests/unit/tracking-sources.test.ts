@@ -7,6 +7,7 @@ import {
   sourceRank,
   type Candidate,
   paymentSourceGaps,
+  processorMatchesSource,
 } from "@/lib/tracking/sources";
 
 const d = (iso: string) => new Date(iso);
@@ -200,5 +201,27 @@ describe("paymentSourceGaps", () => {
         { source: "fathom", netCents: 0 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("processorMatchesSource", () => {
+  it("matches the sheet's processor cell to its source, case-insensitively", () => {
+    expect(processorMatchesSource("Stripe", "stripe")).toBe(true);
+    expect(processorMatchesSource("  stripe ", "stripe")).toBe(true);
+  });
+
+  it("keeps another processor's money OUT of the comparison", () => {
+    // A sheet logging Shopify beside Stripe is knowledge, not disagreement.
+    expect(processorMatchesSource("Shopify", "stripe")).toBe(false);
+  });
+
+  it("knows Fanbasis also goes by Commas", () => {
+    expect(processorMatchesSource("Commas", "fanbasis")).toBe(true);
+    expect(processorMatchesSource("Fanbasis", "fanbasis")).toBe(true);
+  });
+
+  it("an unrecorded processor never matches — no guessing", () => {
+    expect(processorMatchesSource(null, "stripe")).toBe(false);
+    expect(processorMatchesSource("", "stripe")).toBe(false);
   });
 });

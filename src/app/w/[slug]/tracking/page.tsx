@@ -25,7 +25,7 @@ import {
   latestSnapshotsBySource,
   rowsForTab,
 } from "@/lib/tracking/queries";
-import { paymentSourceGaps } from "@/lib/tracking/sources";
+import { paymentSourceGaps, processorMatchesSource } from "@/lib/tracking/sources";
 import { totalPayments } from "@/lib/tracking/refunds";
 import { scanWarnings } from "@/lib/tracking/scan";
 
@@ -146,11 +146,27 @@ export default async function WorkspaceTrackingPage({
       };
     }),
   );
-  const gaps = paymentSourceGaps(
-    sourceSummaries
-      .filter((x) => x.paymentsNetCents !== null)
-      .map((x) => ({ source: x.source, netCents: x.paymentsNetCents as number })),
-  );
+  // Like with like: each processor source compares against the sheet's rows
+  // for THAT processor only — the sheet also logging another processor's
+  // money (Shopify beside Stripe) is knowledge, not a disagreement.
+  const sheetPayments = cash.payments;
+  const gaps = sourceSummaries
+    .filter((x) => x.source !== "sheet" && x.paymentsNetCents !== null)
+    .flatMap((x) => {
+      const subset = sheetPayments.filter((p) =>
+        processorMatchesSource(p.processor, x.source),
+      );
+      if (subset.length === 0) return [];
+      const sheetNet = totalPayments(
+        subset.map((p) => ({ cashCents: p.cashCents, status: p.status })),
+      ).netCents;
+      return (
+        paymentSourceGaps([
+          { source: x.source, netCents: x.paymentsNetCents as number },
+          { source: "sheet", netCents: sheetNet },
+        ]) ?? []
+      );
+    });
 
   const [recent, reads, counts] = await Promise.all([
     rowsForTab(snapshot.syncId, "eoc", 8),
@@ -206,7 +222,8 @@ export default async function WorkspaceTrackingPage({
             {gaps.map((g) => (
               <p key={g.other} className="text-warning text-xs">
                 <span className="capitalize">{g.authority}</span>&apos;s own record
-                differs from the <span className="capitalize">{g.other}</span> by{" "}
+                differs from the <span className="capitalize">{g.other}</span>&apos;s
+                own {g.authority} rows by{" "}
                 <span className="numeric font-medium">
                   $
                   {(Math.abs(g.gapCents) / 100).toLocaleString("en-US", {
