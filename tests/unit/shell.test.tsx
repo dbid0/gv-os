@@ -8,6 +8,10 @@ import { Sidebar } from "@/components/shell/sidebar";
 import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
 
+const TEST_ROSTER = [
+  { slug: "the-grid", name: "The Grid", owner: "Kaden", accent: "#4aa3ff" },
+];
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
   useRouter: () => ({
@@ -51,7 +55,7 @@ describe("Sidebar", () => {
   });
 
   it("renders every navigation group and item", () => {
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
 
     navigation.forEach((group) => {
       expect(screen.getByText(group.label)).toBeInTheDocument();
@@ -66,7 +70,7 @@ describe("Sidebar", () => {
   });
 
   it("links only the sections that exist, and marks the rest as unbuilt", () => {
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
 
     // Dashboard is real, so it is a link.
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute(
@@ -80,7 +84,7 @@ describe("Sidebar", () => {
   });
 
   it("marks the current route as the active page", () => {
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute(
       "aria-current",
       "page",
@@ -89,7 +93,7 @@ describe("Sidebar", () => {
 
   it("collapses and expands, and remembers the choice", async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<Sidebar user={USER} />);
+    const { unmount } = render(<Sidebar roster={TEST_ROSTER} user={USER} />);
 
     const sidebar = screen.getByTestId("sidebar");
     expect(sidebar).toHaveAttribute("data-collapsed", "false");
@@ -105,13 +109,13 @@ describe("Sidebar", () => {
 
     // The behaviour that matters either way: the preference survives a remount.
     unmount();
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
     expect(screen.getByTestId("sidebar")).toHaveAttribute("data-collapsed", "true");
   });
 
   it("hides labels when collapsed", async () => {
     const user = userEvent.setup();
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
 
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /collapse sidebar/i }));

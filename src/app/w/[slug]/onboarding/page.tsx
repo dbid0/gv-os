@@ -16,7 +16,7 @@ import {
 } from "@/db/schema/app";
 import { currentSnapshot } from "@/lib/tracking/queries";
 import { listTeamspaceTodos } from "@/lib/workspace/queries";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export default async function WorkspaceOnboardingPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const db = getDb();

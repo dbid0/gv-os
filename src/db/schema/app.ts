@@ -63,6 +63,17 @@ export const clients = appSchema.table(
      * own owner line). Editable inline on the card; null falls back to a
      * derived default so the card is never blank. */
     summary: text("summary"),
+    /** Display identity for the roster — owner's first name, the offer line,
+     * the engagement category, the locked rev-share label, when they signed.
+     * Nullable: a new client renders with honest fallbacks until filled. */
+    owner: text("owner"),
+    offer: text("offer"),
+    category: text("category"),
+    revShare: text("rev_share"),
+    since: text("since"),
+    /** The client's own data colour (hex). Generated from the slug when
+     * absent, so a brand-new client is never invisible or un-themed. */
+    accent: text("accent"),
     /**
      * Which source owns this offer's CASH — the Money Spine anti-double-count
      * switch (MONEY-SPINE-SPEC §3). `auto` (default) = processors own the cash

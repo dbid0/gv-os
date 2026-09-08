@@ -11,7 +11,7 @@ import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { searchLeads } from "@/lib/tracking/leads";
 import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 
@@ -35,7 +35,7 @@ export default async function WorkspaceLeadsPage({
 }) {
   const { slug } = await params;
   const { q = "" } = await searchParams;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const db = getDb();

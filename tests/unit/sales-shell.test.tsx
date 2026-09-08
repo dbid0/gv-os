@@ -10,6 +10,10 @@ import { Sidebar } from "@/components/shell/sidebar";
 import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
 
+const TEST_ROSTER = [
+  { slug: "the-grid", name: "The Grid", owner: "Kaden", accent: "#4aa3ff" },
+];
+
 // A mutable pathname so each test can place itself somewhere in the app.
 const nav = vi.hoisted(() => ({ pathname: "/sales" }));
 vi.mock("next/navigation", () => ({
@@ -39,7 +43,7 @@ describe("Sales in the nav", () => {
   it("renders Sales as a link rather than a Soon stub", () => {
     nav.pathname = "/dashboard";
     clearPersistedState();
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
     expect(screen.getByRole("link", { name: /sales/i })).toHaveAttribute(
       "href",
       "/sales",
@@ -51,7 +55,7 @@ describe("Sales in the nav", () => {
     // the Sales item is still the highlighted section.
     nav.pathname = "/sales/deals";
     clearPersistedState();
-    render(<Sidebar user={USER} />);
+    render(<Sidebar roster={TEST_ROSTER} user={USER} />);
     expect(screen.getByRole("link", { name: /sales/i })).toHaveAttribute(
       "aria-current",
       "page",

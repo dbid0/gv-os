@@ -17,7 +17,7 @@ import { getDb } from "@/db/client";
 import { clientColumnMap, clients } from "@/db/schema/app";
 import { callReadsForClient, readCounts } from "@/lib/calls/share-transcripts";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { possessive } from "@/lib/text";
 import {
   cashRowsForClient,
@@ -49,7 +49,7 @@ export default async function WorkspaceTrackingPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   // Hiding the tab is not enough — the URL is guessable, and this page is GV's
