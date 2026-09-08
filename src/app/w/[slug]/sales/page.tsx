@@ -19,6 +19,7 @@ import { applications, clients, reps as repsTable } from "@/db/schema/app";
 import { bucketByDay, chartColorForClient } from "@/lib/charts";
 import { getClientReport } from "@/lib/clients/report";
 import { cents } from "@/lib/money";
+import { displayName } from "@/lib/text";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   aggregateByRep,
@@ -128,6 +129,7 @@ export default async function WorkspaceSalesPage({
         measured: 0,
         applications: 0,
         everDialed: 0,
+        byRep: [],
       };
   const color = chartColorForClient(slug);
   const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
@@ -200,6 +202,42 @@ export default async function WorkspaceSalesPage({
             )}
           </div>
         </div>
+        {/* The engine re-cut per rep — attribution to the FIRST dial. GV's
+            view only; the floor's per-rep numbers are ours to manage. */}
+        {!portalView && stl.byRep.length > 0 && (
+          <div className="mt-4 overflow-x-auto border-t pt-3">
+            <table className="w-full text-sm">
+              <thead className="text-faint text-xs uppercase">
+                <tr>
+                  <th className="py-1 pr-4 text-left font-medium">Rep — first dial</th>
+                  <th className="py-1 pr-4 text-right font-medium">Measured</th>
+                  <th className="py-1 pr-4 text-right font-medium">Median</th>
+                  <th className="py-1 pr-4 text-right font-medium">Within 5m</th>
+                </tr>
+              </thead>
+              <tbody className="gv-rows">
+                {stl.byRep.map((r) => (
+                  <tr key={r.rep} className="border-t">
+                    <td className="py-1.5 pr-4">{displayName(r.rep)}</td>
+                    <td className="numeric py-1.5 pr-4 text-right">{r.matched}</td>
+                    <td className="numeric py-1.5 pr-4 text-right">
+                      {r.medianMinutes === null ? "—" : `${r.medianMinutes}m`}
+                    </td>
+                    <td
+                      className={
+                        r.slaPct !== null && r.slaPct >= 0.8
+                          ? "numeric text-success py-1.5 pr-4 text-right"
+                          : "numeric text-warning py-1.5 pr-4 text-right"
+                      }
+                    >
+                      {r.slaPct === null ? "—" : `${Math.round(r.slaPct * 100)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
