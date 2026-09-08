@@ -98,6 +98,7 @@ async function run(req: NextRequest) {
           applicants: push.applicants,
           alreadyInCrm: push.alreadyInCrm,
           created: push.created,
+          createFailed: push.createFailed,
         };
       }
       results[offer.slug] = entry;
