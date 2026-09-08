@@ -1,7 +1,5 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -11,12 +9,8 @@ import { integrations } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
-import { seal, secretHint } from "@/lib/crypto/secretbox";
-import {
-  PROVIDER_VALUES,
-  providerByValue,
-  providerSupportsMethod,
-} from "@/lib/integrations/providers";
+import { connectIntegrationCore } from "@/lib/integrations/connect";
+import { PROVIDER_VALUES } from "@/lib/integrations/providers";
 import { syncProviderNow } from "@/lib/integrations/sync-on-connect";
 import { serverEnv } from "@/env.server";
 
@@ -61,51 +55,14 @@ const connectInput = z.object({
 export async function connectIntegration(raw: z.input<typeof connectInput>) {
   await requireUser();
   const input = connectInput.parse(raw);
-  const provider = providerByValue(input.provider);
-  if (!provider) throw new Error("Unknown provider.");
-  if (!providerSupportsMethod(provider, input.method)) {
-    throw new Error(`${provider.label} can't be connected by ${input.method}.`);
-  }
-  const db = getDb();
-
-  const config: Record<string, unknown> = { method: input.method };
-  let secretBox: string | null = null;
-  let hint: string | null = null;
-
-  if (input.method === "api_key") {
-    const secret = input.secret?.trim();
-    if (!secret) throw new Error("Paste the credential.");
-    const key = requireKey();
-    secretBox = seal(secret, key);
-    hint = secretHint(secret);
-  } else if (input.method === "webhook") {
-    // The minted URL is the credential the tool posts to.
-    config.webhook_token = randomBytes(24).toString("hex");
-  } else {
-    const reference = input.reference?.trim();
-    if (reference) config.reference = reference;
-  }
-
-  const [row] = await db
-    .insert(integrations)
-    .values({
-      provider: input.provider,
-      label: input.label.trim(),
-      clientId: input.clientId ?? null,
-      secretBox,
-      secretHint: hint,
-      config,
-      status: "connected",
-    })
-    .returning({ id: integrations.id, secretHint: integrations.secretHint });
-
-  // Pull the provider's data immediately (api_key connections only — a webhook
-  // has nothing to pull yet, and manual is off-platform). Fail-soft, so a bad
-  // key never breaks the connect; the scheduled job keeps it fresh after.
-  if (input.method === "api_key") {
-    await syncProviderNow(input.provider);
-  }
-
+  const row = await connectIntegrationCore({
+    provider: input.provider,
+    label: input.label,
+    method: input.method,
+    secret: input.secret ?? null,
+    reference: input.reference ?? null,
+    clientId: input.clientId ?? null,
+  });
   revalidatePath("/settings/integrations");
   return row;
 }
