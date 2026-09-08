@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status";
 import { buttonVariants } from "@/components/ui/button";
 import { clientSummaries } from "@/lib/clients/summaries";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -19,6 +19,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
+  const roster = await loadRoster();
   const summaries = await clientSummaries();
   const cards: ClientCard[] = roster.map((client) => ({
     slug: client.slug,

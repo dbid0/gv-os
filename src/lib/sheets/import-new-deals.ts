@@ -13,7 +13,7 @@ import {
 } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { readSheetValues } from "@/lib/google/sheets";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { formOwnsCash, normalizeCashAuthority } from "@/lib/sources/cash-authority";
 import {
   newDealToTransaction,
@@ -195,7 +195,7 @@ export async function importNewDealsForOffer(slug: string): Promise<ImportResult
     Boolean(processor),
   );
 
-  const offer = clientBySlug(slug)?.offer ?? null;
+  const offer = (await rosterClientBySlug(slug))?.offer ?? null;
   const values = await readSheetValues(client.sheet, NEW_DEALS_RANGE);
   const rows = parseNewDealsSheet(values);
 

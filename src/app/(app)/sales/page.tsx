@@ -9,7 +9,7 @@ import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientReport } from "@/lib/clients/report";
 import { getViewerScope } from "@/lib/home/viewer-scope";
 import { scopeRowsToViewer } from "@/lib/home/visibility";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { listReps, listTeams } from "@/lib/sales/queries";
 
 export const metadata = { title: "Teams - GV OS" };
@@ -26,6 +26,7 @@ export const dynamic = "force-dynamic";
  * connection pool.
  */
 export default async function SalesPage() {
+  const roster = await loadRoster();
   // Whose offers this viewer may read. A rep is granted /sales for their own
   // leaderboard and commissions, but must not see other clients' books.
   const [scope, teamsAll, reps] = await Promise.all([

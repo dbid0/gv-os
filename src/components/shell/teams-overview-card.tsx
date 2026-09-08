@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { StatusPill } from "@/components/ui/status";
-import { clientBySlug } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import type { TeamsOverview } from "@/lib/teams-overview";
 
 /**
@@ -12,7 +12,9 @@ import type { TeamsOverview } from "@/lib/teams-overview";
  * feel as the hero); Close% shows an em dash rather than a fake 0% when there
  * is no activity yet. Each chip links into that team's workspace.
  */
-export function TeamsOverviewCard({ overview }: { overview: TeamsOverview }) {
+export async function TeamsOverviewCard({ overview }: { overview: TeamsOverview }) {
+  const roster = await loadRoster();
+  const clientBySlug = (slug: string) => roster.find((c) => c.slug === slug);
   const { cashCents, revenueCents, deals, closeRatePct, teams } = overview;
 
   return (

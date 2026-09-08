@@ -12,7 +12,7 @@ import { getDb } from "@/db/client";
 import { offerSettings, revShareRules } from "@/db/schema/app";
 import { onboardingProgress, onboardingSteps } from "@/lib/clients/onboarding";
 import { listIntegrations } from "@/lib/integrations/queries";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { getTeamBySlug, listEodTemplates } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,7 @@ export default async function ClientSetupPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const [team, allIntegrations, templates] = await Promise.all([

@@ -6,7 +6,7 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { cents } from "@/lib/money";
-import { clientBySlug, roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -19,6 +19,8 @@ export const dynamic = "force-dynamic";
  * time; unmatched rows show as their own line, never dropped.
  */
 export default async function ClientLedgerPage() {
+  const roster = await loadRoster();
+  const clientBySlug = (slug: string) => roster.find((c) => c.slug === slug);
   // The GROSS CLIENT side of the book (Daniel's two-tab model): only
   // client-layer rows — the cash each offer collected. Agency-layer income
   // (setup fees, rev-share GV earns FROM a client) lives on the Agency ledger,

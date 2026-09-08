@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { WorkspaceApp } from "@/components/workspace/workspace-app";
 import { getOrCreateHomePage, getTeamspaceTree } from "@/lib/workspace/queries";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   return {
     title: client ? `${client.name} workspace - GV OS` : "Workspace - GV OS",
   };
