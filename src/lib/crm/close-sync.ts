@@ -18,8 +18,11 @@ import { failureNote } from "@/lib/integrations/sync-note";
 
 const KINDS = ["call", "sms", "email"] as const;
 const PAGE_LIMIT = 100;
-const MAX_PAGES_PER_KIND = 5;
-const WINDOW_DAYS = 7;
+const MAX_PAGES_PER_KIND = 10;
+// A month, not a week: speed-to-lead is judged over 30 days, so the dialler's
+// record must cover the same window the applications do. Captures are
+// idempotent on (provider, external_id) — re-pulling costs reads, never dupes.
+const WINDOW_DAYS = 30;
 
 export async function pullCloseActivity(): Promise<
   { integrationId: string; fetched?: number; captured?: number; error?: string }[]
@@ -111,7 +114,7 @@ export async function pullCloseActivity(): Promise<
         .update(integrations)
         .set({
           lastSyncAt: new Date(),
-          lastSyncNote: `pulled ${fetched} activities (7d), captured ${captured} new, resolved ${resolvedLeads} lead emails`,
+          lastSyncNote: `pulled ${fetched} activities (30d), captured ${captured} new, resolved ${resolvedLeads} lead emails`,
           updatedAt: new Date(),
         })
         .where(eq(integrations.id, conn.id));
