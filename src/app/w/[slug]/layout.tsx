@@ -14,7 +14,8 @@ import { clients as clientsTable } from "@/db/schema/app";
 import { eq } from "drizzle-orm";
 import { WorkspaceNav } from "@/components/workspace/workspace-nav";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
-import { clientBySlug, clientInitial } from "@/lib/roster";
+import { clientInitial } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 
 /**
  * v2 two-view architecture (spec §1): a client WORKSPACE. The whole shell
@@ -32,7 +33,7 @@ export default async function WorkspaceLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
   const cookieStore = await cookies();
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;

@@ -14,7 +14,7 @@ import { applications, clients, reps as repsTable } from "@/db/schema/app";
 import { bucketByDay, chartColorForClient } from "@/lib/charts";
 import { getClientReport } from "@/lib/clients/report";
 import { cents } from "@/lib/money";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   aggregateByRep,
   compareRepStats,
@@ -46,7 +46,7 @@ export default async function WorkspaceSalesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const db = getDb();

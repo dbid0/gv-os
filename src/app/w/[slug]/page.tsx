@@ -21,7 +21,7 @@ import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { getClientReport } from "@/lib/clients/report";
 import { rowsForClient } from "@/lib/clients/attribution";
 import { cents } from "@/lib/money";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   customBounds,
   homeRangeRows,
@@ -42,7 +42,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   return { title: client ? `${client.name} Workspace - GV OS` : "Workspace - GV OS" };
 }
 
@@ -59,7 +59,7 @@ export default async function WorkspacePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
   const sp = await searchParams;
   const todayKey = dayKeyCT(new Date());

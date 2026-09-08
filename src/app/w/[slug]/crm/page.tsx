@@ -15,7 +15,7 @@ import {
   nearDuplicateRepNames,
 } from "@/lib/tracking/activity";
 import { currentSnapshot, eodRowsForClient } from "@/lib/tracking/queries";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { possessive } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function WorkspaceCrmPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const db = getDb();
@@ -104,7 +104,7 @@ export default async function WorkspaceCrmPage({
   ]);
 
   const connected = connection[0]?.status === "connected";
-  const accent = clientBySlug(slug)?.accent;
+  const accent = (await rosterClientBySlug(slug))?.accent;
 
   // The floor's own numbers, from the EOD forms already on the tracking sheet.
   // These exist whether or not Close is connected, and they are SELF-REPORTED —

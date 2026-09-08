@@ -9,7 +9,7 @@ import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { transcriptByShareUrl } from "@/lib/calls/share-transcripts";
 import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
 
@@ -41,7 +41,7 @@ export default async function LeadDetailPage({
   params: Promise<{ slug: string; email: string }>;
 }) {
   const { slug, email: raw } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
   const email = decodeURIComponent(raw);
 

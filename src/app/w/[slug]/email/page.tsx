@@ -9,7 +9,7 @@ import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { chartColorForClient, latestPerDay } from "@/lib/charts";
 import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { clientIdBySlug } from "@/lib/clients/id";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ export default async function WorkspaceEmailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const [accounts, growthSamples, clientId] = await Promise.all([

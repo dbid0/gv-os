@@ -25,7 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { roster } from "@/lib/roster";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
 import { useIsHydrated, usePersistedBoolean } from "@/lib/client-state";
@@ -37,7 +36,11 @@ const STORAGE_KEY = "gvos.sidebar.collapsed";
 export function Sidebar({
   user,
   previewRole = null,
+  roster,
 }: {
+  /** DB-backed roster from the layout — a signed client appears here without
+   * anyone editing a file. */
+  roster: { slug: string; name: string; owner: string; accent: string }[];
   user: ShellUser | null;
   previewRole?: Role | null;
 }) {
