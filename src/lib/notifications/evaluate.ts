@@ -30,7 +30,7 @@ import {
 import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
 import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
 import { getEodCompliance } from "@/lib/sales/queries";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
@@ -45,6 +45,7 @@ export async function evaluateNotifications(): Promise<{
 }> {
   const db = getDb();
   const now = new Date();
+  const roster = await loadRoster();
   const [
     [latestRun],
     docs,

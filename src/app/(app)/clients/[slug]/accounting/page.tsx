@@ -17,7 +17,7 @@ import { getClientReport } from "@/lib/clients/report";
 import { revShareLines } from "@/lib/revshare/engine";
 import { getAdSpendByMonth } from "@/lib/revshare/ad-spend-query";
 import { formatMonth } from "@/lib/revshare/statement";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   return {
     title: client ? `${client.name} accounting - GV OS` : "Client accounting - GV OS",
   };
@@ -55,7 +55,7 @@ export default async function ClientAccountingPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   // Burst 1: the canonical per-client cash bundle (its own internal fan-out is

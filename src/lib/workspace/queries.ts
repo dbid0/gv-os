@@ -9,7 +9,7 @@ import {
   workspaceTodos,
   type WorkspacePage,
 } from "@/db/schema/app";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import {
   buildHomeDefaultContent,
   isFilledTwoColumnSeed,
@@ -45,7 +45,10 @@ export interface TeamspaceTree extends Teamspace {
   pages: PageNode[];
 }
 
-function accentForSlug(slug: string | null): string {
+function accentForSlug(
+  roster: { slug: string; accent: string }[],
+  slug: string | null,
+): string {
   if (!slug) return AGENCY_ACCENT;
   return roster.find((c) => c.slug === slug)?.accent ?? AGENCY_ACCENT;
 }
@@ -77,18 +80,21 @@ export async function listTeamspaces(): Promise<Teamspace[]> {
   };
   try {
     const db = getDb();
-    const rows = await db
-      .select({ id: clients.id, name: clients.name, slug: clients.slug })
-      .from(clients)
-      .where(eq(clients.status, "active"))
-      .orderBy(clients.name);
+    const [rows, roster] = await Promise.all([
+      db
+        .select({ id: clients.id, name: clients.name, slug: clients.slug })
+        .from(clients)
+        .where(eq(clients.status, "active"))
+        .orderBy(clients.name),
+      loadRoster(),
+    ]);
     return [
       agency,
       ...rows.map((c) => ({
         clientId: c.id,
         slug: c.slug,
         name: c.name,
-        accent: accentForSlug(c.slug),
+        accent: accentForSlug(roster, c.slug),
       })),
     ];
   } catch {

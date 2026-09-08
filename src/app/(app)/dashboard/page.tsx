@@ -22,7 +22,7 @@ import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { normalizeSalesMetricIds, salesMetricsFrom } from "@/lib/sales/metrics";
 import {
   closeRateFrom,
@@ -56,6 +56,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const roster = await loadRoster();
   const params = await searchParams;
   const user = await shellUser();
   const todayKey = dayKeyCT(new Date());

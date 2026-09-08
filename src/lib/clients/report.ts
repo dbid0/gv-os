@@ -14,7 +14,7 @@ import {
 } from "@/db/schema/app";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -58,6 +58,7 @@ export async function getClientReport(
   slug: string,
   displayName: string,
 ): Promise<ClientReport> {
+  const roster = await loadRoster();
   const db = getDb();
   const [row] = await db
     .select({ id: clients.id, monthlyTargetCents: clients.monthlyTargetCents })

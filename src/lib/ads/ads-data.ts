@@ -5,7 +5,7 @@ import { clientAdSpend, clients } from "@/db/schema/app";
 import { adRoas, type AdRoas } from "@/lib/ads/roas";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { dayKeyCT } from "@/lib/charts";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { listApplications } from "@/lib/funnel/queries";
 import { listDeals } from "@/lib/sales/queries";
 import { clientLedger } from "@/lib/transactions/ledger";
@@ -38,6 +38,7 @@ export interface AdsData {
  * assembled from the same live reads the ledger and funnel use. Fail-soft.
  */
 export async function getAdsData(): Promise<AdsData> {
+  const roster = await loadRoster();
   const empty: AdsData = {
     rows: [],
     totals: {

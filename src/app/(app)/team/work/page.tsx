@@ -7,7 +7,7 @@ import { WorkBoard, type ClientOption } from "@/components/work/work-board";
 import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
-import { clientBySlug } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { cn } from "@/lib/utils";
 import { listWorkItems, listWorkMembers } from "@/lib/work/queries";
 
@@ -15,6 +15,8 @@ export const metadata = { title: "Team work - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function TeamWorkPage() {
+  const rosterList = await loadRoster();
+  const clientBySlug = (slug: string) => rosterList.find((c) => c.slug === slug);
   const db = getDb();
   const [items, members, clientRows] = await Promise.all([
     listWorkItems(),

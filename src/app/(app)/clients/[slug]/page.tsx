@@ -30,7 +30,7 @@ import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { getClientReport } from "@/lib/clients/report";
 import { listAdSpendForClient } from "@/lib/revshare/ad-spend-query";
-import { clientBySlug } from "@/lib/roster";
+import { rosterClientBySlug } from "@/lib/roster-server";
 import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   return { title: client ? `${client.name} - GV OS` : "Client - GV OS" };
 }
 
@@ -95,7 +95,7 @@ export default async function ClientPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = clientBySlug(slug);
+  const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
   const [team, report, drive, allIntegrations] = await Promise.all([

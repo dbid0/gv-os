@@ -8,7 +8,7 @@ import {
 } from "@/lib/clients/health";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { listApplications } from "@/lib/funnel/queries";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { listActivityReports, listEodReps } from "@/lib/sales/queries";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
@@ -36,6 +36,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * a broken page.
  */
 export async function getClientHealthData(): Promise<ClientHealthRow[]> {
+  const roster = await loadRoster();
   try {
     const now = new Date();
     const todayKey = dayKeyCT(now);

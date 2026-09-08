@@ -9,7 +9,7 @@ import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
 import { buildAgencySnapshotEmbed, buildTestMessage } from "@/lib/discord/embed";
 import { buildDigestMessage } from "@/lib/discord/digest";
 import { postToAgencyDiscord } from "@/lib/discord/webhook";
-import { roster } from "@/lib/roster";
+import { loadRoster } from "@/lib/roster-server";
 import { computeFunnel } from "@/lib/sales/funnel";
 import { getLeaderboard } from "@/lib/sales/queries";
 import { partialDealAr } from "@/lib/transactions/ar";
@@ -56,7 +56,7 @@ export async function sendAgencySnapshot() {
       monthCashCents: collectedCents,
       totalRevenueCents: revenueCents,
       dealsClosed,
-      activeClients: roster.length,
+      activeClients: (await loadRoster()).length,
       isoTimestamp: now.toISOString(),
     }),
   );
