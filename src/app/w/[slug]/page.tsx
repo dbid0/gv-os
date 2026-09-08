@@ -14,6 +14,7 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
+import { portalVisibility } from "@/lib/clients/portal-visibility";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
 import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
 import { buildOfferFunnel } from "@/lib/tracking/funnel";
@@ -316,21 +317,6 @@ export default async function WorkspacePage({
       )}
     </div>
   );
-}
-
-async function portalVisibility(slug: string): Promise<Record<string, boolean>> {
-  try {
-    const db = getDb();
-    const [row] = await db
-      .select({ visibility: offerSettings.visibility })
-      .from(offerSettings)
-      .innerJoin(clients, eq(offerSettings.clientId, clients.id))
-      .where(eq(clients.slug, slug))
-      .limit(1);
-    return row?.visibility ?? {};
-  } catch {
-    return {};
-  }
 }
 
 /** The offer's current snapshot and its model — the funnel needs both. */
