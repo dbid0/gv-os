@@ -225,3 +225,21 @@ export function paymentSourceGaps(
       gapCents: authority.netCents - e.netCents,
     }));
 }
+
+/**
+ * Whether a sheet payment row's Processor cell belongs to a given source.
+ *
+ * The comparison must be LIKE WITH LIKE: a sheet that also logs another
+ * processor's money (Shopify beside Stripe) would otherwise show a large,
+ * entirely fictional "gap" against the Stripe record — the sheet knowing
+ * about money Stripe cannot see is not a disagreement.
+ */
+export function processorMatchesSource(
+  processor: string | null | undefined,
+  source: FactSource,
+): boolean {
+  const p = (processor ?? "").trim().toLowerCase();
+  if (p === "") return false;
+  if (source === "fanbasis") return p.includes("fanbasis") || p.includes("commas");
+  return p.includes(source);
+}
