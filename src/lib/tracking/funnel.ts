@@ -41,6 +41,15 @@ export interface OfferFunnel {
   stages: FunnelStage[];
   steps: FunnelStep[];
   /**
+   * The two motions inside "paid". A high-ticket offer with a low-ticket
+   * front end has buyers who never touch a closer: more people PAID than
+   * ever had a deal logged, which reads as broken tracking unless the split
+   * is named. Counted in people; money is the NET the lead summaries carry.
+   */
+  paidViaDeal: number;
+  paidWithoutDeal: number;
+  paidWithoutDealCents: number;
+  /**
    * Leads who appear at a later stage without the earlier one — buyers who
    * never filled in an application, calls with no booking row. Reported, not
    * hidden: it is usually a gap in the sheet, occasionally a real other channel.
@@ -110,6 +119,11 @@ export function buildOfferFunnel(
   // with no application means they entered the funnel partway, which is a gap
   // in the sheet or a channel the sheet doesn't record. A lead who simply
   // hasn't progressed yet (applied, booked, no further) is NOT a skip.
+  const paidViaDeal = leads.filter((l) => l.paymentsCents > 0 && l.deals > 0).length;
+  const paidWithoutDealLeads = leads.filter(
+    (l) => l.paymentsCents > 0 && l.deals === 0,
+  );
+
   const skipped = reached.filter((r) => {
     let highest = -1;
     ORDER_FOR_OFFER.forEach((s, i) => {
@@ -119,7 +133,18 @@ export function buildOfferFunnel(
     return ORDER_FOR_OFFER.slice(0, highest + 1).some((s) => !r.has(s));
   }).length;
 
-  return { stages, steps, skipped, totalLeads: leads.length };
+  return {
+    stages,
+    steps,
+    paidViaDeal,
+    paidWithoutDeal: paidWithoutDealLeads.length,
+    paidWithoutDealCents: paidWithoutDealLeads.reduce(
+      (sum, l) => sum + l.paymentsCents,
+      0,
+    ),
+    skipped,
+    totalLeads: leads.length,
+  };
 }
 
 /** A rate as a percentage string, or "—" when it is unknown. */

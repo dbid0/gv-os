@@ -158,3 +158,25 @@ describe("an offer's funnel follows its own shape", () => {
     ]);
   });
 });
+
+describe("the two motions inside Paid", () => {
+  it("splits pipeline buyers from direct buyers, in people and net cents", () => {
+    // The shape that reads as broken tracking: more people paid than ever had
+    // a deal logged, because the low-ticket front end buys direct.
+    const f = buildOfferFunnel([
+      lead({ applied: true, deals: 1, paymentsCents: 500_000 }), // pipeline
+      lead({ paymentsCents: 4_900 }), // sub, no deal
+      lead({ paymentsCents: 4_900 }), // sub, no deal
+    ]);
+    expect(f.paidViaDeal).toBe(1);
+    expect(f.paidWithoutDeal).toBe(2);
+    expect(f.paidWithoutDealCents).toBe(9_800);
+  });
+
+  it("a refunded-to-zero lead counts in neither motion", () => {
+    // paymentsCents is NET — a fully refunded buyer has nothing standing.
+    const f = buildOfferFunnel([lead({ paymentsCents: 0, deals: 0 })]);
+    expect(f.paidViaDeal).toBe(0);
+    expect(f.paidWithoutDeal).toBe(0);
+  });
+});
