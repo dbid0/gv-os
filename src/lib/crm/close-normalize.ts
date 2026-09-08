@@ -70,3 +70,34 @@ export function emailFromCloseLead(payload: Record<string, unknown>): string | n
   }
   return null;
 }
+
+/**
+ * A phone as a JOIN KEY: the last ten digits, or null when fewer survive.
+ *
+ * "+1 (555) 010-2030", "15550102030" and "555-010-2030" are one number typed
+ * three ways; country codes and formatting never survive a sheet round-trip,
+ * so the last ten digits are the stable part. Under ten digits is not a US
+ * number worth joining on — null, never a guess.
+ */
+export function phoneKey(raw: string | null | undefined): string | null {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  return digits.slice(-10);
+}
+
+/** The lead's best phone from a Close LEAD payload — same walk as the email. */
+export function phoneFromCloseLead(payload: Record<string, unknown>): string | null {
+  const contacts = Array.isArray(payload.contacts) ? payload.contacts : [];
+  for (const contact of contacts) {
+    if (typeof contact !== "object" || contact === null) continue;
+    const phones = (contact as Record<string, unknown>).phones;
+    if (!Array.isArray(phones)) continue;
+    for (const entry of phones) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const phone = (entry as Record<string, unknown>).phone;
+      const key = phoneKey(typeof phone === "string" ? phone : null);
+      if (key) return key;
+    }
+  }
+  return null;
+}

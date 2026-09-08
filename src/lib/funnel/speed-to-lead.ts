@@ -10,18 +10,22 @@
 
 export interface SpeedToLeadApp {
   email: string | null;
+  /** Optional second join key — last-10-digit phone (see phoneKey). */
+  phone?: string | null;
   /** submittedAt ?? createdAt, in epoch ms. */
   submittedAtMs: number;
 }
 
 export interface SpeedToLeadCall {
   email: string | null;
+  /** Optional second join key — last-10-digit phone (see phoneKey). */
+  phone?: string | null;
   /** When the call/dial happened, epoch ms. */
   occurredAtMs: number;
 }
 
 export interface SpeedToLeadStats {
-  /** Applications that carry an email (i.e. are dialable at all). */
+  /** Applications that carry an email or phone (i.e. are joinable at all). */
   dialableApps: number;
   /** Dialable apps with a first call at or after they came in. */
   matched: number;
@@ -53,21 +57,31 @@ export function computeSpeedToLead(
   apps: SpeedToLeadApp[],
   calls: SpeedToLeadCall[],
 ): SpeedToLeadStats {
-  // Earliest call per email — the first time anyone dialed that lead.
+  // Earliest call per join key — the first time anyone dialed that lead.
+  // Email is the primary key; the phone (last ten digits) is the FALLBACK,
+  // because a floor that dials phone-only leads leaves most calls without an
+  // email and the flagship metric would only ever see a sliver of the day.
   const firstCallByEmail = new Map<string, number>();
+  const firstCallByPhone = new Map<string, number>();
+  const keep = (map: Map<string, number>, key: string, at: number) => {
+    const prev = map.get(key);
+    if (prev === undefined || at < prev) map.set(key, at);
+  };
   for (const c of calls) {
     const e = normEmail(c.email);
-    if (!e) continue;
-    const prev = firstCallByEmail.get(e);
-    if (prev === undefined || c.occurredAtMs < prev) {
-      firstCallByEmail.set(e, c.occurredAtMs);
-    }
+    if (e) keep(firstCallByEmail, e, c.occurredAtMs);
+    if (c.phone) keep(firstCallByPhone, c.phone, c.occurredAtMs);
   }
 
-  const dialable = apps.filter((a) => normEmail(a.email) !== null);
+  const dialable = apps.filter((a) => normEmail(a.email) !== null || Boolean(a.phone));
   const durations: number[] = [];
   for (const a of dialable) {
-    const call = firstCallByEmail.get(normEmail(a.email)!);
+    const e = normEmail(a.email);
+    // Email wins when both keys match — it is the stronger identity; the
+    // phone answers only when the email finds nothing.
+    const call =
+      (e ? firstCallByEmail.get(e) : undefined) ??
+      (a.phone ? firstCallByPhone.get(a.phone) : undefined);
     if (call === undefined) continue;
     const delta = call - a.submittedAtMs;
     // A call logged before the application isn't a speed-to-lead on it.

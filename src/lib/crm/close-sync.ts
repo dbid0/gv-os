@@ -6,7 +6,11 @@ import { getDb } from "@/db/client";
 import { crmActivity, integrations } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
-import { emailFromCloseLead, normalizeCloseActivity } from "@/lib/crm/close-normalize";
+import {
+  emailFromCloseLead,
+  normalizeCloseActivity,
+  phoneFromCloseLead,
+} from "@/lib/crm/close-normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
 
 /**
@@ -170,17 +174,22 @@ async function resolveLeadEmails(
     if (!res.ok) continue;
     const payload = (await res.json()) as Record<string, unknown>;
     const email = emailFromCloseLead(payload);
-    if (!email) continue;
+    const phone = phoneFromCloseLead(payload);
+    // A lead with NO email gets the empty-string sentinel: "checked, none".
+    // Leaving it null meant re-fetching the same emailless leads every run,
+    // forever — thousands of wasted CRM calls a day on a floor that dials
+    // phone-only leads. The empty string never matches an application
+    // (normEmail('') is null), so no reader changes meaning.
     await db
       .update(crmActivity)
-      .set({ leadEmail: email })
+      .set({ leadEmail: email ?? "", leadPhone: phone })
       .where(
         and(
           eq(crmActivity.integrationId, integrationId),
           eq(crmActivity.leadId, leadId),
         ),
       );
-    resolved += 1;
+    if (email || phone) resolved += 1;
   }
   return resolved;
 }

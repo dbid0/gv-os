@@ -609,6 +609,9 @@ export const crmActivity = appSchema.table(
      * Speed-to-lead matches applications to first dials BY EMAIL — without
      * this column the flagship metric was uncomputable by construction. */
     leadEmail: text("lead_email"),
+    /** The lead's phone (last 10 digits), resolved with the email — the
+     * fallback join key on a floor that dials phone-only leads. */
+    leadPhone: text("lead_phone"),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -981,6 +984,10 @@ export const transactions = appSchema.table(
       .default(0),
     agreementSigned: boolean("agreement_signed"),
     leadEmail: text("lead_email"),
+    /** The lead's phone, when the source carried one. Landed alongside the
+     * CRM's lead_phone (same shape); nullable and unused until a matcher
+     * wants it — never required. */
+    leadPhone: text("lead_phone"),
     /** True = money not tied to a tracked sale (mutes the missing-form alert). */
     external: boolean("external").notNull().default(false),
     /** form · processor · manual · sheet. */
