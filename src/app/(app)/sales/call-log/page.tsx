@@ -4,6 +4,7 @@ import {
 } from "@/components/sales/call-history-view";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { listEodReps, listTeams } from "@/lib/sales/queries";
+import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = { title: "Call Log - GV OS" };
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ const fmtWhen = (d: Date) =>
   });
 
 export default async function SalesCallLogPage() {
+  // Live when you're looking: kick a close pull after the response.
+  refreshProviderOnView("close");
   const [logs, teams, reps] = await Promise.all([
     listCallLogs(),
     listTeams(),

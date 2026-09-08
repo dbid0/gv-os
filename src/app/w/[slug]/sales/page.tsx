@@ -28,6 +28,7 @@ import {
 } from "@/lib/sales/call-activity";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { listDeals } from "@/lib/sales/queries";
+import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,8 @@ export default async function WorkspaceSalesPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  // Live when you're looking: kick a close pull after the response.
+  refreshProviderOnView("close");
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
