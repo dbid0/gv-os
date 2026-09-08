@@ -42,6 +42,7 @@ import {
   normalizeHomeMode,
   normalizeHomeRange,
   rangeBounds,
+  previousBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -127,6 +128,10 @@ export default async function DashboardPage({
   const bounds =
     custom ?? rangeBounds(range as Exclude<typeof range, "custom">, todayKey);
   const headline = homeRangeHeadline(backlog, mode, bounds);
+  // The same headline over the window immediately before — "vs last period"
+  // context on the hero. All-time has no previous period, so no delta.
+  const prevBounds = previousBounds(bounds);
+  const prevHeadline = prevBounds ? homeRangeHeadline(backlog, mode, prevBounds) : null;
   const series = homeRangeSeries(backlog, mode, bounds);
 
   // Sections: only who actually has money in the range — and NEVER a mixed
@@ -219,6 +224,7 @@ export default async function DashboardPage({
         todayKey={todayKey}
         monthLabel={monthLabel}
         collectedCents={headline.collectedCents}
+        previousCollectedCents={prevHeadline ? prevHeadline.collectedCents : null}
         revenueCents={headline.revenueCents}
         sections={sections}
         series={series}
