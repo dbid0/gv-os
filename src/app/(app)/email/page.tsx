@@ -6,11 +6,14 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { latestPerDay, type DayBucket } from "@/lib/charts";
 import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
+import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = { title: "Email - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
+  // Live when you're looking: kick a kit pull after the response.
+  refreshProviderOnView("kit");
   const [accounts, growthSamples] = await Promise.all([
     latestKitOverview(),
     kitGrowthByConnection(),

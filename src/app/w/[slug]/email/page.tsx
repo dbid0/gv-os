@@ -12,6 +12,7 @@ import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { clientIdBySlug } from "@/lib/clients/id";
 import { cn } from "@/lib/utils";
+import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ export default async function WorkspaceEmailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  // Live when you're looking: kick a kit pull after the response.
+  refreshProviderOnView("kit");
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();

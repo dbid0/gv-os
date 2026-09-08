@@ -17,6 +17,7 @@ import {
 import { currentSnapshot, eodRowsForClient } from "@/lib/tracking/queries";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { possessive } from "@/lib/text";
+import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export default async function WorkspaceCrmPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  // Live when you're looking: kick a close pull after the response.
+  refreshProviderOnView("close");
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
@@ -57,7 +60,11 @@ export default async function WorkspaceCrmPage({
   const [connection, activity, apps] = await Promise.all([
     clientId
       ? db
-          .select({ id: integrations.id, status: integrations.status })
+          .select({
+            id: integrations.id,
+            status: integrations.status,
+            lastSyncAt: integrations.lastSyncAt,
+          })
           .from(integrations)
           .where(
             and(
@@ -104,6 +111,12 @@ export default async function WorkspaceCrmPage({
   ]);
 
   const connected = connection[0]?.status === "connected";
+  const syncedAgoMin = connection[0]?.lastSyncAt
+    ? Math.max(
+        0,
+        Math.round((now.getTime() - connection[0].lastSyncAt.getTime()) / 60_000),
+      )
+    : null;
   const accent = (await rosterClientBySlug(slug))?.accent;
 
   // The floor's own numbers, from the EOD forms already on the tracking sheet.
@@ -206,6 +219,15 @@ export default async function WorkspaceCrmPage({
 
   return (
     <div className="space-y-6">
+      {syncedAgoMin !== null && (
+        <p className="text-faint -mb-3 text-[11px]">
+          <span className="bg-success mr-1.5 inline-block size-1.5 animate-pulse rounded-full align-middle" />
+          Live from the dialler — synced{" "}
+          {syncedAgoMin === 0 ? "just now" : `${syncedAgoMin}m ago`}; viewing this page
+          refreshes it.
+        </p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Speed to lead — median"
