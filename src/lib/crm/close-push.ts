@@ -34,12 +34,14 @@ export interface ClosePushResult {
   applicants: number;
   alreadyInCrm: number;
   created: number;
+  /** Creates the CRM refused this run — surfaced, not swallowed. */
+  createFailed: number;
   /** Set when nothing could run — never a fabricated zero. */
   error: string | null;
 }
 
 function empty(error: string): ClosePushResult {
-  return { applicants: 0, alreadyInCrm: 0, created: 0, error };
+  return { applicants: 0, alreadyInCrm: 0, created: 0, createFailed: 0, error };
 }
 
 async function closeKeyFor(clientId: string): Promise<string | null> {
@@ -132,6 +134,7 @@ export async function pushApplicantsToClose(
 
   let alreadyInCrm = 0;
   let created = 0;
+  let createFailed = 0;
   for (const a of applicants) {
     if (created >= CREATE_CAP_PER_RUN) break;
     const phone = phoneKey(a.phone);
@@ -152,9 +155,17 @@ export async function pushApplicantsToClose(
       }),
     });
     if (res.ok) created += 1;
+    else createFailed += 1;
     // A failed create is left for the next run — the search will still miss
-    // it, and the retry costs one request.
+    // it, and the retry costs one request. The count surfaces so a payload
+    // problem can't hide behind silence.
   }
 
-  return { applicants: applicants.length, alreadyInCrm, created, error: null };
+  return {
+    applicants: applicants.length,
+    alreadyInCrm,
+    created,
+    createFailed,
+    error: null,
+  };
 }
