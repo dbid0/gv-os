@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { Zap } from "lucide-react";
 
 import { offerSpeedToLead } from "@/lib/crm/offer-stl";
+import {
+  isPortalView,
+  portalShows,
+  portalVisibility,
+} from "@/lib/clients/portal-visibility";
 import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
@@ -103,6 +108,14 @@ export default async function WorkspaceSalesPage({
     30,
     now,
   );
+  const [portalView, visibility] = await Promise.all([
+    isPortalView(),
+    portalVisibility(slug),
+  ]);
+  // Same rule as the workspace home: a client sees MONEY only when the admin
+  // turned it on. This tab used to show the cash card unconditionally.
+  const showCash = portalShows(portalView, visibility, "cash", false);
+
   const stl = report?.clientId
     ? await offerSpeedToLead(report.clientId)
     : {
@@ -126,10 +139,18 @@ export default async function WorkspaceSalesPage({
             <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
               <Zap className="size-3.5" /> Speed to lead — the 5-minute standard
             </p>
-            {stl.connected &&
-            stl.measured === 0 &&
-            stl.applications > 0 &&
-            stl.everDialed === 0 ? (
+            {portalView && (!stl.connected || stl.measured === 0) ? (
+              // The client's portal never carries GV's setup or ops language
+              // ("connect Close", "check the CRM handoff") — those are our
+              // jobs. Until the metric measures, the portal says only that.
+              <p className="text-muted-foreground mt-2 max-w-xl text-sm">
+                Speed-to-lead reporting arrives once the dialler feed is live for this
+                offer.
+              </p>
+            ) : stl.connected &&
+              stl.measured === 0 &&
+              stl.applications > 0 &&
+              stl.everDialed === 0 ? (
               // The operational disconnect, named: applications exist, the
               // floor is dialling — and the two lists never touch.
               <p className="text-warning mt-2 max-w-xl text-sm">
@@ -179,13 +200,15 @@ export default async function WorkspaceSalesPage({
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Cash collected — all time"
-          value={report ? <Money amount={cents(report.mirror.cashCents)} /> : "—"}
-          hint="the mirror's figure"
-          accent={client.accent}
-          tone="success"
-        />
+        {showCash && (
+          <StatCard
+            label="Cash collected — all time"
+            value={report ? <Money amount={cents(report.mirror.cashCents)} /> : "—"}
+            hint={portalView ? "your offer's collections" : "the mirror's figure"}
+            accent={client.accent}
+            tone="success"
+          />
+        )}
         {/* The mirror's own count, not the deals table's. This card sits
             beside "Cash collected — all time", which IS the mirror, and the
             dashboard reports the same pair — a count from one source next to
