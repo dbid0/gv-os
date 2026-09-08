@@ -32,7 +32,7 @@ import {
   getSalesOverview,
 } from "@/lib/sales/queries";
 import { getSettings } from "@/lib/settings";
-import { homeSections } from "@/lib/home/sections";
+import { homeSections, totalCard } from "@/lib/home/sections";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
   customBounds,
@@ -128,16 +128,40 @@ export default async function DashboardPage({
   const headline = homeRangeHeadline(backlog, mode, bounds);
   const series = homeRangeSeries(backlog, mode, bounds);
 
-  // Sections: only who actually has money in the range, in the current mode.
-  // Agency pinned far left, clients to the right — see lib/home/sections.
+  // Sections: only who actually has money in the range — and NEVER a mixed
+  // layer on one card. A client card is their OFFER's cash (client layer); a
+  // setup fee or rev-share they paid GV is the agency's income and shows on
+  // the agency card only. Mixing them reported GV's own collections as
+  // revenue the client's offer had made.
+  const rosterLite = roster.map((c) => ({ slug: c.slug, name: c.name }));
   const monthRows = homeRangeRows(backlog, mode, bounds);
-  const sections: HomeSection[] = homeSections(
-    clientLedger(
-      monthRows,
-      roster.map((c) => ({ slug: c.slug, name: c.name })),
-      matchesSheetClient,
-    ),
-  );
+  let sections: HomeSection[];
+  if (mode === "all") {
+    const agency = totalCard(
+      clientLedger(
+        homeRangeRows(backlog, "agency", bounds),
+        rosterLite,
+        matchesSheetClient,
+      ),
+      "Agency — GV income",
+    );
+    const clientCards = homeSections(
+      clientLedger(
+        homeRangeRows(backlog, "clients", bounds),
+        rosterLite,
+        matchesSheetClient,
+      ),
+    );
+    sections = agency ? [agency, ...clientCards] : clientCards;
+  } else {
+    // Single-layer modes are already pure; only the slug-less bucket's name
+    // differs — GV direct income on the agency book, Unattributed on the
+    // client book.
+    sections = homeSections(
+      clientLedger(monthRows, rosterLite, matchesSheetClient),
+      mode === "agency" ? "Agency — direct" : "Unattributed",
+    );
+  }
 
   const recentRows = backlog.slice(0, 8).map((r) => ({
     id: r.id,

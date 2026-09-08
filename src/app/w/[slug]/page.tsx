@@ -96,10 +96,14 @@ export default async function WorkspacePage({
   const showApps = show("apps", true);
   const showDrive = show("drive", true);
 
-  // This client's income inside the range — attributed the same way the
-  // client ledger does it (join first, sheet aliases second).
+  // This client's income inside the range — CLIENT-layer rows only,
+  // attributed the same way the client ledger does it (join first, sheet
+  // aliases second). Agency-layer money is GV's income — a setup fee or
+  // rev-share the client paid US — and must never render as cash their
+  // offer collected. It did: an agency row described with the client's
+  // name alias-matched onto this hero as the offer's revenue.
   const rangeRows = rowsForClient(
-    homeRangeRows(backlog, "all", bounds),
+    homeRangeRows(backlog, "clients", bounds),
     report.clientId,
     slug,
   );
@@ -109,8 +113,12 @@ export default async function WorkspacePage({
   const offerSeries = homeRangeSeries(rangeRows, "all", bounds);
 
   // This offer's most recent money, attributed the same way — the workspace's
-  // own transaction feed, mirroring the admin dashboard.
-  const offerRecent = rowsForClient(backlog, report.clientId, slug)
+  // own transaction feed. Client layer only, same rule as the hero.
+  const offerRecent = rowsForClient(
+    backlog.filter((r) => r.layer === "client"),
+    report.clientId,
+    slug,
+  )
     .slice(0, 8)
     .map((r) => ({
       id: r.id,
