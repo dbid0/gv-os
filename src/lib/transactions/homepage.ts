@@ -246,3 +246,20 @@ export function customBounds(from: unknown, to: unknown): RangeBounds | null {
   const [lo, hi] = from <= to ? [from, to] : [to, from];
   return { from: lo, to: hi, label: "Custom range" };
 }
+
+/**
+ * The window immediately BEFORE a bounded window, same length — the honest
+ * comparison base for "vs last period". An unbounded window (all-time) has
+ * no previous period, so null: a delta against nothing is a made-up number.
+ */
+export function previousBounds(bounds: RangeBounds): RangeBounds | null {
+  if (!bounds.from || !bounds.to) return null;
+  const from = new Date(`${bounds.from}T00:00:00Z`);
+  const to = new Date(`${bounds.to}T00:00:00Z`);
+  const days = Math.round((to.getTime() - from.getTime()) / (24 * 3600 * 1000)) + 1;
+  return {
+    from: shiftDayKey(bounds.from, -days),
+    to: shiftDayKey(bounds.from, -1),
+    label: `previous ${days === 1 ? "day" : `${days} days`}`,
+  };
+}

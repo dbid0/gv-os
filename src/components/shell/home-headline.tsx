@@ -8,6 +8,7 @@ import { useState, useTransition } from "react";
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
 import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
+import { PeriodDelta } from "@/components/ui/period-delta";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
 import { useCountUp } from "@/lib/client-state";
@@ -44,6 +45,7 @@ export function HomeHeadline({
   todayKey,
   monthLabel,
   collectedCents,
+  previousCollectedCents = null,
   revenueCents,
   sections,
   series,
@@ -55,6 +57,7 @@ export function HomeHeadline({
   todayKey: string;
   monthLabel: string;
   collectedCents: number;
+  previousCollectedCents?: number | null;
   revenueCents: number;
   sections: HomeSection[];
   series: { day: string; cents: number }[];
@@ -123,6 +126,10 @@ export function HomeHeadline({
                 <p className="numeric text-success mt-0.5 text-5xl font-bold tracking-tight tabular-nums sm:text-6xl">
                   {fmtUsd(shownCollected)}
                 </p>
+                <PeriodDelta
+                  currentCents={collectedCents}
+                  previousCents={previousCollectedCents}
+                />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs font-medium">

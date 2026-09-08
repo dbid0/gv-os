@@ -19,6 +19,7 @@ import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
 import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
 import { buildOfferFunnel } from "@/lib/tracking/funnel";
 import { CashMixBar } from "@/components/tracking/cash-mix-bar";
+import { PeriodDelta } from "@/components/ui/period-delta";
 import { cashMix } from "@/lib/tracking/cash-mix";
 import {
   cashRowsForClient,
@@ -36,6 +37,7 @@ import {
   homeRangeSeries,
   normalizeHomeRange,
   rangeBounds,
+  previousBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
 import { getDb } from "@/db/client";
@@ -116,6 +118,15 @@ export default async function WorkspacePage({
     slug,
   );
   const rangeCash = rangeRows.reduce((s, r) => s + r.cashCents, 0);
+  // "vs last period" — the window immediately before, same length.
+  const prevBounds = previousBounds(bounds);
+  const prevRangeCash = prevBounds
+    ? rowsForClient(
+        homeRangeRows(backlog, "clients", prevBounds),
+        report.clientId,
+        slug,
+      ).reduce((sum, r) => sum + r.cashCents, 0)
+    : null;
   const rangeRevenue = rangeRows.reduce((s, r) => s + r.revenueCents, 0);
   // The offer's own growth curve for the hero — same shape the dashboard uses.
   const offerSeries = homeRangeSeries(rangeRows, "all", bounds);
@@ -234,6 +245,7 @@ export default async function WorkspacePage({
                     )}
                   </span>
                 </p>
+                <PeriodDelta currentCents={rangeCash} previousCents={prevRangeCash} />
               </div>
             )}
             <DateRangePicker
