@@ -20,6 +20,9 @@ name: integration-sync
 on:
   schedule:
     - cron: "*/15 * * * *"
+    # The 11:00 UTC firing also refreshes the tracking mirrors (sheet +
+    # processor snapshots) — once a day, before the workday, deliberate.
+    - cron: "0 11 * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -41,3 +44,15 @@ jobs:
             -w "%{http_code}" "https://os.globalventures.app/api/sync/all-pulls" || echo "ERR")
           echo "all-pulls -> $code"
           head -c 1000 /tmp/pull.json 2>/dev/null || true
+
+      - name: Daily tracking snapshot (sheet + processor mirrors)
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.event.schedule, '0 11')
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: |
+          if [ -z "$SYNC_SECRET" ]; then exit 0; fi
+          code=$(curl -s -o /tmp/track.json -m 300 --retry 2 --retry-delay 10 --retry-all-errors \
+            -H "Authorization: Bearer $SYNC_SECRET" \
+            -w "%{http_code}" "https://os.globalventures.app/api/sync/tracking?transcripts=1" || echo "ERR")
+          echo "tracking -> $code"
+          head -c 1000 /tmp/track.json 2>/dev/null || true
