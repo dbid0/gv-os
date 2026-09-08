@@ -3,10 +3,18 @@ import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
+import { stuckCalls } from "@/lib/bookings/stuck";
 import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
-import { applications, clients, crmActivity, integrations } from "@/db/schema/app";
+import {
+  applications,
+  bookings,
+  clients,
+  clientTrackingRows,
+  crmActivity,
+  integrations,
+} from "@/db/schema/app";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
 import { ActivityTable } from "@/components/tracking/activity-table";
 import {
@@ -134,6 +142,42 @@ export default async function WorkspaceCrmPage({
     eodRows.map((r) => r.occurredAt?.toISOString().slice(0, 10)).filter(Boolean),
   ).size;
 
+  // Stuck calls: booked, date passed, nobody said what happened. Bookings
+  // are the scheduler's own record; the end-of-call reports on the sheet
+  // are the outcomes. Honest empty until a calendar connects.
+  let stuck: ReturnType<typeof stuckCalls> = [];
+  if (clientId) {
+    const [bookingRows, eocRows] = await Promise.all([
+      db
+        .select({
+          inviteeName: bookings.inviteeName,
+          inviteeEmail: bookings.inviteeEmail,
+          startsAt: bookings.startsAt,
+          status: bookings.status,
+        })
+        .from(bookings)
+        .where(eq(bookings.clientId, clientId))
+        .limit(500),
+      snapshot
+        ? db
+            .select({ email: clientTrackingRows.email })
+            .from(clientTrackingRows)
+            .where(
+              and(
+                eq(clientTrackingRows.syncId, snapshot.syncId),
+                eq(clientTrackingRows.tab, "eoc"),
+              ),
+            )
+        : Promise.resolve([] as { email: string | null }[]),
+    ]);
+    const reported = new Set(
+      eocRows
+        .map((r) => r.email?.trim().toLowerCase())
+        .filter((e): e is string => Boolean(e)),
+    );
+    stuck = stuckCalls(bookingRows, reported, now);
+  }
+
   const floorPanel =
     reps.length > 0 ? (
       <Panel
@@ -226,6 +270,43 @@ export default async function WorkspaceCrmPage({
           {syncedAgoMin === 0 ? "just now" : `${syncedAgoMin}m ago`}; viewing this page
           refreshes it.
         </p>
+      )}
+
+      {stuck.length > 0 && (
+        <section className="border-warning/40 bg-warning/5 rounded-xl border p-4">
+          <p className="text-warning text-[11px] font-medium tracking-wider uppercase">
+            Stuck — date passed, no outcome filed ({stuck.length})
+          </p>
+          <div className="gv-rows mt-2 space-y-1">
+            {stuck.slice(0, 6).map((c) => (
+              <div
+                key={`${c.inviteeEmail}-${c.startsAt.toISOString()}`}
+                className="flex flex-wrap items-center gap-x-3 text-sm"
+              >
+                <span className="font-medium">
+                  {c.inviteeName ?? c.inviteeEmail ?? "Unknown invitee"}
+                </span>
+                <span className="text-faint text-xs">
+                  {c.startsAt.toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}{" "}
+                  · {c.hoursOverdue}h overdue
+                </span>
+              </div>
+            ))}
+            {stuck.length > 6 && (
+              <p className="text-faint text-xs">and {stuck.length - 6} more</p>
+            )}
+          </div>
+          <p className="text-faint mt-2 text-xs">
+            Booked, never cancelled, and no end-of-call report for the invitee. Either
+            it happened and nobody wrote it down, or it never happened — both are worth
+            a look.
+          </p>
+        </section>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
