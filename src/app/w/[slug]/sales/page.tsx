@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { Zap } from "lucide-react";
 
 import { offerSpeedToLead } from "@/lib/crm/offer-stl";
+import { closesPaid } from "@/lib/tracking/closes-paid";
+import { cashRowsForClient, currentSnapshot } from "@/lib/tracking/queries";
 import {
   isPortalView,
   portalShows,
@@ -119,6 +121,24 @@ export default async function WorkspaceSalesPage({
   // Same rule as the workspace home: a client sees MONEY only when the admin
   // turned it on. This tab used to show the cash card unconditionally.
   const showCash = portalShows(portalView, visibility, "cash", false);
+
+  // How the closes paid — from the offer's own deals record.
+  let paidMix = null;
+  if (showCash && report?.clientId) {
+    const snap = await currentSnapshot(report.clientId);
+    if (snap) {
+      const { deals: dealRows } = await cashRowsForClient(snap.syncId);
+      if (dealRows.length > 0) {
+        paidMix = closesPaid(
+          dealRows.map((d) => ({
+            cashCents: d.cashCents,
+            revenueCents: d.revenueCents,
+            label: d.closeType,
+          })),
+        );
+      }
+    }
+  }
 
   const stl = report?.clientId
     ? await offerSpeedToLead(report.clientId)
@@ -275,6 +295,49 @@ export default async function WorkspaceSalesPage({
           accent={client.accent}
         />
       </div>
+
+      {showCash && paidMix && (
+        <section className="card-grad rounded-xl border p-4">
+          <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+            How the closes paid
+          </p>
+          <div className="text-faint mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <span>
+              <span className="bg-success mr-1.5 inline-block size-2 rounded-full align-middle" />
+              <span className="text-foreground font-medium">{paidMix.pif}</span> paid in
+              full — $
+              {(paidMix.pifCents / 100).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+            <span>
+              <span className="bg-brand mr-1.5 inline-block size-2 rounded-full align-middle" />
+              <span className="text-foreground font-medium">{paidMix.split}</span> split
+              pay — $
+              {(paidMix.splitCents / 100).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}{" "}
+              collected so far
+            </span>
+            <span>
+              <span
+                className="mr-1.5 inline-block size-2 rounded-full align-middle"
+                style={{ background: "var(--warning)" }}
+              />
+              <span className="text-foreground font-medium">{paidMix.deposit}</span>{" "}
+              deposit{paidMix.deposit === 1 ? "" : "s"} — $
+              {(paidMix.depositCents / 100).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+            {paidMix.unknown > 0 && (
+              <span>
+                {paidMix.unknown} with no money on the row — unclassified, not guessed
+              </span>
+            )}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel
