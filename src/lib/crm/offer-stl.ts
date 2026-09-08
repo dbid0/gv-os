@@ -11,6 +11,7 @@ import {
   crmActivity,
   integrations,
 } from "@/db/schema/app";
+import { phoneKey } from "@/lib/crm/close-normalize";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
 import { currentSnapshot } from "@/lib/tracking/queries";
 
@@ -61,7 +62,11 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       )
       .limit(500),
     db
-      .select({ occurredAt: crmActivity.occurredAt, leadEmail: crmActivity.leadEmail })
+      .select({
+        occurredAt: crmActivity.occurredAt,
+        leadEmail: crmActivity.leadEmail,
+        leadPhone: crmActivity.leadPhone,
+      })
       .from(crmActivity)
       .where(
         and(
@@ -84,6 +89,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       const mirrored = await db
         .select({
           email: clientTrackingRows.email,
+          phone: clientTrackingRows.phone,
           occurredAt: clientTrackingRows.occurredAt,
         })
         .from(clientTrackingRows)
@@ -95,10 +101,11 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         )
         .limit(2000);
       apps = mirrored
-        .filter((m) => m.email !== null && m.occurredAt !== null)
+        .filter((m) => (m.email !== null || m.phone !== null) && m.occurredAt !== null)
         .filter((m) => m.occurredAt! >= since)
         .map((m) => ({
           email: m.email,
+          phone: m.phone,
           submittedAt: m.occurredAt,
           createdAt: m.occurredAt as Date,
         }));
@@ -108,11 +115,19 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
   const stl = computeSpeedToLead(
     apps.map((a) => ({
       email: a.email,
+      // The synced applications table carries no phone yet; the sheet
+      // fallback does. phoneKey(null) is null, so email-only sources lose
+      // nothing.
+      phone: phoneKey((a as { phone?: string | null }).phone ?? null),
       submittedAtMs: (a.submittedAt ?? a.createdAt).getTime(),
     })),
     calls
       .filter((c) => c.occurredAt)
-      .map((c) => ({ email: c.leadEmail, occurredAtMs: c.occurredAt!.getTime() })),
+      .map((c) => ({
+        email: c.leadEmail,
+        phone: c.leadPhone,
+        occurredAtMs: c.occurredAt!.getTime(),
+      })),
   );
   return {
     connected: true,

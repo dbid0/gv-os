@@ -177,3 +177,40 @@ describe("computeSpeedToLeadByClient", () => {
     expect(out.map((r) => r.clientName)).toEqual(["Bravo", "Alpha"]);
   });
 });
+
+describe("phone-fallback matching", () => {
+  it("matches by phone when neither side carries an email", () => {
+    // The floor that dials phone-only leads: without this, most of the day
+    // is invisible to the flagship metric.
+    const stats = computeSpeedToLead(
+      [{ email: null, phone: "5550102030", submittedAtMs: 0 }],
+      [{ email: null, phone: "5550102030", occurredAtMs: 4 * 60_000 }],
+    );
+    expect(stats.matched).toBe(1);
+    expect(stats.within5).toBe(1);
+  });
+
+  it("email WINS over a conflicting phone match", () => {
+    // Email is the stronger identity: the phone map might hold a household
+    // number shared across leads.
+    const stats = computeSpeedToLead(
+      [{ email: "a@x.com", phone: "5550102030", submittedAtMs: 0 }],
+      [
+        { email: "a@x.com", phone: null, occurredAtMs: 3 * 60_000 },
+        { email: null, phone: "5550102030", occurredAtMs: 60_000 },
+      ],
+    );
+    // matched via email at 3m, NOT via the earlier phone-only dial
+    expect(stats.matched).toBe(1);
+    expect(stats.medianMinutes).toBe(3);
+  });
+
+  it("a phone-only app with no matching dial stays unmatched", () => {
+    const stats = computeSpeedToLead(
+      [{ email: null, phone: "5550102030", submittedAtMs: 0 }],
+      [{ email: null, phone: "9990000000", occurredAtMs: 1000 }],
+    );
+    expect(stats.dialableApps).toBe(1);
+    expect(stats.matched).toBe(0);
+  });
+});
