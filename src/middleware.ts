@@ -48,6 +48,8 @@ const PUBLIC_PATHS = [
   "/api/sync/notifications",
   "/api/sync/new-deals",
   "/api/sync/tracking",
+  // Operator door for connecting integrations — its own SYNC_SECRET bearer.
+  "/api/integrations/connect",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
   "/api/webhooks/bookings",
