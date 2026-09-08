@@ -119,7 +119,21 @@ export default async function WorkspaceSalesPage({
             <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
               <Zap className="size-3.5" /> Speed to lead — the 5-minute standard
             </p>
-            {stl.connected ? (
+            {stl.connected &&
+            stl.measured === 0 &&
+            stl.applications > 0 &&
+            stl.everDialed === 0 ? (
+              // The operational disconnect, named: applications exist, the
+              // floor is dialling — and the two lists never touch.
+              <p className="text-warning mt-2 max-w-xl text-sm">
+                {stl.applications} application
+                {stl.applications === 1 ? "" : "s"} in the last 30 days —{" "}
+                <span className="font-medium">none were ever dialled in the CRM</span>.
+                The floor&apos;s dials aren&apos;t touching the application list, so
+                speed to lead cannot exist yet. Check that applications flow into the
+                CRM as leads.
+              </p>
+            ) : stl.connected ? (
               <div className="mt-2 flex flex-wrap items-end gap-6">
                 <div>
                   <p className="numeric text-4xl font-bold tracking-tight">
