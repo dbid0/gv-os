@@ -16,7 +16,6 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { Cents } from "@/lib/money";
-import { roster } from "@/lib/roster";
 import { useEntranceOnce } from "@/lib/client-state";
 
 export interface DashboardStats {
@@ -46,7 +45,14 @@ const headline = [
   { label: "Close rate", icon: Percent, tone: "default" as const },
 ];
 
-export function SalesEngineCard({ stats }: { stats?: DashboardStats }) {
+export function SalesEngineCard({
+  stats,
+  roster,
+}: {
+  stats?: DashboardStats;
+  /** DB-backed roster from the page. */
+  roster: { slug: string; name: string; accent: string }[];
+}) {
   const reduceMotion = useReducedMotion();
   const entrance = useEntranceOnce();
 

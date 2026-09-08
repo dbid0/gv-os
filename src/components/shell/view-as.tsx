@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import type { Role } from "@/lib/auth/roles";
-import { roster } from "@/lib/roster";
 
 /**
  * View as (v2 §6). Roles preview through the gv-dev-role cookie the
@@ -41,7 +40,12 @@ function setCookie(name: string, value: string | null) {
   }
 }
 
-export function ViewAsMenu() {
+export function ViewAsMenu({
+  roster,
+}: {
+  /** DB-backed roster from the layout — new clients appear without a file edit. */
+  roster: { slug: string; name: string }[];
+}) {
   const router = useRouter();
 
   const preview = (role: Role, clientSlug?: string) => {

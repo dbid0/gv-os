@@ -42,7 +42,9 @@ export function Topbar({
   unreadCount = 0,
   notifications = [],
   avatarUrl = null,
+  roster,
 }: {
+  roster: { slug: string; name: string }[];
   user: ShellUser | null;
   /** Agency cash for the month; null hides the pill (a scoped viewer). */
   monthCash?: MonthCash | null;
@@ -115,7 +117,7 @@ export function Topbar({
           </span>
         )}
         <div className="flex items-center gap-1">
-          <ViewAsMenu />
+          <ViewAsMenu roster={roster} />
           <NotificationBell unreadCount={unreadCount} preview={notifications} />
           <ThemeToggle />
           <UserMenu user={user} avatarUrl={avatarUrl} />

@@ -125,7 +125,7 @@ describe("Sidebar", () => {
 
 describe("SalesEngineCard", () => {
   it("shows placeholders instead of invented numbers", () => {
-    const { container } = render(<SalesEngineCard />);
+    const { container } = render(<SalesEngineCard roster={TEST_ROSTER} />);
 
     // Without stats every headline KPI is pending, and nothing states a figure.
     expect(container.textContent).not.toMatch(/\$\d/);

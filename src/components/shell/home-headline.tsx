@@ -11,7 +11,6 @@ import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useToast } from "@/components/ui/toast";
 import { useCountUp } from "@/lib/client-state";
-import { clientBySlug } from "@/lib/roster";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +28,8 @@ const MODE_LABELS: Record<HomeMode, string> = {
 };
 
 export interface HomeSection {
+  /** The client's own colour, resolved server-side from the DB roster. */
+  accent?: string;
   slug: string | null;
   name: string;
   cashCents: number;
@@ -211,8 +212,7 @@ export function HomeHeadline({
                     aria-hidden
                     className="size-2 shrink-0 rounded-full"
                     style={{
-                      background:
-                        (s.slug && clientBySlug(s.slug)?.accent) || "var(--brand)",
+                      background: s.accent || "var(--brand)",
                     }}
                   />
                   {s.name}

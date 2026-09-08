@@ -16,7 +16,6 @@ import {
 import { monthGrid, monthLabel, stepMonth } from "@/lib/calendar/month-grid";
 import { groupByDay } from "@/lib/calendar/expand";
 import type { CalendarItem } from "@/lib/calendar/queries";
-import { clientBySlug } from "@/lib/roster";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -50,8 +49,7 @@ function ItemDot({ status }: { status: string }) {
 }
 
 /** A client's own accent colour as a small tag. */
-function ClientTag({ name, slug }: { name: string; slug: string | null }) {
-  const accent = slug ? (clientBySlug(slug)?.accent ?? null) : null;
+function ClientTag({ name, accent }: { name: string; accent: string | null }) {
   return (
     <span
       className="inline-flex items-center gap-1 text-[11px] whitespace-nowrap"
@@ -79,9 +77,12 @@ function ClientTag({ name, slug }: { name: string; slug: string | null }) {
 export function CalendarView({
   items,
   todayKey,
+  accents,
 }: {
   items: CalendarItem[];
   todayKey: string;
+  /** slug → the client's accent colour, resolved server-side (DB roster). */
+  accents: Record<string, string>;
 }) {
   const [ty, tm] = todayKey.split("-").map(Number);
   const [view, setView] = useState({ year: ty, month: tm });
@@ -284,7 +285,10 @@ export function CalendarView({
                       {it.title}
                     </span>
                     {it.clientName && (
-                      <ClientTag name={it.clientName} slug={it.clientSlug} />
+                      <ClientTag
+                        name={it.clientName}
+                        accent={it.clientSlug ? (accents[it.clientSlug] ?? null) : null}
+                      />
                     )}
                     {it.assignee && (
                       <span className="text-faint text-[11px] whitespace-nowrap">
