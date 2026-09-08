@@ -153,7 +153,7 @@ export default async function WorkspacePage({
       const from = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
       const to = bounds.to
         ? new Date(`${bounds.to}T23:59:59Z`)
-        : new Date(Date.now() + 24 * 3600 * 1000);
+        : new Date(`${todayKey}T23:59:59Z`);
       mix = cashMix(payments, from, to);
     }
   }
