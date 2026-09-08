@@ -6,6 +6,7 @@ import { clients } from "@/db/schema/app";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { pullShareTranscripts } from "@/lib/calls/share-transcripts";
+import { pushApplicantsToClose } from "@/lib/crm/close-push";
 import { syncClientStripe } from "@/lib/tracking/stripe-sync";
 import { syncClientTrackingSheet } from "@/lib/tracking/sync";
 
@@ -85,6 +86,19 @@ async function run(req: NextRequest) {
           entry.stripe = { error: stripe.error };
       } else {
         entry.stripe = { charges: stripe.chargeCount, rows: stripe.rowCount };
+      }
+      // Applications become CRM leads — the handoff speed-to-lead depends on.
+      // Quiet skip when Close isn't connected.
+      const push = await pushApplicantsToClose(offer.id, stripeSince);
+      if (push.error) {
+        if (!push.error.includes("isn't connected"))
+          entry.closePush = { error: push.error };
+      } else {
+        entry.closePush = {
+          applicants: push.applicants,
+          alreadyInCrm: push.alreadyInCrm,
+          created: push.created,
+        };
       }
       results[offer.slug] = entry;
     } catch (e) {
