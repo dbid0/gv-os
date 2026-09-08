@@ -46,3 +46,52 @@ describe("normalizeCloseActivity", () => {
     });
   });
 });
+
+describe("the real Close envelope", () => {
+  // Shape confirmed against a live /activity/call/ payload: these are the
+  // exact keys and formats Close sends.
+  const realShape = {
+    id: "acti_abcdefghijklmnopqrstuvwxyz012345",
+    user_id: "user_ABCDEFGHIJKLMNOPQRSTUVWXYZ01234",
+    user_name: "yel akot",
+    direction: "outbound",
+    duration: 5,
+    date_created: "2026-09-07T14:49:29.089000+00:00",
+    lead_id: "lead_ABCDEFGHIJKLMNOPQRSTUVWXYZ01234",
+  };
+
+  it("reads every field of a live-shaped call", () => {
+    const n = normalizeCloseActivity("call", realShape);
+    expect(n).toEqual({
+      externalId: realShape.id,
+      kind: "call",
+      userId: realShape.user_id,
+      userName: "yel akot",
+      direction: "outbound",
+      durationSeconds: 5,
+      occurredAt: realShape.date_created,
+      leadId: realShape.lead_id,
+    });
+  });
+
+  it("keeps the microsecond+offset timestamp parseable", () => {
+    const n = normalizeCloseActivity("call", realShape);
+    expect(Number.isNaN(Date.parse(n!.occurredAt!))).toBe(false);
+  });
+
+  it("an sms or email never carries talk time, even if a duration sneaks in", () => {
+    const n = normalizeCloseActivity("sms", { ...realShape, duration: 99 });
+    expect(n!.durationSeconds).toBeNull();
+  });
+
+  it("a zero-second dial is a real dial, not a null", () => {
+    // 0 is falsy; a naive `|| null` would erase legitimate zero-duration
+    // dials (straight to voicemail) from talk-time stats.
+    const n = normalizeCloseActivity("call", { ...realShape, duration: 0 });
+    expect(n!.durationSeconds).toBe(0);
+  });
+
+  it("drops a payload with no id rather than inventing an idempotency key", () => {
+    expect(normalizeCloseActivity("call", { ...realShape, id: "" })).toBeNull();
+  });
+});
