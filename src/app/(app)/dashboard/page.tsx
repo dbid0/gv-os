@@ -164,6 +164,14 @@ export default async function DashboardPage({
     );
   }
 
+  // The client's own colour rides on each card, resolved here from the DB
+  // roster — the shell components stopped importing the static file.
+  const accentBySlug = new Map(roster.map((c) => [c.slug, c.accent]));
+  sections = sections.map((s2) => ({
+    ...s2,
+    accent: s2.slug ? accentBySlug.get(s2.slug) : undefined,
+  }));
+
   const recentRows = backlog.slice(0, 8).map((r) => ({
     id: r.id,
     occurredOn: r.occurredOn,
@@ -253,6 +261,7 @@ export default async function DashboardPage({
         slots={{
           "sales-engine": (
             <SalesEngineCard
+              roster={roster}
               stats={{
                 cash: overview.cashCollectedCents,
                 revenue: overview.revenueCents,

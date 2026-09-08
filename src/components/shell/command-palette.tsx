@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2 } from "lucide-react";
 
 import { allNavItems } from "@/components/shell/nav-config";
-import { roster } from "@/lib/roster";
 import { snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +26,11 @@ import { cn } from "@/lib/utils";
  *   fight the arrow keys.
  * - Escape closes, Enter navigates, and focus returns where it came from.
  */
-export function CommandPalette() {
+export function CommandPalette({
+  roster,
+}: {
+  roster: { slug: string; name: string }[];
+}) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);

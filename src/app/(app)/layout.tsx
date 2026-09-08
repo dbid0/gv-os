@@ -66,6 +66,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <Sidebar user={user} previewRole={shownRole} roster={roster} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
+          roster={roster.map((c) => ({ slug: c.slug, name: c.name }))}
           user={user}
           monthCash={scope.restricted ? null : monthCash}
           unreadCount={unreadCount}
@@ -76,7 +77,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
-      <CommandPalette />
+      <CommandPalette roster={roster.map((c) => ({ slug: c.slug, name: c.name }))} />
       {previewRole && <ViewAsBanner role={previewRole} />}
       <DealClosedToasts />
       <TabKeepWarm />

@@ -3,6 +3,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 import { dayKeyCT } from "@/lib/charts";
 import { stepMonth } from "@/lib/calendar/month-grid";
 import { listCalendarItems } from "@/lib/calendar/queries";
+import { loadRoster } from "@/lib/roster-server";
 
 export const metadata = { title: "Calendar - GV OS" };
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export default async function CalendarPage() {
   const toKey = `${to.year}-${pad(to.month)}-${pad(lastDay)}`;
 
   const items = await listCalendarItems(fromKey, toKey);
+  const accents = Object.fromEntries(
+    (await loadRoster()).map((c) => [c.slug, c.accent]),
+  );
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -29,7 +33,7 @@ export default async function CalendarPage() {
         title="Calendar"
         description="The day's work — every task due, by day. Click any day to see what is on it."
       />
-      <CalendarView items={items} todayKey={todayKey} />
+      <CalendarView items={items} todayKey={todayKey} accents={accents} />
     </div>
   );
 }
