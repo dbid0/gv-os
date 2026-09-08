@@ -594,6 +594,10 @@ export const crmActivity = appSchema.table(
     durationSeconds: bigint("duration_seconds", { mode: "number" }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }),
     leadId: text("lead_id"),
+    /** The lead's email, resolved from the CRM's lead record after capture.
+     * Speed-to-lead matches applications to first dials BY EMAIL — without
+     * this column the flagship metric was uncomputable by construction. */
+    leadEmail: text("lead_email"),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -17,7 +17,9 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { label: "Dashboard", path: "" },
   { label: "Sales", path: "/sales" },
-  { label: "Marketing", path: "/marketing" },
+  // No Marketing tab: it was Kit twice (Email owns Kit). Ads and YouTube get
+  // their own tabs when they exist — UTM-tracked toward the funnel — and a
+  // dead tab teaches people not to trust the nav.
   { label: "Email", path: "/email" },
   { label: "CRM", path: "/crm" },
   { label: "Leads", path: "/leads" },

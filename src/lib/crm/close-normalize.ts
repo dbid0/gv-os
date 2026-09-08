@@ -45,3 +45,28 @@ export function normalizeCloseActivity(
     leadId: str(payload.lead_id),
   };
 }
+
+/**
+ * The lead's best email from a Close LEAD payload (`/api/v1/lead/{id}`).
+ *
+ * Close nests emails under contacts: lead → contacts[] → emails[] → email.
+ * First contact's first email wins — Close orders contacts primary-first.
+ * Lowercased, because speed-to-lead joins on the application's email and the
+ * application side is already lowercased at parse.
+ */
+export function emailFromCloseLead(payload: Record<string, unknown>): string | null {
+  const contacts = Array.isArray(payload.contacts) ? payload.contacts : [];
+  for (const contact of contacts) {
+    if (typeof contact !== "object" || contact === null) continue;
+    const emails = (contact as Record<string, unknown>).emails;
+    if (!Array.isArray(emails)) continue;
+    for (const entry of emails) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const email = (entry as Record<string, unknown>).email;
+      if (typeof email === "string" && email.includes("@")) {
+        return email.trim().toLowerCase();
+      }
+    }
+  }
+  return null;
+}
