@@ -1,12 +1,12 @@
 import "server-only";
 
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { crmActivity, integrations } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
-import { normalizeCloseActivity } from "@/lib/crm/close-normalize";
+import { emailFromCloseLead, normalizeCloseActivity } from "@/lib/crm/close-normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
 
 /**
@@ -102,11 +102,16 @@ export async function pullCloseActivity(): Promise<
         }
       }
 
+      // Resolve lead emails for rows that still lack one — speed-to-lead
+      // joins applications to first dials BY EMAIL, and activities carry only
+      // the CRM's lead id. Capped per run; repeated runs converge.
+      const resolvedLeads = await resolveLeadEmails(db, conn.id, auth);
+
       await db
         .update(integrations)
         .set({
           lastSyncAt: new Date(),
-          lastSyncNote: `pulled ${fetched} activities (7d), captured ${captured} new`,
+          lastSyncNote: `pulled ${fetched} activities (7d), captured ${captured} new, resolved ${resolvedLeads} lead emails`,
           updatedAt: new Date(),
         })
         .where(eq(integrations.id, conn.id));
@@ -123,4 +128,56 @@ export async function pullCloseActivity(): Promise<
     }
   }
   return results;
+}
+
+/** How many leads to resolve per run — keeps a sync bounded on big backlogs. */
+const LEAD_RESOLVE_CAP = 100;
+
+/**
+ * Fill `lead_email` on captured activities from Close's own lead records.
+ * One fetch per DISTINCT unresolved lead, capped; every activity of that
+ * lead is stamped in one update. A lead whose record has no email is left
+ * null and retried next run (cheap: it stays inside the same cap).
+ */
+async function resolveLeadEmails(
+  db: ReturnType<typeof getDb>,
+  integrationId: string,
+  auth: string,
+): Promise<number> {
+  const pending = await db
+    .selectDistinct({ leadId: crmActivity.leadId })
+    .from(crmActivity)
+    .where(
+      and(
+        eq(crmActivity.integrationId, integrationId),
+        isNotNull(crmActivity.leadId),
+        isNull(crmActivity.leadEmail),
+      ),
+    )
+    .limit(LEAD_RESOLVE_CAP);
+
+  let resolved = 0;
+  for (const row of pending) {
+    const leadId = row.leadId as string;
+    const res = await fetch(
+      `https://api.close.com/api/v1/lead/${encodeURIComponent(leadId)}/?_fields=id,contacts`,
+      { headers: { Authorization: auth } },
+    );
+    // A single bad lead must not fail the sync that already captured data.
+    if (!res.ok) continue;
+    const payload = (await res.json()) as Record<string, unknown>;
+    const email = emailFromCloseLead(payload);
+    if (!email) continue;
+    await db
+      .update(crmActivity)
+      .set({ leadEmail: email })
+      .where(
+        and(
+          eq(crmActivity.integrationId, integrationId),
+          eq(crmActivity.leadId, leadId),
+        ),
+      );
+    resolved += 1;
+  }
+  return resolved;
 }

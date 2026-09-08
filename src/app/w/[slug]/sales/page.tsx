@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import { Zap } from "lucide-react";
+
+import { offerSpeedToLead } from "@/lib/crm/offer-stl";
 import { and, desc, eq, gte } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
@@ -100,11 +103,60 @@ export default async function WorkspaceSalesPage({
     30,
     now,
   );
+  const stl = report?.clientId
+    ? await offerSpeedToLead(report.clientId)
+    : { connected: false, medianMinutes: null, slaPct: null, measured: 0 };
   const color = chartColorForClient(slug);
   const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
 
   return (
     <div className="space-y-6">
+      {/* THE number this floor is judged on: application in → first dial out.
+          The 5-minute standard is non-negotiable, so it leads the page. */}
+      <section className="card-grad elev-glow rounded-xl border p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
+              <Zap className="size-3.5" /> Speed to lead — the 5-minute standard
+            </p>
+            {stl.connected ? (
+              <div className="mt-2 flex flex-wrap items-end gap-6">
+                <div>
+                  <p className="numeric text-4xl font-bold tracking-tight">
+                    {stl.medianMinutes === null ? "—" : `${stl.medianMinutes}m`}
+                  </p>
+                  <p className="text-faint text-[11px]">median, last 30 days</p>
+                </div>
+                <div>
+                  <p
+                    className={
+                      stl.slaPct !== null && stl.slaPct >= 0.8
+                        ? "numeric text-success text-4xl font-bold tracking-tight"
+                        : "numeric text-warning text-4xl font-bold tracking-tight"
+                    }
+                  >
+                    {stl.slaPct === null ? "—" : `${Math.round(stl.slaPct * 100)}%`}
+                  </p>
+                  <p className="text-faint text-[11px]">dialled within 5 minutes</p>
+                </div>
+                <div>
+                  <p className="numeric text-4xl font-bold tracking-tight">
+                    {stl.measured}
+                  </p>
+                  <p className="text-faint text-[11px]">applications measured</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground mt-2 max-w-xl text-sm">
+                Measured from the dialler&apos;s own record — connect this offer&apos;s
+                Close CRM in Integrations and every application is timed to its first
+                dial against the 5-minute standard. Nothing is estimated until then.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Cash collected — all time"

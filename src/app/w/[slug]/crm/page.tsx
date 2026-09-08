@@ -71,6 +71,7 @@ export default async function WorkspaceCrmPage({
       ? db
           .select({
             kind: crmActivity.kind,
+            leadEmail: crmActivity.leadEmail,
             direction: crmActivity.direction,
             userName: crmActivity.userName,
             occurredAt: crmActivity.occurredAt,
@@ -173,7 +174,9 @@ export default async function WorkspaceCrmPage({
     })),
     calls
       .filter((c) => c.occurredAt)
-      .map((c) => ({ email: null, occurredAtMs: c.occurredAt!.getTime() })),
+      // The resolved lead email — the join key. Passing null here made
+      // speed-to-lead permanently unmeasurable.
+      .map((c) => ({ email: c.leadEmail, occurredAtMs: c.occurredAt!.getTime() })),
   );
 
   if (!connected) {

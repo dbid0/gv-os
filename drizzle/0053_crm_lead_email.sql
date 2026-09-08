@@ -1,0 +1,1 @@
+ALTER TABLE "app"."crm_activity" ADD COLUMN "lead_email" text;
