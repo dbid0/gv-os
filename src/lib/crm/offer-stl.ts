@@ -2,9 +2,17 @@ import "server-only";
 
 import { and, eq, gte } from "drizzle-orm";
 
+import { and as andOp, eq as eqOp } from "drizzle-orm";
+
 import { getDb } from "@/db/client";
-import { applications, crmActivity, integrations } from "@/db/schema/app";
+import {
+  applications,
+  clientTrackingRows,
+  crmActivity,
+  integrations,
+} from "@/db/schema/app";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import { currentSnapshot } from "@/lib/tracking/queries";
 
 /**
  * ONE offer's speed to lead — application in, first dial out.
@@ -39,7 +47,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     return { connected: false, medianMinutes: null, slaPct: null, measured: 0 };
   }
 
-  const [apps, calls] = await Promise.all([
+  let [apps, calls] = await Promise.all([
     db
       .select({
         email: applications.email,
@@ -63,6 +71,38 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       )
       .limit(1000),
   ]);
+
+  // The synced applications table is the first choice; when it's empty the
+  // sheet mirror answers — its application rows carry emails and timestamps,
+  // and an offer whose intake lives on the sheet must not read as "no
+  // applications" beside a funnel full of them. One source or the other,
+  // never both: the same person in two records would be measured twice.
+  if (apps.length === 0) {
+    const snapshot = await currentSnapshot(clientId);
+    if (snapshot) {
+      const mirrored = await db
+        .select({
+          email: clientTrackingRows.email,
+          occurredAt: clientTrackingRows.occurredAt,
+        })
+        .from(clientTrackingRows)
+        .where(
+          andOp(
+            eqOp(clientTrackingRows.syncId, snapshot.syncId),
+            eqOp(clientTrackingRows.tab, "applications"),
+          ),
+        )
+        .limit(2000);
+      apps = mirrored
+        .filter((m) => m.email !== null && m.occurredAt !== null)
+        .filter((m) => m.occurredAt! >= since)
+        .map((m) => ({
+          email: m.email,
+          submittedAt: m.occurredAt,
+          createdAt: m.occurredAt as Date,
+        }));
+    }
+  }
 
   const stl = computeSpeedToLead(
     apps.map((a) => ({
