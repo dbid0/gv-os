@@ -18,7 +18,14 @@ import { portalVisibility } from "@/lib/clients/portal-visibility";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
 import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
 import { buildOfferFunnel } from "@/lib/tracking/funnel";
-import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
+import { CashMixBar } from "@/components/tracking/cash-mix-bar";
+import { cashMix } from "@/lib/tracking/cash-mix";
+import {
+  cashRowsForClient,
+  currentSnapshot,
+  latestSnapshotsBySource,
+  leadsForClient,
+} from "@/lib/tracking/queries";
 import { getClientReport } from "@/lib/clients/report";
 import { rowsForClient } from "@/lib/clients/attribution";
 import { cents } from "@/lib/money";
@@ -130,6 +137,27 @@ export default async function WorkspacePage({
       description: r.description,
       cashCents: r.cashCents,
     }));
+  // The cash mix — whose money the window is made of. The processor's own
+  // snapshot is preferred (it holds the full recent history); the sheet
+  // answers when no processor is connected. Full history feeds first-payment
+  // lookups; only the window's payments are reported.
+  let mix = null;
+  if (showCash && report.clientId) {
+    const snaps = await latestSnapshotsBySource(report.clientId);
+    const paySource =
+      snaps.find((x) => x.source === "stripe") ??
+      snaps.find((x) => x.source === "sheet") ??
+      null;
+    if (paySource) {
+      const { payments } = await cashRowsForClient(paySource.snapshot.syncId);
+      const from = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
+      const to = bounds.to
+        ? new Date(`${bounds.to}T23:59:59Z`)
+        : new Date(Date.now() + 24 * 3600 * 1000);
+      mix = cashMix(payments, from, to);
+    }
+  }
+
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
@@ -227,6 +255,23 @@ export default async function WorkspacePage({
           sitting directly beneath a hero showing the selected range, so an
           unqualified "Cash collected" put two different numbers under one name
           a few pixels apart. */}
+      {showCash && mix && (
+        <section className="card-grad rounded-xl border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+              Cash mix — {bounds.label}
+            </p>
+            {mix.unplaceableCents > 0 && (
+              <p className="text-faint text-[11px]">
+                ${(mix.unplaceableCents / 100).toLocaleString("en-US")} without a payer
+                identity — shown, not guessed
+              </p>
+            )}
+          </div>
+          <CashMixBar mix={mix} label={bounds.label} />
+        </section>
+      )}
+
       {showCash && (
         <div className="grid gap-4 sm:grid-cols-3">
           <Kpi
