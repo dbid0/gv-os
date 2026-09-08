@@ -105,7 +105,14 @@ export default async function WorkspaceSalesPage({
   );
   const stl = report?.clientId
     ? await offerSpeedToLead(report.clientId)
-    : { connected: false, medianMinutes: null, slaPct: null, measured: 0 };
+    : {
+        connected: false,
+        medianMinutes: null,
+        slaPct: null,
+        measured: 0,
+        applications: 0,
+        everDialed: 0,
+      };
   const color = chartColorForClient(slug);
   const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
 
