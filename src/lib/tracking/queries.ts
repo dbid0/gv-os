@@ -258,6 +258,7 @@ export async function cashRowsForClient(syncId: string) {
     .select({
       tab: clientTrackingRows.tab,
       email: clientTrackingRows.email,
+      phone: clientTrackingRows.phone,
       cashCents: clientTrackingRows.cashCents,
       status: clientTrackingRows.status,
       occurredAt: clientTrackingRows.occurredAt,
@@ -283,6 +284,8 @@ export async function cashRowsForClient(syncId: string) {
     // repeating a charge must not double the month.
     payments: dedupePaymentRows(rows.filter((r) => r.tab === "payments")).map((r) => ({
       email: r.email,
+      phone: r.phone,
+      occurredAt: r.occurredAt,
       cashCents: r.cashCents,
       processor: r.payload?.["Processor"] ?? null,
       // The processor's own word for what happened — succeeded, refunded,
