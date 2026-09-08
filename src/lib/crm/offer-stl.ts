@@ -47,6 +47,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     return { connected: false, medianMinutes: null, slaPct: null, measured: 0 };
   }
 
+  // eslint-disable-next-line prefer-const -- apps is reassigned by the sheet fallback below
   let [apps, calls] = await Promise.all([
     db
       .select({
