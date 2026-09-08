@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { pullShareTranscripts } from "@/lib/calls/share-transcripts";
+import { syncClientStripe } from "@/lib/tracking/stripe-sync";
 import { syncClientTrackingSheet } from "@/lib/tracking/sync";
 
 export const runtime = "nodejs";
@@ -45,25 +46,45 @@ async function run(req: NextRequest) {
   const withTranscripts = url.searchParams.get("transcripts") === "1";
 
   const db = getDb();
+  // With a slug: that offer. Without: every offer that has ANY feed — a
+  // linked sheet or a connected processor. An offer with only Stripe (a
+  // Base 44 play) must not be skipped for lacking a sheet.
   const offers = await db
-    .select({ id: clients.id, slug: clients.slug })
+    .select({ id: clients.id, slug: clients.slug, sheet: clients.trackingSheetId })
     .from(clients)
-    .where(slug ? eq(clients.slug, slug) : isNotNull(clients.trackingSheetId));
+    .where(slug ? eq(clients.slug, slug) : ne(clients.status, "archived"));
+
+  // Processor history is finite upstream; ninety days covers a re-link
+  // without re-reading the world. The sheet pull is always the whole sheet.
+  const stripeSince = new Date(Date.now() - 90 * 24 * 3600 * 1000);
 
   const results: Record<string, unknown> = {};
   for (const offer of offers) {
+    const entry: Record<string, unknown> = {};
     try {
-      const sync = await syncClientTrackingSheet(offer.id);
-      if (sync.error) {
-        results[offer.slug] = { error: sync.error };
-        continue;
+      if (offer.sheet) {
+        const sync = await syncClientTrackingSheet(offer.id);
+        if (sync.error) {
+          entry.sheet = { error: sync.error };
+        } else {
+          entry.sheet = {
+            rows: sync.rowCount,
+            tabs: sync.tabs.map((t) => ({ tab: t.tab, rows: t.rows, dated: t.dated })),
+          };
+          if (withTranscripts && sync.syncId) {
+            entry.transcripts = await pullShareTranscripts(offer.id, sync.syncId);
+          }
+        }
       }
-      const entry: Record<string, unknown> = {
-        rows: sync.rowCount,
-        tabs: sync.tabs.map((t) => ({ tab: t.tab, rows: t.rows, dated: t.dated })),
-      };
-      if (withTranscripts && sync.syncId) {
-        entry.transcripts = await pullShareTranscripts(offer.id, sync.syncId);
+      // The processor's own record, through the same snapshot spine. A
+      // missing connection is a quiet skip here — the Sources panel already
+      // says plainly what is and isn't connected.
+      const stripe = await syncClientStripe(offer.id, stripeSince);
+      if (stripe.error) {
+        if (!stripe.error.includes("isn't connected"))
+          entry.stripe = { error: stripe.error };
+      } else {
+        entry.stripe = { charges: stripe.chargeCount, rows: stripe.rowCount };
       }
       results[offer.slug] = entry;
     } catch (e) {
