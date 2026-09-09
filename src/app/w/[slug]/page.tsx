@@ -16,32 +16,17 @@ import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { portalVisibility } from "@/lib/clients/portal-visibility";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
-import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
-import { buildOfferFunnel } from "@/lib/tracking/funnel";
 import { CashMixBar } from "@/components/tracking/cash-mix-bar";
 import { PeriodDelta } from "@/components/ui/period-delta";
-import { cashMix } from "@/lib/tracking/cash-mix";
-import {
-  cashRowsForClient,
-  currentSnapshot,
-  latestSnapshotsBySource,
-  leadsForClient,
-} from "@/lib/tracking/queries";
-import { getClientReport } from "@/lib/clients/report";
-import { rowsForClient } from "@/lib/clients/attribution";
+import { loadOfferHome } from "@/lib/tracking/offer-metrics-loader";
 import { cents } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   customBounds,
-  homeRangeRows,
   homeRangeSeries,
   normalizeHomeRange,
   rangeBounds,
-  previousBounds,
 } from "@/lib/transactions/homepage";
-import { listTransactions } from "@/lib/transactions/queries";
-import { getDb } from "@/db/client";
-import { clients, offerSettings } from "@/db/schema/app";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -83,21 +68,22 @@ export default async function WorkspacePage({
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
-  const [report, drive, { rows: backlog }, visibility, shape] = await Promise.all([
-    getClientReport(slug, client.name),
-    getClientDriveAssets(slug),
-    listTransactions({}),
-    portalVisibility(slug),
-    offerShapeFor(slug),
-  ]);
-  // The offer's own funnel, from its tracking sheet. Absent until the sheet is
-  // linked and synced — no sheet, no funnel, rather than an empty chart.
-  const funnel = shape.snapshot
-    ? buildOfferFunnel(
-        await leadsForClient(shape.snapshot.syncId),
-        stagesForModel(shape.model),
-      )
-    : null;
+  const [{ metrics, report, mixSource, rangeRows, recentRows }, drive, visibility] =
+    await Promise.all([
+      loadOfferHome(slug, client.name, bounds, todayKey),
+      getClientDriveAssets(slug),
+      portalVisibility(slug),
+    ]);
+  if (!report) notFound();
+  // Every number below comes from the ONE engine — funnel, mix, and window
+  // money are cuts of the same assembled object /sales reads, so the two
+  // surfaces can no longer disagree.
+  const funnel = metrics.funnel;
+  const mix = metrics.cashMix;
+  const rangeCash = metrics.money?.rangeCash ?? 0;
+  const rangeRevenue = metrics.money?.rangeRevenue ?? 0;
+  const prevRangeCash = metrics.money?.prevRangeCash ?? null;
+
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
   const show = (key: string, fallback: boolean) =>
@@ -106,70 +92,19 @@ export default async function WorkspacePage({
   const showApps = show("apps", true);
   const showDrive = show("drive", true);
 
-  // This client's income inside the range — CLIENT-layer rows only,
-  // attributed the same way the client ledger does it (join first, sheet
-  // aliases second). Agency-layer money is GV's income — a setup fee or
-  // rev-share the client paid US — and must never render as cash their
-  // offer collected. It did: an agency row described with the client's
-  // name alias-matched onto this hero as the offer's revenue.
-  const rangeRows = rowsForClient(
-    homeRangeRows(backlog, "clients", bounds),
-    report.clientId,
-    slug,
-  );
-  const rangeCash = rangeRows.reduce((s, r) => s + r.cashCents, 0);
-  // "vs last period" — the window immediately before, same length.
-  const prevBounds = previousBounds(bounds);
-  const prevRangeCash = prevBounds
-    ? rowsForClient(
-        homeRangeRows(backlog, "clients", prevBounds),
-        report.clientId,
-        slug,
-      ).reduce((sum, r) => sum + r.cashCents, 0)
-    : null;
-  const rangeRevenue = rangeRows.reduce((s, r) => s + r.revenueCents, 0);
   // The offer's own growth curve for the hero — same shape the dashboard uses.
   const offerSeries = homeRangeSeries(rangeRows, "all", bounds);
 
-  // This offer's most recent money, attributed the same way — the workspace's
-  // own transaction feed. Client layer only, same rule as the hero.
-  const offerRecent = rowsForClient(
-    backlog.filter((r) => r.layer === "client"),
-    report.clientId,
-    slug,
-  )
-    .slice(0, 8)
-    .map((r) => ({
-      id: r.id,
-      occurredOn: r.occurredOn,
-      direction: r.direction,
-      clientName: r.clientName,
-      dealType: r.dealType,
-      description: r.description,
-      cashCents: r.cashCents,
-    }));
-  // The cash mix — whose money the window is made of. The processor's own
-  // snapshot is preferred (it holds the full recent history); the sheet
-  // answers when no processor is connected. Full history feeds first-payment
-  // lookups; only the window's payments are reported.
-  let mix = null;
-  let mixSource: "stripe" | "sheet" | null = null;
-  if (showCash && report.clientId) {
-    const snaps = await latestSnapshotsBySource(report.clientId);
-    const paySource =
-      snaps.find((x) => x.source === "stripe") ??
-      snaps.find((x) => x.source === "sheet") ??
-      null;
-    if (paySource) {
-      mixSource = paySource.source === "stripe" ? "stripe" : "sheet";
-      const { payments } = await cashRowsForClient(paySource.snapshot.syncId);
-      const from = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
-      const to = bounds.to
-        ? new Date(`${bounds.to}T23:59:59Z`)
-        : new Date(`${todayKey}T23:59:59Z`);
-      mix = cashMix(payments, from, to);
-    }
-  }
+  // This offer's most recent money — the workspace's own transaction feed.
+  const offerRecent = recentRows.map((r) => ({
+    id: r.id,
+    occurredOn: r.occurredOn,
+    direction: r.direction,
+    clientName: r.clientName,
+    dealType: r.dealType,
+    description: r.description,
+    cashCents: r.cashCents,
+  }));
 
   const appsPerDay = bucketByDay(
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
@@ -387,16 +322,3 @@ export default async function WorkspacePage({
 }
 
 /** The offer's current snapshot and its model — the funnel needs both. */
-async function offerShapeFor(slug: string) {
-  const db = getDb();
-  const [row] = await db
-    .select({ id: clients.id, offerModel: clients.offerModel })
-    .from(clients)
-    .where(eq(clients.slug, slug))
-    .limit(1);
-  if (!row) return { snapshot: null, model: offerModelOf(null) };
-  return {
-    snapshot: await currentSnapshot(row.id),
-    model: offerModelOf(row.offerModel),
-  };
-}

@@ -193,6 +193,56 @@ describe("assembleOfferMetrics", () => {
     expect(m.confirmation.confirmedAwaiting).toBe(1);
   });
 
+  it("funnel, mix and money sections are null until their inputs exist", () => {
+    const m = assembleOfferMetrics(inputs(), NOW);
+    expect(m.funnel).toBeNull();
+    expect(m.cashMix).toBeNull();
+    expect(m.money).toBeNull();
+  });
+
+  it("range money reduces the window rows and carries the previous window", () => {
+    const m = assembleOfferMetrics(
+      inputs({
+        rangeMoney: {
+          rows: [
+            { cashCents: 100000, revenueCents: 250000 },
+            { cashCents: 50000, revenueCents: 50000 },
+          ],
+          prevCash: 300000,
+        },
+      }),
+      NOW,
+    );
+    expect(m.money).toEqual({
+      rangeCash: 150000,
+      rangeRevenue: 300000,
+      prevRangeCash: 300000,
+    });
+  });
+
+  it("funnel section builds from stitched leads with the offer's stages", () => {
+    const lead = {
+      email: "a@x.com",
+      applied: true,
+      callsBooked: 1,
+      eocReports: 0,
+      deals: 0,
+      paymentsCents: 0,
+    };
+    const m = assembleOfferMetrics(
+      inputs({
+        funnelLeads: {
+          leads: [lead as never],
+          stageKeys: ["applied", "booked", "held", "closed", "paid"],
+        },
+      }),
+      NOW,
+    );
+    expect(m.funnel).not.toBeNull();
+    expect(m.funnel?.stages[0]).toMatchObject({ key: "applied", leads: 1 });
+    expect(m.funnel?.stages[1]).toMatchObject({ key: "booked", leads: 1 });
+  });
+
   it("an end-of-call report clears a would-be stuck call", () => {
     const m = assembleOfferMetrics(
       inputs({
