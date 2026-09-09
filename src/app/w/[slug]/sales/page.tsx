@@ -1,15 +1,12 @@
 import { notFound } from "next/navigation";
 import { Zap } from "lucide-react";
 
-import { offerSpeedToLead } from "@/lib/crm/offer-stl";
-import { closesPaid } from "@/lib/tracking/closes-paid";
-import { cashRowsForClient, currentSnapshot } from "@/lib/tracking/queries";
 import {
   isPortalView,
   portalShows,
   portalVisibility,
 } from "@/lib/clients/portal-visibility";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
@@ -17,20 +14,13 @@ import { Money } from "@/components/ui/metric";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
-import { applications, clients, reps as repsTable } from "@/db/schema/app";
+import { clients } from "@/db/schema/app";
 import { bucketByDay, chartColorForClient } from "@/lib/charts";
-import { getClientReport } from "@/lib/clients/report";
 import { cents } from "@/lib/money";
 import { displayName } from "@/lib/text";
 import { rosterClientBySlug } from "@/lib/roster-server";
-import {
-  aggregateByRep,
-  compareRepStats,
-  dispositionLabel,
-  summarizeActivity,
-} from "@/lib/sales/call-activity";
-import { listCallLogs } from "@/lib/sales/call-queries";
-import { listDeals } from "@/lib/sales/queries";
+import { dispositionLabel } from "@/lib/sales/call-activity";
+import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const dynamic = "force-dynamic";
@@ -43,11 +33,11 @@ export const dynamic = "force-dynamic";
  * cash, deals, the rep leaderboard, recent calls, and the application flow —
  * rather than the applications-only view it used to be.
  *
- * Every figure is READ from an existing tested source and filtered to this
- * client: cash from `getClientReport` (the same client-ledger figure the
- * accounting page shows), deals from `listDeals`, calls from `listCallLogs`,
- * and the leaderboard from the pure `aggregateByRep`. Nothing is recomputed
- * here, so this page can never disagree with the pages beside it.
+ * Every figure comes from ONE call into the offer metrics engine
+ * (`loadOfferSales` → `assembleOfferMetrics`): the engine assembles the whole
+ * metric object once from one set of rows, and this page just renders cuts of
+ * it. Nothing is recomputed here, so this page can never disagree with any
+ * other surface reading the same engine.
  */
 export default async function WorkspaceSalesPage({
   params,
@@ -69,45 +59,13 @@ export default async function WorkspaceSalesPage({
   const clientId = row?.id ?? null;
 
   const now = new Date();
-  const daysAgo30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [apps, allCalls, allDeals, report, repRows] = await Promise.all([
-    clientId
-      ? db
-          .select({
-            name: applications.name,
-            email: applications.email,
-            formName: applications.formName,
-            submittedAt: applications.submittedAt,
-            createdAt: applications.createdAt,
-          })
-          .from(applications)
-          .where(
-            and(
-              eq(applications.clientId, clientId),
-              gte(applications.createdAt, daysAgo30),
-            ),
-          )
-          .orderBy(desc(applications.createdAt))
-          .limit(100)
-      : Promise.resolve([]),
-    listCallLogs(500),
-    listDeals(),
-    getClientReport(slug, client.name).catch(() => null),
-    clientId
-      ? db
-          .select({ id: repsTable.id, name: repsTable.name })
-          .from(repsTable)
-          .where(eq(repsTable.clientId, clientId))
-      : Promise.resolve([]),
-  ]);
-
-  // Everything below is THIS offer only.
-  const calls = allCalls.filter((c) => c.clientId === clientId);
-  const deals = allDeals.filter((d) => d.clientId === clientId);
-  const stats = summarizeActivity(calls);
-  const repName = new Map(repRows.map((r) => [r.id, r.name]));
-  const board = aggregateByRep(calls).sort(compareRepStats).slice(0, 8);
+  const { metrics, report, apps, deals, calls, repName } = await loadOfferSales(
+    clientId,
+    slug,
+    client.name,
+  );
+  const { activity: stats, board, paidMix, stl } = metrics;
 
   const perDay = bucketByDay(
     apps.map((a) => a.submittedAt ?? a.createdAt),
@@ -119,38 +77,9 @@ export default async function WorkspaceSalesPage({
     portalVisibility(slug),
   ]);
   // Same rule as the workspace home: a client sees MONEY only when the admin
-  // turned it on. This tab used to show the cash card unconditionally.
+  // turned it on. The engine always computes the mix; this flag gates RENDER.
   const showCash = portalShows(portalView, visibility, "cash", false);
 
-  // How the closes paid — from the offer's own deals record.
-  let paidMix = null;
-  if (showCash && report?.clientId) {
-    const snap = await currentSnapshot(report.clientId);
-    if (snap) {
-      const { deals: dealRows } = await cashRowsForClient(snap.syncId);
-      if (dealRows.length > 0) {
-        paidMix = closesPaid(
-          dealRows.map((d) => ({
-            cashCents: d.cashCents,
-            revenueCents: d.revenueCents,
-            label: d.closeType,
-          })),
-        );
-      }
-    }
-  }
-
-  const stl = report?.clientId
-    ? await offerSpeedToLead(report.clientId)
-    : {
-        connected: false,
-        medianMinutes: null,
-        slaPct: null,
-        measured: 0,
-        applications: 0,
-        everDialed: 0,
-        byRep: [],
-      };
   const color = chartColorForClient(slug);
   const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
 
