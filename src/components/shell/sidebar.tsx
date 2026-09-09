@@ -4,11 +4,13 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   ChevronRight,
   CircleUserRound,
   LogOut,
+  Search,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -33,6 +35,20 @@ import { smooth, snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "gvos.sidebar.collapsed";
+const GROUPS_KEY = "gvos.sidebar.groups";
+
+/** Which nav groups are folded shut. One record, read once — the group list
+ * is static so there is nothing to sync beyond this component. */
+function readFoldedGroups(): Record<string, boolean> {
+  try {
+    return JSON.parse(window.localStorage.getItem(GROUPS_KEY) ?? "{}") as Record<
+      string,
+      boolean
+    >;
+  } catch {
+    return {};
+  }
+}
 
 export function Sidebar({
   user,
@@ -80,6 +96,16 @@ export function Sidebar({
   const reduceMotion = useReducedMotion();
   const [collapsed, setCollapsed] = usePersistedBoolean(STORAGE_KEY, false);
   const hydrated = useIsHydrated();
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
+  useEffect(() => setFolded(readFoldedGroups()), []);
+  const toggleGroup = (label: string) =>
+    setFolded((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      try {
+        window.localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
 
   const toggle = () => setCollapsed(!collapsed);
 
@@ -212,6 +238,17 @@ export function Sidebar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Search — looks like an input, IS the palette. */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("gvos:open-palette"))}
+            className="text-faint hover:text-muted-foreground bg-secondary/40 mt-2 flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-[13px] transition-colors"
+          >
+            <Search className="size-3.5 shrink-0" />
+            <span className="flex-1">Search…</span>
+            <kbd className="text-faint text-[10px]">⌘K</kbd>
+          </button>
         </div>
       )}
 
@@ -220,18 +257,32 @@ export function Sidebar({
           <div key={group.label}>
             <AnimatePresence initial={false}>
               {!collapsed && (
-                <motion.p
+                <motion.button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-muted-foreground mb-1 px-2 text-[10.5px] font-semibold tracking-[0.09em] uppercase"
+                  aria-expanded={!folded[group.label]}
+                  className="text-muted-foreground hover:text-foreground mb-1 flex w-full items-center gap-1 px-2 text-[10.5px] font-semibold tracking-[0.09em] uppercase transition-colors"
                 >
+                  <ChevronDown
+                    className={cn(
+                      "size-3 shrink-0 transition-transform",
+                      folded[group.label] && "-rotate-90",
+                    )}
+                  />
                   {group.label}
-                </motion.p>
+                </motion.button>
               )}
             </AnimatePresence>
 
-            <ul className="space-y-0.5">
+            <ul
+              className={cn(
+                "space-y-0.5",
+                !collapsed && folded[group.label] && "hidden",
+              )}
+            >
               {group.items.map((item) => (
                 <li key={item.href}>
                   <NavLink

@@ -41,6 +41,14 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
 
+  // The sidebar's search field opens the palette without owning any of its
+  // state: it dispatches this event, the palette answers. One-way, no context.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("gvos:open-palette", onOpen);
+    return () => window.removeEventListener("gvos:open-palette", onOpen);
+  }, []);
+
   const setQuery = (value: string) => setSearch({ query: value, index: 0 });
   const setIndex = (next: (i: number) => number) =>
     setSearch((s) => ({ ...s, index: next(s.index) }));
