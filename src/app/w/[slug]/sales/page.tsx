@@ -21,6 +21,7 @@ import { displayName } from "@/lib/text";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { dispositionLabel } from "@/lib/sales/call-activity";
 import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
+import { RightNowPanel } from "@/components/tracking/right-now";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
 export const dynamic = "force-dynamic";
@@ -188,6 +189,14 @@ export default async function WorkspaceSalesPage({
           </div>
         )}
       </section>
+
+      {/* The live state: calendar-fed, so it stays honest-empty until a
+          calendar source connects for this offer. */}
+      {(metrics.rightNow.upcoming > 0 ||
+        metrics.rightNow.stuck > 0 ||
+        metrics.confirmation.ofBookings > 0) && (
+        <RightNowPanel rightNow={metrics.rightNow} />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {showCash && (

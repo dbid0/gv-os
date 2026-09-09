@@ -128,6 +128,40 @@ describe("assembleOfferMetrics", () => {
     expect(m.confirmation.confirmedAwaiting).toBe(1);
   });
 
+  it("rightNow counts upcoming, stuck and confirmed-awaiting from bookings", () => {
+    const bookings = [
+      {
+        id: "up",
+        inviteeName: null,
+        inviteeEmail: null,
+        startsAt: T("2026-09-09T18:00:00Z"),
+        status: "booked",
+      },
+      {
+        id: "stuck",
+        inviteeName: null,
+        inviteeEmail: null,
+        startsAt: T("2026-09-09T09:00:00Z"),
+        status: "booked",
+      },
+      {
+        id: "cancelled",
+        inviteeName: null,
+        inviteeEmail: null,
+        startsAt: T("2026-09-09T20:00:00Z"),
+        status: "canceled",
+      },
+    ];
+    const m = assembleOfferMetrics(
+      inputs({
+        bookings,
+        confirmations: [{ bookingId: "up", confirmedAt: T("2026-09-09T08:00:00Z") }],
+      }),
+      NOW,
+    );
+    expect(m.rightNow).toEqual({ upcoming: 1, stuck: 1, confirmedAwaiting: 1 });
+  });
+
   it("a stuck call and a confirmed-awaiting call are different bookings", () => {
     const bookings = [
       {
