@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
+import { extractUtms } from "@/lib/docs/utm-extract";
 import { applications, integrations, signedDocs } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
@@ -167,6 +168,7 @@ export async function pullTypeformApplications(): Promise<
               submittedAt: normalized.submittedAt
                 ? new Date(normalized.submittedAt)
                 : null,
+              ...extractUtms(item),
               raw: item,
             })
             .onConflictDoNothing({

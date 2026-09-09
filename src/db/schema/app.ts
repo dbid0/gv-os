@@ -749,6 +749,13 @@ export const applications = appSchema.table(
     email: text("email"),
     name: text("name"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    /** Attribution — the form's hidden UTM fields, captured at submit and
+     * normalized to the GV standard (trimmed, lowercase). Null = the link
+     * carried no tag, which is itself a signal. */
+    utmSource: text("utm_source"),
+    utmMedium: text("utm_medium"),
+    utmCampaign: text("utm_campaign"),
+    utmContent: text("utm_content"),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
