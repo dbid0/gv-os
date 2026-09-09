@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -30,25 +30,16 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
 import type { ShellUser } from "@/lib/auth/user";
-import { useIsHydrated, usePersistedBoolean } from "@/lib/client-state";
+import {
+  useIsHydrated,
+  usePersistedBoolean,
+  usePersistedRecord,
+} from "@/lib/client-state";
 import { smooth, snappy } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "gvos.sidebar.collapsed";
 const GROUPS_KEY = "gvos.sidebar.groups";
-
-/** Which nav groups are folded shut. One record, read once — the group list
- * is static so there is nothing to sync beyond this component. */
-function readFoldedGroups(): Record<string, boolean> {
-  try {
-    return JSON.parse(window.localStorage.getItem(GROUPS_KEY) ?? "{}") as Record<
-      string,
-      boolean
-    >;
-  } catch {
-    return {};
-  }
-}
 
 export function Sidebar({
   user,
@@ -96,16 +87,9 @@ export function Sidebar({
   const reduceMotion = useReducedMotion();
   const [collapsed, setCollapsed] = usePersistedBoolean(STORAGE_KEY, false);
   const hydrated = useIsHydrated();
-  const [folded, setFolded] = useState<Record<string, boolean>>({});
-  useEffect(() => setFolded(readFoldedGroups()), []);
+  const [folded, setFolded] = usePersistedRecord(GROUPS_KEY);
   const toggleGroup = (label: string) =>
-    setFolded((prev) => {
-      const next = { ...prev, [label]: !prev[label] };
-      try {
-        window.localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    setFolded({ ...folded, [label]: !folded[label] });
 
   const toggle = () => setCollapsed(!collapsed);
 
