@@ -24,6 +24,13 @@ import {
   type RepActivityStats,
 } from "@/lib/sales/call-activity";
 import { closesPaid, type ClosesPaid } from "@/lib/tracking/closes-paid";
+import { cashMix, type CashMix, type MixPayment } from "@/lib/tracking/cash-mix";
+import {
+  buildOfferFunnel,
+  type FunnelStageKey,
+  type OfferFunnel,
+} from "@/lib/tracking/funnel";
+import type { LeadSummary } from "@/lib/tracking/leads";
 import { stuckCalls, type StuckCall, type StuckCandidate } from "@/lib/bookings/stuck";
 import {
   splitByConfirmation,
@@ -31,6 +38,17 @@ import {
   type ConfirmationRecord,
 } from "@/lib/crm/confirmation";
 import type { OfferStl } from "@/lib/crm/offer-stl";
+
+/** The honest zero-state for speed to lead — no source, no numbers. */
+export const DISCONNECTED_STL: OfferStl = {
+  connected: false,
+  medianMinutes: null,
+  slaPct: null,
+  measured: 0,
+  applications: 0,
+  everDialed: 0,
+  byRep: [],
+};
 
 export type OfferMetricsInputs = {
   /** Applications submitted in the window (dates only — counts derive here). */
@@ -51,6 +69,15 @@ export type OfferMetricsInputs = {
   confirmations: ConfirmationRecord[];
   /** Speed-to-lead, already computed by its own engine. */
   stl: OfferStl;
+  /** Lead-stitched funnel inputs; absent = the surface didn't load leads. */
+  funnelLeads?: { leads: LeadSummary[]; stageKeys: FunnelStageKey[] } | null;
+  /** Windowed payments for the cash mix; absent = no processor/sheet feed. */
+  mixWindow?: { payments: MixPayment[]; from: Date; to: Date } | null;
+  /** The window's client-layer money rows + the previous window's cash. */
+  rangeMoney?: {
+    rows: { cashCents: number; revenueCents: number }[];
+    prevCash: number | null;
+  } | null;
 };
 
 export type RightNow = {
@@ -80,6 +107,16 @@ export type OfferMetrics = {
   /** How the closes paid; null when there are no deal rows to classify. */
   paidMix: ClosesPaid | null;
   stuck: StuckCall[];
+  /** The offer's funnel; null until leads exist for the surface. */
+  funnel: OfferFunnel | null;
+  /** Whose money the window is made of; null without a payment feed. */
+  cashMix: CashMix | null;
+  /** Window money; null when the surface didn't ask for range rows. */
+  money: {
+    rangeCash: number;
+    rangeRevenue: number;
+    prevRangeCash: number | null;
+  } | null;
   rightNow: RightNow;
   confirmation: ConfirmationMetrics;
   stl: OfferStl;
@@ -108,6 +145,19 @@ export function assembleOfferMetrics(
     board: aggregateByRep(inputs.calls).sort(compareRepStats).slice(0, BOARD_LIMIT),
     paidMix: inputs.dealRows.length > 0 ? closesPaid(inputs.dealRows) : null,
     stuck,
+    funnel: inputs.funnelLeads
+      ? buildOfferFunnel(inputs.funnelLeads.leads, inputs.funnelLeads.stageKeys)
+      : null,
+    cashMix: inputs.mixWindow
+      ? cashMix(inputs.mixWindow.payments, inputs.mixWindow.from, inputs.mixWindow.to)
+      : null,
+    money: inputs.rangeMoney
+      ? {
+          rangeCash: inputs.rangeMoney.rows.reduce((s, r) => s + r.cashCents, 0),
+          rangeRevenue: inputs.rangeMoney.rows.reduce((s, r) => s + r.revenueCents, 0),
+          prevRangeCash: inputs.rangeMoney.prevCash,
+        }
+      : null,
     rightNow: {
       upcoming,
       stuck: stuck.length,

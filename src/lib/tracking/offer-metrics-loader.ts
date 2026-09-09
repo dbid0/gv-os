@@ -6,26 +6,34 @@ import { getDb } from "@/db/client";
 import {
   applications,
   bookings,
+  clients,
   clientTrackingRows,
   reps as repsTable,
 } from "@/db/schema/app";
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
-import { offerSpeedToLead, type OfferStl } from "@/lib/crm/offer-stl";
+import { offerSpeedToLead } from "@/lib/crm/offer-stl";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { listDeals } from "@/lib/sales/queries";
-import { assembleOfferMetrics, type OfferMetrics } from "@/lib/tracking/offer-metrics";
-import { cashRowsForClient, currentSnapshot } from "@/lib/tracking/queries";
-
-const DISCONNECTED_STL: OfferStl = {
-  connected: false,
-  medianMinutes: null,
-  slaPct: null,
-  measured: 0,
-  applications: 0,
-  everDialed: 0,
-  byRep: [],
-};
+import {
+  assembleOfferMetrics,
+  DISCONNECTED_STL,
+  type OfferMetrics,
+} from "@/lib/tracking/offer-metrics";
+import {
+  cashRowsForClient,
+  currentSnapshot,
+  latestSnapshotsBySource,
+  leadsForClient,
+} from "@/lib/tracking/queries";
+import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
+import { rowsForClient } from "@/lib/clients/attribution";
+import {
+  homeRangeRows,
+  previousBounds,
+  type RangeBounds,
+} from "@/lib/transactions/homepage";
+import { listTransactions } from "@/lib/transactions/queries";
 
 export type OfferSalesData = {
   metrics: OfferMetrics;
@@ -168,5 +176,129 @@ export async function loadOfferSales(
     deals,
     calls,
     repName: new Map(repRows.map((r) => [r.id, r.name])),
+  };
+}
+
+export type OfferHomeData = {
+  metrics: OfferMetrics;
+  report: ClientReport | null;
+  /** Which feed the cash mix came from, for the card's source label. */
+  mixSource: "stripe" | "sheet" | null;
+  /** The window's client-layer rows — the page derives its series from these. */
+  rangeRows: BacklogRow[];
+  /** The offer's recent client-layer money, newest first. */
+  recentRows: BacklogRow[];
+};
+
+type BacklogRow =
+  ReturnType<typeof listTransactions> extends Promise<{
+    rows: (infer R)[];
+  }>
+    ? R
+    : never;
+
+/**
+ * The home surface's door into the SAME engine as /sales. It loads what the
+ * dashboard renders — funnel leads, windowed payments for the mix, and the
+ * window's ledger rows — and hands them to the one assembler. Sections the
+ * home doesn't fetch (call activity, bookings) come back honest-empty; the
+ * numbers both surfaces share can no longer be computed two ways.
+ */
+export async function loadOfferHome(
+  slug: string,
+  clientName: string,
+  bounds: RangeBounds,
+  todayKey: string,
+): Promise<OfferHomeData> {
+  const db = getDb();
+  const now = new Date();
+
+  const [row] = await db
+    .select({ id: clients.id, offerModel: clients.offerModel })
+    .from(clients)
+    .where(eq(clients.slug, slug))
+    .limit(1);
+
+  const [report, { rows: backlog }, snapshot, snaps] = await Promise.all([
+    getClientReport(slug, clientName).catch(() => null),
+    listTransactions({}),
+    row ? currentSnapshot(row.id) : Promise.resolve(null),
+    row ? latestSnapshotsBySource(row.id) : Promise.resolve([]),
+  ]);
+
+  // Funnel: the offer's lead-stitched stages, shaped to its offer model.
+  const funnelLeads = snapshot
+    ? {
+        leads: await leadsForClient(snapshot.syncId),
+        stageKeys: stagesForModel(offerModelOf(row?.offerModel ?? null)),
+      }
+    : null;
+
+  // Cash mix: processor snapshot first, sheet as the fallback feed.
+  const paySource =
+    snaps.find((x) => x.source === "stripe") ??
+    snaps.find((x) => x.source === "sheet") ??
+    null;
+  let mixWindow = null;
+  if (paySource) {
+    const { payments } = await cashRowsForClient(paySource.snapshot.syncId);
+    mixWindow = {
+      payments,
+      from: bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0),
+      to: bounds.to
+        ? new Date(`${bounds.to}T23:59:59Z`)
+        : new Date(`${todayKey}T23:59:59Z`),
+    };
+  }
+
+  // Window money: client-layer rows, attributed the way the ledger does it.
+  const rangeRows = rowsForClient(
+    homeRangeRows(backlog, "clients", bounds),
+    report?.clientId ?? null,
+    slug,
+  );
+  const prevB = previousBounds(bounds);
+  const prevCash = prevB
+    ? rowsForClient(
+        homeRangeRows(backlog, "clients", prevB),
+        report?.clientId ?? null,
+        slug,
+      ).reduce((sum, r) => sum + r.cashCents, 0)
+    : null;
+
+  const metrics = assembleOfferMetrics(
+    {
+      appDates: (report?.apps ?? []).map((a) => a.submittedAt ?? a.createdAt),
+      calls: [],
+      dealRows: [],
+      bookings: [],
+      reportedEmails: new Set(),
+      confirmations: [],
+      stl: DISCONNECTED_STL,
+      funnelLeads,
+      mixWindow,
+      rangeMoney: {
+        rows: rangeRows.map((r) => ({
+          cashCents: r.cashCents,
+          revenueCents: r.revenueCents,
+        })),
+        prevCash,
+      },
+    },
+    now,
+  );
+
+  const recentRows = rowsForClient(
+    backlog.filter((r) => r.layer === "client"),
+    report?.clientId ?? null,
+    slug,
+  ).slice(0, 8);
+
+  return {
+    metrics,
+    report,
+    mixSource: paySource ? (paySource.source === "stripe" ? "stripe" : "sheet") : null,
+    rangeRows,
+    recentRows,
   };
 }
