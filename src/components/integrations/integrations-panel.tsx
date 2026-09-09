@@ -29,7 +29,7 @@ import {
   type ConnectMethod,
   type SyncStatus,
 } from "@/lib/integrations/providers";
-import { isFailureNote } from "@/lib/integrations/sync-note";
+import { isFailureNote, isStaleSync } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
 
 interface TeamOption {
@@ -129,9 +129,15 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
               )}
             </span>
           )}
-          <span>
+          <span
+            className={cn(
+              isStaleSync(row.lastSyncAt, new Date()) && "text-warning font-medium",
+            )}
+          >
             {row.lastSyncAt
-              ? `Synced ${new Date(row.lastSyncAt).toLocaleString("en-US", {
+              ? `${isStaleSync(row.lastSyncAt, new Date()) ? "No successful sync since" : "Synced"} ${new Date(
+                  row.lastSyncAt,
+                ).toLocaleString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
