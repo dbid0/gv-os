@@ -661,6 +661,42 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Call confirmations — the human layer on top of synced bookings. A booking
+ * row is a MIRROR (re-synced from the scheduler at will), so anything a
+ * person records about the call lives here, keyed by booking id, and
+ * survives every re-sync. One row per booking: who confirmed it, when, any
+ * corrected contact details the lead gave, and pre-call notes for the closer.
+ * "Confirmed" only means something when it happened BEFORE the call started —
+ * that judgement lives in lib/crm/confirmation, not in the table.
+ */
+export const callConfirmations = appSchema.table(
+  "call_confirmations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    /** Denormalized scope so per-client reads never join through bookings. */
+    clientId: uuid("client_id").references(() => clients.id),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    /** Display name of whoever confirmed; a user id can join later. */
+    confirmedBy: text("confirmed_by"),
+    /** setter · dialer · dm_setter — which seat did the confirming. */
+    confirmedRole: text("confirmed_role"),
+    /** The lead sometimes hands over better contact details on the confirm. */
+    correctedEmail: text("corrected_email"),
+    correctedPhone: text("corrected_phone"),
+    preCallNotes: text("pre_call_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("call_confirmations_booking_key").on(table.bookingId),
+    index("call_confirmations_client_idx").on(table.clientId),
+  ],
+);
+
+/**
  * Captured signed documents — agreements PandaDoc reports as completed,
  * polled per client connection. The signed-agreement notification stream and,
  * later, the deal-attachment source. Same staging discipline as every capture.
@@ -929,6 +965,7 @@ export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type CallConfirmation = typeof callConfirmations.$inferSelect;
 export type PaymentEvent = typeof paymentEvents.$inferSelect;
 export type NewPaymentEvent = typeof paymentEvents.$inferInsert;
 

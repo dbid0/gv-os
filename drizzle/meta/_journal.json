@@ -393,6 +393,13 @@
       "when": 1788837005928,
       "tag": "0055_crm_lead_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1788930648650,
+      "tag": "0056_call_confirmations",
+      "breakpoints": true
     }
   ]
 }
