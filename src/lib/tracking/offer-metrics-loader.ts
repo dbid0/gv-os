@@ -258,12 +258,16 @@ export async function loadOfferHome(
     slug,
   );
   const prevB = previousBounds(bounds);
-  const prevCash = prevB
+  const prevRows = prevB
     ? rowsForClient(
         homeRangeRows(backlog, "clients", prevB),
         report?.clientId ?? null,
         slug,
-      ).reduce((sum, r) => sum + r.cashCents, 0)
+      )
+    : null;
+  const prevCash = prevRows ? prevRows.reduce((sum, r) => sum + r.cashCents, 0) : null;
+  const prevRevenue = prevRows
+    ? prevRows.reduce((sum, r) => sum + r.revenueCents, 0)
     : null;
 
   const metrics = assembleOfferMetrics(
@@ -283,6 +287,7 @@ export async function loadOfferHome(
           revenueCents: r.revenueCents,
         })),
         prevCash,
+        prevRevenue,
       },
     },
     now,

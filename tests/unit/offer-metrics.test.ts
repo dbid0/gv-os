@@ -209,6 +209,7 @@ describe("assembleOfferMetrics", () => {
             { cashCents: 50000, revenueCents: 50000 },
           ],
           prevCash: 300000,
+          prevRevenue: 500000,
         },
       }),
       NOW,
@@ -217,6 +218,7 @@ describe("assembleOfferMetrics", () => {
       rangeCash: 150000,
       rangeRevenue: 300000,
       prevRangeCash: 300000,
+      prevRangeRevenue: 500000,
     });
   });
 
