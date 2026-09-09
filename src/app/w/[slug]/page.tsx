@@ -9,6 +9,7 @@ import { CountUpMoney } from "@/components/shell/count-up-money";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { RangeChips } from "@/components/ui/range-chips";
+import { CashGoalStrip } from "@/components/tracking/cash-goal";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -262,6 +263,15 @@ export default async function WorkspacePage({
             )}
           </section>
         </div>
+      )}
+
+      {showCash && (
+        <CashGoalStrip
+          slug={slug}
+          monthlyTargetCents={report.target.monthlyTargetCents}
+          mtdCashCents={report.target.mtdCashCents}
+          canEdit={!portalView}
+        />
       )}
 
       {showCash && (
