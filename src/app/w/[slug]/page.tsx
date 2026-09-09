@@ -153,6 +153,7 @@ export default async function WorkspacePage({
   // answers when no processor is connected. Full history feeds first-payment
   // lookups; only the window's payments are reported.
   let mix = null;
+  let mixSource: "stripe" | "sheet" | null = null;
   if (showCash && report.clientId) {
     const snaps = await latestSnapshotsBySource(report.clientId);
     const paySource =
@@ -160,6 +161,7 @@ export default async function WorkspacePage({
       snaps.find((x) => x.source === "sheet") ??
       null;
     if (paySource) {
+      mixSource = paySource.source === "stripe" ? "stripe" : "sheet";
       const { payments } = await cashRowsForClient(paySource.snapshot.syncId);
       const from = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
       const to = bounds.to
@@ -233,17 +235,19 @@ export default async function WorkspacePage({
                 <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
                   Cash collected — {bounds.label}
                 </p>
+                {/* The note lives UNDER the figure, never inline with it —
+                    inline, the two collided once the typeface changed. */}
                 <p className="numeric text-success text-4xl font-bold tracking-tight">
-                  <CountUpMoney cents={rangeCash} />{" "}
-                  <span className="text-muted-foreground text-sm font-normal">
-                    collected
-                    {rangeRevenue > rangeCash && (
-                      <>
-                        {" "}
-                        · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
-                      </>
-                    )}
-                  </span>
+                  <CountUpMoney cents={rangeCash} />
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  collected
+                  {rangeRevenue > rangeCash && (
+                    <>
+                      {" "}
+                      · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
+                    </>
+                  )}
                 </p>
                 <PeriodDelta currentCents={rangeCash} previousCents={prevRangeCash} />
               </div>
@@ -272,6 +276,12 @@ export default async function WorkspacePage({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
               Cash mix — {bounds.label}
+              {mixSource && (
+                <span className="text-faint/80 normal-case">
+                  {" "}
+                  · {mixSource === "stripe" ? "via Stripe" : "from the tracking sheet"}
+                </span>
+              )}
             </p>
             {mix.unplaceableCents > 0 && (
               <p className="text-faint text-[11px]">
