@@ -661,6 +661,43 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Payment claims — who gets credit for a payment, per sales seat. A claim is
+ * a row BESIDE the payment, never a change to it: the ledger and the
+ * payment_events mirror stay untouched, and commissions DERIVE from claims
+ * later instead of being stored. One claim per (payment, role) — a payment
+ * has at most one setter, one closer, one DM setter. rate_override_bps is the
+ * exception lever (a spiff, a house deal) — null means "use the rules".
+ */
+export const paymentAssignments = appSchema.table(
+  "payment_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    paymentEventId: uuid("payment_event_id")
+      .notNull()
+      .references(() => paymentEvents.id, { onDelete: "cascade" }),
+    /** Denormalized scope so per-client reads never join through payments. */
+    clientId: uuid("client_id").references(() => clients.id),
+    /** setter · closer · dm_setter — the seat being credited. */
+    role: text("role").notNull(),
+    repId: uuid("rep_id")
+      .notNull()
+      .references(() => reps.id),
+    /** Basis points; null = the commission rules decide. */
+    rateOverrideBps: integer("rate_override_bps"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_assignments_payment_role_key").on(
+      table.paymentEventId,
+      table.role,
+    ),
+    index("payment_assignments_client_idx").on(table.clientId),
+    index("payment_assignments_rep_idx").on(table.repId),
+  ],
+);
+
+/**
  * Call confirmations — the human layer on top of synced bookings. A booking
  * row is a MIRROR (re-synced from the scheduler at will), so anything a
  * person records about the call lives here, keyed by booking id, and
@@ -972,6 +1009,7 @@ export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type PaymentAssignment = typeof paymentAssignments.$inferSelect;
 export type CallConfirmation = typeof callConfirmations.$inferSelect;
 export type PaymentEvent = typeof paymentEvents.$inferSelect;
 export type NewPaymentEvent = typeof paymentEvents.$inferInsert;
