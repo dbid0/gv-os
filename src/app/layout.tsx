@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Poppins } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Poppins is the Global Ventures typeface, matching the GGV Portal and the GV
-// Typeform theme. Same face across the job board and the OS.
-const poppins = Poppins({
-  variable: "--font-poppins",
+// Plus Jakarta Sans is the OS typeface (Daniel's 2026-09-08 direction: the
+// reference product's format, our palette). Variable font, one file, all weights.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 // Money and any figure in a column renders in mono with tabular numerals.
@@ -32,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${poppins.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider
