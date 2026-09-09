@@ -1,0 +1,180 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  assembleOfferMetrics,
+  BOARD_LIMIT,
+  type OfferMetricsInputs,
+} from "@/lib/tracking/offer-metrics";
+import type { ActivityInput } from "@/lib/sales/call-activity";
+import type { OfferStl } from "@/lib/crm/offer-stl";
+
+const NOW = new Date("2026-09-09T12:00:00Z");
+const T = (iso: string) => new Date(iso);
+
+const DISCONNECTED_STL: OfferStl = {
+  connected: false,
+  medianMinutes: null,
+  slaPct: null,
+  measured: 0,
+  applications: 0,
+  everDialed: 0,
+  byRep: [],
+};
+
+function inputs(extra: Partial<OfferMetricsInputs> = {}): OfferMetricsInputs {
+  return {
+    appDates: [],
+    calls: [],
+    dealRows: [],
+    bookings: [],
+    reportedEmails: new Set(),
+    confirmations: [],
+    stl: DISCONNECTED_STL,
+    ...extra,
+  };
+}
+
+function callLog(extra: Partial<ActivityInput> = {}): ActivityInput {
+  return {
+    mode: "call",
+    disposition: "showed",
+    repId: null,
+    ...extra,
+  } as ActivityInput;
+}
+
+describe("assembleOfferMetrics", () => {
+  it("empty inputs = empty sections and nulls, never fabricated zeros", () => {
+    const m = assembleOfferMetrics(inputs(), NOW);
+    expect(m.apps.count).toBe(0);
+    expect(m.paidMix).toBeNull(); // no rows ≠ "0 PIF / 0 split"
+    expect(m.activity.showRate).toBeNull(); // no resolved calls ≠ 0% show rate
+    expect(m.activity.closeRate).toBeNull();
+    expect(m.board).toEqual([]);
+    expect(m.stuck).toEqual([]);
+    expect(m.confirmation).toEqual({
+      everConfirmed: 0,
+      ofBookings: 0,
+      confirmedAwaiting: 0,
+      confirmedThenCancelled: 0,
+    });
+    expect(m.stl.medianMinutes).toBeNull();
+  });
+
+  it("the board is the page total re-cut per rep — no rep invented for unassigned", () => {
+    const calls = [
+      callLog({ repId: "r1", disposition: "sale" }),
+      callLog({ repId: "r1" }),
+      callLog({ repId: null }), // unassigned: counts in totals, on no rep's row
+    ];
+    const m = assembleOfferMetrics(inputs({ calls }), NOW);
+    expect(m.activity.calls).toBe(3);
+    expect(m.board).toHaveLength(1);
+    expect(m.board[0].repId).toBe("r1");
+    expect(m.board[0].calls).toBe(2);
+  });
+
+  it("caps the board at the display limit", () => {
+    const calls = Array.from({ length: BOARD_LIMIT + 3 }, (_, i) =>
+      callLog({ repId: `r${i}` }),
+    );
+    const m = assembleOfferMetrics(inputs({ calls }), NOW);
+    expect(m.board).toHaveLength(BOARD_LIMIT);
+  });
+
+  it("paid mix appears once there are deal rows", () => {
+    const m = assembleOfferMetrics(
+      inputs({
+        dealRows: [
+          { cashCents: 500000, revenueCents: 500000, label: null },
+          { cashCents: 100000, revenueCents: 400000, label: null },
+          { cashCents: 50000, revenueCents: 300000, label: "Deposit" },
+        ],
+      }),
+      NOW,
+    );
+    expect(m.paidMix).not.toBeNull();
+    expect(m.paidMix?.pif).toBe(1);
+    expect(m.paidMix?.split).toBe(1);
+    expect(m.paidMix?.deposit).toBe(1);
+  });
+
+  it("confirmation metrics count timely confirms against ALL bookings", () => {
+    const bookings = [
+      {
+        id: "a",
+        inviteeName: null,
+        inviteeEmail: null,
+        startsAt: T("2026-09-09T18:00:00Z"),
+        status: "booked",
+      },
+      {
+        id: "b",
+        inviteeName: null,
+        inviteeEmail: null,
+        startsAt: T("2026-09-09T19:00:00Z"),
+        status: "booked",
+      },
+    ];
+    const m = assembleOfferMetrics(
+      inputs({
+        bookings,
+        confirmations: [{ bookingId: "a", confirmedAt: T("2026-09-09T08:00:00Z") }],
+      }),
+      NOW,
+    );
+    expect(m.confirmation.everConfirmed).toBe(1);
+    expect(m.confirmation.ofBookings).toBe(2);
+    expect(m.confirmation.confirmedAwaiting).toBe(1);
+  });
+
+  it("a stuck call and a confirmed-awaiting call are different bookings", () => {
+    const bookings = [
+      {
+        id: "past",
+        inviteeName: "A",
+        inviteeEmail: "a@x.com",
+        startsAt: T("2026-09-09T09:00:00Z"), // 3h ago, no outcome → stuck
+        status: "booked",
+      },
+      {
+        id: "future",
+        inviteeName: "B",
+        inviteeEmail: "b@x.com",
+        startsAt: T("2026-09-09T18:00:00Z"),
+        status: "booked",
+      },
+    ];
+    const m = assembleOfferMetrics(
+      inputs({
+        bookings,
+        confirmations: [
+          { bookingId: "future", confirmedAt: T("2026-09-09T08:00:00Z") },
+        ],
+      }),
+      NOW,
+    );
+    expect(m.stuck).toHaveLength(1);
+    expect(m.stuck[0].inviteeEmail).toBe("a@x.com");
+    expect(m.confirmation.confirmedAwaiting).toBe(1);
+  });
+
+  it("an end-of-call report clears a would-be stuck call", () => {
+    const m = assembleOfferMetrics(
+      inputs({
+        bookings: [
+          {
+            id: "past",
+            inviteeName: "A",
+            inviteeEmail: "A@X.com",
+            startsAt: T("2026-09-09T09:00:00Z"),
+            status: "booked",
+          },
+        ],
+        reportedEmails: new Set(["a@x.com"]),
+      }),
+      NOW,
+    );
+    expect(m.stuck).toEqual([]);
+  });
+});
