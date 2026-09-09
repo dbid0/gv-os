@@ -26,6 +26,8 @@ import { currentSnapshot, eodRowsForClient } from "@/lib/tracking/queries";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { possessive } from "@/lib/text";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
+import { UpcomingCalls } from "@/components/tracking/upcoming-calls";
+import { isPortalView } from "@/lib/clients/portal-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -270,6 +272,12 @@ export default async function WorkspaceCrmPage({
           {syncedAgoMin === 0 ? "just now" : `${syncedAgoMin}m ago`}; viewing this page
           refreshes it.
         </p>
+      )}
+
+      {/* The pre-call queue with the confirm action — GV ops surface, never
+          the client portal. */}
+      {clientId && !(await isPortalView()) && (
+        <UpcomingCalls clientId={clientId} slug={slug} now={now} />
       )}
 
       {stuck.length > 0 && (
