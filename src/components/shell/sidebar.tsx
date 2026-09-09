@@ -86,7 +86,7 @@ export function Sidebar({
     <motion.aside
       data-testid="sidebar"
       data-collapsed={collapsed}
-      animate={{ width: collapsed ? 72 : 272 }}
+      animate={{ width: collapsed ? 72 : 248 }}
       initial={false}
       transition={reduceMotion ? { duration: 0 } : smooth}
       className="bg-sidebar text-sidebar-foreground relative hidden shrink-0 flex-col border-r md:flex"
@@ -138,7 +138,7 @@ export function Sidebar({
       {!collapsed && (
         <div className="px-3 pb-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors">
+            <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors">
               {activeClient ? (
                 <ClientLogo
                   slug={activeClient.slug}
@@ -214,7 +214,7 @@ export function Sidebar({
         </div>
       )}
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-2">
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-2">
         {visibleNavigation.map((group) => (
           <div key={group.label}>
             <AnimatePresence initial={false}>
@@ -223,14 +223,14 @@ export function Sidebar({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-faint mb-1.5 px-2 text-[10px] font-medium tracking-wider uppercase"
+                  className="text-muted-foreground mb-1 px-2 text-[10.5px] font-semibold tracking-[0.09em] uppercase"
                 >
                   {group.label}
                 </motion.p>
               )}
             </AnimatePresence>
 
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {group.items.map((item) => (
                 <li key={item.href}>
                   <NavLink
@@ -332,7 +332,7 @@ function NavLink({
   const body = (
     <span
       className={cn(
-        "relative flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors",
+        "relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors",
         active && "text-foreground font-medium",
         !active && !planned && "text-muted-foreground hover:text-foreground",
         planned && "text-faint",
@@ -344,7 +344,7 @@ function NavLink({
         <motion.span
           layoutId="nav-active"
           transition={reduceMotion ? { duration: 0 } : snappy}
-          className="border-border-strong bg-secondary elev-card absolute inset-0 -z-10 rounded-lg border"
+          className="border-border-strong bg-secondary elev-card absolute inset-0 -z-10 rounded-md border"
         >
           <span className="bg-brand absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full" />
         </motion.span>
@@ -357,7 +357,6 @@ function NavLink({
       {!collapsed && planned && (
         <span className="text-faint text-[10px] tracking-wide uppercase">Soon</span>
       )}
-      {!collapsed && active && <ChevronRight className="text-faint size-4 shrink-0" />}
     </span>
   );
 
