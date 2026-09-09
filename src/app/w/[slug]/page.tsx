@@ -10,6 +10,7 @@ import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { RangeChips } from "@/components/ui/range-chips";
 import { CashGoalStrip } from "@/components/tracking/cash-goal";
+import { RightNowPanel } from "@/components/tracking/right-now";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -332,13 +333,47 @@ export default async function WorkspacePage({
         </Panel>
       )}
 
+      {/* The reference composition: the funnel flow beside the live call
+          state. The right column only exists once a calendar reports
+          bookings — before that the funnel keeps the full width. */}
       {funnel && funnel.totalLeads > 0 && (
-        <Panel
-          title="Funnel"
-          aside={<span className="text-faint text-xs">from the tracking sheet</span>}
+        <div
+          className={
+            metrics.confirmation.ofBookings > 0
+              ? "grid gap-4 lg:grid-cols-[2fr_1fr]"
+              : ""
+          }
         >
-          <OfferFunnelPanel funnel={funnel} slug={slug} />
-        </Panel>
+          <Panel
+            title="Funnel"
+            aside={<span className="text-faint text-xs">from the tracking sheet</span>}
+          >
+            <OfferFunnelPanel funnel={funnel} slug={slug} />
+          </Panel>
+          {metrics.confirmation.ofBookings > 0 && (
+            <div className="space-y-4">
+              <RightNowPanel rightNow={metrics.rightNow} />
+              <section className="card-grad rounded-xl border p-4">
+                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Confirmed before the call
+                </p>
+                <p className="text-foreground mt-1 font-mono text-2xl font-semibold tabular-nums">
+                  {metrics.confirmation.everConfirmed}
+                  <span className="text-muted-foreground text-sm font-normal">
+                    {" "}
+                    of {metrics.confirmation.ofBookings} booked
+                  </span>
+                </p>
+                {metrics.confirmation.confirmedThenCancelled > 0 && (
+                  <p className="text-warning mt-1 text-xs">
+                    {metrics.confirmation.confirmedThenCancelled} confirmed, then
+                    cancelled anyway
+                  </p>
+                )}
+              </section>
+            </div>
+          )}
+        </div>
       )}
 
       {showCash && <RecentTransactions rows={offerRecent} />}
