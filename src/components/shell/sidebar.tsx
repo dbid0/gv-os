@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   ChevronRight,
+  CircleUserRound,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -265,36 +266,45 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Who you are. */}
-      <div className="border-t px-3 py-3">
-        <div className="flex items-center gap-2.5">
-          <span className="bg-secondary text-foreground grid size-8 shrink-0 place-items-center rounded-full border text-xs font-semibold">
-            {user?.initial ?? "?"}
-          </span>
-          {!collapsed && (
-            <span className="min-w-0 flex-1">
-              <span className="text-foreground block truncate text-sm font-medium">
+      {/* Who you are — one quiet row; email, account and sign-out live in the
+          menu above it, so the sidebar floor stays clean. */}
+      <div className="border-t px-3 py-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="hover:bg-secondary/60 flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors">
+            <span className="bg-secondary text-foreground grid size-7 shrink-0 place-items-center rounded-full border text-xs font-semibold">
+              {user?.initial ?? "?"}
+            </span>
+            {!collapsed && (
+              <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-medium">
                 {user?.name ?? "Signed out"}
               </span>
-              <span className="text-faint block truncate text-xs">
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-foreground truncate text-sm font-semibold">
+                {user?.name ?? "Signed out"}
+              </p>
+              <p className="text-muted-foreground truncate text-xs">
                 {user?.email ?? "No session"}
-              </span>
-            </span>
-          )}
-        </div>
-
-        {!collapsed && (
-          <div className="text-faint mt-3 flex items-center gap-4 text-xs">
+              </p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/settings" />} className="gap-2">
+              <CircleUserRound className="size-4" /> Account
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <form action={signOut}>
-              <button
-                type="submit"
-                className="hover:text-foreground press inline-flex items-center gap-1.5 transition-colors"
+              <DropdownMenuItem
+                nativeButton
+                render={<button type="submit" className="w-full" />}
+                className="gap-2"
               >
-                <LogOut className="size-3.5" /> Sign out
-              </button>
+                <LogOut className="size-4" /> Sign out
+              </DropdownMenuItem>
             </form>
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Button
           variant="ghost"
@@ -302,7 +312,7 @@ export function Sidebar({
           onClick={toggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={hydrated ? !collapsed : undefined}
-          className="text-faint mt-2 w-full justify-start gap-2"
+          className="text-faint mt-1 w-full justify-start gap-2"
         >
           {collapsed ? (
             <PanelLeftOpen className="size-4" />
