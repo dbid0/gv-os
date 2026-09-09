@@ -20,3 +20,22 @@ export function failureNote(err: unknown): string {
 export function isFailureNote(note: string | null | undefined): boolean {
   return typeof note === "string" && note.startsWith(FAILURE_PREFIX);
 }
+
+/**
+ * A connection is STALE when its last successful sync is older than this.
+ * The scheduler runs every 15 minutes, so two hours means at least eight
+ * consecutive runs did nothing for this connection — the scheduler is stuck,
+ * the key is dead, or the provider is refusing us. An old date with no alarm
+ * reads as "fine"; this makes silence itself a signal.
+ */
+export const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
+
+export function isStaleSync(
+  lastSyncAt: Date | string | null | undefined,
+  now: Date,
+): boolean {
+  if (!lastSyncAt) return false; // never-synced is "pending", not "stale"
+  const t = typeof lastSyncAt === "string" ? new Date(lastSyncAt) : lastSyncAt;
+  if (Number.isNaN(t.getTime())) return false;
+  return now.getTime() - t.getTime() > STALE_AFTER_MS;
+}
