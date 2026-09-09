@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useMemo,
+} from "react";
 
 /**
  * Client-state helpers built on useSyncExternalStore.
@@ -116,6 +123,39 @@ export function usePersistedBoolean(
  * shown value to the target, so a scope toggle animates to the new figure
  * instead of snapping. Honors prefers-reduced-motion by jumping straight there.
  */
+/**
+ * A persisted JSON record keyed by string — same store discipline as
+ * usePersistedBoolean (external-store read, hydration-safe fallback, one
+ * emit per write). For small UI state like which nav groups are folded.
+ */
+export function usePersistedRecord(
+  key: string,
+): [Record<string, boolean>, (next: Record<string, boolean>) => void] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => readValue(key) ?? "{}",
+    () => "{}",
+  );
+  const value = useMemo(() => {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, boolean>)
+        : {};
+    } catch {
+      return {};
+    }
+  }, [raw]);
+  const set = useCallback(
+    (next: Record<string, boolean>) => {
+      writeValue(key, JSON.stringify(next));
+      emit();
+    },
+    [key],
+  );
+  return [value, set];
+}
+
 export function useCountUp(target: number, durationMs = 900): number {
   const [value, setValue] = useState(target);
   // First mount counts up from zero; later target changes ease from wherever we
