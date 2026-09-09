@@ -11,6 +11,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { RangeChips } from "@/components/ui/range-chips";
 import { CashGoalStrip } from "@/components/tracking/cash-goal";
 import { RightNowPanel } from "@/components/tracking/right-now";
+import { LeaderboardBand } from "@/components/tracking/leaderboard-band";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -71,12 +72,15 @@ export default async function WorkspacePage({
   const cookieStore = await cookies();
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
-  const [{ metrics, report, mixSource, rangeRows, recentRows }, drive, visibility] =
-    await Promise.all([
-      loadOfferHome(slug, client.name, bounds, todayKey),
-      getClientDriveAssets(slug),
-      portalVisibility(slug),
-    ]);
+  const [
+    { metrics, report, repName, mixSource, rangeRows, recentRows },
+    drive,
+    visibility,
+  ] = await Promise.all([
+    loadOfferHome(slug, client.name, bounds, todayKey),
+    getClientDriveAssets(slug),
+    portalVisibility(slug),
+  ]);
   if (!report) notFound();
   // Every number below comes from the ONE engine — funnel, mix, and window
   // money are cuts of the same assembled object /sales reads, so the two
@@ -375,6 +379,8 @@ export default async function WorkspacePage({
           )}
         </div>
       )}
+
+      <LeaderboardBand metrics={metrics} repName={repName} />
 
       {showCash && <RecentTransactions rows={offerRecent} />}
 

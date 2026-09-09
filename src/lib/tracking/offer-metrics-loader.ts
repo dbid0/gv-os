@@ -182,6 +182,7 @@ export async function loadOfferSales(
 export type OfferHomeData = {
   metrics: OfferMetrics;
   report: ClientReport | null;
+  repName: Map<string, string>;
   /** Which feed the cash mix came from, for the card's source label. */
   mixSource: "stripe" | "sheet" | null;
   /** The window's client-layer rows — the page derives its series from these. */
@@ -219,27 +220,43 @@ export async function loadOfferHome(
     .where(eq(clients.slug, slug))
     .limit(1);
 
-  const [report, { rows: backlog }, snapshot, snaps, bookingRows, confirmations] =
-    await Promise.all([
-      getClientReport(slug, clientName).catch(() => null),
-      listTransactions({}),
-      row ? currentSnapshot(row.id) : Promise.resolve(null),
-      row ? latestSnapshotsBySource(row.id) : Promise.resolve([]),
-      row
-        ? db
-            .select({
-              id: bookings.id,
-              inviteeName: bookings.inviteeName,
-              inviteeEmail: bookings.inviteeEmail,
-              startsAt: bookings.startsAt,
-              status: bookings.status,
-            })
-            .from(bookings)
-            .where(eq(bookings.clientId, row.id))
-            .limit(500)
-        : Promise.resolve([]),
-      row ? listConfirmations(row.id) : Promise.resolve([]),
-    ]);
+  const [
+    report,
+    { rows: backlog },
+    snapshot,
+    snaps,
+    bookingRows,
+    confirmations,
+    allCalls,
+    repRows,
+  ] = await Promise.all([
+    getClientReport(slug, clientName).catch(() => null),
+    listTransactions({}),
+    row ? currentSnapshot(row.id) : Promise.resolve(null),
+    row ? latestSnapshotsBySource(row.id) : Promise.resolve([]),
+    row
+      ? db
+          .select({
+            id: bookings.id,
+            inviteeName: bookings.inviteeName,
+            inviteeEmail: bookings.inviteeEmail,
+            startsAt: bookings.startsAt,
+            status: bookings.status,
+          })
+          .from(bookings)
+          .where(eq(bookings.clientId, row.id))
+          .limit(500)
+      : Promise.resolve([]),
+    row ? listConfirmations(row.id) : Promise.resolve([]),
+    listCallLogs(500),
+    row
+      ? db
+          .select({ id: repsTable.id, name: repsTable.name })
+          .from(repsTable)
+          .where(eq(repsTable.clientId, row.id))
+      : Promise.resolve([]),
+  ]);
+  const calls = allCalls.filter((c) => c.clientId === (row?.id ?? null));
 
   // The outcomes that clear stuck calls — the sheet's EOC emails.
   let reportedEmails = new Set<string>();
@@ -307,7 +324,7 @@ export async function loadOfferHome(
   const metrics = assembleOfferMetrics(
     {
       appDates: (report?.apps ?? []).map((a) => a.submittedAt ?? a.createdAt),
-      calls: [],
+      calls,
       dealRows: [],
       bookings: bookingRows,
       reportedEmails,
@@ -336,6 +353,7 @@ export async function loadOfferHome(
   return {
     metrics,
     report,
+    repName: new Map(repRows.map((r) => [r.id, r.name])),
     mixSource: paySource ? (paySource.source === "stripe" ? "stripe" : "sheet") : null,
     rangeRows,
     recentRows,
