@@ -53,6 +53,15 @@ export type OfferMetricsInputs = {
   stl: OfferStl;
 };
 
+export type RightNow = {
+  /** Booked calls whose start is still ahead. */
+  upcoming: number;
+  /** Booked, start passed, no outcome on file (stuck.length, kept for cuts). */
+  stuck: number;
+  /** Booked, confirmed in time, start still ahead. */
+  confirmedAwaiting: number;
+};
+
 export type ConfirmationMetrics = {
   /** Bookings ever confirmed before their start, of all bookings. */
   everConfirmed: number;
@@ -71,6 +80,7 @@ export type OfferMetrics = {
   /** How the closes paid; null when there are no deal rows to classify. */
   paidMix: ClosesPaid | null;
   stuck: StuckCall[];
+  rightNow: RightNow;
   confirmation: ConfirmationMetrics;
   stl: OfferStl;
 };
@@ -87,13 +97,22 @@ export function assembleOfferMetrics(
     status: b.status,
   }));
   const split = splitByConfirmation(confirmable, inputs.confirmations, now);
+  const upcoming = inputs.bookings.filter(
+    (b) => b.status === "booked" && b.startsAt && b.startsAt.getTime() > now.getTime(),
+  ).length;
+  const stuck = stuckCalls(inputs.bookings, inputs.reportedEmails, now);
 
   return {
     apps: { count: inputs.appDates.length },
     activity: summarizeActivity(inputs.calls),
     board: aggregateByRep(inputs.calls).sort(compareRepStats).slice(0, BOARD_LIMIT),
     paidMix: inputs.dealRows.length > 0 ? closesPaid(inputs.dealRows) : null,
-    stuck: stuckCalls(inputs.bookings, inputs.reportedEmails, now),
+    stuck,
+    rightNow: {
+      upcoming,
+      stuck: stuck.length,
+      confirmedAwaiting: split.confirmedAwaiting,
+    },
     confirmation: {
       everConfirmed: split.confirmed.length,
       ofBookings: inputs.bookings.length,
