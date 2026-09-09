@@ -27,6 +27,9 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/auth/error",
   "/api/health",
+  // The install manifest — Chrome fetches it credential-less; a 307 to /login
+  // would silently kill installability.
+  "/manifest.webmanifest",
   // Public, view-only Workspace share links (/share/[token]). The token IS the
   // capability — an unknown or revoked one 404s in the route, and the route only
   // ever renders the shared page's own subtree, never any (app) surface.

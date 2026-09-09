@@ -22,6 +22,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GV OS",
   description: "The Global Ventures agency OS.",
+  icons: { apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "GV OS", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
