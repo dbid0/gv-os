@@ -1,3 +1,4 @@
+import { cache } from "react";
 import "server-only";
 
 import { and, count, desc, eq, gte } from "drizzle-orm";
@@ -53,6 +54,11 @@ export interface ClientReport {
   };
   target: { monthlyTargetCents: number | null; mtdCashCents: number };
 }
+
+// One backlog load per request, shared by every report on the page. Without
+// this, a page rendering N client cards loads the full transactions backlog N
+// times — the /sales page's entire slowness lived here.
+const listClientLayerTransactions = cache(() => listTransactions({ layer: "client" }));
 
 export async function getClientReport(
   slug: string,
@@ -126,7 +132,7 @@ export async function getClientReport(
   // with /accounting/clients. "Net after fees" = cash minus processor fees. The
   // new-deal importer and processor feeds write these rows, so imported deals
   // appear the moment they land — no separate mirror to fall out of sync.
-  const { rows: clientRows } = await listTransactions({ layer: "client" });
+  const { rows: clientRows } = await listClientLayerTransactions();
   const rosterLite = roster.map((c) => ({ slug: c.slug, name: c.name }));
   const line = clientLedger(clientRows, rosterLite, matchesSheetClient).find(
     (l) => l.slug === slug,

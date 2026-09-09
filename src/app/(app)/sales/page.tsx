@@ -37,20 +37,28 @@ export default async function SalesPage() {
   const teams = scopeRowsToViewer(teamsAll, (t) => t.id, scope.allowed);
 
   const cashByTeam = new Map<string, number>();
-  for (const team of teams) {
-    try {
-      const report = await getClientReport(team.slug, team.name);
-      // Only record cash the ledger could actually attribute to this offer.
-      // An unattributable team used to render "$0.00", which reads as "they
-      // have collected nothing" when the truth is that nothing could be
-      // matched to them at all.
-      if (report.mirror.attributed) {
-        cashByTeam.set(team.slug, report.mirror.cashCents);
+  // Four reports in flight at a time: parallel enough that the page is bound
+  // by the slowest report instead of the sum of all of them, bounded so a
+  // long roster cannot burst the connection pool.
+  const queue = [...teams];
+  await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      for (let team = queue.shift(); team; team = queue.shift()) {
+        try {
+          const report = await getClientReport(team.slug, team.name);
+          // Only record cash the ledger could actually attribute to this
+          // offer. An unattributable team used to render "$0.00", which reads
+          // as "they have collected nothing" when the truth is that nothing
+          // could be matched to them at all.
+          if (report.mirror.attributed) {
+            cashByTeam.set(team.slug, report.mirror.cashCents);
+          }
+        } catch {
+          // A reporting hiccup shows "—", never a broken card.
+        }
       }
-    } catch {
-      // A reporting hiccup shows "—", never a broken card.
-    }
-  }
+    }),
+  );
 
   const repsByTeam = new Map<string, typeof reps>();
   for (const r of reps) {
