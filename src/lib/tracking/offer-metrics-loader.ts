@@ -219,12 +219,46 @@ export async function loadOfferHome(
     .where(eq(clients.slug, slug))
     .limit(1);
 
-  const [report, { rows: backlog }, snapshot, snaps] = await Promise.all([
-    getClientReport(slug, clientName).catch(() => null),
-    listTransactions({}),
-    row ? currentSnapshot(row.id) : Promise.resolve(null),
-    row ? latestSnapshotsBySource(row.id) : Promise.resolve([]),
-  ]);
+  const [report, { rows: backlog }, snapshot, snaps, bookingRows, confirmations] =
+    await Promise.all([
+      getClientReport(slug, clientName).catch(() => null),
+      listTransactions({}),
+      row ? currentSnapshot(row.id) : Promise.resolve(null),
+      row ? latestSnapshotsBySource(row.id) : Promise.resolve([]),
+      row
+        ? db
+            .select({
+              id: bookings.id,
+              inviteeName: bookings.inviteeName,
+              inviteeEmail: bookings.inviteeEmail,
+              startsAt: bookings.startsAt,
+              status: bookings.status,
+            })
+            .from(bookings)
+            .where(eq(bookings.clientId, row.id))
+            .limit(500)
+        : Promise.resolve([]),
+      row ? listConfirmations(row.id) : Promise.resolve([]),
+    ]);
+
+  // The outcomes that clear stuck calls — the sheet's EOC emails.
+  let reportedEmails = new Set<string>();
+  if (snapshot) {
+    const eocRows = await db
+      .select({ email: clientTrackingRows.email })
+      .from(clientTrackingRows)
+      .where(
+        and(
+          eq(clientTrackingRows.syncId, snapshot.syncId),
+          eq(clientTrackingRows.tab, "eoc"),
+        ),
+      );
+    reportedEmails = new Set(
+      eocRows
+        .map((r) => r.email?.trim().toLowerCase())
+        .filter((e): e is string => Boolean(e)),
+    );
+  }
 
   // Funnel: the offer's lead-stitched stages, shaped to its offer model.
   const funnelLeads = snapshot
@@ -275,9 +309,9 @@ export async function loadOfferHome(
       appDates: (report?.apps ?? []).map((a) => a.submittedAt ?? a.createdAt),
       calls: [],
       dealRows: [],
-      bookings: [],
-      reportedEmails: new Set(),
-      confirmations: [],
+      bookings: bookingRows,
+      reportedEmails,
+      confirmations,
       stl: DISCONNECTED_STL,
       funnelLeads,
       mixWindow,
