@@ -77,6 +77,7 @@ export type OfferMetricsInputs = {
   rangeMoney?: {
     rows: { cashCents: number; revenueCents: number }[];
     prevCash: number | null;
+    prevRevenue: number | null;
   } | null;
 };
 
@@ -116,6 +117,7 @@ export type OfferMetrics = {
     rangeCash: number;
     rangeRevenue: number;
     prevRangeCash: number | null;
+    prevRangeRevenue: number | null;
   } | null;
   rightNow: RightNow;
   confirmation: ConfirmationMetrics;
@@ -156,6 +158,7 @@ export function assembleOfferMetrics(
           rangeCash: inputs.rangeMoney.rows.reduce((s, r) => s + r.cashCents, 0),
           rangeRevenue: inputs.rangeMoney.rows.reduce((s, r) => s + r.revenueCents, 0),
           prevRangeCash: inputs.rangeMoney.prevCash,
+          prevRangeRevenue: inputs.rangeMoney.prevRevenue,
         }
       : null,
     rightNow: {

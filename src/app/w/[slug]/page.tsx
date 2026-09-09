@@ -8,6 +8,7 @@ import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { RangeChips } from "@/components/ui/range-chips";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
@@ -136,97 +137,131 @@ export default async function WorkspacePage({
       </div>
 
       {showCash && (
-        <section className="card-grad elev-glow relative rounded-xl border">
-          {/* The offer's growth curve behind the number — clipped in its OWN
-              rounded layer, NOT on the section, so the date picker's dropdown
-              can overflow the card instead of being chopped off. */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
-            <div className="absolute inset-x-0 bottom-0 h-2/3">
-              <CollectedSparkline series={offerSeries} className="h-full w-full" />
-            </div>
-          </div>
-          <div className="relative flex flex-wrap items-center justify-between gap-3 p-5">
-            {/* One canonical story (P0-1): never a bare $0.00 sitting above a
-                non-zero figure — a quiet range falls back to the all-time
-                number with an explicit label. */}
-            {rangeCash === 0 && report.mirror.cashCents > 0 ? (
-              <div>
-                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                  Cash collected — all time
-                </p>
-                <p className="numeric text-success text-4xl font-bold tracking-tight">
-                  <CountUpMoney cents={report.mirror.cashCents} />{" "}
-                  {/* Reads as one sentence: the big number is all-time, the
-                      note says the chosen window was quiet. Without the
-                      separator this rendered as "$183,550.00 nothing
-                      collected in last 30 days". */}
-                  <span className="text-muted-foreground text-sm font-normal">
-                    · none in the {bounds.label.toLowerCase()}
-                  </span>
-                </p>
+        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          {/* LEFT — Cash collected: the window's headline with its curve. */}
+          <section className="card-grad elev-glow relative rounded-xl border">
+            {/* The offer's growth curve behind the number — clipped in its OWN
+                rounded layer, NOT on the section, so the date picker's dropdown
+                can overflow the card instead of being chopped off. */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+              <div className="absolute inset-x-0 bottom-0 h-2/3">
+                <CollectedSparkline series={offerSeries} className="h-full w-full" />
               </div>
-            ) : (
-              <div>
+            </div>
+            <div className="relative flex h-full flex-col justify-between gap-4 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                {/* One canonical story (P0-1): never a bare $0.00 sitting above
+                    a non-zero figure — a quiet range falls back to the all-time
+                    number with an explicit label. */}
+                {rangeCash === 0 && report.mirror.cashCents > 0 ? (
+                  <div>
+                    <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                      Cash collected — all time
+                    </p>
+                    <p className="numeric text-success text-4xl font-bold tracking-tight">
+                      <CountUpMoney cents={report.mirror.cashCents} />
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      none in the {bounds.label.toLowerCase()}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                      Cash collected — {bounds.label}
+                    </p>
+                    <p className="numeric text-success text-4xl font-bold tracking-tight">
+                      <CountUpMoney cents={rangeCash} />
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      collected
+                      {rangeRevenue > rangeCash && (
+                        <>
+                          {" "}
+                          · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
+                        </>
+                      )}
+                    </p>
+                    <PeriodDelta
+                      currentCents={rangeCash}
+                      previousCents={prevRangeCash}
+                    />
+                  </div>
+                )}
+                <DateRangePicker
+                  basePath={`/w/${slug}`}
+                  activeRange={range}
+                  from={bounds.from}
+                  to={bounds.to}
+                  todayKey={todayKey}
+                />
+              </div>
+              <RangeChips basePath={`/w/${slug}`} activeRange={range} />
+            </div>
+          </section>
+
+          {/* RIGHT — Revenue generated: what was SOLD in the window, how it is
+              coming in, and whose money it is. Unknown rows stay dashes. */}
+          <section className="card-grad rounded-xl border p-5">
+            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+              Revenue generated — {bounds.label}
+            </p>
+            <p className="numeric text-foreground text-3xl font-bold tracking-tight">
+              <CountUpMoney cents={rangeRevenue} />
+            </p>
+            <PeriodDelta
+              currentCents={rangeRevenue}
+              previousCents={metrics.money?.prevRangeRevenue ?? null}
+            />
+            <div className="text-muted-foreground mt-4 space-y-1.5 border-t pt-3 text-sm">
+              <p className="flex items-center justify-between gap-3">
+                <span>Cash collected</span>
+                <span className="numeric text-foreground">
+                  <Money amount={cents(rangeCash)} />
+                </span>
+              </p>
+              <p className="flex items-center justify-between gap-3">
+                <span>Cash left to collect</span>
+                <span className="numeric text-foreground">
+                  {rangeRevenue > rangeCash ? (
+                    <Money amount={cents(rangeRevenue - rangeCash)} />
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </p>
+              <p className="flex items-center justify-between gap-3">
+                <span>Cash after fees</span>
+                {/* Window rows don't carry processor fees yet — a dash, never
+                    an estimate. */}
+                <span className="numeric">—</span>
+              </p>
+            </div>
+            {mix && (
+              <div className="mt-4 border-t pt-3">
                 <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                  Cash collected — {bounds.label}
-                </p>
-                {/* The note lives UNDER the figure, never inline with it —
-                    inline, the two collided once the typeface changed. */}
-                <p className="numeric text-success text-4xl font-bold tracking-tight">
-                  <CountUpMoney cents={rangeCash} />
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  collected
-                  {rangeRevenue > rangeCash && (
-                    <>
+                  Cash mix
+                  {mixSource && (
+                    <span className="text-faint/80 normal-case">
                       {" "}
-                      · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
-                    </>
+                      ·{" "}
+                      {mixSource === "stripe"
+                        ? "via Stripe"
+                        : "from the tracking sheet"}
+                    </span>
                   )}
                 </p>
-                <PeriodDelta currentCents={rangeCash} previousCents={prevRangeCash} />
+                <CashMixBar mix={mix} label={bounds.label} />
+                {mix.unplaceableCents > 0 && (
+                  <p className="text-faint mt-1 text-[11px]">
+                    ${(mix.unplaceableCents / 100).toLocaleString("en-US")} without a
+                    payer identity — shown, not guessed
+                  </p>
+                )}
               </div>
             )}
-            <DateRangePicker
-              basePath={`/w/${slug}`}
-              activeRange={range}
-              from={bounds.from}
-              to={bounds.to}
-              todayKey={todayKey}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Money KPIs are behind the cash toggle too — a client viewing their own
-          portal never sees cash or revenue at a glance unless the admin turns
-          it on (the v2 §6 "money off by default" rule; previously this row
-          leaked both figures regardless of the toggle). */}
-      {/* Every label here names its window. These are ALL-TIME mirror figures
-          sitting directly beneath a hero showing the selected range, so an
-          unqualified "Cash collected" put two different numbers under one name
-          a few pixels apart. */}
-      {showCash && mix && (
-        <section className="card-grad rounded-xl border p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-              Cash mix — {bounds.label}
-              {mixSource && (
-                <span className="text-faint/80 normal-case">
-                  {" "}
-                  · {mixSource === "stripe" ? "via Stripe" : "from the tracking sheet"}
-                </span>
-              )}
-            </p>
-            {mix.unplaceableCents > 0 && (
-              <p className="text-faint text-[11px]">
-                ${(mix.unplaceableCents / 100).toLocaleString("en-US")} without a payer
-                identity — shown, not guessed
-              </p>
-            )}
-          </div>
-          <CashMixBar mix={mix} label={bounds.label} />
-        </section>
+          </section>
+        </div>
       )}
 
       {showCash && (
