@@ -1,3 +1,6 @@
+import { cache } from "react";
+
+import { verifyAccessToken } from "@/lib/auth/verify-jwt";
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
@@ -40,10 +43,19 @@ export async function createClient() {
 }
 
 /** The signed-in user, or null. Never throws. */
-export async function currentUser() {
+export const currentUser = cache(async () => {
   const supabase = await createClient();
+  // Same fast path as the middleware: the cookie's JWT verified against the
+  // auth project's public keys — no network on the happy path — falling
+  // through to the real getUser() when the token is missing or near expiry.
+  // React cache() dedupes the check per request: a layout + page + three
+  // components asking "who is this" costs one verification, not five.
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  const local = await verifyAccessToken(token);
+  if (local && sessionData.session?.user) return sessionData.session.user;
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
