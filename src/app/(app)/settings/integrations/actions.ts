@@ -13,6 +13,7 @@ import { connectIntegrationCore } from "@/lib/integrations/connect";
 import { PROVIDER_VALUES } from "@/lib/integrations/providers";
 import { syncProviderNow } from "@/lib/integrations/sync-on-connect";
 import { serverEnv } from "@/env.server";
+import { seal } from "@/lib/crypto/secretbox";
 
 async function requireUser() {
   // Dev/preview bypass only — never passes in production.
@@ -86,6 +87,41 @@ export async function deleteIntegration(id: string) {
   const integrationId = z.string().uuid().parse(id);
   const db = getDb();
   await db.delete(integrations).where(eq(integrations.id, integrationId));
+  revalidatePath("/settings/integrations");
+  return { ok: true };
+}
+
+/**
+ * Save a Stripe connection's webhook signing secret — sealed like every
+ * credential, stored beside the connection's config. Once present, every
+ * webhook delivery for that connection must carry a valid Stripe-Signature.
+ * Empty input removes it (back to capability-URL-only).
+ */
+export async function saveWebhookSecret(
+  integrationId: string,
+  rawSecret: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  await requireUser();
+  const secret = rawSecret.trim();
+  if (secret && !secret.startsWith("whsec_")) {
+    return { ok: false, reason: "Stripe signing secrets start with whsec_." };
+  }
+  const key = serverEnv().CREDENTIALS_KEY;
+  if (!key) return { ok: false, reason: "Vault unavailable." };
+  const db = getDb();
+  const [row] = await db
+    .select({ id: integrations.id, config: integrations.config })
+    .from(integrations)
+    .where(eq(integrations.id, integrationId))
+    .limit(1);
+  if (!row) return { ok: false, reason: "Unknown connection." };
+  const config = { ...(row.config as Record<string, unknown>) };
+  if (secret) config.webhook_secret_box = seal(secret, key);
+  else delete config.webhook_secret_box;
+  await db
+    .update(integrations)
+    .set({ config, updatedAt: new Date() })
+    .where(eq(integrations.id, integrationId));
   revalidatePath("/settings/integrations");
   return { ok: true };
 }

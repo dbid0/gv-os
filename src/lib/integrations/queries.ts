@@ -21,6 +21,7 @@ export interface IntegrationRow {
   lastSyncNote: string | null;
   /** For payments connections: the catch-hook path to paste into the processor. */
   webhookPath: string | null;
+  hasWebhookSecret: boolean;
   /** How this connection was made: api_key | webhook | manual. */
   method: string;
   /** The optional reference link for a manual connection. */
@@ -51,6 +52,7 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
   return rows.map(({ config, ...row }) => {
     const cfg = config as {
       webhook_token?: string;
+      webhook_secret_box?: string;
       method?: string;
       reference?: string;
     };
@@ -63,6 +65,7 @@ export async function listIntegrations(): Promise<IntegrationRow[]> {
     return {
       ...row,
       webhookPath: token ? `/api/webhooks/${lane}/${token}` : null,
+      hasWebhookSecret: Boolean(cfg.webhook_secret_box),
       method,
       reference: cfg.reference ?? null,
     };
