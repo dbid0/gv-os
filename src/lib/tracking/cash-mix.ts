@@ -1,3 +1,5 @@
+import { EMPTY_ALIASES, resolveEmail, type AliasMap } from "@/lib/tracking/aliases";
+
 /**
  * THE CASH MIX — whose money is this month made of?
  *
@@ -42,8 +44,10 @@ export interface CashMix {
   returningPayers: number;
 }
 
-const keyOf = (p: MixPayment): string | null => {
-  const email = p.email?.trim().toLowerCase();
+const keyOf = (p: MixPayment, aliases: AliasMap): string | null => {
+  // Identity resolves through the alias map FIRST — the same person paying
+  // from two inboxes must land on one payer key or "new" over-counts.
+  const email = resolveEmail(p.email ?? null, aliases);
   if (email) return `e:${email}`;
   const digits = (p.phone ?? "").replace(/\D/g, "");
   if (digits.length >= 10) return `p:${digits.slice(-10)}`;
@@ -56,6 +60,7 @@ export function cashMix(
   history: MixPayment[],
   windowFrom: Date,
   windowTo: Date,
+  aliases: AliasMap = EMPTY_ALIASES,
 ): CashMix {
   // Collected money only — a refund or a declined card is not a mix.
   const collected = history.filter(
@@ -67,7 +72,7 @@ export function cashMix(
   // Each payer's first-ever collected payment, from the FULL history.
   const firstAt = new Map<string, number>();
   for (const p of collected) {
-    const key = keyOf(p);
+    const key = keyOf(p, aliases);
     if (!key || !p.occurredAt) continue;
     const t = p.occurredAt.getTime();
     const prev = firstAt.get(key);
@@ -90,7 +95,7 @@ export function cashMix(
     const t = p.occurredAt.getTime();
     if (t < windowFrom.getTime() || t > windowTo.getTime()) continue;
     const cents = p.cashCents ?? 0;
-    const key = keyOf(p);
+    const key = keyOf(p, aliases);
     if (!key) {
       mix.unplaceableCents += cents;
       continue;

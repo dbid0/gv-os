@@ -25,6 +25,7 @@ import {
 } from "@/lib/sales/call-activity";
 import { closesPaid, type ClosesPaid } from "@/lib/tracking/closes-paid";
 import { cashMix, type CashMix, type MixPayment } from "@/lib/tracking/cash-mix";
+import type { AliasMap } from "@/lib/tracking/aliases";
 import {
   buildOfferFunnel,
   type FunnelStageKey,
@@ -72,7 +73,12 @@ export type OfferMetricsInputs = {
   /** Lead-stitched funnel inputs; absent = the surface didn't load leads. */
   funnelLeads?: { leads: LeadSummary[]; stageKeys: FunnelStageKey[] } | null;
   /** Windowed payments for the cash mix; absent = no processor/sheet feed. */
-  mixWindow?: { payments: MixPayment[]; from: Date; to: Date } | null;
+  mixWindow?: {
+    payments: MixPayment[];
+    from: Date;
+    to: Date;
+    aliases?: AliasMap;
+  } | null;
   /** The window's client-layer money rows + the previous window's cash. */
   rangeMoney?: {
     rows: { cashCents: number; revenueCents: number }[];
@@ -151,7 +157,12 @@ export function assembleOfferMetrics(
       ? buildOfferFunnel(inputs.funnelLeads.leads, inputs.funnelLeads.stageKeys)
       : null,
     cashMix: inputs.mixWindow
-      ? cashMix(inputs.mixWindow.payments, inputs.mixWindow.from, inputs.mixWindow.to)
+      ? cashMix(
+          inputs.mixWindow.payments,
+          inputs.mixWindow.from,
+          inputs.mixWindow.to,
+          inputs.mixWindow.aliases,
+        )
       : null,
     money: inputs.rangeMoney
       ? {
