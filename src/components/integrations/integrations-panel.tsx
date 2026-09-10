@@ -30,6 +30,7 @@ import {
   type SyncStatus,
 } from "@/lib/integrations/providers";
 import { isFailureNote, isStaleSync } from "@/lib/integrations/sync-note";
+import { saveWebhookSecret } from "@/app/(app)/settings/integrations/actions";
 import { cn } from "@/lib/utils";
 
 interface TeamOption {
@@ -41,6 +42,7 @@ interface TeamOption {
 interface ConnectionRow {
   id: string;
   provider: string;
+  hasWebhookSecret: boolean;
   label: string;
   clientId: string | null;
   clientName: string | null;
@@ -178,6 +180,9 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
         >
           copy webhook URL
         </button>
+      )}
+      {row.provider === "stripe" && row.webhookPath && !revoked && (
+        <WebhookSecretField integrationId={row.id} hasSecret={row.hasWebhookSecret} />
       )}
 
       <span
@@ -466,5 +471,82 @@ export function IntegrationsPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The Stripe signing-secret slot beside a connection's webhook URL. Saved
+ * secrets are sealed server-side; once one exists every delivery must carry
+ * a valid Stripe-Signature. Clearing it returns the endpoint to
+ * capability-URL-only.
+ */
+function WebhookSecretField({
+  integrationId,
+  hasSecret,
+}: {
+  integrationId: string;
+  hasSecret: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className={cn(
+          "rounded-md border px-2 py-1 text-[10px] transition-colors",
+          hasSecret
+            ? "text-success hover:text-foreground"
+            : "text-faint hover:text-foreground",
+        )}
+        title="Stripe webhook signing secret — deliveries are HMAC-verified once saved"
+      >
+        {hasSecret ? "signature ✓" : "add signing secret"}
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="whsec_…"
+        className="bg-secondary/60 text-foreground w-40 rounded border px-1.5 py-0.5 font-mono text-[10px]"
+        aria-label="Stripe webhook signing secret"
+      />
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            const res = await saveWebhookSecret(integrationId, value);
+            if (!res.ok) setError(res.reason ?? "Could not save.");
+            else {
+              setEditing(false);
+              setValue("");
+            }
+          })
+        }
+        className="bg-secondary text-foreground rounded border px-1.5 py-0.5 text-[10px] font-medium"
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(false);
+          setError(null);
+        }}
+        className="text-faint text-[10px]"
+      >
+        Cancel
+      </button>
+      {error && <span className="text-warning text-[10px]">{error}</span>}
+    </span>
   );
 }
