@@ -7,6 +7,11 @@ import {
   type OfferSettingsRow,
 } from "@/components/settings/offer-settings-panel";
 import { SettingsForm } from "@/components/settings/settings-form";
+import {
+  CommissionRatesPanel,
+  type ClientRatesRow,
+} from "@/components/settings/commission-rates-panel";
+import { listRates } from "@/lib/payments/rates-store";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
@@ -27,7 +32,7 @@ function SectionLabel({ children }: { children: string }) {
 
 export default async function SettingsPage() {
   const db = getDb();
-  const [settings, clientRows, offerRows] = await Promise.all([
+  const [settings, clientRows, offerRows, rateRows] = await Promise.all([
     getSettings(),
     db
       .select({
@@ -38,7 +43,22 @@ export default async function SettingsPage() {
       .from(clients)
       .where(eq(clients.status, "active")),
     db.select().from(offerSettings),
+    listRates(),
   ]);
+
+  const fmtBps = (bps: number | undefined) =>
+    bps === undefined ? "" : String(bps / 100);
+  const ratesRows: ClientRatesRow[] = clientRows.map((c) => {
+    const forClient = rateRows.filter((r) => r.clientId === c.id);
+    const bps = (role: string) => forClient.find((r) => r.salesRole === role)?.rateBps;
+    return {
+      clientId: c.id,
+      clientName: c.name,
+      setter: fmtBps(bps("setter")),
+      closer: fmtBps(bps("closer")),
+      dm_setter: fmtBps(bps("dm_setter")),
+    };
+  });
 
   const rows: OfferSettingsRow[] = clientRows.map((c) => {
     const existing = offerRows.find((o) => o.clientId === c.id);
@@ -83,6 +103,8 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <SectionLabel>Per-offer</SectionLabel>
         <OfferSettingsPanel rows={rows} />
+
+        <CommissionRatesPanel rows={ratesRows} />
       </section>
 
       <section className="space-y-3">

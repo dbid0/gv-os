@@ -10,6 +10,8 @@ import { cents } from "@/lib/money";
 import { listPaymentEvents } from "@/lib/payments/capture";
 import { ClaimCell } from "@/components/accounting/claim-cell";
 import { claimsByPayment, repsByClient } from "@/lib/payments/claims-store";
+import { deriveCommissions, totalsByRep } from "@/lib/payments/commissions";
+import { listClaimRows, listRates } from "@/lib/payments/rates-store";
 
 export const metadata = { title: "Payments - GV OS" };
 export const dynamic = "force-dynamic";
@@ -25,11 +27,32 @@ const fmtWhen = (d: Date | null) =>
     : "—";
 
 export default async function PaymentsPage() {
-  const [events, claims, repsFor] = await Promise.all([
+  const [events, claims, repsFor, claimRows, rateRows] = await Promise.all([
     listPaymentEvents(),
     claimsByPayment(),
     repsByClient(),
+    listClaimRows(),
+    listRates(),
   ]);
+
+  // Commissions derive on read — payment cents × claim × rate, never stored.
+  // Rules are matched within the payment's client, so one offer's rates can
+  // never price another offer's claims.
+  const repNameById = new Map([...repsFor.values()].flat().map((r) => [r.id, r.name]));
+  const commissionRows = events.flatMap((e) => {
+    if (!e.clientId) return [];
+    const forClient = rateRows.filter((r) => r.clientId === e.clientId);
+    return deriveCommissions(
+      [{ id: e.id, amountCents: e.amountCents, kind: e.kind, clientId: e.clientId }],
+      claimRows.filter((c) => c.paymentEventId === e.id),
+      forClient.map((r) => ({
+        salesRole: r.salesRole,
+        rateBps: r.rateBps,
+        priority: r.priority,
+      })),
+    );
+  });
+  const repTotals = totalsByRep(commissionRows);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -132,6 +155,36 @@ export default async function PaymentsPage() {
               </tbody>
             </table>
           </div>
+        </Panel>
+      )}
+
+      {repTotals.length > 0 && (
+        <Panel
+          title="Commissions — derived"
+          aside={
+            <span className="text-faint text-xs">
+              computed from claims × rates on read — nothing stored
+            </span>
+          }
+        >
+          <ul className="divide-y">
+            {repTotals.map((t) => (
+              <li key={t.repId} className="flex items-center gap-3 py-2 text-sm">
+                <span className="text-foreground flex-1 font-medium">
+                  {repNameById.get(t.repId) ?? "Unknown rep"}
+                </span>
+                {t.unknownRateRows > 0 && (
+                  <span className="text-warning text-xs">
+                    {t.unknownRateRows} claim{t.unknownRateRows === 1 ? "" : "s"} with
+                    no rate set
+                  </span>
+                )}
+                <span className="numeric text-foreground">
+                  <Money amount={cents(t.totalCents)} />
+                </span>
+              </li>
+            ))}
+          </ul>
         </Panel>
       )}
 
