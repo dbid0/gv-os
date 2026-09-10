@@ -4,6 +4,7 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { stuckCalls } from "@/lib/bookings/stuck";
+import { filterCountedBookings } from "@/lib/bookings/counted";
 import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
@@ -152,6 +153,7 @@ export default async function WorkspaceCrmPage({
     const [bookingRows, eocRows] = await Promise.all([
       db
         .select({
+          provider: bookings.provider,
           inviteeName: bookings.inviteeName,
           inviteeEmail: bookings.inviteeEmail,
           startsAt: bookings.startsAt,
@@ -177,7 +179,16 @@ export default async function WorkspaceCrmPage({
         .map((r) => r.email?.trim().toLowerCase())
         .filter((e): e is string => Boolean(e)),
     );
-    stuck = stuckCalls(bookingRows, reported, now);
+    const [countedRow] = await db
+      .select({ countedCallSources: clients.countedCallSources })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1);
+    stuck = stuckCalls(
+      filterCountedBookings(bookingRows, countedRow?.countedCallSources ?? null),
+      reported,
+      now,
+    );
   }
 
   const floorPanel =

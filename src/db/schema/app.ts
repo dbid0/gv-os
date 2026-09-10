@@ -55,6 +55,10 @@ export const clients = appSchema.table(
     /** Monthly cash target in integer cents; actuals come from the sheet
      * mirror. Null = no target set — the page shows an honest empty state. */
     monthlyTargetCents: bigint("monthly_target_cents", { mode: "number" }),
+    /** Which booking providers COUNT for the call funnel. Null = all of them
+     * (the single-source reality). The moment a second calendar mirrors the
+     * first, list the one that counts here or every stat double-counts. */
+    countedCallSources: jsonb("counted_call_sources").$type<string[] | null>(),
     /** Workspace logo as a small data URL — uploaded from the workspace
      * header; renders in the switcher, headers, and home sections. */
     logo: text("logo"),
