@@ -158,9 +158,11 @@ export function usePersistedRecord(
 
 export function useCountUp(target: number, durationMs = 900): number {
   const [value, setValue] = useState(target);
-  // First mount counts up from zero; later target changes ease from wherever we
-  // left off, never a jarring reset to zero.
-  const fromRef = useRef(0);
+  // FIRST PAINT SHOWS THE REAL VALUE. The count-up only plays when the target
+  // CHANGES (a scope toggle, a live update) — easing from wherever it was.
+  // Counting up from zero on every load performed a second of fake loading on
+  // top of the real one; a dashboard's first job is the number, not the show.
+  const fromRef = useRef(target);
 
   useEffect(() => {
     const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
@@ -194,18 +196,21 @@ const entranceStore = { entered: false };
 const entranceSubscribe = () => () => {};
 
 /**
- * Play entrance motion once per app lifetime (P1-8): the first mounted
- * page animates in; every navigation after renders settled. Server
- * snapshot animates (safe default), the store flips after first mount.
+ * Entrance motion belongs to SOFT navigations only. On a full document
+ * load the server HTML must be readable the instant it arrives — hiding
+ * it until hydration reveals it made every fresh tab feel like a spinner
+ * (the payload was there; 1.4MB of JS was gatekeeping it). So the server
+ * snapshot and the first client mount render settled; the store flips
+ * after entry and every in-app navigation after that gets the motion.
  */
 export function useEntranceOnce(): boolean {
-  const first = useSyncExternalStore(
+  const animate = useSyncExternalStore(
     entranceSubscribe,
-    () => !entranceStore.entered,
-    () => true,
+    () => entranceStore.entered,
+    () => false,
   );
   useEffect(() => {
     entranceStore.entered = true;
   }, []);
-  return first;
+  return animate;
 }
