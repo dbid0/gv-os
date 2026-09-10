@@ -1,5 +1,6 @@
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { notFound } from "next/navigation";
-import { Zap } from "lucide-react";
+import { BarChart3, Zap } from "lucide-react";
 
 import {
   isPortalView,
@@ -86,6 +87,11 @@ export default async function WorkspaceSalesPage({
 
   return (
     <div className="space-y-6">
+      <WsPageHeader
+        icon={BarChart3}
+        title="Sales"
+        lede="This offer's sales command center — speed to lead against the 5-minute standard, the live call state, how the closes paid, and the rep leaderboard, all read from one engine."
+      />
       {/* THE number this floor is judged on: application in → first dial out.
           The 5-minute standard is non-negotiable, so it leads the page. */}
       <section className="card-grad elev-glow rounded-xl border p-5">
