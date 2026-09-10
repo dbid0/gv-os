@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 
 import { CommandPalette } from "@/components/shell/command-palette";
@@ -21,63 +22,99 @@ import { effectiveRole, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
 
 /**
- * The authenticated application shell.
+ * The authenticated application shell — STREAMING.
  *
- * The user is resolved ONCE here and passed down, rather than every component
- * fetching it. The middleware already guarantees a session exists by the time
- * this renders, so there is no loading state to design around.
+ * The layout itself renders the frame with zero data: the sidebar, topbar and
+ * palette are Suspense-wrapped async components that fetch their own inputs,
+ * and {children} sits OUTSIDE those boundaries. First paint (and every page's
+ * own loading skeleton) no longer waits on a single shell query — the chrome
+ * fills in beside the page instead of in front of it. The middleware already
+ * guarantees a session, so the fallbacks are skeletons, never auth states.
  */
-export default async function AppLayout({ children }: { children: ReactNode }) {
-  // The four user-independent fetches don't need user.email, so run them IN
-  // PARALLEL with the auth roundtrip instead of behind it — that auth wait was
-  // on the critical path of every cold shell render. Only prefs + realRole need
-  // the resolved email, so they wait in a second (tiny) batch.
-  const [user, monthCash, unreadCount, notifications, cookieStore, scope, roster] =
+
+async function shownRoleFor(previewRole: string | null): Promise<Role> {
+  const user = await shellUser();
+  const realRole = await resolveRealRole(user?.email ?? null);
+  const previewIsRole = (v: string | null): v is Role =>
+    v === "sales_manager" || v === "sales_rep" || v === "team_member" || v === "client";
+  return effectiveRole(realRole, previewIsRole(previewRole) ? previewRole : null);
+}
+
+async function ShellSidebar({ previewRole }: { previewRole: string | null }) {
+  const [user, roster, shownRole] = await Promise.all([
+    shellUser(),
+    loadRoster(),
+    shownRoleFor(previewRole),
+  ]);
+  return <Sidebar user={user} previewRole={shownRole} roster={roster} />;
+}
+
+function SidebarFallback() {
+  return (
+    <aside className="bg-sidebar hidden w-[248px] shrink-0 animate-pulse flex-col gap-3 border-r p-4 md:flex">
+      <div className="bg-secondary/60 h-8 w-32 rounded-md" />
+      <div className="bg-secondary/60 h-9 w-full rounded-md" />
+      <div className="mt-2 space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="bg-secondary/40 h-7 w-full rounded-md" />
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+async function ShellTopbar() {
+  const [user, monthCash, unreadCount, notifications, scope, roster] =
     await Promise.all([
       shellUser(),
       currentMonthCash(),
       unreadNotificationCount(),
       recentNotifications(),
-      cookies(),
       getViewerScope(),
       loadRoster(),
     ]);
-  const [prefs, realRole] = await Promise.all([
-    getPrefs(user?.email ?? null, ["avatar", "display-name"]),
-    resolveRealRole(user?.email ?? null),
-  ]);
+  const prefs = await getPrefs(user?.email ?? null, ["avatar", "display-name"]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
-  const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
-  const previewIsRole = (v: string | null): v is Role =>
-    v === "sales_manager" || v === "sales_rep" || v === "team_member" || v === "client";
-  // The role the shell actually renders for: the user's REAL role, narrowed by
-  // an admin's restrict-only "View as" preview. A non-admin ignores the preview
-  // cookie, so it can never widen the nav. Admin -> full nav (Sidebar treats
-  // "admin" as no filter). The banner below still keys off the raw cookie, so it
-  // only shows while an admin is actively previewing.
-  const shownRole = effectiveRole(
-    realRole,
-    previewIsRole(previewRole) ? previewRole : null,
+  return (
+    <Topbar
+      roster={roster.map((c) => ({ slug: c.slug, name: c.name }))}
+      user={user}
+      monthCash={scope.restricted ? null : monthCash}
+      unreadCount={unreadCount}
+      notifications={notifications}
+      avatarUrl={avatarUrl}
+    />
   );
+}
+
+async function ShellPalette() {
+  const roster = await loadRoster();
+  return (
+    <CommandPalette roster={roster.map((c) => ({ slug: c.slug, name: c.name }))} />
+  );
+}
+
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const cookieStore = await cookies();
+  const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      <Sidebar user={user} previewRole={shownRole} roster={roster} />
+      <Suspense fallback={<SidebarFallback />}>
+        <ShellSidebar previewRole={previewRole} />
+      </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          roster={roster.map((c) => ({ slug: c.slug, name: c.name }))}
-          user={user}
-          monthCash={scope.restricted ? null : monthCash}
-          unreadCount={unreadCount}
-          notifications={notifications}
-          avatarUrl={avatarUrl}
-        />
+        <Suspense fallback={<div className="glass h-14 shrink-0 border-b" />}>
+          <ShellTopbar />
+        </Suspense>
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
-      <CommandPalette roster={roster.map((c) => ({ slug: c.slug, name: c.name }))} />
+      <Suspense>
+        <ShellPalette />
+      </Suspense>
       {previewRole && <ViewAsBanner role={previewRole} />}
       <DealClosedToasts />
       <TabKeepWarm />
