@@ -10,7 +10,11 @@ import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { chartColorForClient, latestPerDay } from "@/lib/charts";
-import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
+import {
+  broadcastsForClient,
+  kitGrowthByConnection,
+  latestKitOverview,
+} from "@/lib/email/queries";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { clientIdBySlug } from "@/lib/clients/id";
 import { cn } from "@/lib/utils";
@@ -39,6 +43,7 @@ export default async function WorkspaceEmailPage({
   // list here (see lib/clients/attribution).
   const account =
     accounts.find((a) => clientId !== null && a.clientId === clientId) ?? null;
+  const emails = clientId ? await broadcastsForClient(clientId) : [];
   const growth = account
     ? latestPerDay(growthSamples.get(account.integrationId) ?? [])
     : [];
@@ -91,6 +96,72 @@ export default async function WorkspaceEmailPage({
       {growth.length >= 2 && (
         <Panel title="List growth — daily">
           <ColumnChart data={growth} color={chartColorForClient(client.name)} />
+        </Panel>
+      )}
+
+      {emails.length > 0 && (
+        <Panel
+          title="Emails sent"
+          aside={
+            <span className="text-faint text-xs">
+              stats as Kit reports them — opens keep arriving after send
+            </span>
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-faint text-left text-[11px] tracking-wider uppercase">
+                  <th className="py-1.5 pr-3 font-medium">Email</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Sent</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Recipients</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Opens</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Open rate</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Clicks</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Unsubs</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {emails.map((e) => (
+                  <tr key={e.externalId}>
+                    <td className="max-w-72 truncate py-2 pr-3 font-medium">
+                      {e.subject ?? "(no subject)"}
+                    </td>
+                    <td className="text-muted-foreground numeric px-3 py-2 text-right whitespace-nowrap">
+                      {e.sentAt
+                        ? e.sentAt.toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            timeZone: "America/Chicago",
+                          })
+                        : "—"}
+                    </td>
+                    <td className="numeric px-3 py-2 text-right">
+                      {e.recipients ?? "—"}
+                    </td>
+                    <td className="numeric px-3 py-2 text-right">
+                      {e.emailsOpened ?? "—"}
+                    </td>
+                    <td className="numeric px-3 py-2 text-right">
+                      {e.openTrackingDisabled
+                        ? "off"
+                        : e.openRateBps !== null
+                          ? `${(e.openRateBps / 100).toFixed(1)}%`
+                          : "—"}
+                    </td>
+                    <td className="numeric px-3 py-2 text-right">
+                      {e.totalClicks ?? "—"}
+                    </td>
+                    <td className="numeric px-3 py-2 text-right">
+                      {e.unsubscribes ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
 

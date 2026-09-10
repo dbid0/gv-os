@@ -665,6 +665,45 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Kit broadcasts — one row per email the account sent, with its stats.
+ * Stats CHANGE after send (opens keep arriving), so rows upsert on the
+ * platform's own id rather than insert-once. Rates are stored in basis
+ * points (46.74% → 4674) — integers, like every number we keep.
+ */
+export const kitBroadcasts = appSchema.table(
+  "kit_broadcasts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    clientId: uuid("client_id").references(() => clients.id),
+    /** Kit's own broadcast id — the idempotency key. */
+    externalId: text("external_id").notNull(),
+    subject: text("subject"),
+    previewText: text("preview_text"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    status: text("status"),
+    recipients: integer("recipients"),
+    emailsOpened: integer("emails_opened"),
+    openRateBps: integer("open_rate_bps"),
+    totalClicks: integer("total_clicks"),
+    clickRateBps: integer("click_rate_bps"),
+    unsubscribes: integer("unsubscribes"),
+    /** Null rates mean tracking was off or stats absent — unknown, not 0. */
+    openTrackingDisabled: boolean("open_tracking_disabled").notNull().default(false),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("kit_broadcasts_integration_external_key").on(
+      table.integrationId,
+      table.externalId,
+    ),
+    index("kit_broadcasts_client_idx").on(table.clientId),
+  ],
+);
+
+/**
  * Payment email aliases — the identity layer. People pay under a different
  * email than they booked with; this table says "these are the same person"
  * (alias → canonical), per client. Resolution is ONE hop by design: a
