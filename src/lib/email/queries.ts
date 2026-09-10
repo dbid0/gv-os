@@ -3,7 +3,7 @@ import "server-only";
 import { desc, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { clients, integrations, kitSnapshots } from "@/db/schema/app";
+import { clients, integrations, kitBroadcasts, kitSnapshots } from "@/db/schema/app";
 
 /** The latest snapshot per Kit connection, shaped for the Email section. */
 export interface KitOverviewRow {
@@ -81,4 +81,26 @@ export async function kitGrowthByConnection(): Promise<
     byConnection.set(row.integrationId, list);
   }
   return byConnection;
+}
+
+/** The client's sent emails, newest first, stats as Kit reported them. */
+export async function broadcastsForClient(clientId: string) {
+  const db = getDb();
+  return db
+    .select({
+      externalId: kitBroadcasts.externalId,
+      subject: kitBroadcasts.subject,
+      sentAt: kitBroadcasts.sentAt,
+      status: kitBroadcasts.status,
+      recipients: kitBroadcasts.recipients,
+      emailsOpened: kitBroadcasts.emailsOpened,
+      openRateBps: kitBroadcasts.openRateBps,
+      totalClicks: kitBroadcasts.totalClicks,
+      clickRateBps: kitBroadcasts.clickRateBps,
+      unsubscribes: kitBroadcasts.unsubscribes,
+      openTrackingDisabled: kitBroadcasts.openTrackingDisabled,
+    })
+    .from(kitBroadcasts)
+    .where(eq(kitBroadcasts.clientId, clientId))
+    .orderBy(desc(kitBroadcasts.sentAt));
 }
