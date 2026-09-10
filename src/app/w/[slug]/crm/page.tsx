@@ -1,3 +1,5 @@
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
+import { Kanban } from "lucide-react";
 import { notFound } from "next/navigation";
 import { and, desc, eq, gte } from "drizzle-orm";
 
@@ -252,6 +254,11 @@ export default async function WorkspaceCrmPage({
   if (!connected) {
     return (
       <div className="space-y-6">
+        <WsPageHeader
+          icon={Kanban}
+          title="CRM"
+          lede="The floor's day — what each rep self-reported beside what the CRM recorded, the pre-call confirm queue, and booked calls whose date passed with no outcome filed."
+        />
         {/* The floor first: it has real numbers today. The missing CRM is
             stated underneath rather than being the whole page. */}
         {floorPanel}

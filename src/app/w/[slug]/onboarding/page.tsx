@@ -1,7 +1,8 @@
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { and, count, eq, inArray } from "drizzle-orm";
-import { CheckCircle2, Circle, CircleDashed } from "lucide-react";
+import { CheckCircle2, Circle, CircleDashed, ClipboardList } from "lucide-react";
 
 import { Panel } from "@/components/ui/panel";
 import { Kpi } from "@/components/ui/metric";
@@ -126,6 +127,11 @@ export default async function WorkspaceOnboardingPage({
 
   return (
     <div className="space-y-6">
+      <WsPageHeader
+        icon={ClipboardList}
+        title="Onboarding"
+        lede="The launch build-out — what's live, what's in progress, and what's blocked on whom."
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <Kpi
           label="Install checklist"

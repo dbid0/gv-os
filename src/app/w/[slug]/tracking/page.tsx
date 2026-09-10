@@ -1,3 +1,5 @@
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
+import { Activity } from "lucide-react";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
@@ -176,6 +178,11 @@ export default async function WorkspaceTrackingPage({
 
   return (
     <div className="space-y-6">
+      <WsPageHeader
+        icon={Activity}
+        title="Tracking"
+        lede="The sync console — what the sheet supplies, what the processors report beside it, and what this app refused to guess."
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
           variant="tile"

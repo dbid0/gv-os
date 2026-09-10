@@ -1,3 +1,5 @@
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
+import { Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -80,6 +82,11 @@ export default async function WorkspaceLeadsPage({
 
   return (
     <div className="space-y-6">
+      <WsPageHeader
+        icon={Users}
+        title="Leads"
+        lede="Every person this offer knows — applications, calls, end-of-call reports and payments stitched into one row per human."
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Leads tracked"
