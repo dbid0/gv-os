@@ -225,6 +225,7 @@ export default async function DashboardPage({
         monthLabel={monthLabel}
         collectedCents={headline.collectedCents}
         previousCollectedCents={prevHeadline ? prevHeadline.collectedCents : null}
+        previousRevenueCents={prevHeadline ? prevHeadline.revenueCents : null}
         revenueCents={headline.revenueCents}
         sections={sections}
         series={series}

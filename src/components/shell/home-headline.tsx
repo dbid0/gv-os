@@ -10,6 +10,7 @@ import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { PeriodDelta } from "@/components/ui/period-delta";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { RangeChips } from "@/components/ui/range-chips";
 import { useToast } from "@/components/ui/toast";
 import { useCountUp } from "@/lib/client-state";
 import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
@@ -47,6 +48,7 @@ export function HomeHeadline({
   collectedCents,
   previousCollectedCents = null,
   revenueCents,
+  previousRevenueCents = null,
   sections,
   series,
 }: {
@@ -59,6 +61,7 @@ export function HomeHeadline({
   collectedCents: number;
   previousCollectedCents?: number | null;
   revenueCents: number;
+  previousRevenueCents?: number | null;
   sections: HomeSection[];
   series: { day: string; cents: number }[];
 }) {
@@ -76,170 +79,188 @@ export function HomeHeadline({
   const shownRevenue = useCountUp(revenueCents);
 
   return (
-    <section className="card-grad elev-glow relative rounded-xl border">
-      {/* Decoration lives in its OWN clipped layer, matched to the card's
-          rounded shape — the corner wash and the growth curve. The section
-          itself is NOT clipped, so the date picker's dropdown can overflow the
-          card (an overflow-hidden section chops the calendar grid off). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
-      >
-        {/* Ambient rising-chart motion, faintest layer — Whop-style life behind
-            the number, under the real growth curve. */}
-        <AmbientBackdrop />
-        {/* A faint brand wash in the top-right corner gives the hero depth
-            without fighting the number. */}
-        <div
-          className="absolute -top-24 -right-16 h-64 w-64 rounded-full opacity-60 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%)",
-          }}
-        />
-        {/* The growth curve fills the card's lower half; the number sits on top. */}
-        <div className="absolute inset-x-0 bottom-0 h-2/3">
-          <CollectedSparkline series={series} className="h-full w-full" />
-        </div>
-      </div>
-
-      <div className="relative space-y-5 p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
-              <span className="dot-brand inline-block size-1.5 rounded-full" />
-              {monthLabel}
-            </p>
-            {/* Dimmed while a mode switch is in flight: these are still the
-                OLD mode's figures, and showing them at full strength reads as
-                the new answer having arrived. */}
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        {/* LEFT — Cash collected: the agency's headline with its curve. */}
+        <section className="card-grad elev-glow relative rounded-xl border">
+          {/* Decoration lives in its OWN clipped layer, matched to the card's
+              rounded shape — the section itself is NOT clipped, so the date
+              picker's dropdown can overflow the card. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
+          >
+            <AmbientBackdrop />
             <div
-              className={cn(
-                "mt-2 flex flex-wrap items-end gap-x-10 gap-y-3 transition-opacity duration-200",
-                pending && "opacity-40",
-              )}
-            >
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">
-                  Cash collected
-                </p>
-                <p className="numeric text-success mt-0.5 text-5xl font-bold tracking-tight tabular-nums sm:text-6xl">
-                  {fmtUsd(shownCollected)}
-                </p>
-                <PeriodDelta
-                  currentCents={collectedCents}
-                  previousCents={previousCollectedCents}
-                />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">
-                  Total revenue
-                </p>
-                <p className="numeric mt-0.5 text-4xl font-bold tracking-tight tabular-nums">
-                  {fmtUsd(shownRevenue)}
-                </p>
-              </div>
+              className="absolute -top-24 -right-16 h-64 w-64 rounded-full opacity-60 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(circle, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%)",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 h-2/3">
+              <CollectedSparkline series={series} className="h-full w-full" />
             </div>
-            {revenueCents > collectedCents && (
-              <p className="text-warning mt-2 text-sm">
-                {fmtUsd(revenueCents - collectedCents)} still due
-              </p>
-            )}
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <div
-              className="flex gap-1 rounded-lg border p-1"
-              role="group"
-              aria-label="Scope"
-            >
-              {HOME_MODES.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  // Disabled while a switch is in flight: the click writes a
-                  // preference and re-renders the page server-side, and queuing
-                  // three of those behind each other is what made it feel stuck.
-                  disabled={pending}
-                  onClick={() => {
-                    setOptimisticMode(m);
-                    start(async () => {
-                      try {
-                        await setHomeMode(m);
-                        router.refresh();
-                      } catch (e) {
-                        setOptimisticMode(mode);
-                        toast({
-                          tone: "error",
-                          title: e instanceof Error ? e.message : "Action failed.",
-                        });
-                      }
-                    });
-                  }}
+          <div className="relative flex h-full flex-col justify-between gap-5 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
+                  <span className="dot-brand inline-block size-1.5 rounded-full" />
+                  Cash collected — {monthLabel}
+                </p>
+                {/* Dimmed while a mode switch is in flight: these are still
+                    the OLD mode's figures. */}
+                <div
                   className={cn(
-                    "relative rounded-md px-3 py-1 text-xs transition-colors",
-                    m === activeMode
-                      ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
-                      : "text-muted-foreground hover:text-foreground",
-                    pending && "cursor-wait",
+                    "mt-2 transition-opacity duration-200",
+                    pending && "opacity-40",
                   )}
                 >
-                  {MODE_LABELS[m]}
-                  {/* The switch is a server round-trip. Showing it working on
-                      the pill you just pressed is the difference between "slow"
-                      and "broken". */}
-                  {pending && m === activeMode && (
-                    <Loader2 className="text-brand absolute top-1/2 -right-1 size-3 -translate-y-1/2 animate-spin" />
-                  )}
-                </button>
-              ))}
+                  <p className="numeric text-success text-5xl font-bold tracking-tight tabular-nums">
+                    {fmtUsd(shownCollected)}
+                  </p>
+                  <PeriodDelta
+                    currentCents={collectedCents}
+                    previousCents={previousCollectedCents}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <div
+                  className="flex gap-1 rounded-lg border p-1"
+                  role="group"
+                  aria-label="Scope"
+                >
+                  {HOME_MODES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        setOptimisticMode(m);
+                        start(async () => {
+                          try {
+                            await setHomeMode(m);
+                            router.refresh();
+                          } catch (e) {
+                            setOptimisticMode(mode);
+                            toast({
+                              tone: "error",
+                              title: e instanceof Error ? e.message : "Action failed.",
+                            });
+                          }
+                        });
+                      }}
+                      className={cn(
+                        "relative rounded-md px-3 py-1 text-xs transition-colors",
+                        m === activeMode
+                          ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
+                          : "text-muted-foreground hover:text-foreground",
+                        pending && "cursor-wait",
+                      )}
+                    >
+                      {MODE_LABELS[m]}
+                      {pending && m === activeMode && (
+                        <Loader2 className="text-brand absolute top-1/2 -right-1 size-3 -translate-y-1/2 animate-spin" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <DateRangePicker
+                  basePath="/dashboard"
+                  activeRange={range}
+                  from={from}
+                  to={to}
+                  todayKey={todayKey}
+                />
+              </div>
             </div>
-            <DateRangePicker
-              basePath="/dashboard"
-              activeRange={range}
-              from={from}
-              to={to}
-              todayKey={todayKey}
+
+            <RangeChips basePath="/dashboard" activeRange={range} />
+          </div>
+        </section>
+
+        {/* RIGHT — Total revenue: what was sold, and how much of it arrived. */}
+        <section className="card-grad rounded-xl border p-6">
+          <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
+            Total revenue — {monthLabel}
+          </p>
+          <div
+            className={cn(
+              "mt-2 transition-opacity duration-200",
+              pending && "opacity-40",
+            )}
+          >
+            <p className="numeric text-3xl font-bold tracking-tight tabular-nums">
+              {fmtUsd(shownRevenue)}
+            </p>
+            <PeriodDelta
+              currentCents={revenueCents}
+              previousCents={previousRevenueCents}
             />
           </div>
-        </div>
-
-        {/* While the switch is in flight the figures are the OLD mode's, so
-            they are dimmed rather than left looking like the new answer. */}
-        {sections.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {sections.map((s) => (
-              <Link
-                key={s.slug ?? s.name}
-                href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
-                className="bg-card hover-lift hover:border-brand/40 rounded-lg border p-3"
-              >
-                <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{
-                      background: s.accent || "var(--brand)",
-                    }}
-                  />
-                  {s.name}
-                </p>
-                <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
-                  {fmtUsd(s.cashCents)}
-                </p>
-                {/* Same vocabulary as the headline above — "still due", the
-                    gap itself. "of $X booked" made the reader do the math and
-                    left "booked" unexplained. */}
-                {s.revenueCents > s.cashCents && (
-                  <p className="text-faint text-[11px]">
-                    {fmtUsd(s.revenueCents - s.cashCents)} still due
-                  </p>
+          <div className="text-muted-foreground mt-4 space-y-1.5 border-t pt-3 text-sm">
+            <p className="flex items-center justify-between gap-3">
+              <span>Cash collected</span>
+              <span className="numeric text-foreground">{fmtUsd(collectedCents)}</span>
+            </p>
+            <p className="flex items-center justify-between gap-3">
+              <span>Still due</span>
+              <span
+                className={cn(
+                  "numeric",
+                  revenueCents > collectedCents ? "text-warning" : "text-foreground",
                 )}
-              </Link>
-            ))}
+              >
+                {revenueCents > collectedCents
+                  ? fmtUsd(revenueCents - collectedCents)
+                  : "—"}
+              </span>
+            </p>
           </div>
-        )}
+        </section>
       </div>
-    </section>
+
+      {/* Whose money the window is made of — one card per source of cash,
+          never a mixed layer. Out of the hero so the curve stays legible. */}
+      {sections.length > 0 && (
+        <div
+          className={cn(
+            "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+            pending && "opacity-40",
+          )}
+        >
+          {sections.map((s) => (
+            <Link
+              key={s.slug ?? s.name}
+              href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
+              className="bg-card hover-lift hover:border-brand/40 rounded-lg border p-3"
+            >
+              <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-full"
+                  style={{
+                    background: s.accent || "var(--brand)",
+                  }}
+                />
+                {s.name}
+              </p>
+              <p className="numeric mt-0.5 text-lg font-semibold tabular-nums">
+                {fmtUsd(s.cashCents)}
+              </p>
+              {s.revenueCents > s.cashCents && (
+                <p className="text-faint text-[11px]">
+                  {fmtUsd(s.revenueCents - s.cashCents)} still due
+                </p>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
