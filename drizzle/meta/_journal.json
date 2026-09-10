@@ -414,6 +414,13 @@
       "when": 1788998061869,
       "tag": "0058_payment_claims",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1788999316211,
+      "tag": "0059_rep_percentages",
+      "breakpoints": true
     }
   ]
 }

@@ -661,6 +661,31 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Default commission rates — the RULES half of the payout derive. One row per
+ * (client, seat): "closers on this offer earn 10%". Claims resolve their rate
+ * as override-beats-rule; a seat with neither stays UNKNOWN and derives a
+ * null commission, never a zero. `priority` reserves room for richer rule
+ * layers (per-offer, per-tag, ladders) without a schema change — today the
+ * lowest priority number wins per (client, role).
+ */
+export const repPercentages = appSchema.table(
+  "rep_percentages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** setter · closer · dm_setter */
+    salesRole: text("sales_role").notNull(),
+    /** Basis points of the payment amount. */
+    rateBps: integer("rate_bps").notNull(),
+    priority: integer("priority").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("rep_percentages_client_idx").on(table.clientId)],
+);
+
+/**
  * Payment claims — who gets credit for a payment, per sales seat. A claim is
  * a row BESIDE the payment, never a change to it: the ledger and the
  * payment_events mirror stay untouched, and commissions DERIVE from claims
@@ -1009,6 +1034,7 @@ export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+export type RepPercentage = typeof repPercentages.$inferSelect;
 export type PaymentAssignment = typeof paymentAssignments.$inferSelect;
 export type CallConfirmation = typeof callConfirmations.$inferSelect;
 export type PaymentEvent = typeof paymentEvents.$inferSelect;
