@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -32,7 +33,21 @@ export function accentFromSlug(slug: string): string {
   return `hsl(${hash % 360} 70% 55%)`;
 }
 
-export const loadRoster = cache(async (): Promise<RosterClient[]> => {
+/**
+ * The DB read behind the roster, cached ACROSS requests for 60 seconds.
+ * The roster changes when a client is signed or edited — a minute of
+ * staleness is invisible there, but the win is huge: the (app) layout needs
+ * the roster for the sidebar, and before this every navigation held the
+ * ENTIRE first paint hostage to this query. Now the shell streams
+ * immediately on all but the first request each minute.
+ */
+const loadRosterCached = unstable_cache(
+  async (): Promise<RosterClient[]> => loadRosterFromDb(),
+  ["roster"],
+  { revalidate: 60 },
+);
+
+async function loadRosterFromDb(): Promise<RosterClient[]> {
   try {
     const db = getDb();
     const rows = await db
@@ -70,7 +85,12 @@ export const loadRoster = cache(async (): Promise<RosterClient[]> => {
     // two-client roster is stale but real.
     return [...staticRoster];
   }
-});
+}
+
+/** Request-deduped view over the cross-request cache. */
+export const loadRoster = cache(async (): Promise<RosterClient[]> =>
+  loadRosterCached(),
+);
 
 /** One roster client by slug, DB-backed — null instead of a 404 landmine. */
 export async function rosterClientBySlug(slug: string): Promise<RosterClient | null> {
