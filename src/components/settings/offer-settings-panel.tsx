@@ -5,7 +5,6 @@ import { useState, useTransition } from "react";
 import { saveOfferSettings } from "@/app/(app)/settings/offer-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Panel } from "@/components/ui/panel";
 import { useToast } from "@/components/ui/toast";
 
 export interface OfferSettingsRow {
@@ -134,17 +133,10 @@ function Row({ row }: { row: OfferSettingsRow }) {
 
 export function OfferSettingsPanel({ rows }: { rows: OfferSettingsRow[] }) {
   return (
-    <Panel title="Per-offer alerts & celebrations">
-      <p className="text-faint mb-3 text-sm">
-        EOD/BOD alert times feed the notification engine (misses fire once their report
-        sources connect). The confetti threshold decides which closes get the full
-        celebration — every close still gets the slide-in.
-      </p>
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <Row key={r.clientId} row={r} />
-        ))}
-      </div>
-    </Panel>
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <Row key={r.clientId} row={r} />
+      ))}
+    </div>
   );
 }
