@@ -1,5 +1,7 @@
 import "server-only";
 
+import { aliasMapForClient } from "@/lib/tracking/aliases-store";
+
 import { and, eq, gte } from "drizzle-orm";
 
 import { and as andOp, eq as eqOp } from "drizzle-orm";
@@ -131,6 +133,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     }
   }
 
+  const aliases = await aliasMapForClient(clientId);
   const stl = computeSpeedToLead(
     apps.map((a) => ({
       email: a.email,
@@ -147,6 +150,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         phone: c.leadPhone,
         occurredAtMs: c.occurredAt!.getTime(),
       })),
+    aliases,
   );
   const appsForJoin = apps.map((a) => ({
     email: a.email,
@@ -163,6 +167,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         occurredAtMs: c.occurredAt!.getTime(),
         rep: c.userName,
       })),
+    aliases,
   );
 
   // The disconnect check: did ANY applicant ever get dialled?

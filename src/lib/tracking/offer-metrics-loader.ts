@@ -12,6 +12,7 @@ import {
 } from "@/db/schema/app";
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
+import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import { offerSpeedToLead } from "@/lib/crm/offer-stl";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { listDeals } from "@/lib/sales/queries";
@@ -291,14 +292,18 @@ export async function loadOfferHome(
     snaps.find((x) => x.source === "sheet") ??
     null;
   let mixWindow = null;
-  if (paySource) {
-    const { payments } = await cashRowsForClient(paySource.snapshot.syncId);
+  if (paySource && row) {
+    const [{ payments }, aliases] = await Promise.all([
+      cashRowsForClient(paySource.snapshot.syncId),
+      aliasMapForClient(row.id),
+    ]);
     mixWindow = {
       payments,
       from: bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0),
       to: bounds.to
         ? new Date(`${bounds.to}T23:59:59Z`)
         : new Date(`${todayKey}T23:59:59Z`),
+      aliases,
     };
   }
 

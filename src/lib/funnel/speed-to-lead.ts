@@ -1,3 +1,5 @@
+import { EMPTY_ALIASES, resolveEmail, type AliasMap } from "@/lib/tracking/aliases";
+
 /**
  * Speed to lead — the minutes between an application landing and the first dial
  * against that lead. GV's non-negotiable standard is 5 minutes, so this measures
@@ -39,11 +41,6 @@ export interface SpeedToLeadStats {
   slaPct: number | null;
 }
 
-function normEmail(email: string | null): string | null {
-  const e = email?.trim().toLowerCase();
-  return e ? e : null;
-}
-
 function median(sortedMs: number[]): number | null {
   const n = sortedMs.length;
   if (n === 0) return null;
@@ -56,6 +53,7 @@ const MINUTE = 60_000;
 export function computeSpeedToLead(
   apps: SpeedToLeadApp[],
   calls: SpeedToLeadCall[],
+  aliases: AliasMap = EMPTY_ALIASES,
 ): SpeedToLeadStats {
   // Earliest call per join key — the first time anyone dialed that lead.
   // Email is the primary key; the phone (last ten digits) is the FALLBACK,
@@ -68,15 +66,17 @@ export function computeSpeedToLead(
     if (prev === undefined || at < prev) map.set(key, at);
   };
   for (const c of calls) {
-    const e = normEmail(c.email);
+    const e = resolveEmail(c.email, aliases);
     if (e) keep(firstCallByEmail, e, c.occurredAtMs);
     if (c.phone) keep(firstCallByPhone, c.phone, c.occurredAtMs);
   }
 
-  const dialable = apps.filter((a) => normEmail(a.email) !== null || Boolean(a.phone));
+  const dialable = apps.filter(
+    (a) => resolveEmail(a.email, aliases) !== null || Boolean(a.phone),
+  );
   const durations: number[] = [];
   for (const a of dialable) {
-    const e = normEmail(a.email);
+    const e = resolveEmail(a.email, aliases);
     // Email wins when both keys match — it is the stronger identity; the
     // phone answers only when the email finds nothing.
     const call =
@@ -212,6 +212,7 @@ export interface RepSpeedToLead {
 export function computeSpeedToLeadByRep(
   apps: SpeedToLeadApp[],
   calls: SpeedToLeadRepCall[],
+  aliases: AliasMap = EMPTY_ALIASES,
 ): RepSpeedToLead[] {
   interface First {
     at: number;
@@ -229,14 +230,14 @@ export function computeSpeedToLeadByRep(
   const byEmail = new Map<string, First>();
   const byPhone = new Map<string, First>();
   for (const c of calls) {
-    const email = c.email?.trim().toLowerCase();
+    const email = resolveEmail(c.email ?? null, aliases);
     if (email) keep(byEmail, email, c.occurredAtMs, c.rep);
     if (c.phone) keep(byPhone, c.phone, c.occurredAtMs, c.rep);
   }
 
   const durationsByRep = new Map<string, { rep: string; durations: number[] }>();
   for (const a of apps) {
-    const email = a.email?.trim().toLowerCase();
+    const email = resolveEmail(a.email ?? null, aliases);
     const first =
       (email ? byEmail.get(email) : undefined) ??
       (a.phone ? byPhone.get(a.phone) : undefined);

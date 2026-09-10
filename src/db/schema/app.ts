@@ -661,6 +661,35 @@ export const bookings = appSchema.table(
 );
 
 /**
+ * Payment email aliases — the identity layer. People pay under a different
+ * email than they booked with; this table says "these are the same person"
+ * (alias → canonical), per client. Resolution is ONE hop by design: a
+ * canonical that is itself listed as an alias elsewhere does not chain —
+ * chains would make identity depend on row order, and a wrong merge should
+ * damage exactly one link, not a whole chain of them.
+ */
+export const paymentEmailAliases = appSchema.table(
+  "payment_email_aliases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    aliasEmail: text("alias_email").notNull(),
+    canonicalEmail: text("canonical_email").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_email_aliases_client_alias_key").on(
+      table.clientId,
+      table.aliasEmail,
+    ),
+    index("payment_email_aliases_client_idx").on(table.clientId),
+  ],
+);
+
+/**
  * Default commission rates — the RULES half of the payout derive. One row per
  * (client, seat): "closers on this offer earn 10%". Claims resolve their rate
  * as override-beats-rule; a seat with neither stays UNKNOWN and derives a
