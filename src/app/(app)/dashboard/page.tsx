@@ -8,7 +8,12 @@ import { getDb } from "@/db/client";
 import { normalizeDashboardCards } from "@/lib/dashboard-cards";
 import { cents } from "@/lib/money";
 import { partialDealAr } from "@/lib/transactions/ar";
-import { HomeHeadline, type HomeSection } from "@/components/shell/home-headline";
+import {
+  HomeHeadline,
+  type HomeSection,
+  type HomeVariant,
+} from "@/components/shell/home-headline";
+import { RevenueOverTime } from "@/components/shell/revenue-over-time";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { RepTrendsPanel } from "@/components/shell/rep-trends-panel";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
@@ -16,7 +21,6 @@ import { TeamsOverviewCard } from "@/components/shell/teams-overview-card";
 import { getRepTrends } from "@/lib/sales/rep-trends-query";
 import { buildTeamsOverview } from "@/lib/teams-overview";
 import { ActivityHeatmap } from "@/components/ui/activity-heatmap";
-import { RevenueChart } from "@/components/ui/revenue-chart";
 import { buildActivityHeatmap } from "@/lib/activity-heatmap";
 import { shellUser } from "@/lib/auth/user";
 import { dayKeyCT } from "@/lib/charts";
@@ -35,14 +39,18 @@ import { getSettings } from "@/lib/settings";
 import { homeSections, totalCard } from "@/lib/home/sections";
 import { clientLedger } from "@/lib/transactions/ledger";
 import {
+  HOME_MODES,
+  HOME_RANGES,
+  type HomeMode,
+  type RangeBounds,
   customBounds,
   homeRangeHeadline,
   homeRangeRows,
   homeRangeSeries,
   normalizeHomeMode,
   normalizeHomeRange,
-  rangeBounds,
   previousBounds,
+  rangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
 
@@ -140,42 +148,88 @@ export default async function DashboardPage({
   // the agency card only. Mixing them reported GV's own collections as
   // revenue the client's offer had made.
   const rosterLite = roster.map((c) => ({ slug: c.slug, name: c.name }));
-  const monthRows = homeRangeRows(backlog, mode, bounds);
-  let sections: HomeSection[];
-  if (mode === "all") {
-    const agency = totalCard(
-      clientLedger(
-        homeRangeRows(backlog, "agency", bounds),
-        rosterLite,
-        matchesSheetClient,
-      ),
-      "Agency — GV income",
-    );
-    const clientCards = homeSections(
-      clientLedger(
-        homeRangeRows(backlog, "clients", bounds),
-        rosterLite,
-        matchesSheetClient,
-      ),
-    );
-    sections = agency ? [agency, ...clientCards] : clientCards;
-  } else {
-    // Single-layer modes are already pure; only the slug-less bucket's name
-    // differs — GV direct income on the agency book, Unattributed on the
-    // client book.
-    sections = homeSections(
-      clientLedger(monthRows, rosterLite, matchesSheetClient),
-      mode === "agency" ? "Agency — direct" : "Unattributed",
-    );
-  }
-
-  // The client's own colour rides on each card, resolved here from the DB
-  // roster — the shell components stopped importing the static file.
   const accentBySlug = new Map(roster.map((c) => [c.slug, c.accent]));
-  sections = sections.map((s2) => ({
-    ...s2,
-    accent: s2.slug ? accentBySlug.get(s2.slug) : undefined,
-  }));
+  const buildSections = (m: HomeMode, b: RangeBounds): HomeSection[] => {
+    let built: HomeSection[];
+    if (m === "all") {
+      const agency = totalCard(
+        clientLedger(
+          homeRangeRows(backlog, "agency", b),
+          rosterLite,
+          matchesSheetClient,
+        ),
+        "Agency — GV income",
+      );
+      const clientCards = homeSections(
+        clientLedger(
+          homeRangeRows(backlog, "clients", b),
+          rosterLite,
+          matchesSheetClient,
+        ),
+      );
+      built = agency ? [agency, ...clientCards] : clientCards;
+    } else {
+      // Single-layer modes are already pure; only the slug-less bucket's name
+      // differs — GV direct income on the agency book, Unattributed on the
+      // client book.
+      built = homeSections(
+        clientLedger(homeRangeRows(backlog, m, b), rosterLite, matchesSheetClient),
+        m === "agency" ? "Agency — direct" : "Unattributed",
+      );
+    }
+    // The client's own colour rides on each card, resolved here from the DB
+    // roster — the shell components stopped importing the static file.
+    return built.map((s2) => ({
+      ...s2,
+      accent: s2.slug ? accentBySlug.get(s2.slug) : undefined,
+    }));
+  };
+
+  // EVERY preset window × scope, precomputed in one pass over the backlog —
+  // the hero's toggles are then pure client-side lookups instead of a server
+  // action + full refresh per click. 45 variants over a small backlog is
+  // cheaper than one network round trip.
+  const monthName = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Chicago",
+  });
+  const variants: Record<string, HomeVariant> = {};
+  for (const r of HOME_RANGES) {
+    const b = rangeBounds(r, todayKey);
+    const pb = previousBounds(b);
+    for (const m of HOME_MODES) {
+      const h = homeRangeHeadline(backlog, m, b);
+      const ph = pb ? homeRangeHeadline(backlog, m, pb) : null;
+      variants[`${r}|${m}`] = {
+        label: r === "month" ? monthName : b.label,
+        from: b.from,
+        to: b.to,
+        collectedCents: h.collectedCents,
+        revenueCents: h.revenueCents,
+        previousCollectedCents: ph ? ph.collectedCents : null,
+        previousRevenueCents: ph ? ph.revenueCents : null,
+        series: homeRangeSeries(backlog, m, b),
+        sections: buildSections(m, b),
+      };
+    }
+  }
+  const customVariant: HomeVariant | null = custom
+    ? {
+        label: bounds.label,
+        from: bounds.from,
+        to: bounds.to,
+        collectedCents: headline.collectedCents,
+        revenueCents: headline.revenueCents,
+        previousCollectedCents: prevHeadline ? prevHeadline.collectedCents : null,
+        previousRevenueCents: prevHeadline ? prevHeadline.revenueCents : null,
+        series,
+        sections: buildSections(mode, bounds),
+      }
+    : null;
+  const seriesByKey = Object.fromEntries(
+    Object.entries(variants).map(([k, v]) => [k, v.series]),
+  );
 
   const recentRows = backlog.slice(0, 8).map((r) => ({
     id: r.id,
@@ -205,30 +259,14 @@ export default async function DashboardPage({
     closeRatePct,
   );
 
-  const monthLabel =
-    range === "month"
-      ? new Date().toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-          timeZone: "America/Chicago",
-        })
-      : bounds.label;
-
   return (
     <div className="space-y-6">
       <HomeHeadline
-        mode={mode}
-        range={range}
-        from={bounds.from}
-        to={bounds.to}
+        variants={variants}
+        initialMode={mode}
+        initialRange={range}
+        custom={customVariant}
         todayKey={todayKey}
-        monthLabel={monthLabel}
-        collectedCents={headline.collectedCents}
-        previousCollectedCents={prevHeadline ? prevHeadline.collectedCents : null}
-        previousRevenueCents={prevHeadline ? prevHeadline.revenueCents : null}
-        revenueCents={headline.revenueCents}
-        sections={sections}
-        series={series}
       />
 
       {/* RepVision's "All Teams Overview": the four headline figures + a
@@ -242,7 +280,11 @@ export default async function DashboardPage({
       {/* Revenue over time — the RepVision chart panel: real $ and date axes,
           gridlines, and a hover crosshair over the daily collected series. */}
       <Panel title="Revenue over time">
-        <RevenueChart series={series} />
+        <RevenueOverTime
+          seriesByKey={seriesByKey}
+          initialKey={`${range}|${mode}`}
+          initialSeries={series}
+        />
       </Panel>
 
       {/* Activity heatmap — the RepVision "Time Period Trends" grid: cash by

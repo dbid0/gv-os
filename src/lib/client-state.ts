@@ -209,3 +209,30 @@ export function useEntranceOnce(): boolean {
   }, []);
   return first;
 }
+
+/**
+ * The dashboard's active window+scope, shared between the hero (which owns
+ * the toggles) and the "Revenue over time" panel further down the page. Both
+ * hold the full precomputed variant set, so a toggle is a pure client-side
+ * lookup — this store only tells the chart WHICH key is live. Null until the
+ * hero mounts; readers fall back to their server-rendered initial key.
+ */
+type HomeScopeKey = string;
+let homeScopeKey: HomeScopeKey | null = null;
+const homeScopeListeners = new Set<() => void>();
+
+export function setHomeScopeKey(key: HomeScopeKey): void {
+  homeScopeKey = key;
+  homeScopeListeners.forEach((l) => l());
+}
+
+export function useHomeScopeKey(fallback: HomeScopeKey): HomeScopeKey {
+  return useSyncExternalStore(
+    (cb) => {
+      homeScopeListeners.add(cb);
+      return () => homeScopeListeners.delete(cb);
+    },
+    () => homeScopeKey ?? fallback,
+    () => fallback,
+  );
+}

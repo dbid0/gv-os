@@ -1,9 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { setHomeMode } from "@/app/(app)/dashboard/actions";
 import { AmbientBackdrop } from "@/components/shell/ambient-backdrop";
@@ -11,9 +9,13 @@ import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { PeriodDelta } from "@/components/ui/period-delta";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { RangeChips } from "@/components/ui/range-chips";
-import { useToast } from "@/components/ui/toast";
-import { useCountUp } from "@/lib/client-state";
-import { HOME_MODES, type HomeMode, type HomeRange } from "@/lib/transactions/homepage";
+import { setHomeScopeKey, useCountUp } from "@/lib/client-state";
+import {
+  DEFAULT_HOME_RANGE,
+  HOME_MODES,
+  type HomeMode,
+  type HomeRange,
+} from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
 const fmtUsd = (c: number) =>
@@ -38,45 +40,75 @@ export interface HomeSection {
   revenueCents: number;
 }
 
-export function HomeHeadline({
-  mode,
-  range,
-  from,
-  to,
-  todayKey,
-  monthLabel,
-  collectedCents,
-  previousCollectedCents = null,
-  revenueCents,
-  previousRevenueCents = null,
-  sections,
-  series,
-}: {
-  mode: HomeMode;
-  range: HomeRange | "custom";
+/** Everything one (range × mode) window needs — precomputed server-side. */
+export interface HomeVariant {
+  label: string;
   from: string | null;
   to: string | null;
-  todayKey: string;
-  monthLabel: string;
   collectedCents: number;
-  previousCollectedCents?: number | null;
   revenueCents: number;
-  previousRevenueCents?: number | null;
-  sections: HomeSection[];
+  previousCollectedCents: number | null;
+  previousRevenueCents: number | null;
   series: { day: string; cents: number }[];
-}) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
-  const { toast } = useToast();
-  // Optimistic scope: the highlight jumps on click; the numbers catch up when
-  // the server responds, so the toggle never feels like it's hanging.
-  const [optimisticMode, setOptimisticMode] = useState(mode);
-  const activeMode = pending ? optimisticMode : mode;
+  sections: HomeSection[];
+}
 
-  // The hero numbers count up — the money "landing" on load and easing to the
-  // new figure on a scope toggle.
-  const shownCollected = useCountUp(collectedCents);
-  const shownRevenue = useCountUp(revenueCents);
+/**
+ * The dashboard hero. Every preset window × scope pair arrives precomputed in
+ * `variants`, so the toggles are pure lookups: the highlight, the numbers,
+ * the curve, and the cards all move the instant they're clicked. The old
+ * wiring round-tripped every click through a server action plus a full RSC
+ * refresh — half a second of disabled buttons to change which slice of 41
+ * rows was summed. The server still learns about mode changes (the pref
+ * persists for next visit) but nothing waits on it. Only a dragged custom
+ * calendar range still navigates: the server computes arbitrary bounds.
+ */
+export function HomeHeadline({
+  variants,
+  initialMode,
+  initialRange,
+  custom,
+  todayKey,
+}: {
+  variants: Record<string, HomeVariant>;
+  initialMode: HomeMode;
+  initialRange: HomeRange | "custom";
+  /** The active variant when the URL carries a dragged custom range. */
+  custom: HomeVariant | null;
+  todayKey: string;
+}) {
+  const [mode, setMode] = useState<HomeMode>(initialMode);
+  const [range, setRange] = useState<HomeRange | "custom">(initialRange);
+
+  const active = range === "custom" && custom ? custom : variants[`${range}|${mode}`];
+
+  const syncUrl = (r: HomeRange) => {
+    const url = r === DEFAULT_HOME_RANGE ? "/dashboard" : `/dashboard?range=${r}`;
+    window.history.replaceState(null, "", url);
+  };
+
+  const pickMode = (m: HomeMode) => {
+    setMode(m);
+    const r = range === "custom" ? DEFAULT_HOME_RANGE : range;
+    if (range === "custom") {
+      setRange(r);
+      syncUrl(r);
+    }
+    setHomeScopeKey(`${r}|${m}`);
+    // Persist the preference for the next visit — nothing waits on it.
+    void setHomeMode(m).catch(() => {});
+  };
+
+  const pickRange = (r: HomeRange) => {
+    setRange(r);
+    syncUrl(r);
+    setHomeScopeKey(`${r}|${mode}`);
+  };
+
+  // The hero numbers ease between figures — quick enough to feel like the
+  // toggle itself, never like a fetch.
+  const shownCollected = useCountUp(active.collectedCents, 450);
+  const shownRevenue = useCountUp(active.revenueCents, 450);
 
   return (
     <div className="space-y-4">
@@ -99,7 +131,7 @@ export function HomeHeadline({
               }}
             />
             <div className="absolute inset-x-0 bottom-0 h-2/3">
-              <CollectedSparkline series={series} className="h-full w-full" />
+              <CollectedSparkline series={active.series} className="h-full w-full" />
             </div>
           </div>
 
@@ -108,22 +140,15 @@ export function HomeHeadline({
               <div>
                 <p className="text-faint flex items-center gap-2 text-[11px] font-medium tracking-wider uppercase">
                   <span className="dot-brand inline-block size-1.5 rounded-full" />
-                  Cash collected — {monthLabel}
+                  Cash collected — {active.label}
                 </p>
-                {/* Dimmed while a mode switch is in flight: these are still
-                    the OLD mode's figures. */}
-                <div
-                  className={cn(
-                    "mt-2 transition-opacity duration-200",
-                    pending && "opacity-40",
-                  )}
-                >
+                <div className="mt-2">
                   <p className="numeric text-success text-5xl font-bold tracking-tight tabular-nums">
                     {fmtUsd(shownCollected)}
                   </p>
                   <PeriodDelta
-                    currentCents={collectedCents}
-                    previousCents={previousCollectedCents}
+                    currentCents={active.collectedCents}
+                    previousCents={active.previousCollectedCents}
                   />
                 </div>
               </div>
@@ -138,85 +163,69 @@ export function HomeHeadline({
                     <button
                       key={m}
                       type="button"
-                      disabled={pending}
-                      onClick={() => {
-                        setOptimisticMode(m);
-                        start(async () => {
-                          try {
-                            await setHomeMode(m);
-                            router.refresh();
-                          } catch (e) {
-                            setOptimisticMode(mode);
-                            toast({
-                              tone: "error",
-                              title: e instanceof Error ? e.message : "Action failed.",
-                            });
-                          }
-                        });
-                      }}
+                      onClick={() => pickMode(m)}
                       className={cn(
-                        "relative rounded-md px-3 py-1 text-xs transition-colors",
-                        m === activeMode
+                        "rounded-md px-3 py-1 text-xs transition-colors",
+                        m === mode
                           ? "bg-brand-soft/70 text-foreground border-brand/40 border font-medium"
                           : "text-muted-foreground hover:text-foreground",
-                        pending && "cursor-wait",
                       )}
                     >
                       {MODE_LABELS[m]}
-                      {pending && m === activeMode && (
-                        <Loader2 className="text-brand absolute top-1/2 -right-1 size-3 -translate-y-1/2 animate-spin" />
-                      )}
                     </button>
                   ))}
                 </div>
                 <DateRangePicker
                   basePath="/dashboard"
                   activeRange={range}
-                  from={from}
-                  to={to}
+                  from={active.from}
+                  to={active.to}
                   todayKey={todayKey}
                 />
               </div>
             </div>
 
-            <RangeChips basePath="/dashboard" activeRange={range} />
+            <RangeChips
+              basePath="/dashboard"
+              activeRange={range}
+              onSelect={pickRange}
+            />
           </div>
         </section>
 
         {/* RIGHT — Total revenue: what was sold, and how much of it arrived. */}
         <section className="card-grad rounded-xl border p-6">
           <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-            Total revenue — {monthLabel}
+            Total revenue — {active.label}
           </p>
-          <div
-            className={cn(
-              "mt-2 transition-opacity duration-200",
-              pending && "opacity-40",
-            )}
-          >
+          <div className="mt-2">
             <p className="numeric text-3xl font-bold tracking-tight tabular-nums">
               {fmtUsd(shownRevenue)}
             </p>
             <PeriodDelta
-              currentCents={revenueCents}
-              previousCents={previousRevenueCents}
+              currentCents={active.revenueCents}
+              previousCents={active.previousRevenueCents}
             />
           </div>
           <div className="text-muted-foreground mt-4 space-y-1.5 border-t pt-3 text-sm">
             <p className="flex items-center justify-between gap-3">
               <span>Cash collected</span>
-              <span className="numeric text-foreground">{fmtUsd(collectedCents)}</span>
+              <span className="numeric text-foreground">
+                {fmtUsd(active.collectedCents)}
+              </span>
             </p>
             <p className="flex items-center justify-between gap-3">
               <span>Still due</span>
               <span
                 className={cn(
                   "numeric",
-                  revenueCents > collectedCents ? "text-warning" : "text-foreground",
+                  active.revenueCents > active.collectedCents
+                    ? "text-warning"
+                    : "text-foreground",
                 )}
               >
-                {revenueCents > collectedCents
-                  ? fmtUsd(revenueCents - collectedCents)
+                {active.revenueCents > active.collectedCents
+                  ? fmtUsd(active.revenueCents - active.collectedCents)
                   : "—"}
               </span>
             </p>
@@ -226,14 +235,9 @@ export function HomeHeadline({
 
       {/* Whose money the window is made of — one card per source of cash,
           never a mixed layer. Out of the hero so the curve stays legible. */}
-      {sections.length > 0 && (
-        <div
-          className={cn(
-            "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
-            pending && "opacity-40",
-          )}
-        >
-          {sections.map((s) => (
+      {active.sections.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {active.sections.map((s) => (
             <Link
               key={s.slug ?? s.name}
               href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
