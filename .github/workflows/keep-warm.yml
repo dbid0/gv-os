@@ -25,8 +25,23 @@ jobs:
     steps:
       - name: Warm the function + DB pool
         run: |
-          for path in /api/health /dashboard /brief /sales /accounting /accounting/reconciliation /team /team/work /clients /clients/health /ads /calendar /email /notifications /settings/integrations; do
+          # /api/health = process + DB socket; /dashboard (a 307 off the login
+          # wall) = the middleware function. Neither reaches the page's real
+          # work — that's /api/warm below.
+          for path in /api/health /dashboard; do
             code=$(curl -s -o /dev/null -m 40 --retry 3 --retry-delay 8 --retry-all-errors \
               -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
             echo "$path -> $code"
           done
+      - name: Warm the signed-in path (queries, caches, JWKS)
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: |
+          if [ -z "$SYNC_SECRET" ]; then
+            echo "SYNC_SECRET repo secret not set — skipping the deep warm."
+            exit 0
+          fi
+          curl -s -m 40 --retry 3 --retry-delay 8 --retry-all-errors \
+            -H "Authorization: Bearer $SYNC_SECRET" \
+            "https://os.globalventures.app/api/warm" || true
+          echo ""

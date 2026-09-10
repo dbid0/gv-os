@@ -55,6 +55,8 @@ const PUBLIC_PATHS = [
   "/api/sync/tracking",
   // Operator door for connecting integrations — its own SYNC_SECRET bearer.
   "/api/integrations/connect",
+  // The real warmer — its own SYNC_SECRET bearer; read-only queries.
+  "/api/warm",
   // Capability-URL token IS the auth; unknown tokens 404 in the route.
   "/api/webhooks/payments",
   "/api/webhooks/bookings",

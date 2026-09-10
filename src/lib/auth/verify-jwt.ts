@@ -48,3 +48,17 @@ export async function verifyAccessToken(
     return null;
   }
 }
+
+/**
+ * Prime the JWKS cache on a fresh runtime. The dummy below is a syntactically
+ * valid, deliberately unsigned token: jose parses its header, resolves the
+ * remote key set — fetching and caching the real public keys — then fails the
+ * signature check, which is fine: the fetch WAS the work. Without this, the
+ * first real visitor after a cold start pays the key fetch inside their own
+ * navigation.
+ */
+export async function prewarmJwks(): Promise<void> {
+  const part = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const dummy = `${part({ alg: "ES256", typ: "JWT" })}.${part({ exp: 9_999_999_999 })}.${Buffer.from("warm").toString("base64url")}`;
+  await jwtVerify(dummy, keySet()).catch(() => {});
+}
