@@ -8,6 +8,8 @@ import { StatusPill } from "@/components/ui/status";
 import { ConfirmQueueCell } from "@/components/accounting/confirm-queue-cell";
 import { cents } from "@/lib/money";
 import { listPaymentEvents } from "@/lib/payments/capture";
+import { ClaimCell } from "@/components/accounting/claim-cell";
+import { claimsByPayment, repsByClient } from "@/lib/payments/claims-store";
 
 export const metadata = { title: "Payments - GV OS" };
 export const dynamic = "force-dynamic";
@@ -23,7 +25,11 @@ const fmtWhen = (d: Date | null) =>
     : "—";
 
 export default async function PaymentsPage() {
-  const events = await listPaymentEvents();
+  const [events, claims, repsFor] = await Promise.all([
+    listPaymentEvents(),
+    claimsByPayment(),
+    repsByClient(),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -64,6 +70,7 @@ export default async function PaymentsPage() {
                   <th className="py-2 pr-3 font-medium">Event</th>
                   <th className="py-2 pr-3 text-right font-medium">Amount</th>
                   <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-medium">Credit</th>
                   <th className="py-2 font-medium">Post</th>
                 </tr>
               </thead>
@@ -98,6 +105,20 @@ export default async function PaymentsPage() {
                       <StatusPill tone={e.status === "posted" ? "live" : "pending"}>
                         {e.status}
                       </StatusPill>
+                    </td>
+                    <td className="py-2 pr-3">
+                      {/* Claims credit seats on CHARGES with an offer scope.
+                          Refunds get clawbacks later; agency rows have no
+                          reps to credit. */}
+                      {e.kind !== "refund" && e.clientId ? (
+                        <ClaimCell
+                          paymentEventId={e.id}
+                          claims={claims.get(e.id) ?? []}
+                          reps={repsFor.get(e.clientId) ?? []}
+                        />
+                      ) : (
+                        <span className="text-faint text-xs">—</span>
+                      )}
                     </td>
                     <td className="py-2">
                       {e.status === "captured" ? (

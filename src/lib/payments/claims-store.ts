@@ -96,3 +96,42 @@ export async function listClaims(clientId: string) {
     .where(eq(paymentAssignments.clientId, clientId))
     .orderBy(desc(paymentAssignments.createdAt));
 }
+
+/** All claims with rep display names, keyed by payment id — the page's join. */
+export async function claimsByPayment(): Promise<
+  Map<string, { role: string; repName: string }[]>
+> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      paymentEventId: paymentAssignments.paymentEventId,
+      role: paymentAssignments.role,
+      repName: reps.name,
+    })
+    .from(paymentAssignments)
+    .innerJoin(reps, eq(paymentAssignments.repId, reps.id));
+  const map = new Map<string, { role: string; repName: string }[]>();
+  for (const r of rows) {
+    const list = map.get(r.paymentEventId) ?? [];
+    list.push({ role: r.role, repName: r.repName });
+    map.set(r.paymentEventId, list);
+  }
+  return map;
+}
+
+/** Active reps grouped by client, for the per-row seat pickers. */
+export async function repsByClient(): Promise<
+  Map<string, { id: string; name: string }[]>
+> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: reps.id, name: reps.name, clientId: reps.clientId })
+    .from(reps);
+  const map = new Map<string, { id: string; name: string }[]>();
+  for (const r of rows) {
+    const list = map.get(r.clientId) ?? [];
+    list.push({ id: r.id, name: r.name });
+    map.set(r.clientId, list);
+  }
+  return map;
+}

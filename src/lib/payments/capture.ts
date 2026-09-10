@@ -138,6 +138,7 @@ export async function pullStripeEvents(): Promise<
 export interface PaymentEventRow {
   id: string;
   provider: string;
+  clientId: string | null;
   clientName: string | null;
   kind: string;
   amountCents: number;
@@ -156,6 +157,7 @@ export async function listPaymentEvents(limit = 100): Promise<PaymentEventRow[]>
     .select({
       id: paymentEvents.id,
       provider: paymentEvents.provider,
+      clientId: paymentEvents.clientId,
       clientName: clients.name,
       kind: paymentEvents.kind,
       amountCents: paymentEvents.amountCents,
