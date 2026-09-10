@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
 import { TopClock } from "@/components/shell/top-clock";
 import { ViewAsBanner } from "@/components/shell/view-as";
 import { WorkspaceLogo } from "@/components/workspace/workspace-logo";
+import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { getDb } from "@/db/client";
 import { clients as clientsTable } from "@/db/schema/app";
 import { eq } from "drizzle-orm";
@@ -18,12 +17,11 @@ import { clientInitial } from "@/lib/roster";
 import { rosterClientBySlug } from "@/lib/roster-server";
 
 /**
- * v2 two-view architecture (spec §1): a client WORKSPACE. The whole shell
- * re-skins to the client — their accent becomes --brand for everything
- * inside, so every brand-colored element wears their color with zero
- * per-component work. Client logos land when Daniel uploads them; the
- * accent-tinted mark stands in until then. One click back to Admin, always
- * visible top-left.
+ * v2 two-view architecture (spec §1): a client WORKSPACE — the reference
+ * product's sub-account shape. Inside a client, the LEFT SIDEBAR is that
+ * client's nav (Tracking / Leads / Operations); the whole shell re-skins to
+ * their accent. The old top tab row survives only below md, where a sidebar
+ * has no room. One click back to Admin lives at the top of the sidebar.
  */
 export default async function WorkspaceLayout({
   children,
@@ -54,38 +52,49 @@ export default async function WorkspaceLayout({
     "--brand-soft": `color-mix(in oklab, ${client.accent} 16%, var(--background))`,
   } as CSSProperties;
 
-  return (
-    <div style={skin} className="flex h-dvh flex-col overflow-hidden">
-      <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
-        {!clientPreview && (
-          <Link
-            href="/dashboard"
-            className="text-muted-foreground hover:text-foreground flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors"
-          >
-            <ArrowLeft className="size-3.5" /> Admin
-          </Link>
-        )}
-        <WorkspaceLogo
-          slug={slug}
-          logo={logo}
-          initial={clientInitial(client.name)}
-          accent={client.accent}
-          editable={!clientPreview}
-        />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{client.name}</p>
-          <p className="text-faint truncate text-[11px]">
-            {client.owner} · client workspace
-          </p>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <TopClock />
-        </div>
-      </header>
-      <div className="border-b px-4 py-2 md:px-6">
-        <WorkspaceNav slug={slug} admin={admin} />
+  const identity = (
+    <div className="flex items-center gap-2.5">
+      <WorkspaceLogo
+        slug={slug}
+        logo={logo}
+        initial={clientInitial(client.name)}
+        accent={client.accent}
+        editable={!clientPreview}
+      />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{client.name}</p>
+        <p className="text-faint truncate text-[11px]">
+          {client.owner} · client workspace
+        </p>
       </div>
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+    </div>
+  );
+
+  return (
+    <div style={skin} className="flex h-dvh overflow-hidden">
+      <WorkspaceSidebar
+        slug={slug}
+        admin={admin}
+        clientPreview={clientPreview}
+        identity={identity}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="glass sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b px-4 md:px-6">
+          {/* Identity lives in the sidebar on desktop; on mobile it leads
+              the header so the page still says whose world this is. */}
+          <div className="flex min-w-0 items-center gap-2.5 md:hidden">{identity}</div>
+          <div className="ml-auto flex items-center gap-3">
+            <TopClock />
+          </div>
+        </header>
+        {/* Below md the sidebar has no room — the tab row carries the nav. */}
+        <div className="border-b px-4 py-2 md:hidden">
+          <WorkspaceNav slug={slug} admin={admin} />
+        </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+      </div>
+
       <TabKeepWarm />
       {previewRole && <ViewAsBanner role={previewRole} clientName={client.name} />}
     </div>
