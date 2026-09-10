@@ -198,9 +198,16 @@ export async function leadsForClient(syncId: string): Promise<LeadSummary[]> {
 export async function leadByEmail(
   syncId: string,
   email: string,
+  /** Extra inboxes that are the SAME person (the alias layer) — their rows
+   * merge into one journey instead of splitting across pages. */
+  aliasEmails: string[] = [],
 ): Promise<LeadSummary | null> {
   const wanted = email.trim().toLowerCase();
   if (wanted === "") return null;
+  const inboxes = [
+    wanted,
+    ...aliasEmails.map((e) => e.trim().toLowerCase()).filter((e) => e && e !== wanted),
+  ];
   const db = getDb();
   const rows = await db
     .select({
@@ -222,7 +229,7 @@ export async function leadByEmail(
     .where(
       and(
         eq(clientTrackingRows.syncId, syncId),
-        eq(clientTrackingRows.email, wanted),
+        inArray(clientTrackingRows.email, inboxes),
         inArray(clientTrackingRows.tab, LEAD_TABS),
       ),
     );

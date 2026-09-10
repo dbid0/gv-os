@@ -2,16 +2,21 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserRound } from "lucide-react";
 
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
-import { clients } from "@/db/schema/app";
+import { bookings, clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { transcriptByShareUrl } from "@/lib/calls/share-transcripts";
 import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
+import { aliasMapForClient } from "@/lib/tracking/aliases-store";
+import { resolveEmail } from "@/lib/tracking/aliases";
+import { listConfirmations } from "@/lib/crm/confirmation-store";
+import { confirmedBeforeCall } from "@/lib/crm/confirmation";
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -61,8 +66,37 @@ export default async function LeadDetailPage({
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
   const snapshot = await currentSnapshot(row.id);
-  const lead = snapshot ? await leadByEmail(snapshot.syncId, email) : null;
+  // The alias layer: every inbox that is this same person merges into one
+  // journey — the paying inbox and the booking inbox stop being two leads.
+  const aliases = await aliasMapForClient(row.id);
+  const canonical = resolveEmail(email, aliases) ?? email.trim().toLowerCase();
+  const inboxes = [canonical];
+  for (const [alias, target] of aliases) {
+    if (target === canonical && !inboxes.includes(alias)) inboxes.push(alias);
+  }
+  const lead = snapshot ? await leadByEmail(snapshot.syncId, canonical, inboxes) : null;
   if (!lead) notFound();
+
+  // The scheduler's record of this person, with confirmation state — folded
+  // into the journey beside the sheet's own rows.
+  const [bookingRows, confirmations] = await Promise.all([
+    db
+      .select({
+        id: bookings.id,
+        inviteeEmail: bookings.inviteeEmail,
+        startsAt: bookings.startsAt,
+        status: bookings.status,
+        eventType: bookings.eventType,
+      })
+      .from(bookings)
+      .where(eq(bookings.clientId, row.id)),
+    listConfirmations(row.id),
+  ]);
+  const confirmedAt = new Map(confirmations.map((c) => [c.bookingId, c.confirmedAt]));
+  const personBookings = bookingRows.filter((b) => {
+    const e = b.inviteeEmail?.trim().toLowerCase();
+    return e ? inboxes.includes(resolveEmail(e, aliases) ?? e) : false;
+  });
 
   // The transcript behind each recording link, when it has been pulled. Keyed
   // by URL so an event can show the call itself, not just a link away to it.
@@ -86,10 +120,16 @@ export default async function LeadDetailPage({
         <ArrowLeft className="size-3.5" /> All leads
       </Link>
 
-      <div>
-        <h2 className="text-xl font-semibold">{lead.name ?? lead.email}</h2>
-        <p className="text-muted-foreground text-sm">{lead.email}</p>
-      </div>
+      <WsPageHeader
+        icon={UserRound}
+        title={lead.name ?? lead.email}
+        lede={[
+          inboxes.join(" · "),
+          lead.reps.length > 0 ? `worked by ${lead.reps.join(", ")}` : null,
+        ]
+          .filter(Boolean)
+          .join(" — ")}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Touchpoints" value={String(lead.events.length)} tone="brand" />
@@ -100,6 +140,56 @@ export default async function LeadDetailPage({
           value={lead.paymentsCents > 0 ? formatUSD(cents(lead.paymentsCents)) : "—"}
         />
       </div>
+
+      {personBookings.length > 0 && (
+        <Panel title="Calls on the calendar">
+          <ul className="divide-y">
+            {personBookings.map((b) => {
+              const timely = confirmedBeforeCall(
+                confirmedAt.get(b.id) ?? null,
+                b.startsAt,
+              );
+              return (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-center gap-3 py-2 text-sm"
+                >
+                  <span className="text-foreground font-medium">
+                    {b.startsAt
+                      ? b.startsAt.toLocaleString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          timeZone: "America/Chicago",
+                        })
+                      : "unscheduled"}
+                  </span>
+                  {b.eventType && (
+                    <span className="text-faint text-xs">{b.eventType}</span>
+                  )}
+                  <span
+                    className={
+                      b.status === "canceled"
+                        ? "text-warning text-xs"
+                        : timely
+                          ? "text-success text-xs"
+                          : "text-faint text-xs"
+                    }
+                  >
+                    {b.status === "canceled"
+                      ? "cancelled"
+                      : timely
+                        ? "confirmed before the call"
+                        : "not confirmed"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      )}
 
       <Panel
         title="Journey"
