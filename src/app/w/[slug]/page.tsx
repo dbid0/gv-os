@@ -282,11 +282,13 @@ export default async function WorkspacePage({
       {showCash && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
+            variant="tile"
             label="Deals — all time"
             value={String(report.mirror.deals)}
             tone="brand"
           />
           <Kpi
+            variant="tile"
             label={`Avg deal size — of ${report.mirror.deals} deals`}
             value={
               report.mirror.deals > 0 ? (
@@ -302,11 +304,13 @@ export default async function WorkspacePage({
             tone="brand"
           />
           <Kpi
+            variant="tile"
             label="Cash collected — all time"
             value={<CountUpMoney cents={report.mirror.cashCents} />}
             tone="success"
           />
           <Kpi
+            variant="tile"
             label="Revenue booked — all time"
             value={<CountUpMoney cents={report.mirror.revenueCents} />}
           />
