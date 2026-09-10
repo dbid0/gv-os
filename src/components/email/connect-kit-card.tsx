@@ -7,7 +7,7 @@ import { KeyRound, Plug } from "lucide-react";
 import { connectIntegration } from "@/app/(app)/settings/integrations/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Panel } from "@/components/ui/panel";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 
 /**
@@ -58,21 +58,11 @@ export function ConnectKitCard({
   }
 
   return (
-    <Panel title="Connect Kit">
-      <div className="flex flex-col items-center gap-4 py-6 text-center">
-        <span className="bg-brand-soft/40 text-brand grid size-12 place-items-center rounded-full border">
-          <Plug className="size-5" />
-        </span>
-        <div>
-          <p className="text-sm font-medium">
-            {clientName}&apos;s email engine isn&apos;t connected yet.
-          </p>
-          <p className="text-faint mx-auto mt-1 max-w-md text-xs">
-            Paste the account&apos;s Kit v4 API key. It is sealed before it is stored,
-            and the list, sequences and growth appear here after the first sync — which
-            starts the moment you connect.
-          </p>
-        </div>
+    <EmptyState
+      icon={Plug}
+      title={`${clientName}'s email engine isn't connected yet`}
+      explainer="Paste the account's Kit v4 API key. It is sealed before it is stored, and the list, sequences and growth appear here after the first sync — which starts the moment you connect."
+      action={
         <form onSubmit={submit} className="flex w-full max-w-md items-center gap-2">
           <div className="relative flex-1">
             <KeyRound className="text-faint absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
@@ -89,7 +79,7 @@ export function ConnectKitCard({
             {pending ? "Connecting…" : "Connect"}
           </Button>
         </form>
-      </div>
-    </Panel>
+      }
+    />
   );
 }

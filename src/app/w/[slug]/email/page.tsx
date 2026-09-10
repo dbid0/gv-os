@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { Mail } from "lucide-react";
+import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { notFound } from "next/navigation";
 
 import { ConnectKitCard } from "@/components/email/connect-kit-card";
@@ -46,7 +48,12 @@ export default async function WorkspaceEmailPage({
     // the fact plainly and never shows a credential input.
     const portalView = (await cookies()).get("gv-dev-role")?.value === "client";
     return (
-      <div className="mx-auto w-full max-w-7xl">
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <WsPageHeader
+          icon={Mail}
+          title="Email"
+          lede="The offer's email engine, read straight from Kit — list growth, broadcasts, and sequences. Reporting only; nothing sends from here."
+        />
         {portalView || clientId === null ? (
           <Panel title="No Kit account connected">
             <p className="text-faint py-8 text-center text-sm">
@@ -62,6 +69,11 @@ export default async function WorkspaceEmailPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
+      <WsPageHeader
+        icon={Mail}
+        title="Email"
+        lede="The offer's email engine, read straight from Kit — list growth, broadcasts, and sequences. Reporting only; nothing sends from here."
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <Kpi
           label="Subscribers"
