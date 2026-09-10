@@ -1,5 +1,7 @@
 import "server-only";
 
+import { filterCountedBookings } from "@/lib/bookings/counted";
+
 import { and, desc, eq, gte } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -68,6 +70,14 @@ export async function loadOfferSales(
   const now = new Date();
   const daysAgo30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+  const [clientRow] = clientId
+    ? await db
+        .select({ countedCallSources: clients.countedCallSources })
+        .from(clients)
+        .where(eq(clients.id, clientId))
+        .limit(1)
+    : [undefined];
+
   const [apps, allCalls, allDeals, report, repRows, bookingRows, confirmations] =
     await Promise.all([
       clientId
@@ -102,6 +112,7 @@ export async function loadOfferSales(
         ? db
             .select({
               id: bookings.id,
+              provider: bookings.provider,
               inviteeName: bookings.inviteeName,
               inviteeEmail: bookings.inviteeEmail,
               startsAt: bookings.startsAt,
@@ -162,7 +173,10 @@ export async function loadOfferSales(
       appDates: apps.map((a) => a.submittedAt ?? a.createdAt),
       calls,
       dealRows,
-      bookings: bookingRows,
+      bookings: filterCountedBookings(
+        bookingRows,
+        clientRow?.countedCallSources ?? null,
+      ),
       reportedEmails,
       confirmations,
       stl,
@@ -216,7 +230,11 @@ export async function loadOfferHome(
   const now = new Date();
 
   const [row] = await db
-    .select({ id: clients.id, offerModel: clients.offerModel })
+    .select({
+      id: clients.id,
+      offerModel: clients.offerModel,
+      countedCallSources: clients.countedCallSources,
+    })
     .from(clients)
     .where(eq(clients.slug, slug))
     .limit(1);
@@ -239,6 +257,7 @@ export async function loadOfferHome(
       ? db
           .select({
             id: bookings.id,
+            provider: bookings.provider,
             inviteeName: bookings.inviteeName,
             inviteeEmail: bookings.inviteeEmail,
             startsAt: bookings.startsAt,
@@ -331,7 +350,7 @@ export async function loadOfferHome(
       appDates: (report?.apps ?? []).map((a) => a.submittedAt ?? a.createdAt),
       calls,
       dealRows: [],
-      bookings: bookingRows,
+      bookings: filterCountedBookings(bookingRows, row?.countedCallSources ?? null),
       reportedEmails,
       confirmations,
       stl: DISCONNECTED_STL,

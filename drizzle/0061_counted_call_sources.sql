@@ -1,0 +1,1 @@
+ALTER TABLE "app"."clients" ADD COLUMN "counted_call_sources" jsonb;
