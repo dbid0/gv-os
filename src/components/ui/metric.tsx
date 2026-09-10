@@ -108,12 +108,17 @@ export function Kpi({
   icon: Icon,
   tone = "default",
   pending,
+  variant = "bare",
 }: {
   label: string;
   value?: ReactNode;
   icon?: LucideIcon;
   tone?: "default" | "brand" | "success" | "warning" | "danger";
   pending?: boolean;
+  /** "tile" wraps the figure in the house card — for KPIs that stand in a
+   * row on the page ground. "bare" (default) is for KPIs already inside a
+   * Panel or card, where a second border would double-frame them. */
+  variant?: "bare" | "tile";
 }) {
   const tones = {
     default: "text-faint",
@@ -124,7 +129,12 @@ export function Kpi({
   } as const;
 
   return (
-    <div className="space-y-2">
+    <div
+      className={cn(
+        "space-y-2",
+        variant === "tile" && "card-grad rounded-xl border p-4",
+      )}
+    >
       <div className="flex items-center gap-2">
         {Icon && <Icon className={cn("size-3.5 shrink-0", tones[tone])} />}
         <span className="text-muted-foreground text-xs">{label}</span>

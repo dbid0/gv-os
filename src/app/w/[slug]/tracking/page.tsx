@@ -178,16 +178,22 @@ export default async function WorkspaceTrackingPage({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
+          variant="tile"
           label="Rows mirrored"
           value={snapshot.rowCount.toLocaleString("en-US")}
           tone="brand"
         />
         <Kpi
+          variant="tile"
           label="Applications"
           value={applications ? String(applications.rows) : "—"}
         />
-        <Kpi label="EOC reports" value={eoc ? String(eoc.rows) : "—"} />
-        <Kpi label="With a recording" value={eoc ? String(eoc.withRecording) : "—"} />
+        <Kpi variant="tile" label="EOC reports" value={eoc ? String(eoc.rows) : "—"} />
+        <Kpi
+          variant="tile"
+          label="With a recording"
+          value={eoc ? String(eoc.withRecording) : "—"}
+        />
       </div>
 
       <Panel
