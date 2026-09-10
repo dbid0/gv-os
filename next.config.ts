@@ -13,7 +13,9 @@ const nextConfig: NextConfig = {
       // answers it at the edge — the old server-component redirect cost a full
       // function invocation (cross-country, ~0.5s) before /dashboard even
       // started loading.
-      { source: "/", destination: "/dashboard", permanent: false },
+      // Permanent (308): the browser caches it, so typing the bare domain
+      // skips the redirect round trip entirely after the first visit.
+      { source: "/", destination: "/dashboard", permanent: true },
     ];
   },
 };
