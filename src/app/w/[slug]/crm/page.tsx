@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { Kanban, PhoneOff } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -413,18 +414,36 @@ export default async function WorkspaceCrmPage({
           <div className="divide-y">
             {activity.slice(0, 12).map((a, i) => (
               <div key={i} className="flex items-center gap-3 py-2.5">
-                <span className="text-faint w-14 text-xs capitalize">{a.kind}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {a.userName ?? "—"}
-                  {a.direction && (
-                    <span className="text-faint text-xs"> · {a.direction}</span>
-                  )}
+                <span className="text-faint w-14 shrink-0 text-xs capitalize">
+                  {a.kind}
                 </span>
-                <span className="text-faint w-24 text-right text-xs tabular-nums">
+                {/* WHO the touch reached leads the row — the dial's whole
+                    point — linked to their story when the CRM knew an email. */}
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {a.leadEmail ? (
+                    <Link
+                      href={`/w/${slug}/leads/${encodeURIComponent(a.leadEmail)}`}
+                      className="hover:text-brand font-medium"
+                    >
+                      {a.leadEmail}
+                    </Link>
+                  ) : (
+                    <span className="text-faint">no lead on record</span>
+                  )}
+                  <span className="text-faint text-xs">
+                    {" "}
+                    · {a.userName ?? "—"}
+                    {a.direction && ` · ${a.direction}`}
+                  </span>
+                </span>
+                <span className="text-faint w-32 shrink-0 text-right text-xs tabular-nums">
                   {a.occurredAt
-                    ? a.occurredAt.toLocaleDateString("en-US", {
+                    ? a.occurredAt.toLocaleString("en-US", {
                         month: "short",
                         day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        timeZone: "America/Chicago",
                       })
                     : "—"}
                 </span>
