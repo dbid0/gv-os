@@ -1,5 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, Plug, User } from "lucide-react";
+import {
+  ArrowRight,
+  BellRing,
+  Boxes,
+  Building2,
+  MessagesSquare,
+  Percent,
+  Plug,
+  Target,
+  User,
+  Users,
+} from "lucide-react";
 
 import { AgencyDiscordCard } from "@/components/settings/agency-discord-card";
 import {
@@ -7,13 +18,12 @@ import {
   type OfferSettingsRow,
 } from "@/components/settings/offer-settings-panel";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { SettingsSection } from "@/components/settings/settings-section";
 import {
   CommissionRatesPanel,
   type ClientRatesRow,
 } from "@/components/settings/commission-rates-panel";
 import { listRates } from "@/lib/payments/rates-store";
-import { PageHeader } from "@/components/shell/page-header";
-import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
 import { clients, offerSettings } from "@/db/schema/app";
 import { getSettings } from "@/lib/settings";
@@ -22,13 +32,33 @@ import { eq } from "drizzle-orm";
 export const metadata = { title: "Settings - GV OS" };
 export const dynamic = "force-dynamic";
 
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <h2 className="text-faint px-1 text-[11px] font-medium tracking-wider uppercase">
-      {children}
-    </h2>
-  );
-}
+/** The reference product's setup tile: icon box, name, two lines, an arrow. */
+const SETUP_TILES = [
+  {
+    href: "/clients",
+    icon: Building2,
+    title: "Clients",
+    detail: "Every offer on the books — brands, logos, and each client's workspace.",
+  },
+  {
+    href: "/team",
+    icon: Users,
+    title: "Team",
+    detail: "Who is on the floor, their roles, and the offers they work.",
+  },
+  {
+    href: "/settings/integrations",
+    icon: Plug,
+    title: "Integrations",
+    detail: "Payment processors, sheets, and CRMs — keys sealed on save.",
+  },
+  {
+    href: "/profile",
+    icon: User,
+    title: "Your account",
+    detail: "Profile picture, display name, and Discord handle.",
+  },
+];
 
 export default async function SettingsPage() {
   const db = getDb();
@@ -73,63 +103,73 @@ export default async function SettingsPage() {
     };
   });
 
-  const shortcuts = [
-    {
-      href: "/settings/integrations",
-      icon: Plug,
-      title: "Integrations",
-      detail: "Connect payment processors, sheets, and CRMs — keys sealed on save.",
-    },
-    {
-      href: "/profile",
-      icon: User,
-      title: "Your account",
-      detail: "Profile picture, display name, and Discord handle.",
-    },
-  ];
-
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8">
-      <PageHeader
-        title="Settings"
-        description="Goals, per-offer alerts, and connections. Goals are targets the dashboards measure against — never money in the ledger."
-      />
+    <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
+      <header className="pt-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground mt-1.5 text-sm">
+          Manage the agency&apos;s settings and preferences.
+        </p>
+      </header>
 
-      <section className="space-y-3">
-        <SectionLabel>Organization</SectionLabel>
-        <SettingsForm settings={settings} />
-      </section>
-
-      <section className="space-y-3">
-        <SectionLabel>Per-offer</SectionLabel>
-        <OfferSettingsPanel rows={rows} />
-
-        <CommissionRatesPanel rows={ratesRows} />
-      </section>
-
-      <section className="space-y-3">
-        <SectionLabel>Agency sync</SectionLabel>
-        <AgencyDiscordCard />
-      </section>
-
-      <section className="space-y-3">
-        <SectionLabel>Connections & account</SectionLabel>
+      <SettingsSection
+        icon={Boxes}
+        title="Account setup"
+        description="How this workspace is put together — set these up once, then get on with the work."
+      >
         <div className="grid gap-3 sm:grid-cols-2">
-          {shortcuts.map((s) => (
-            <Link key={s.href} href={s.href} className="group block">
-              <Panel title={s.title}>
-                <div className="flex items-start gap-3">
-                  <span className="border-brand/40 bg-brand-soft/50 text-brand grid size-9 shrink-0 place-items-center rounded-lg border">
-                    <s.icon className="size-4" />
-                  </span>
-                  <p className="text-muted-foreground flex-1 text-sm">{s.detail}</p>
-                  <ArrowRight className="text-faint size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </Panel>
+          {SETUP_TILES.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="group bg-secondary/40 hover:bg-secondary/70 flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-colors"
+            >
+              <span className="text-muted-foreground grid size-9 shrink-0 place-items-center rounded-lg border bg-black/20">
+                <t.icon className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{t.title}</span>
+                <span className="text-muted-foreground block text-xs leading-snug">
+                  {t.detail}
+                </span>
+              </span>
+              <ArrowRight className="text-faint size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
             </Link>
           ))}
         </div>
-      </section>
+      </SettingsSection>
+
+      <SettingsSection
+        icon={Target}
+        title="Goals & targets"
+        description="Display currency and the monthly goal each dashboard measures against. Goals are targets — never money in the ledger."
+      >
+        <SettingsForm settings={settings} />
+      </SettingsSection>
+
+      <SettingsSection
+        icon={BellRing}
+        title="Per-offer alerts & celebrations"
+        description="EOD/BOD alert times feed the notification engine (misses fire once their report sources connect). The confetti threshold decides which closes get the full celebration — every close still gets the slide-in."
+      >
+        <OfferSettingsPanel rows={rows} />
+      </SettingsSection>
+
+      <SettingsSection
+        icon={Percent}
+        title="Commission rates"
+        description="Setter, closer, and DM-setter rates per offer. Empty means unset — commissions derive unknown, never zero."
+      >
+        <CommissionRatesPanel rows={ratesRows} />
+      </SettingsSection>
+
+      <SettingsSection
+        icon={MessagesSquare}
+        title="Agency Discord"
+        description="Push GV OS updates into the agency Discord HQ."
+      >
+        <AgencyDiscordCard />
+      </SettingsSection>
     </div>
   );
 }

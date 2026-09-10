@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 
 import { saveRatesAction } from "@/app/(app)/settings/rate-actions";
-import { Panel } from "@/components/ui/panel";
 
 export type ClientRatesRow = {
   clientId: string;
@@ -27,20 +26,11 @@ const SEATS = [
  */
 export function CommissionRatesPanel({ rows }: { rows: ClientRatesRow[] }) {
   return (
-    <Panel
-      title="Commission rates"
-      aside={
-        <span className="text-faint text-xs">
-          empty = unset — derives unknown, never zero
-        </span>
-      }
-    >
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <RateRow key={row.clientId} row={row} />
-        ))}
-      </div>
-    </Panel>
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <RateRow key={row.clientId} row={row} />
+      ))}
+    </div>
   );
 }
 
