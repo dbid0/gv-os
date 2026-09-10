@@ -1,4 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
+
+import { verifyAccessToken } from "@/lib/auth/verify-jwt";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
@@ -141,11 +143,21 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // getUser, not getSession: this revalidates against Supabase rather than
-  // trusting a cookie that could have been tampered with.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // FAST PATH: the session cookie's access token is a signed JWT — verify it
+  // locally against the auth project's public keys (see verify-jwt.ts). This
+  // proves the same thing getUser() proves, without the per-navigation
+  // network round trip that made every click wait on the auth server. A
+  // token that fails, is foreign, or is near expiry falls through to the
+  // real getUser(), which also rotates the session cookies.
+  let user: { email?: string } | null = null;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const localUser = await verifyAccessToken(sessionData.session?.access_token);
+  if (localUser) {
+    user = { email: localUser.email };
+  } else {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  }
 
   // A signed-in user has no reason to sit on the login page.
   if (user && isAllowed(user.email) && pathname === "/login") {
