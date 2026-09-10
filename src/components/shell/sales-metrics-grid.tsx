@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { BarChart3, DollarSign, Hash, Percent, Plus, X } from "lucide-react";
+import { DollarSign, Hash, Percent, Plus, X } from "lucide-react";
 
 import { saveSalesMetrics } from "@/app/(app)/dashboard/metrics-actions";
 import { useToast } from "@/components/ui/toast";
@@ -138,7 +138,6 @@ export function SalesMetricsGrid({
           className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
         >
           {shown.map((m) => {
-            const Icon = KIND_ICON[m.kind];
             return (
               <motion.div key={m.key} variants={fadeUp} className="group/card relative">
                 <button
@@ -152,20 +151,19 @@ export function SalesMetricsGrid({
                 >
                   <X className="size-3" />
                 </button>
-                <div className="bg-card hover:border-brand/40 overflow-hidden rounded-lg border p-3 transition-colors">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-faint text-[10px] leading-tight font-medium tracking-wider uppercase">
-                      {m.label}
-                    </span>
-                    <BarChart3 className="text-faint/50 size-3 shrink-0" />
-                  </div>
+                {/* The value's own formatting says what it is — a $ sign or
+                    a bare count. Repeating that as a glyph read as noise
+                    twelve tiles in a row. */}
+                <div className="card-grad hover:border-brand/40 overflow-hidden rounded-xl border p-4 transition-colors">
+                  <span className="text-faint block text-[11px] leading-tight font-medium tracking-wider uppercase">
+                    {m.label}
+                  </span>
                   <p
                     className={cn(
-                      "numeric mt-2 flex items-center gap-1 text-lg font-bold tabular-nums",
+                      "numeric mt-1.5 text-xl font-bold tabular-nums",
                       KIND_TONE[m.kind],
                     )}
                   >
-                    <Icon className="size-3.5 shrink-0 opacity-70" />
                     {m.value}
                   </p>
                 </div>
