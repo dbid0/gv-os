@@ -1,5 +1,5 @@
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
-import { Kanban } from "lucide-react";
+import { Kanban, PhoneOff } from "lucide-react";
 import { notFound } from "next/navigation";
 import { and, desc, eq, gte } from "drizzle-orm";
 
@@ -7,8 +7,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { stuckCalls } from "@/lib/bookings/stuck";
 import { filterCountedBookings } from "@/lib/bookings/counted";
-import { Kpi } from "@/components/ui/metric";
-import { StatusPill } from "@/components/ui/status";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getDb } from "@/db/client";
 import {
   applications,
@@ -262,21 +261,19 @@ export default async function WorkspaceCrmPage({
         {/* The floor first: it has real numbers today. The missing CRM is
             stated underneath rather than being the whole page. */}
         {floorPanel}
-        <Panel
-          title="Close CRM"
-          aside={<StatusPill tone="pending">Not connected</StatusPill>}
-        >
-          <p className="text-muted-foreground text-sm">
-            {possessive(client.name)} Close account isn&apos;t connected yet. Once its
-            API key is added in Integrations, this page fills in on the next sync: rep
-            dials, texts and emails, how fast new applications get called, and which
-            leads answered.
-          </p>
-          <p className="text-faint mt-2 text-xs">
-            Nothing is estimated here — an unconnected CRM shows nothing rather than
-            zeros that read like a quiet day.
-          </p>
-        </Panel>
+        <EmptyState
+          icon={PhoneOff}
+          title="Close CRM isn't connected yet"
+          explainer={
+            <>
+              Once {possessive(client.name)} API key is added in Integrations, this page
+              fills in on the next sync — rep dials, texts and emails, how fast new
+              applications get called, and which leads answered. Nothing is estimated in
+              the meantime: an unconnected CRM shows nothing rather than zeros that read
+              like a quiet day.
+            </>
+          }
+        />
       </div>
     );
   }
