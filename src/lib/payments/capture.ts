@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, integrations, paymentEvents } from "@/db/schema/app";
@@ -60,6 +60,9 @@ export async function capturePayment(
       email: normalized.email,
       occurredAt: normalized.occurredAt ? new Date(normalized.occurredAt) : null,
       label: normalized.label,
+      failureCode: normalized.failureCode,
+      failureMessage: normalized.failureMessage,
+      customerRef: normalized.customerRef,
       raw: payload,
     })
     .onConflictDoNothing({
@@ -101,7 +104,7 @@ export async function pullStripeEvents(): Promise<
   for (const conn of connections) {
     const apiKey = open(conn.secretBox as string, key);
     const res = await fetch(
-      "https://api.stripe.com/v1/events?limit=100&types[]=charge.succeeded&types[]=charge.refunded&types[]=charge.dispute.created",
+      "https://api.stripe.com/v1/events?limit=100&types[]=charge.succeeded&types[]=charge.refunded&types[]=charge.dispute.created&types[]=charge.failed",
       {
         headers: {
           Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
@@ -150,7 +153,12 @@ export interface PaymentEventRow {
   createdAt: Date;
 }
 
-/** Recent captured events for the payments inbox. */
+/**
+ * Recent captured events for the payments inbox. Declined attempts (kind
+ * "failed") are deliberately excluded — they carry no collectable money and
+ * must never appear in the claim/confirm/commission surfaces. They live in the
+ * recovery inbox (`listRecoveryRows`) instead.
+ */
 export async function listPaymentEvents(limit = 100): Promise<PaymentEventRow[]> {
   const db = getDb();
   return db
@@ -170,6 +178,7 @@ export async function listPaymentEvents(limit = 100): Promise<PaymentEventRow[]>
     })
     .from(paymentEvents)
     .leftJoin(clients, eq(paymentEvents.clientId, clients.id))
+    .where(ne(paymentEvents.kind, "failed"))
     .orderBy(
       desc(sql`coalesce(${paymentEvents.occurredAt}, ${paymentEvents.createdAt})`),
     )

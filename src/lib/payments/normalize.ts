@@ -16,7 +16,7 @@
 export interface NormalizedPayment {
   /** The processor's own id — the dedupe key. */
   externalId: string;
-  /** charge · refund · unknown */
+  /** charge · refund · failed · unknown */
   kind: string;
   amountCents: number;
   currency: string;
@@ -26,6 +26,12 @@ export interface NormalizedPayment {
   occurredAt: string | null;
   /** What the processor called this event, for display. */
   label: string;
+  /** Declined charges only: the processor's failure/decline code. */
+  failureCode: string | null;
+  /** Declined charges only: the human-readable failure reason. */
+  failureMessage: string | null;
+  /** The processor's customer id when present — for recovered-vs-lost matching. */
+  customerRef: string | null;
 }
 
 type Payload = Record<string, unknown>;
@@ -59,20 +65,59 @@ export function normalizeStripe(payload: Payload): NormalizedPayment | null {
   if (!id) return null;
   const type = str(payload.type) ?? "unknown";
   const object = asRecord(asRecord(payload.data).object);
-  const amount =
-    num(object.amount_captured) ?? num(object.amount) ?? num(object.amount_paid) ?? 0;
   const refund = type.includes("refund") || type.includes("dispute");
+  // A declined attempt: `charge.failed`, or a PaymentIntent whose last attempt
+  // errored (`payment_intent.payment_failed`). Detected before "charge" so a
+  // failed charge is never miscounted as one that succeeded.
+  const failed =
+    type === "charge.failed" ||
+    type.includes("payment_failed") ||
+    (object.paid === false && str(object.failure_code) !== null);
+  // Successful charges report amount_captured; a declined attempt captured
+  // nothing, so its recoverable figure is the amount it TRIED to charge.
+  const amount = failed
+    ? (num(object.amount) ?? num(object.amount_captured) ?? 0)
+    : (num(object.amount_captured) ??
+      num(object.amount) ??
+      num(object.amount_paid) ??
+      0);
   const created = num(payload.created);
   const billing = asRecord(object.billing_details);
+  // Failure detail lives on the charge directly, or on a PaymentIntent's
+  // last_payment_error.
+  const lastError = asRecord(object.last_payment_error);
+  const failureCode = failed
+    ? (str(object.failure_code) ??
+      str(object.decline_code) ??
+      str(lastError.decline_code) ??
+      str(lastError.code))
+    : null;
+  const failureMessage = failed
+    ? (str(object.failure_message) ??
+      str(asRecord(object.outcome).seller_message) ??
+      str(lastError.message))
+    : null;
+  const kind = refund
+    ? "refund"
+    : failed
+      ? "failed"
+      : type.startsWith("charge")
+        ? "charge"
+        : "unknown";
   return {
     externalId: id,
-    kind: refund ? "refund" : type.startsWith("charge") ? "charge" : "unknown",
+    kind,
+    // Failed attempts stay positive — they are recoverable, never collected,
+    // and never posted; only refunds carry a negative sign.
     amountCents: refund ? -Math.abs(amount) : amount,
     currency: (str(object.currency) ?? "usd").toLowerCase(),
     email:
       str(billing.email) ?? str(object.receipt_email) ?? str(object.customer_email),
     occurredAt: created ? new Date(created * 1000).toISOString() : null,
     label: type,
+    failureCode,
+    failureMessage,
+    customerRef: str(object.customer),
   };
 }
 
@@ -108,6 +153,9 @@ export function normalizeFanbasis(payload: Payload): NormalizedPayment | null {
     email,
     occurredAt: when,
     label: str(payload.type) ?? str(payload.event) ?? "fanbasis sale",
+    failureCode: null,
+    failureMessage: null,
+    customerRef: null,
   };
 }
 
@@ -132,6 +180,9 @@ export function normalizeWhop(payload: Payload): NormalizedPayment | null {
     email: str(data.user_email) ?? str(data.email),
     occurredAt: str(data.created_at),
     label: str(payload.action) ?? "whop payment",
+    failureCode: null,
+    failureMessage: null,
+    customerRef: str(data.user_id) ?? str(data.customer_id),
   };
 }
 
@@ -153,6 +204,9 @@ export function normalizeGeneric(payload: Payload): NormalizedPayment | null {
     email: str(payload.email) ?? str(data.email),
     occurredAt: str(payload.created_at) ?? str(data.created_at),
     label: str(payload.type) ?? str(payload.event) ?? str(payload.action) ?? "payment",
+    failureCode: null,
+    failureMessage: null,
+    customerRef: str(payload.customer) ?? str(data.customer) ?? str(data.customer_id),
   };
 }
 
