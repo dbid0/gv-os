@@ -6,6 +6,7 @@ import {
   Clapperboard,
   ClipboardList,
   LayoutDashboard,
+  Link2,
   Mail,
   Megaphone,
   Plug,
@@ -113,6 +114,14 @@ export const navigation: NavGroup[] = [
         icon: Megaphone,
         status: "ready",
         description: "Spend, ROAS, and cost per deal by offer",
+      },
+      {
+        label: "UTM links",
+        href: "/marketing/utm",
+        icon: Link2,
+        status: "ready",
+        description:
+          "Generate GV-standard tagged links — every one saved to a registry",
       },
     ],
   },
