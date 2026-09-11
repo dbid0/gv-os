@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ClipboardList,
+  Columns3,
   FileText,
   Kanban,
   LayoutGrid,
@@ -59,6 +60,10 @@ const GROUPS: { label: string; items: Item[] }[] = [
     items: [
       { label: "CRM", icon: Kanban, path: "/crm" },
       { label: "Leads", icon: Users, path: "/leads" },
+      // GV-internal: a rep-level "who's where in the funnel" board is not
+      // something to hand a client inside their own portal (same call as
+      // Tracking below), so it is admin-only in both nav and page gate.
+      { label: "Pipeline", icon: Columns3, path: "/pipeline", adminOnly: true },
       { label: "Sales", icon: BarChart3, path: "/sales" },
     ],
   },
