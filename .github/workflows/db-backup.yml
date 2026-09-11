@@ -1,0 +1,143 @@
+name: db-backup
+
+# Nightly backup of the money ledger, with a REHEARSED restore in the same run.
+# A dump nobody has ever restored is a rumour, not a backup — so every run
+# spins up a throwaway Postgres, restores the dump into it, and asserts the
+# core money tables came back with rows in them. If that check fails, the
+# whole job fails loudly (see continue-on-error note below).
+#
+# Scope: only the `app` and `ledger` schemas are dumped, not the full
+# Supabase database. Supabase-managed schemas (auth, storage, realtime,
+# vault, extensions, graphql, …) reference extensions and roles that don't
+# exist in a vanilla postgres:17 container, so a full-database dump would
+# fail to restore here for reasons that have nothing to do with whether the
+# money data is actually safe. `app` and `ledger` are where the ledger lives
+# (see src/db/schema/index.ts — `export * from "./app"; export * from
+# "./ledger";`), including app.clients and app.transactions, so scoping to
+# those two schemas is deliberate, not an oversight.
+#
+# Cost discipline: this repo is PRIVATE, so GitHub Actions bills every run
+# rounded UP to a full minute. This job runs ONCE a day on a fixed cron plus
+# workflow_dispatch — never on a tighter schedule. Do not add a second
+# schedule entry or shorten the cron; see integration-sync.yml's header for
+# why that already burned most of a month's minutes once.
+#
+# One-time setup required: add a repository secret named
+# BACKUP_DATABASE_URL — a READ-capable connection string for the prod
+# Supabase project, using the SESSION POOLER (port 5432), not the
+# transaction pooler (port 6543). pg_dump needs session-level semantics that
+# the transaction pooler doesn't reliably support (same reasoning as
+# MIGRATION_DATABASE_URL in .env.example). Settings → Secrets and variables
+# → Actions → New repository secret. Until it's set, this workflow fails
+# fast with an explicit message instead of silently skipping — a backup job
+# is the one scheduled job in this repo where a quiet no-op is the wrong
+# default.
+#
+# Where backups land: each successful run uploads the compressed dump as a
+# workflow artifact (Actions → this workflow → a run → Artifacts), retained
+# 21 days. Nothing is ever committed to git — a dump file is live money data
+# and belongs in git history even less than it belongs in a log line.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: dump app+ledger · restore-check · upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Unlike integration-sync.yml's warmers, a failed backup must surface —
+    # a scheduled job nobody is watching is exactly the failure mode a
+    # backup exists to prevent. Do not add continue-on-error here.
+    continue-on-error: false
+
+    services:
+      # The restore target. Version matches the dump tooling below and this
+      # repo's own ci.yml integration job, which already pins postgres:17.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Verify BACKUP_DATABASE_URL is configured
+        run: |
+          if [ -z "${{ secrets.BACKUP_DATABASE_URL }}" ]; then
+            echo "::error::BACKUP_DATABASE_URL repo secret is not set. Add a read-capable SESSION POOLER connection string (port 5432 — not the 6543 transaction pooler) for the prod Supabase project: repo Settings -> Secrets and variables -> Actions -> New repository secret -> name it BACKUP_DATABASE_URL. Nightly backups cannot run until this is set."
+            exit 1
+          fi
+
+      - name: Install postgresql-client-17 (pg_dump/pg_restore matching the Supabase server version)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "pg_dump: $(pg_dump --version)"
+          echo "pg_restore: $(pg_restore --version)"
+          echo "psql: $(psql --version)"
+
+      - name: Dump app + ledger schemas from prod
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          echo "FILE=gvos-backup-$STAMP.dump" >> "$GITHUB_ENV"
+          pg_dump "$BACKUP_DATABASE_URL" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --schema=app \
+            --schema=ledger \
+            --file="gvos-backup-$STAMP.dump"
+          # Size only — never dump contents to the log.
+          ls -lh "gvos-backup-$STAMP.dump"
+
+      - name: Restore into throwaway Postgres and verify
+        run: |
+          set -euo pipefail
+          RESTORE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
+
+          pg_restore --dbname="$RESTORE_URL" --no-owner --no-privileges "$FILE"
+
+          CLIENTS_COUNT=$(psql "$RESTORE_URL" -tAc "SELECT count(*) FROM app.clients")
+          TX_COUNT=$(psql "$RESTORE_URL" -tAc "SELECT count(*) FROM app.transactions")
+          # Counts only, never rows — that's the whole point of the assertion
+          # below, not a reason to print the data itself.
+          echo "restored app.clients rows: $CLIENTS_COUNT"
+          echo "restored app.transactions rows: $TX_COUNT"
+
+          if [ "$CLIENTS_COUNT" -le 0 ] || [ "$TX_COUNT" -le 0 ]; then
+            echo "::error::Restore check failed — app.clients or app.transactions restored with zero rows. pg_restore exited 0 but that is not enough: a zero-row restore of the live money ledger means BACKUP_DATABASE_URL is pointed at the wrong database, or prod itself is empty. Check the secret and the pg_dump step's output above before assuming tonight's backup is good."
+            exit 1
+          fi
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gvos-db-backup-${{ env.STAMP }}
+          path: ${{ env.FILE }}
+          retention-days: 21
+          if-no-files-found: error
