@@ -61,17 +61,26 @@ describe("driftRule severity", () => {
   it("still SURFACES cents of drift, but as a warning, never a page", () => {
     // Production fired a CRITICAL alert over $0.08 of drift. Drift must never
     // pass silently — but rounding noise must not page like an incident.
-    const [n] = driftRule({ id: "r", driftRowCount: 8, totalAbsDriftCents: 8 });
+    const [n] = driftRule(
+      { id: "r", driftRowCount: 8, totalAbsDriftCents: 8 },
+      "2026-08-22",
+    );
     expect(n.severity).toBe("warning");
   });
 
   it("warns between the baseline and $100", () => {
-    const [n] = driftRule({ id: "r", driftRowCount: 8, totalAbsDriftCents: 800 });
+    const [n] = driftRule(
+      { id: "r", driftRowCount: 8, totalAbsDriftCents: 800 },
+      "2026-08-22",
+    );
     expect(n.severity).toBe("warning");
   });
 
   it("stays critical at $100 and above", () => {
-    const [n] = driftRule({ id: "r", driftRowCount: 3, totalAbsDriftCents: 10_000 });
+    const [n] = driftRule(
+      { id: "r", driftRowCount: 3, totalAbsDriftCents: 10_000 },
+      "2026-08-22",
+    );
     expect(n.severity).toBe("critical");
   });
 });
@@ -102,19 +111,43 @@ describe("bodRule title", () => {
 });
 
 describe("driftRule", () => {
-  it("fires only above the 5-cent baseline, keyed per run", () => {
-    expect(driftRule(null)).toEqual([]);
-    expect(driftRule({ id: "r1", driftRowCount: 5, totalAbsDriftCents: 5 })).toEqual(
-      [],
+  it("fires only above the 5-cent baseline, keyed per day", () => {
+    expect(driftRule(null, "2026-08-22")).toEqual([]);
+    expect(
+      driftRule({ id: "r1", driftRowCount: 5, totalAbsDriftCents: 5 }, "2026-08-22"),
+    ).toEqual([]);
+    const out = driftRule(
+      { id: "r2", driftRowCount: 6, totalAbsDriftCents: 105 },
+      "2026-08-22",
     );
-    const out = driftRule({ id: "r2", driftRowCount: 6, totalAbsDriftCents: 105 });
     expect(out[0]).toMatchObject({
       kind: "sheet_drift",
       // $1.05 surfaces as a warning; critical is reserved for >= $100.
       severity: "warning",
-      dedupeKey: "drift:r2",
+      dedupeKey: "drift:2026-08-22",
     });
     expect(out[0].title).toContain("$1.05");
+  });
+
+  it("dedupes to one alert per day regardless of which run or amount fired it", () => {
+    // Same day, two different runs with two different drift amounts — this is
+    // the every-30-minutes cron scenario. The key must not move.
+    const a = driftRule(
+      { id: "run-a", driftRowCount: 6, totalAbsDriftCents: 15_529 },
+      "2026-08-22",
+    )[0].dedupeKey;
+    const b = driftRule(
+      { id: "run-b", driftRowCount: 6, totalAbsDriftCents: 15_480 },
+      "2026-08-22",
+    )[0].dedupeKey;
+    expect(a).toBe(b);
+
+    // A new day gets its own alert.
+    const c = driftRule(
+      { id: "run-c", driftRowCount: 6, totalAbsDriftCents: 15_480 },
+      "2026-08-23",
+    )[0].dedupeKey;
+    expect(c).not.toBe(b);
   });
 });
 
@@ -391,22 +424,37 @@ describe("spineDriftRule", () => {
     { scope: "the-vault", name: "The Vault", month: "2026-08", cashDeltaCents: 0 },
   ];
 
-  it("raises one critical alert per drifting book, with the exact delta", () => {
+  it("raises one critical alert per drifting book, with the exact delta in the title", () => {
     const out = spineDriftRule(rows);
     expect(out).toHaveLength(2); // the zero-delta row is skipped
     expect(out[0]).toMatchObject({
       kind: "spine_drift",
       severity: "critical",
       title: "The Grid 2026-08: sources off by $500.00",
-      dedupeKey: "spine-drift:the-grid:2026-08:50000",
+      dedupeKey: "spine-drift:the-grid:2026-08",
     });
     expect(out[1].title).toContain("$125.00"); // abs value of the agency delta
   });
 
-  it("keys the alert by the delta so a changed drift re-fires and green clears it", () => {
+  it("keys the alert by scope + month only, so the SAME book+period stays one alert no matter how the delta moves cycle to cycle", () => {
+    // Production symptom this guards against: a reconciler cron runs every 30
+    // minutes, and the drift amount wobbles as new transactions land — with
+    // the old delta-in-key design that meant a fresh "critical" row every
+    // single evaluation for the same drifting book, all fanned to Discord.
     expect(spineDriftRule([])).toEqual([]);
     const a = spineDriftRule([rows[0]])[0].dedupeKey;
     const b = spineDriftRule([{ ...rows[0], cashDeltaCents: 60_000 }])[0].dedupeKey;
-    expect(a).not.toBe(b);
+    const c = spineDriftRule([{ ...rows[0], cashDeltaCents: 1 }])[0].dedupeKey;
+    expect(a).toBe(b);
+    expect(a).toBe(c);
+  });
+
+  it("still changes the key across a different month or a different book", () => {
+    const base = spineDriftRule([rows[0]])[0].dedupeKey;
+    const nextMonth = spineDriftRule([{ ...rows[0], month: "2026-09" }])[0].dedupeKey;
+    const otherBook = spineDriftRule([{ ...rows[0], scope: "the-vault-live" }])[0]
+      .dedupeKey;
+    expect(nextMonth).not.toBe(base);
+    expect(otherBook).not.toBe(base);
   });
 });

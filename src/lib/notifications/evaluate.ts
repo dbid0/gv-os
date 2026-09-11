@@ -244,7 +244,7 @@ export async function evaluateNotifications(): Promise<{
   );
 
   const candidates = [
-    ...driftRule(latestRun ?? null),
+    ...driftRule(latestRun ?? null, todayKey),
     ...spineDriftRule(driftRows),
     ...signedDocRule(docs),
     ...bodRule(bodOffers, now, todayKey),
