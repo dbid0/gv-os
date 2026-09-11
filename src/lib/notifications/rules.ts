@@ -326,3 +326,70 @@ export function callReviewRule(calls: CallReviewState[]): Candidate[] {
     dedupeKey: `call-review:${c.recordingId}`,
   }));
 }
+
+/** A failed charge with the admin disposition still "open" — see recovery.ts. */
+export interface PaymentFailureState {
+  /** payment_events row id — the stable dedupe target. */
+  id: string;
+  clientId: string | null;
+  clientName: string | null;
+  /** Attempted-and-declined cents. NOT revenue, NOT cash — see recovery.ts. */
+  amountCents: number;
+  provider: string;
+  failureMessage: string | null;
+}
+
+/**
+ * A newly-seen unrecovered failed charge (v2 §5 + payment recovery). Callers
+ * pass only rows the recovery inbox classifies as "open" — untouched, not
+ * being chased, not written off (see `effectiveRecoveryStatus`) — so this
+ * never re-fires once a human has set a disposition on the charge, and never
+ * fires again once the same customer succeeds later.
+ *
+ * One alert per charge, keyed on the payment_events id: a charge that stays
+ * open for days of 30-minute evaluations still gets exactly one alert, the
+ * first time it's seen.
+ */
+export function paymentFailureRule(rows: PaymentFailureState[]): Candidate[] {
+  return rows.map((r) => ({
+    kind: "payment_failed",
+    severity: "critical" as const,
+    title: `${r.clientName ?? "Unattributed"}: failed charge — $${(r.amountCents / 100).toFixed(2)}`,
+    body: r.failureMessage
+      ? `${r.provider}: ${r.failureMessage}. Open the recovery inbox.`
+      : `${r.provider} charge declined and not yet chased. Open the recovery inbox.`,
+    clientId: r.clientId,
+    dedupeKey: `payment-failed:${r.id}`,
+  }));
+}
+
+/** One application still uncontacted past the 5-minute speed-to-lead SLA. */
+export interface SpeedToLeadBreachState {
+  /** clientId + email + submit time — stable enough to key one alert per
+   * application without needing the applications table's own uuid. */
+  applicationKey: string;
+  clientId: string | null;
+  clientName: string | null;
+  email: string;
+  name: string | null;
+  /** Seconds waited with no contact, already past the SLA right now. */
+  waitingSec: number;
+}
+
+/**
+ * A live speed-to-lead breach — GV's 5-minute standard (funnel/speed-to-lead.ts)
+ * blown with no contact yet. One alert per application, fired the first time
+ * it's caught overdue; `waitingSec` keeps climbing across later 30-minute
+ * evaluations but the alert itself never repeats — it's already sitting in
+ * /notifications for a manager to act on.
+ */
+export function speedToLeadBreachRule(rows: SpeedToLeadBreachState[]): Candidate[] {
+  return rows.map((r) => ({
+    kind: "speed_to_lead_breach",
+    severity: "warning" as const,
+    title: `${r.clientName ?? "An offer"}: ${r.name?.trim() || r.email} — past the 5-minute standard`,
+    body: `No contact yet, ${Math.round(r.waitingSec / 60)} minutes and counting since the application landed.`,
+    clientId: r.clientId,
+    dedupeKey: `speed-to-lead:${r.applicationKey}`,
+  }));
+}

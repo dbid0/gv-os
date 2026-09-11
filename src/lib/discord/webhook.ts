@@ -12,7 +12,11 @@ import type { DiscordMessage } from "@/lib/discord/embed";
  * The agency Discord sync sender. The webhook URL lives SEALED in the
  * integrations vault under the `discord` provider (Settings → Integrations →
  * Discord), exactly like the Google credential — the plaintext never leaves
- * this module. Everything is manual/triggered; nothing here runs on a schedule.
+ * this module. The snapshot/digest sends from Settings are manual, a person
+ * clicking a button. Fired notifications (evaluate.ts) are the one automatic
+ * user: they post from inside the existing 30-minute integration-sync
+ * pull — no separate schedule — and soft-fail if no webhook is connected,
+ * since a missing Discord credential must never block the in-app alert.
  */
 
 const DISCORD_WEBHOOK_RE =
