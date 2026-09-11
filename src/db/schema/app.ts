@@ -1984,3 +1984,41 @@ export const clientColumnMap = appSchema.table(
     index("client_column_map_client_idx").on(table.clientId),
   ],
 );
+
+/**
+ * The UTM link registry — every public link GV has ever generated, born
+ * compliant with the standard (lib/marketing/utm.ts): lowercase, dashed,
+ * all four params present. A link is written here the moment it's generated,
+ * never as a separate "record it" step, so the registry is never behind what
+ * actually got pasted into a bio or a description.
+ *
+ * `destinationUrl` is what was typed in (the bare funnel link);
+ * `assembledUrl` is the full generated link — stored rather than re-derived
+ * so the registry stays a record of what was actually issued even if the
+ * builder's assembly logic changes later. The four `utm*` columns are
+ * denormalized out of `assembledUrl` so the table can be filtered/grouped by
+ * source, medium, campaign, or content without re-parsing a URL.
+ */
+export const utmLinks = appSchema.table(
+  "utm_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    destinationUrl: text("destination_url").notNull(),
+    utmSource: text("utm_source").notNull(),
+    utmMedium: text("utm_medium").notNull(),
+    utmCampaign: text("utm_campaign").notNull(),
+    utmContent: text("utm_content").notNull(),
+    assembledUrl: text("assembled_url").notNull(),
+    /** Email of who generated it — null only for rows written before this
+     * column existed or by a non-interactive path. */
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("utm_links_client_idx").on(table.clientId),
+    index("utm_links_created_idx").on(table.createdAt),
+  ],
+);
