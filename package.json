@@ -32,6 +32,7 @@
     "@blocknote/xl-multi-column": "^0.54.0",
     "@mantine/core": "^9.5.2",
     "@mantine/hooks": "^9.5.2",
+    "@sentry/nextjs": "^10.74.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "class-variance-authority": "^0.7.1",
