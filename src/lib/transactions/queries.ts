@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, desc, eq, gte, lte, type SQL } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -14,7 +15,7 @@ export interface BacklogFilters {
   to?: string;
 }
 
-export async function listTransactions(filters: BacklogFilters) {
+async function loadTransactions(filters: BacklogFilters) {
   const db = getDb();
   const where: SQL[] = [];
   if (filters.layer) where.push(eq(transactions.layer, filters.layer));
@@ -48,4 +49,34 @@ export async function listTransactions(filters: BacklogFilters) {
   // Direction is respected by `summarizeBacklog`, not here: money in and money
   // out are different directions and adding them is not a total of anything.
   return { rows, totals: summarizeBacklog(rows) };
+}
+
+// Per-request dedupe: heavy pages (dashboard, brief, accounting, sales) can
+// end up calling the same filter combination more than once per render via
+// independent loaders. React's cache() keys on argument identity though, so
+// caching this function directly on the `filters` OBJECT would not work —
+// every call site builds a fresh object literal (`listTransactions({})`),
+// so two calls with an identical *shape* would still be a cache miss and
+// re-run the query. Passing the four primitive fields instead lets cache()
+// correctly recognize identical filter combinations across call sites.
+//
+// This is request-scoped only (Next.js resets React's cache() per request),
+// so it can never serve a stale figure across requests — it only avoids
+// re-scanning the backlog more than once within the same render.
+const loadTransactionsCached = cache(
+  (
+    layer: BacklogFilters["layer"],
+    direction: BacklogFilters["direction"],
+    from: BacklogFilters["from"],
+    to: BacklogFilters["to"],
+  ) => loadTransactions({ layer, direction, from, to }),
+);
+
+export async function listTransactions(filters: BacklogFilters) {
+  return loadTransactionsCached(
+    filters.layer,
+    filters.direction,
+    filters.from,
+    filters.to,
+  );
 }
