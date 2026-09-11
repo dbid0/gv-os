@@ -20,6 +20,10 @@ export function notificationHref(kind: string, clientSlug: string | null): strin
     case "eod_missing":
     case "bod_missing":
       return "/sales/eod";
+    case "payment_failed":
+      return "/accounting/recovery";
+    case "speed_to_lead_breach":
+      return clientSlug ? `/w/${clientSlug}/crm` : "/sales/cockpit";
     default:
       return "/notifications";
   }

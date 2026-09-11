@@ -5,14 +5,18 @@ import {
   bodRule,
   driftRule,
   eodReminderRule,
+  paymentFailureRule,
   repWellbeingRule,
   signedDocRule,
+  speedToLeadBreachRule,
   spineDriftRule,
   stalenessRule,
   syncFailureRule,
   type CheckInComplianceState,
   type IntegrationState,
+  type PaymentFailureState,
   type RepWellbeingState,
+  type SpeedToLeadBreachState,
   type SpineDriftRow,
 } from "@/lib/notifications/rules";
 
@@ -286,7 +290,97 @@ describe("notificationHref", () => {
     expect(notificationHref("rep_wellbeing", null)).toBe("/sales/eod");
     expect(notificationHref("eod_missing", null)).toBe("/sales/eod");
     expect(notificationHref("bod_missing", null)).toBe("/sales/eod");
+    expect(notificationHref("payment_failed", null)).toBe("/accounting/recovery");
+    expect(notificationHref("speed_to_lead_breach", "the-grid")).toBe(
+      "/w/the-grid/crm",
+    );
+    expect(notificationHref("speed_to_lead_breach", null)).toBe("/sales/cockpit");
     expect(notificationHref("unknown_kind", null)).toBe("/notifications");
+  });
+});
+
+describe("paymentFailureRule", () => {
+  const failure = (o: Partial<PaymentFailureState>): PaymentFailureState => ({
+    id: "pe1",
+    clientId: "grid",
+    clientName: "The Grid",
+    amountCents: 4_999,
+    provider: "stripe",
+    failureMessage: "card_declined",
+    ...o,
+  });
+
+  it("fires one critical alert per open failed charge, with the exact amount", () => {
+    const out = paymentFailureRule([failure({})]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      kind: "payment_failed",
+      severity: "critical",
+      clientId: "grid",
+      dedupeKey: "payment-failed:pe1",
+    });
+    expect(out[0].title).toBe("The Grid: failed charge — $49.99");
+    expect(out[0].body).toBe("stripe: card_declined. Open the recovery inbox.");
+  });
+
+  it("falls back to a generic body when there is no failure message", () => {
+    const out = paymentFailureRule([failure({ failureMessage: null })]);
+    expect(out[0].body).toBe(
+      "stripe charge declined and not yet chased. Open the recovery inbox.",
+    );
+  });
+
+  it("names unattributed charges rather than dropping them", () => {
+    const out = paymentFailureRule([failure({ clientId: null, clientName: null })]);
+    expect(out[0].title).toBe("Unattributed: failed charge — $49.99");
+    expect(out[0].clientId).toBeNull();
+  });
+
+  it("dedupes on the payment_events id, so the same charge never double-fires", () => {
+    const a = paymentFailureRule([failure({ id: "pe1" })])[0].dedupeKey;
+    const b = paymentFailureRule([failure({ id: "pe1", amountCents: 4_999 })])[0]
+      .dedupeKey;
+    expect(a).toBe(b);
+  });
+});
+
+describe("speedToLeadBreachRule", () => {
+  const breach = (o: Partial<SpeedToLeadBreachState>): SpeedToLeadBreachState => ({
+    applicationKey: "grid:lead@example.com:1700000000000",
+    clientId: "grid",
+    clientName: "The Grid",
+    email: "lead@example.com",
+    name: "Jamie Lead",
+    waitingSec: 900,
+    ...o,
+  });
+
+  it("fires one warning per live breach, naming who and how late", () => {
+    const out = speedToLeadBreachRule([breach({})]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      kind: "speed_to_lead_breach",
+      severity: "warning",
+      clientId: "grid",
+      dedupeKey: "speed-to-lead:grid:lead@example.com:1700000000000",
+    });
+    expect(out[0].title).toBe("The Grid: Jamie Lead — past the 5-minute standard");
+    expect(out[0].body).toBe(
+      "No contact yet, 15 minutes and counting since the application landed.",
+    );
+  });
+
+  it("falls back to the email when there is no name", () => {
+    const out = speedToLeadBreachRule([breach({ name: null })]);
+    expect(out[0].title).toBe(
+      "The Grid: lead@example.com — past the 5-minute standard",
+    );
+  });
+
+  it("dedupes per application, not per evaluation — waitingSec climbing doesn't change the key", () => {
+    const a = speedToLeadBreachRule([breach({ waitingSec: 900 })])[0].dedupeKey;
+    const b = speedToLeadBreachRule([breach({ waitingSec: 5_400 })])[0].dedupeKey;
+    expect(a).toBe(b);
   });
 });
 

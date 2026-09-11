@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   GV_BRAND_COLOR,
   buildAgencySnapshotEmbed,
+  buildAlertBatchMessage,
   buildTestMessage,
   usdWhole,
+  type AlertNotification,
 } from "@/lib/discord/embed";
 
 describe("usdWhole", () => {
@@ -60,5 +62,51 @@ describe("buildTestMessage", () => {
     const msg = buildTestMessage();
     expect(msg.content).toContain("connected");
     expect(msg.embeds).toBeUndefined();
+  });
+});
+
+describe("buildAlertBatchMessage", () => {
+  const alert = (o: Partial<AlertNotification>): AlertNotification => ({
+    severity: "warning",
+    title: "Something needs a look",
+    body: "The detail line.",
+    clientName: "The Grid",
+    ...o,
+  });
+
+  it("renders one embed per alert, colored and emoji'd by severity", () => {
+    const msg = buildAlertBatchMessage([
+      alert({ severity: "critical", title: "Failed charge" }),
+      alert({ severity: "warning", title: "Late lead" }),
+    ]);
+    expect(msg.content).toBe("**2 new alerts — GV OS**");
+    expect(msg.embeds).toHaveLength(2);
+    expect(msg.embeds![0]).toMatchObject({
+      title: "🔴 Failed charge",
+      description: "The detail line.",
+      color: 0xe5484d,
+      footer: { text: "The Grid" },
+    });
+    expect(msg.embeds![1]).toMatchObject({ title: "🟠 Late lead", color: 0xf5a623 });
+  });
+
+  it("singular content line for exactly one alert", () => {
+    const msg = buildAlertBatchMessage([alert({})]);
+    expect(msg.content).toBe("**New alert — GV OS**");
+  });
+
+  it("falls back to 'GV OS' as the footer when there's no single client", () => {
+    const msg = buildAlertBatchMessage([alert({ clientName: null })]);
+    expect(msg.embeds![0].footer).toEqual({ text: "GV OS" });
+  });
+
+  it("caps at 10 embeds and folds the rest into one overflow line", () => {
+    const alerts = Array.from({ length: 13 }, (_, i) => alert({ title: `Alert ${i}` }));
+    const msg = buildAlertBatchMessage(alerts);
+    expect(msg.embeds).toHaveLength(11);
+    expect(msg.embeds![10]).toMatchObject({
+      description: "+ 3 more — open /notifications in GV OS.",
+      color: GV_BRAND_COLOR,
+    });
   });
 });

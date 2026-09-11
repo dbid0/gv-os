@@ -15,20 +15,29 @@ import {
 import { reviewQueue } from "@/lib/calls/review-queue";
 import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
+import { liveSpeedToLead } from "@/lib/crm/speed-to-lead-live";
+import { buildAlertBatchMessage, type AlertNotification } from "@/lib/discord/embed";
+import { postToAgencyDiscord } from "@/lib/discord/webhook";
 import {
   bodReminderRule,
   callReviewRule,
   bodRule,
   driftRule,
   eodReminderRule,
+  paymentFailureRule,
   repWellbeingRule,
   signedDocRule,
+  speedToLeadBreachRule,
   spineDriftRule,
+  type Candidate,
+  type PaymentFailureState,
   type RepWellbeingState,
+  type SpeedToLeadBreachState,
   type SpineDriftRow,
 } from "@/lib/notifications/rules";
 import { getAgencyReconciliation } from "@/lib/accounting/reconcile-agency-query";
 import { getSpineReconciliation } from "@/lib/accounting/reconcile-spine-query";
+import { listRecoveryRows } from "@/lib/payments/recovery-store";
 import { getEodCompliance } from "@/lib/sales/queries";
 import { loadRoster } from "@/lib/roster-server";
 import { homeRangeRows, rangeBounds } from "@/lib/transactions/homepage";
@@ -75,7 +84,14 @@ export async function evaluateNotifications(): Promise<{
       .from(signedDocs)
       .orderBy(desc(signedDocs.createdAt))
       .limit(100),
-    db.select({ id: clients.id, slug: clients.slug, name: clients.name }).from(clients),
+    db
+      .select({
+        id: clients.id,
+        slug: clients.slug,
+        name: clients.name,
+        status: clients.status,
+      })
+      .from(clients),
     db
       .select({
         clientId: offerSettings.clientId,
@@ -177,9 +193,55 @@ export async function evaluateNotifications(): Promise<{
   // Sync-failure + staleness alerts are OFF until integrations carry real
   // traffic (Daniel: the placeholder "Kit sync failing" note is meaningless
   // noise). Re-enable both — with human-readable copy — once real keys land.
-  // Calls the read says need a manager. Read here rather than in the rule so
-  // the rule itself stays pure and testable.
-  const reviews = await reviewQueue({ limit: 50 });
+  // Looked up once for the Discord delivery step further down, so a fired
+  // alert's clientId can be turned back into a name without a second query.
+  const clientById = new Map(clientRows.map((r) => [r.id, r]));
+
+  // Calls the read says need a manager, the failed-payment recovery inbox,
+  // and live speed-to-lead breaches — read here rather than in the rules so
+  // the rules themselves stay pure and testable.
+  const [reviews, recoveryRows, stlByClient] = await Promise.all([
+    reviewQueue({ limit: 50 }),
+    // Failed-payment recovery inbox — the "open" rows are untouched failures
+    // (see recovery.ts: chasing/written_off/recovered are all human decisions
+    // already made, so they never page again).
+    listRecoveryRows(),
+    // Speed-to-lead, LIVE, per active offer. Archived clients are skipped —
+    // they never carry a real breach worth paging on. `liveSpeedToLead`
+    // itself short-circuits to `connected: false` (one cheap query) for any
+    // offer that doesn't have BOTH Close and Typeform wired, so this stays
+    // affordable even as the roster grows.
+    Promise.all(
+      clientRows
+        .filter((c) => c.status === "active")
+        .map(async (c) => ({ client: c, live: await liveSpeedToLead(c.id) })),
+    ),
+  ]);
+
+  const paymentFailures: PaymentFailureState[] = recoveryRows
+    .filter((r) => r.effectiveStatus === "open")
+    .map((r) => ({
+      id: r.id,
+      clientId: r.clientId,
+      clientName: r.clientName,
+      amountCents: r.amountCents,
+      provider: r.provider,
+      failureMessage: r.failureMessage,
+    }));
+
+  const speedToLeadBreaches: SpeedToLeadBreachState[] = stlByClient.flatMap(
+    ({ client, live }) =>
+      live.connected
+        ? live.liveBreaches.map((b) => ({
+            applicationKey: `${client.id}:${b.email}:${b.submittedAtMs}`,
+            clientId: client.id,
+            clientName: client.name,
+            email: b.email,
+            name: b.name,
+            waitingSec: b.waitingSec,
+          }))
+        : [],
+  );
 
   const candidates = [
     ...driftRule(latestRun ?? null),
@@ -198,16 +260,41 @@ export async function evaluateNotifications(): Promise<{
         priority: r.decision.priority,
       })),
     ),
+    ...paymentFailureRule(paymentFailures),
+    ...speedToLeadBreachRule(speedToLeadBreaches),
   ];
 
-  let created = 0;
+  const created: Candidate[] = [];
   for (const c of candidates) {
     const inserted = await db
       .insert(notifications)
       .values(c)
       .onConflictDoNothing({ target: [notifications.dedupeKey] })
       .returning({ id: notifications.id });
-    if (inserted.length > 0) created += 1;
+    if (inserted.length > 0) created.push(c);
   }
-  return { candidates: candidates.length, created };
+
+  // Deliver the newly-fired alerts to the agency Discord — warning/critical
+  // only, batched into one post. Info-level rows (a signed agreement, the
+  // BOD digest) stay in-app; they're good news or routine, not a page.
+  // Soft-fail: no connected Discord credential, or a Discord outage, must
+  // never undo the inserts above or fail the sync that called this — the
+  // alerts are already safely in /notifications either way.
+  const pageable = created.filter((c) => c.severity !== "info");
+  if (pageable.length > 0) {
+    try {
+      const alerts: AlertNotification[] = pageable.map((c) => ({
+        severity: c.severity,
+        title: c.title,
+        body: c.body,
+        clientName: c.clientId ? (clientById.get(c.clientId)?.name ?? null) : null,
+      }));
+      await postToAgencyDiscord(buildAlertBatchMessage(alerts));
+    } catch {
+      // No connected webhook yet, or Discord rejected the post — never lets
+      // a delivery failure look like an evaluation failure.
+    }
+  }
+
+  return { candidates: candidates.length, created: created.length };
 }
