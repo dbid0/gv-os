@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
-import { Kanban, PhoneOff } from "lucide-react";
+import { AlertTriangle, Kanban, PhoneOff } from "lucide-react";
 import { notFound } from "next/navigation";
 import { and, desc, eq, gte } from "drizzle-orm";
 
@@ -19,6 +19,7 @@ import {
   integrations,
 } from "@/db/schema/app";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import { DISCONNECTED_LIVE_STL, liveSpeedToLead } from "@/lib/crm/speed-to-lead-live";
 import { ActivityTable } from "@/components/tracking/activity-table";
 import {
   aggregateActivity,
@@ -69,6 +70,7 @@ export default async function WorkspaceCrmPage({
   const clientId = row?.id ?? null;
   const now = new Date();
   const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const portalView = await isPortalView();
 
   const [connection, activity, apps] = await Promise.all([
     clientId
@@ -251,6 +253,11 @@ export default async function WorkspaceCrmPage({
       .map((c) => ({ email: c.leadEmail, occurredAtMs: c.occurredAt!.getTime() })),
   );
 
+  // Speed to lead, LIVE — which specific application is late RIGHT NOW.
+  // Only meaningful with Typeform AND Close both connected (checked inside);
+  // otherwise every number here reads "—", never a fabricated zero.
+  const stlLive = clientId ? await liveSpeedToLead(clientId) : DISCONNECTED_LIVE_STL;
+
   if (!connected) {
     return (
       <div className="space-y-6">
@@ -292,7 +299,7 @@ export default async function WorkspaceCrmPage({
 
       {/* The pre-call queue with the confirm action — GV ops surface, never
           the client portal. */}
-      {clientId && !(await isPortalView()) && (
+      {clientId && !portalView && (
         <UpcomingCalls clientId={clientId} slug={slug} now={now} />
       )}
 
@@ -333,7 +340,7 @@ export default async function WorkspaceCrmPage({
         </section>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           label="Speed to lead — median"
           value={stl.medianMinutes === null ? "—" : `${stl.medianMinutes}m`}
@@ -347,6 +354,19 @@ export default async function WorkspaceCrmPage({
           hint="the 5-minute standard"
           accent={accent}
           tone={stl.slaPct !== null && stl.slaPct >= 0.8 ? "success" : "warning"}
+        />
+        <StatCard
+          label="Waiting past 5 min now"
+          value={stlLive.connected ? String(stlLive.summary.overdueNow) : "—"}
+          hint={
+            stlLive.connected
+              ? "live breaches — no outbound touch yet"
+              : "needs Typeform + Close connected"
+          }
+          accent={accent}
+          tone={
+            stlLive.connected && stlLive.summary.overdueNow > 0 ? "warning" : "default"
+          }
         />
         <StatCard
           label="Leads responded"
@@ -404,6 +424,95 @@ export default async function WorkspaceCrmPage({
           )}
         </Panel>
       </div>
+
+      {/* Which SPECIFIC application is late right now, not just the window's
+          average — the operational cut, so GV ops only (same precedent as
+          UpcomingCalls above: an action list, never the client portal). */}
+      {!portalView && !stlLive.connected && (
+        <Panel title="Speed to lead — live">
+          <p className="text-faint py-6 text-center text-sm">
+            Connect Typeform and Close to see which applications are waiting on first
+            contact right now.
+          </p>
+        </Panel>
+      )}
+      {!portalView && stlLive.connected && (
+        <Panel
+          title="Speed to lead — live"
+          aside={
+            <span className="text-faint text-xs">
+              calls, texts and emails · outbound only
+            </span>
+          }
+        >
+          {stlLive.liveBreaches.length === 0 && stlLive.recentBreaches.length === 0 ? (
+            <p className="text-faint py-6 text-center text-sm">
+              Nothing waiting past the 5-minute standard right now.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {stlLive.liveBreaches.length > 0 && (
+                <div>
+                  <p className="text-warning mb-2 flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                    <AlertTriangle className="size-3.5" />
+                    Waiting on first contact ({stlLive.liveBreaches.length})
+                  </p>
+                  <div className="divide-y">
+                    {stlLive.liveBreaches.map((b) => (
+                      <div
+                        key={b.email}
+                        className="flex items-center justify-between gap-3 py-2.5"
+                      >
+                        <Link
+                          href={`/w/${slug}/leads/${encodeURIComponent(b.email)}`}
+                          className="hover:text-brand min-w-0 truncate text-sm font-medium"
+                        >
+                          {b.name?.trim() || b.email}
+                        </Link>
+                        <span className="text-warning shrink-0 text-xs font-semibold tabular-nums">
+                          {Math.round(b.waitingSec / 60)}m overdue
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {stlLive.recentBreaches.length > 0 && (
+                <div>
+                  <p className="text-faint mb-2 text-[11px] font-medium tracking-wider uppercase">
+                    Recently missed the 5-minute window
+                  </p>
+                  <div className="divide-y">
+                    {stlLive.recentBreaches.map((b) => (
+                      <div
+                        key={b.email}
+                        className="flex items-center justify-between gap-3 py-2.5"
+                      >
+                        <Link
+                          href={`/w/${slug}/leads/${encodeURIComponent(b.email)}`}
+                          className="hover:text-brand min-w-0 truncate text-sm font-medium"
+                        >
+                          {b.name?.trim() || b.email}
+                        </Link>
+                        <span className="text-faint shrink-0 text-xs tabular-nums">
+                          {Math.round(b.timeToContactSec / 60)}m to first contact ·{" "}
+                          {new Date(b.submittedAtMs).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            timeZone: "America/Chicago",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Panel>
+      )}
 
       <Panel title="Recent activity">
         {activity.length === 0 ? (

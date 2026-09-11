@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifySpeedToLead,
   computeSpeedToLeadByRep,
   computeSpeedToLead,
   computeSpeedToLeadByClient,
+  isSpeedToLeadOverdue,
+  SPEED_TO_LEAD_SLA_SECONDS,
+  summarizeSpeedToLead,
   type SpeedToLeadApp,
   type SpeedToLeadCall,
+  type SpeedToLeadClassification,
   type SpeedToLeadClientApp,
   type SpeedToLeadClientCall,
 } from "@/lib/funnel/speed-to-lead";
@@ -264,5 +269,180 @@ describe("computeSpeedToLeadByRep", () => {
     const overall = computeSpeedToLead(apps, calls);
     const byRep = computeSpeedToLeadByRep(apps, calls);
     expect(byRep.reduce((s, r) => s + r.matched, 0)).toBe(overall.matched);
+  });
+});
+
+describe("classifySpeedToLead", () => {
+  const NOW = T0 + min(60); // an hour after T0, used as "now" across this block
+
+  it("returns nothing for an empty application list (no-application edge case)", () => {
+    expect(classifySpeedToLead([], [call("a@x.com", 3)], NOW)).toEqual([]);
+  });
+
+  it("classifies WITHIN when contact lands at or inside the 5-minute SLA", () => {
+    const [row] = classifySpeedToLead([app("a@x.com", 0)], [call("a@x.com", 5)], NOW);
+    expect(row.status).toBe("within");
+    expect(row.timeToContactSec).toBe(5 * 60);
+    expect(row.waitingSec).toBeNull();
+  });
+
+  it("the SLA boundary itself (exactly 300s) counts as WITHIN, not breached", () => {
+    const app0 = app("a@x.com", 0);
+    const exactContact = {
+      email: "a@x.com",
+      occurredAtMs: T0 + SPEED_TO_LEAD_SLA_SECONDS * 1000,
+    };
+    const [row] = classifySpeedToLead([app0], [exactContact], NOW);
+    expect(row.status).toBe("within");
+    expect(row.timeToContactSec).toBe(SPEED_TO_LEAD_SLA_SECONDS);
+  });
+
+  it("classifies BREACHED when contact lands after the 5-minute SLA", () => {
+    const [row] = classifySpeedToLead([app("a@x.com", 0)], [call("a@x.com", 12)], NOW);
+    expect(row.status).toBe("breached");
+    expect(row.timeToContactSec).toBe(12 * 60);
+    expect(row.waitingSec).toBeNull();
+  });
+
+  it("classifies OPEN with no contact at all, and reports how long it has waited", () => {
+    const [row] = classifySpeedToLead(
+      [app("a@x.com", 0)],
+      [],
+      T0 + 90_000, // 90s after the application
+    );
+    expect(row.status).toBe("open");
+    expect(row.timeToContactSec).toBeNull();
+    expect(row.waitingSec).toBe(90);
+  });
+
+  it("an OPEN row not yet past the SLA is not an overdue breach", () => {
+    const [row] = classifySpeedToLead([app("a@x.com", 0)], [], T0 + 90_000);
+    expect(isSpeedToLeadOverdue(row)).toBe(false);
+  });
+
+  it("an OPEN row past the SLA IS a live breach — the overdue boundary is exclusive", () => {
+    const atExactly300 = classifySpeedToLead(
+      [app("a@x.com", 0)],
+      [],
+      T0 + SPEED_TO_LEAD_SLA_SECONDS * 1000,
+    )[0];
+    expect(isSpeedToLeadOverdue(atExactly300)).toBe(false); // exactly on the line: not yet overdue
+
+    const atOneSecondPast = classifySpeedToLead(
+      [app("a@x.com", 0)],
+      [],
+      T0 + SPEED_TO_LEAD_SLA_SECONDS * 1000 + 1000,
+    )[0];
+    expect(isSpeedToLeadOverdue(atOneSecondPast)).toBe(true);
+    expect(atOneSecondPast.waitingSec).toBe(SPEED_TO_LEAD_SLA_SECONDS + 1);
+  });
+
+  it("a contact logged BEFORE the application reads as no valid contact — OPEN, not within", () => {
+    // The only captured touch for this lead predates their application (e.g. a
+    // stale dial from a previous, unrelated application). It must not be read
+    // as a fast response to THIS application.
+    const [row] = classifySpeedToLead(
+      [app("a@x.com", 10)],
+      [call("a@x.com", 2)],
+      T0 + min(11),
+    );
+    expect(row.status).toBe("open");
+    expect(row.timeToContactSec).toBeNull();
+    expect(row.waitingSec).toBe(60); // 1 minute since the 10-minute-mark application
+  });
+
+  it("matches by phone when neither side carries an email", () => {
+    const [row] = classifySpeedToLead(
+      [{ email: null, phone: "5550102030", submittedAtMs: 0 }],
+      [{ email: null, phone: "5550102030", occurredAtMs: 90_000 }],
+      500_000,
+    );
+    expect(row.status).toBe("within");
+    expect(row.timeToContactSec).toBe(90);
+  });
+
+  it("resolves an aliased email before matching", () => {
+    const aliases = new Map([["alias@x.com", "canonical@x.com"]]);
+    const [row] = classifySpeedToLead(
+      [app("alias@x.com", 0)],
+      [call("canonical@x.com", 2)],
+      NOW,
+      aliases,
+    );
+    expect(row.status).toBe("within");
+  });
+
+  it("an application with neither email nor phone stays OPEN forever, but is echoed through", () => {
+    const [row] = classifySpeedToLead(
+      [{ email: null, phone: null, submittedAtMs: T0 }],
+      [call("a@x.com", 1)],
+      NOW,
+    );
+    expect(row.status).toBe("open");
+  });
+
+  it("echoes the application's name straight through for display", () => {
+    const [row] = classifySpeedToLead(
+      [{ email: "a@x.com", name: "Jane Lead", submittedAtMs: T0 }],
+      [],
+      NOW,
+    );
+    expect(row.name).toBe("Jane Lead");
+  });
+});
+
+describe("summarizeSpeedToLead", () => {
+  it("returns an honest empty shape for no rows", () => {
+    expect(summarizeSpeedToLead([])).toEqual({
+      dialableApps: 0,
+      within: 0,
+      breached: 0,
+      open: 0,
+      overdueNow: 0,
+      contactedSlaPct: null,
+      medianContactSec: null,
+    });
+  });
+
+  it("rolls up a mix of within / breached / open / overdue-open correctly", () => {
+    const rows = classifySpeedToLead(
+      [
+        app("within@x.com", 0), // contacted at 3m -> within
+        app("late@x.com", 0), // contacted at 20m -> breached
+        app("waiting-ontime@x.com", 29), // applied 1 min before "now" -> open, not overdue
+        app("waiting-overdue@x.com", 0), // applied 30 min before "now" -> open, overdue
+      ],
+      [call("within@x.com", 3), call("late@x.com", 20)],
+      T0 + min(30),
+    );
+    // Sanity: this fixture actually produced the four states we intend to assert on.
+    expect(rows.map((r) => r.status)).toEqual(["within", "breached", "open", "open"]);
+
+    const summary = summarizeSpeedToLead(rows);
+    expect(summary.dialableApps).toBe(4);
+    expect(summary.within).toBe(1);
+    expect(summary.breached).toBe(1);
+    expect(summary.open).toBe(2);
+    expect(summary.overdueNow).toBe(1); // only the 30-minute-waiting one is past the 5-min SLA
+    expect(summary.contactedSlaPct).toBeCloseTo(1 / 2); // 1 within of 2 contacted
+    expect(summary.medianContactSec).toBe((3 * 60 + 20 * 60) / 2);
+  });
+
+  it("excludes rows with neither email nor phone from every count", () => {
+    const rows: SpeedToLeadClassification[] = [
+      {
+        email: null,
+        phone: null,
+        name: null,
+        submittedAtMs: T0,
+        status: "open",
+        timeToContactSec: null,
+        waitingSec: 10_000,
+      },
+    ];
+    const summary = summarizeSpeedToLead(rows);
+    expect(summary.dialableApps).toBe(0);
+    expect(summary.open).toBe(0);
+    expect(summary.overdueNow).toBe(0);
   });
 });

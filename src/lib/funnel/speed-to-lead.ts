@@ -50,6 +50,16 @@ function median(sortedMs: number[]): number | null {
 
 const MINUTE = 60_000;
 
+/**
+ * GV's non-negotiable standard, named once. Every SLA comparison in this file
+ * — the aggregate `within5` bucket below and the per-application classifier
+ * further down — reads this constant rather than a repeated literal, so the
+ * "5 minutes" the sales org is judged on can never drift between the two.
+ */
+export const SPEED_TO_LEAD_SLA_MINUTES = 5;
+export const SPEED_TO_LEAD_SLA_MS = SPEED_TO_LEAD_SLA_MINUTES * MINUTE;
+export const SPEED_TO_LEAD_SLA_SECONDS = SPEED_TO_LEAD_SLA_MS / 1000;
+
 export function computeSpeedToLead(
   apps: SpeedToLeadApp[],
   calls: SpeedToLeadCall[],
@@ -96,10 +106,12 @@ export function computeSpeedToLead(
     dialableApps: dialable.length,
     matched,
     medianMinutes: medMs === null ? null : Math.round(medMs / MINUTE),
-    within5: durations.filter((d) => d <= 5 * MINUTE).length,
+    within5: durations.filter((d) => d <= SPEED_TO_LEAD_SLA_MS).length,
     within20: durations.filter((d) => d <= 20 * MINUTE).length,
     over60: durations.filter((d) => d > 60 * MINUTE).length,
-    slaPct: matched ? durations.filter((d) => d <= 5 * MINUTE).length / matched : null,
+    slaPct: matched
+      ? durations.filter((d) => d <= SPEED_TO_LEAD_SLA_MS).length / matched
+      : null,
   };
 }
 
@@ -255,7 +267,7 @@ export function computeSpeedToLeadByRep(
     .map(({ rep, durations }) => {
       durations.sort((x, y) => x - y);
       const med = median(durations);
-      const within5 = durations.filter((d) => d <= 5 * MINUTE).length;
+      const within5 = durations.filter((d) => d <= SPEED_TO_LEAD_SLA_MS).length;
       return {
         rep,
         matched: durations.length,
@@ -265,4 +277,180 @@ export function computeSpeedToLeadByRep(
       };
     })
     .sort((a, b) => b.matched - a.matched || a.rep.localeCompare(b.rep));
+}
+
+// ---------------------------------------------------------------------------
+// Live status — the operational cut. The stats above answer "how are we
+// doing over the window"; this answers "which specific application is late
+// RIGHT NOW", which is the question the floor needs answered every minute,
+// not once a day in a report.
+// ---------------------------------------------------------------------------
+
+export type SpeedToLeadStatus = "within" | "breached" | "open";
+
+export interface SpeedToLeadStatusApp extends SpeedToLeadApp {
+  /** Echoed straight through for display — not used for matching. */
+  name?: string | null;
+}
+
+/**
+ * One application's speed-to-lead outcome.
+ *
+ * `timeToContactSec` is set only for "within" / "breached" (a contact
+ * happened). `waitingSec` is set only for "open" (no valid contact yet) —
+ * the elapsed time since the application landed, which is how a caller knows
+ * whether an "open" row is merely on the clock (waitingSec still under the
+ * SLA) or a live breach in progress (waitingSec past it — see
+ * `isSpeedToLeadOverdue`).
+ */
+export interface SpeedToLeadClassification {
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+  submittedAtMs: number;
+  status: SpeedToLeadStatus;
+  timeToContactSec: number | null;
+  waitingSec: number | null;
+}
+
+/**
+ * Classify every application as within the 5-minute SLA, breached (contacted
+ * late), or still open (no contact at all yet). Pure and deterministic: the
+ * caller supplies `nowMs` rather than this function reading the clock, and
+ * `contacts` must already be reduced to OUTBOUND touches only (any channel —
+ * call, text, or email; see `isOutboundDirection` for how a raw Close row
+ * maps to that) — this function has no notion of channel or direction, only
+ * identity and time.
+ *
+ * Matching reuses the exact same earliest-contact-per-lead logic as
+ * `computeSpeedToLead` (email first, last-10-digit phone as the fallback; one
+ * alias hop) so the two can never disagree about who is or isn't matched. One
+ * known, accepted limitation carried over from that function: a lead's
+ * EARLIEST captured contact is what gets checked against each application, so
+ * if that earliest contact predates the application (see the
+ * contact-before-application test) the application reads as having no valid
+ * contact — a genuine LATER outbound touch to the same lead is not
+ * separately searched for. On the applications this actually governs (one
+ * application per lead inside the offer's own recent window) that trade-off
+ * matches production behavior rather than diverging from it.
+ *
+ * An application with neither an email nor a phone can never be matched to
+ * anything — it is returned with status "open" so it is never silently
+ * dropped, but it will never leave that state no matter how much time
+ * passes; callers that only want the ACTIONABLE open rows should also check
+ * that the row carries an identity.
+ */
+export function classifySpeedToLead(
+  apps: SpeedToLeadStatusApp[],
+  contacts: SpeedToLeadCall[],
+  nowMs: number,
+  aliases: AliasMap = EMPTY_ALIASES,
+): SpeedToLeadClassification[] {
+  const firstContactByEmail = new Map<string, number>();
+  const firstContactByPhone = new Map<string, number>();
+  const keep = (map: Map<string, number>, key: string, at: number) => {
+    const prev = map.get(key);
+    if (prev === undefined || at < prev) map.set(key, at);
+  };
+  for (const c of contacts) {
+    const e = resolveEmail(c.email, aliases);
+    if (e) keep(firstContactByEmail, e, c.occurredAtMs);
+    if (c.phone) keep(firstContactByPhone, c.phone, c.occurredAtMs);
+  }
+
+  return apps.map((a) => {
+    const email = resolveEmail(a.email, aliases);
+    const contact =
+      (email ? firstContactByEmail.get(email) : undefined) ??
+      (a.phone ? firstContactByPhone.get(a.phone) : undefined);
+
+    // A contact exists but landed before this application — not a real
+    // response to it (same rule `computeSpeedToLead` applies), so it counts
+    // as no valid contact rather than a negative time-to-contact.
+    const validContact = contact !== undefined && contact >= a.submittedAtMs;
+
+    if (validContact) {
+      const deltaSec = Math.round((contact - a.submittedAtMs) / 1000);
+      return {
+        email: a.email,
+        phone: a.phone ?? null,
+        name: a.name ?? null,
+        submittedAtMs: a.submittedAtMs,
+        status: (deltaSec <= SPEED_TO_LEAD_SLA_SECONDS
+          ? "within"
+          : "breached") as SpeedToLeadStatus,
+        timeToContactSec: deltaSec,
+        waitingSec: null,
+      };
+    }
+
+    return {
+      email: a.email,
+      phone: a.phone ?? null,
+      name: a.name ?? null,
+      submittedAtMs: a.submittedAtMs,
+      status: "open" as SpeedToLeadStatus,
+      timeToContactSec: null,
+      waitingSec: Math.max(0, Math.round((nowMs - a.submittedAtMs) / 1000)),
+    };
+  });
+}
+
+/**
+ * An "open" row is a LIVE BREACH once it has sat past the SLA with no
+ * contact — this is the number the floor should never see above zero for
+ * long. A row still inside the SLA window is "open" but not yet overdue, so
+ * it does not count here.
+ */
+export function isSpeedToLeadOverdue(row: SpeedToLeadClassification): boolean {
+  return row.status === "open" && (row.waitingSec ?? 0) > SPEED_TO_LEAD_SLA_SECONDS;
+}
+
+export interface SpeedToLeadLiveSummary {
+  /** Applications carrying an identity to match on (email or phone). */
+  dialableApps: number;
+  within: number;
+  breached: number;
+  /** No valid contact yet, regardless of whether the SLA has elapsed. */
+  open: number;
+  /** Of the open ones, how many are PAST the SLA right now. */
+  overdueNow: number;
+  /** within / (within + breached); null when neither has happened yet. */
+  contactedSlaPct: number | null;
+  /** Median seconds to first contact, across within + breached. null if none. */
+  medianContactSec: number | null;
+}
+
+/**
+ * Pure rollup over `classifySpeedToLead`'s output — the three numbers a
+ * dashboard card needs (contacted-in-SLA share, median time to contact, live
+ * breach count) plus the raw counts they're built from, so a caller never has
+ * to re-derive them by hand and risk the two disagreeing.
+ */
+export function summarizeSpeedToLead(
+  rows: SpeedToLeadClassification[],
+): SpeedToLeadLiveSummary {
+  const dialable = rows.filter((r) => r.email !== null || r.phone !== null);
+  const contacted = dialable.filter(
+    (r): r is SpeedToLeadClassification & { timeToContactSec: number } =>
+      r.timeToContactSec !== null,
+  );
+  const within = contacted.filter((r) => r.status === "within").length;
+  const breached = contacted.filter((r) => r.status === "breached").length;
+  const open = dialable.filter((r) => r.status === "open").length;
+  const overdueNow = dialable.filter(isSpeedToLeadOverdue).length;
+  const contactMs = contacted
+    .map((r) => r.timeToContactSec * 1000)
+    .sort((x, y) => x - y);
+  const medianMs = median(contactMs);
+
+  return {
+    dialableApps: dialable.length,
+    within,
+    breached,
+    open,
+    overdueNow,
+    contactedSlaPct: contacted.length ? within / contacted.length : null,
+    medianContactSec: medianMs === null ? null : medianMs / 1000,
+  };
 }

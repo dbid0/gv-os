@@ -72,6 +72,20 @@ export function emailFromCloseLead(payload: Record<string, unknown>): string | n
 }
 
 /**
+ * Whether a captured activity's `direction` means "we reached out" — Close
+ * does not use one vocabulary across activity types: calls and texts say
+ * outbound/inbound, but email activity says outgoing/incoming instead
+ * (confirmed against live captured data, not assumed). Speed-to-lead only
+ * ever counts an OUTBOUND touch as first contact, so every reader of
+ * `direction` for that purpose must go through this rather than comparing to
+ * `"outbound"` directly, or every outgoing email silently drops out of the
+ * measurement.
+ */
+export function isOutboundDirection(direction: string | null): boolean {
+  return direction === "outbound" || direction === "outgoing";
+}
+
+/**
  * A phone as a JOIN KEY: the last ten digits, or null when fewer survive.
  *
  * "+1 (555) 010-2030", "15550102030" and "555-010-2030" are one number typed
