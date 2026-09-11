@@ -1,17 +1,17 @@
 name: integration-sync
 
-# ONE scheduled workflow that both warms the app and pulls every connected
-# integration — deliberately merged. GitHub bills a private repo's Actions by
-# the run, ROUNDED UP to the minute, so two separate schedules (a warm ping +
-# a sync) cost two billed minutes for ~25 seconds of work. Folding them into a
-# single job pays one minute and warms the dashboard path as a side effect of
-# the sync it was already doing.
+# Pulls every connected integration on a schedule. This used to ALSO warm the
+# app in the same job — deliberately, because the repo was PRIVATE and GitHub
+# bills a private repo's Actions by the run, rounded up to the minute, so a
+# separate warm schedule cost a whole extra billed minute for a few seconds
+# of curl. That reason is gone: the repo is PUBLIC now, Actions minutes are
+# free/unlimited, so warming lives in its own workflow — `keep-warm.yml`, on
+# a much tighter */15 cadence than a 30-minute data pull should ever run at.
+# This workflow stays focused on the pulls only.
 #
 # Cadence is 30 minutes. Payments and new leads arrive in real time over their
 # own webhooks (Stripe, new-deals) — this poll is the backstop for everything
 # else (Close, Calendly, Typeform, Kit, Fathom), where 30 minutes is plenty.
-# At */30 this workflow costs ~1,440 billed minutes/month; the retired */5
-# keep-warm alone was ~8,640.
 #
 # Setup (one time): add a repo secret `SYNC_SECRET` matching the app's
 # SYNC_SECRET env. Until it's set, this workflow skips cleanly instead of erroring.
@@ -34,26 +34,6 @@ jobs:
     timeout-minutes: 8
     continue-on-error: true
     steps:
-      - name: Warm the function + DB pool + signed-in path
-        env:
-          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
-        run: |
-          # /api/health = process + DB socket; /dashboard = the middleware
-          # function (a 307 off the login wall). /api/warm runs the dashboard's
-          # own queries + caches + JWKS under the bearer secret — the actual
-          # path a signed-in visitor takes.
-          for path in /api/health /dashboard; do
-            code=$(curl -s -o /dev/null -m 40 --retry 2 --retry-delay 6 --retry-all-errors \
-              -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
-            echo "$path -> $code"
-          done
-          if [ -n "$SYNC_SECRET" ]; then
-            curl -s -m 40 --retry 2 --retry-delay 6 --retry-all-errors \
-              -H "Authorization: Bearer $SYNC_SECRET" \
-              "https://os.globalventures.app/api/warm" || true
-            echo ""
-          fi
-
       - name: Pull all connected integrations
         env:
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}

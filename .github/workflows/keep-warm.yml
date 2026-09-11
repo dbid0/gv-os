@@ -1,0 +1,61 @@
+name: keep-warm
+
+# A dedicated, frequent warm ping — split out of integration-sync so warming
+# isn't coupled to the data-pull cadence.
+#
+# This used to be folded into integration-sync (*/30) because the repo was
+# PRIVATE: GitHub bills a private repo's Actions by the run, rounded up to the
+# minute, and a separate */5 keep-warm alongside the sync was costing ~8,640
+# billed minutes/month for a few seconds of curl each run — expensive enough
+# that it got retired and folded into the sync's own warm step instead.
+#
+# The repo is PUBLIC now, so Actions minutes are free/unlimited — the cost
+# reason for throttling the warm is gone. This restores a standalone,
+# frequent cadence so a cold start (1-2s on the query-heavy routes) stays
+# rare, without adding load to the actual integration pulls.
+#
+# Cadence: every 15 minutes. Do NOT go below ~10 minutes — Vercel functions
+# and the DB pool stay warm on their own for several minutes after the last
+# hit, so anything much tighter than 10 minutes is diminishing returns for
+# more billed minutes and more load on the DB pool.
+#
+# Setup: same repo secret as integration-sync, `SYNC_SECRET`, matching the
+# app's SYNC_SECRET env. Until it's set, the /api/warm leg skips cleanly.
+#
+# continue-on-error: a scheduler is not a monitor — a flaky run must never
+# email the repo owner. Sync/app health is surfaced in-app, not here.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    continue-on-error: true
+    steps:
+      - name: Warm the function + DB pool + signed-in path
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: |
+          # /api/health = process + DB socket; /dashboard = the middleware
+          # function (a 307 off the login wall) — both public, no secret
+          # needed. /api/warm runs every heavy page's own read-only loaders
+          # (dashboard, reconciliation, sales/client reports, the daily
+          # brief) under the bearer secret — the actual paths a signed-in
+          # visitor takes.
+          for path in /api/health /dashboard; do
+            code=$(curl -s -o /dev/null -m 20 --retry 1 --retry-delay 3 --retry-all-errors \
+              -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
+            echo "$path -> $code"
+          done
+          if [ -z "$SYNC_SECRET" ]; then
+            echo "SYNC_SECRET repo secret not set — skipping /api/warm."
+            exit 0
+          fi
+          curl -s -m 30 --retry 1 --retry-delay 3 --retry-all-errors \
+            -H "Authorization: Bearer $SYNC_SECRET" \
+            -w "\n%{http_code}\n" \
+            "https://os.globalventures.app/api/warm" || true
