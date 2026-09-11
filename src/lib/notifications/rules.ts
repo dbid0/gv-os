@@ -71,8 +71,13 @@ export interface DriftRunState {
 
 const DRIFT_BASELINE_CENTS = 5;
 
-/** Sheet drift above the accepted 5-cent baseline. One alert per run. */
-export function driftRule(run: DriftRunState | null): Candidate[] {
+/**
+ * Sheet drift above the accepted 5-cent baseline. One alert per day: the key
+ * carries the day, not the run's own id, so a persisting drift doesn't spawn
+ * a fresh critical every time this runs — same idea as `stalenessRule` /
+ * `bodRule` below. The amount can move between evaluations; the key can't.
+ */
+export function driftRule(run: DriftRunState | null, todayKey: string): Candidate[] {
   if (!run || run.totalAbsDriftCents <= DRIFT_BASELINE_CENTS) return [];
   return [
     {
@@ -83,7 +88,7 @@ export function driftRule(run: DriftRunState | null): Candidate[] {
       title: `Sheet drift: ${run.driftRowCount} rows, $${(run.totalAbsDriftCents / 100).toFixed(2)}`,
       body: "The reconciliation found NEW drift above the accepted 5-cent baseline. Open Accounting → Reconciliation.",
       clientId: null,
-      dedupeKey: `drift:${run.id}`,
+      dedupeKey: `drift:${todayKey}`,
     },
   ];
 }
@@ -99,9 +104,17 @@ export interface SpineDriftRow {
 }
 
 /**
- * Money Spine reconciler drift — the "can't fail unnoticed" alert. One critical
- * notification per drifting offer-month; the delta is in the dedupe key, so a
- * changed drift updates the alert and a reconciled book (no rows) clears it.
+ * Money Spine reconciler drift — the "can't fail unnoticed" alert. One open
+ * critical notification per drifting offer-month: the key is scope + month
+ * ONLY. It deliberately does NOT include the delta — a reconciler cron runs
+ * every 30 minutes, and the drift amount wobbles cycle to cycle as new
+ * transactions land, so keying on the exact cents meant every single
+ * evaluation minted a brand-new "critical" row for the same drifting book
+ * (onConflictDoNothing never had anything to conflict with). Scope + month
+ * alone means exactly one alert stays open per book while it's drifting; the
+ * amount still shows in the title, it's just not part of what makes the
+ * alert unique. A later month naturally opens its own alert if drift
+ * persists into it.
  */
 export function spineDriftRule(rows: SpineDriftRow[]): Candidate[] {
   return rows
@@ -112,7 +125,7 @@ export function spineDriftRule(rows: SpineDriftRow[]): Candidate[] {
       title: `${r.name} ${r.month}: sources off by $${(Math.abs(r.cashDeltaCents) / 100).toFixed(2)}`,
       body: "The Money Spine reconciler found sources not matching the ledger. Open Accounting → Reconciliation.",
       clientId: null,
-      dedupeKey: `spine-drift:${r.scope}:${r.month}:${r.cashDeltaCents}`,
+      dedupeKey: `spine-drift:${r.scope}:${r.month}`,
     }));
 }
 
