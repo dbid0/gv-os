@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -84,6 +85,39 @@ export async function runFinanceSheetSync(): Promise<SyncSummary> {
   };
 }
 
+export interface LatestSyncRunRow {
+  id: string;
+  createdAt: Date;
+  status: string;
+  rowCount: number;
+  driftRowCount: number;
+  totalAbsDriftCents: number;
+}
+
+// "What's the latest sync run" is asked by every function below AND by
+// `currentMonthCash`, which the app shell (layout.tsx) calls on literally
+// every page — so without sharing this, the identical query re-ran up to 4x
+// on a single /accounting/reconciliation render alone, on top of once per
+// page load app-wide. Per-request only (React resets cache() every request),
+// so this can never serve a stale run across requests — it only avoids
+// re-asking the same question twice within one render.
+const getLatestSyncRun = cache(async (): Promise<LatestSyncRunRow | null> => {
+  const db = getDb();
+  const [run] = await db
+    .select({
+      id: sheetSyncRuns.id,
+      createdAt: sheetSyncRuns.createdAt,
+      status: sheetSyncRuns.status,
+      rowCount: sheetSyncRuns.rowCount,
+      driftRowCount: sheetSyncRuns.driftRowCount,
+      totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
+    })
+    .from(sheetSyncRuns)
+    .orderBy(desc(sheetSyncRuns.createdAt))
+    .limit(1);
+  return run ?? null;
+});
+
 export interface LatestReconciliation {
   run: {
     id: string;
@@ -113,21 +147,10 @@ export interface LatestReconciliation {
 
 /** The latest run and its rows, for the reconciliation screen. */
 export async function latestReconciliation(): Promise<LatestReconciliation> {
-  const db = getDb();
-  const [run] = await db
-    .select({
-      id: sheetSyncRuns.id,
-      createdAt: sheetSyncRuns.createdAt,
-      status: sheetSyncRuns.status,
-      rowCount: sheetSyncRuns.rowCount,
-      driftRowCount: sheetSyncRuns.driftRowCount,
-      totalAbsDriftCents: sheetSyncRuns.totalAbsDriftCents,
-    })
-    .from(sheetSyncRuns)
-    .orderBy(desc(sheetSyncRuns.createdAt))
-    .limit(1);
+  const run = await getLatestSyncRun();
   if (!run) return { run: null, deals: [] };
 
+  const db = getDb();
   const deals = await db
     .select({
       rowIndex: sheetMirrorDeals.rowIndex,
@@ -150,13 +173,9 @@ export async function latestReconciliation(): Promise<LatestReconciliation> {
 
 /** Net cash by calendar month from the latest mirror run — real, reconciled. */
 export async function mirrorMonthly(): Promise<{ date: string; cents: number }[]> {
-  const db = getDb();
-  const [run] = await db
-    .select({ id: sheetSyncRuns.id })
-    .from(sheetSyncRuns)
-    .orderBy(desc(sheetSyncRuns.createdAt))
-    .limit(1);
+  const run = await getLatestSyncRun();
   if (!run) return [];
+  const db = getDb();
   const rows = await db
     .select({
       dateClosed: sheetMirrorDeals.dateClosed,
@@ -185,13 +204,9 @@ export async function mirrorOutstanding(): Promise<{
   rows: OutstandingRow[];
   totalArCents: number;
 }> {
-  const db = getDb();
-  const [run] = await db
-    .select({ id: sheetSyncRuns.id })
-    .from(sheetSyncRuns)
-    .orderBy(desc(sheetSyncRuns.createdAt))
-    .limit(1);
+  const run = await getLatestSyncRun();
   if (!run) return { rows: [], totalArCents: 0 };
+  const db = getDb();
   const all = await db
     .select({
       client: sheetMirrorDeals.client,
@@ -244,13 +259,9 @@ export type MonthCash =
 
 export async function currentMonthCash(): Promise<MonthCash> {
   try {
-    const db = getDb();
-    const [run] = await db
-      .select({ id: sheetSyncRuns.id })
-      .from(sheetSyncRuns)
-      .orderBy(desc(sheetSyncRuns.createdAt))
-      .limit(1);
+    const run = await getLatestSyncRun();
     if (!run) return { status: "never-synced" };
+    const db = getDb();
     const rows = await db
       .select({
         dateClosed: sheetMirrorDeals.dateClosed,

@@ -44,11 +44,19 @@ const driftLabel = (cents: number) =>
   `${cents > 0 ? "+" : "−"}${(Math.abs(cents) / 100).toFixed(2)}`;
 
 export default async function ReconciliationPage() {
-  const { run, deals } = await latestReconciliation();
-  const monthly = bucketByMonth(await mirrorMonthly());
-  const outstanding = await mirrorOutstanding();
-  const spine = await getSpineReconciliation();
-  const agency = await getAgencyReconciliation();
+  // Five independent reads — none depends on another's result — run
+  // concurrently instead of one after another. `latestReconciliation`,
+  // `mirrorMonthly`, and `mirrorOutstanding` all also share one cached
+  // "latest sync run" lookup under the hood (see sheet-sync.ts), so this
+  // page now issues that query once instead of three times.
+  const [{ run, deals }, monthlyRaw, outstanding, spine, agency] = await Promise.all([
+    latestReconciliation(),
+    mirrorMonthly(),
+    mirrorOutstanding(),
+    getSpineReconciliation(),
+    getAgencyReconciliation(),
+  ]);
+  const monthly = bucketByMonth(monthlyRaw);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
