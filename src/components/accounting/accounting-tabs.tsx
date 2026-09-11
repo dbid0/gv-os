@@ -26,6 +26,7 @@ const detail = [
   { label: "Rev-share", href: "/accounting/revshare" },
   { label: "Payouts", href: "/accounting/payouts" },
   { label: "A/R", href: "/accounting/ar" },
+  { label: "Recovery", href: "/accounting/recovery" },
   { label: "Expenses", href: "/accounting/expenses" },
 ];
 

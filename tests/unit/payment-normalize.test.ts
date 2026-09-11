@@ -65,6 +65,68 @@ describe("normalizeStripe", () => {
     expect(out?.kind).toBe("unknown");
     expect(out?.amountCents).toBe(0);
   });
+
+  it("captures a declined charge as kind 'failed' with the ATTEMPTED amount", () => {
+    const out = normalizeStripe({
+      id: "evt_failed",
+      type: "charge.failed",
+      created: 1787280000,
+      data: {
+        object: {
+          amount: 199700,
+          // A declined charge captured nothing — the recoverable figure is the
+          // amount it TRIED to charge, never the zero it captured.
+          amount_captured: 0,
+          paid: false,
+          currency: "usd",
+          failure_code: "card_declined",
+          failure_message: "Your card was declined.",
+          customer: "cus_123",
+          billing_details: { email: "declined@example.com" },
+        },
+      },
+    });
+    expect(out).toMatchObject({
+      externalId: "evt_failed",
+      kind: "failed",
+      amountCents: 199700,
+      email: "declined@example.com",
+      failureCode: "card_declined",
+      failureMessage: "Your card was declined.",
+      customerRef: "cus_123",
+    });
+    // A failed attempt stays POSITIVE — recoverable, never a negative refund.
+    expect(out!.amountCents).toBeGreaterThan(0);
+  });
+
+  it("reads failure detail off a PaymentIntent's last_payment_error", () => {
+    const out = normalizeStripe({
+      id: "evt_pi_failed",
+      type: "payment_intent.payment_failed",
+      created: 1787280000,
+      data: {
+        object: {
+          amount: 50000,
+          currency: "usd",
+          customer: "cus_x",
+          receipt_email: "pi@example.com",
+          last_payment_error: {
+            code: "card_declined",
+            decline_code: "insufficient_funds",
+            message: "Insufficient funds.",
+          },
+        },
+      },
+    });
+    expect(out).toMatchObject({
+      kind: "failed",
+      amountCents: 50000,
+      email: "pi@example.com",
+      failureCode: "insufficient_funds",
+      failureMessage: "Insufficient funds.",
+      customerRef: "cus_x",
+    });
+  });
 });
 
 describe("normalizeFanbasis (defensive probing)", () => {

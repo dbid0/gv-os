@@ -68,6 +68,12 @@ const SECTIONS = [
     icon: Wallet,
     detail: "Captured processor events awaiting attribution",
   },
+  {
+    label: "Recovery",
+    href: "/accounting/recovery",
+    icon: Wallet,
+    detail: "Declined charges to chase — attempted, never collected",
+  },
 ];
 
 export default async function AccountingPage() {

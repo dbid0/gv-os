@@ -559,8 +559,13 @@ export const paymentEvents = appSchema.table(
     externalId: text("external_id").notNull(),
     /** Scope inherited from the connection. Null = agency. */
     clientId: uuid("client_id").references(() => clients.id),
-    /** charge · refund · unknown */
+    /** charge · refund · failed · unknown. A "failed" kind is a declined/failed
+     * charge attempt — visibility only. It can never post to the ledger (the
+     * confirm mapping refuses any kind but charge/refund) and never counts in
+     * gross, net, revenue, or cash. */
     kind: text("kind").notNull().default("unknown"),
+    /** For a charge/refund: the money that moved. For a "failed" kind: the
+     * amount that was ATTEMPTED and declined — recoverable, never collected. */
     amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
     currency: text("currency").notNull().default("usd"),
     email: text("email"),
@@ -569,6 +574,17 @@ export const paymentEvents = appSchema.table(
     label: text("label"),
     /** captured · posted · ignored */
     status: text("status").notNull().default("captured"),
+    /** Declined-charge only: the processor's failure/decline code. */
+    failureCode: text("failure_code"),
+    /** Declined-charge only: the human-readable reason the charge failed. */
+    failureMessage: text("failure_message"),
+    /** The processor's own customer id when present. Matches a later success to
+     * an earlier failure for recovered-vs-lost even if the email differs. */
+    customerRef: text("customer_ref"),
+    /** Admin disposition on a declined charge: chasing · recovered · written_off.
+     * Null = untouched (still needs chasing). Operational state only — it never
+     * moves a money total; a failed charge stays visibility-only regardless. */
+    recoveryStatus: text("recovery_status"),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
