@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeCloseActivity } from "@/lib/crm/close-normalize";
+import { isOutboundDirection, normalizeCloseActivity } from "@/lib/crm/close-normalize";
 
 describe("normalizeCloseActivity", () => {
   it("normalizes a call with talk time", () => {
@@ -93,5 +93,30 @@ describe("the real Close envelope", () => {
 
   it("drops a payload with no id rather than inventing an idempotency key", () => {
     expect(normalizeCloseActivity("call", { ...realShape, id: "" })).toBeNull();
+  });
+});
+
+describe("isOutboundDirection", () => {
+  it("treats a call/sms's own outbound word as outbound", () => {
+    expect(isOutboundDirection("outbound")).toBe(true);
+  });
+
+  it("treats an email's DIFFERENT outbound word as outbound too", () => {
+    // Confirmed against live captured data: Close's email activity says
+    // "outgoing", not "outbound" — the same vocabulary calls and sms use.
+    // A filter that only recognized "outbound" would silently drop every
+    // outgoing email from speed-to-lead.
+    expect(isOutboundDirection("outgoing")).toBe(true);
+  });
+
+  it("rejects both inbound spellings", () => {
+    expect(isOutboundDirection("inbound")).toBe(false);
+    expect(isOutboundDirection("incoming")).toBe(false);
+  });
+
+  it("rejects null and anything unrecognized", () => {
+    expect(isOutboundDirection(null)).toBe(false);
+    expect(isOutboundDirection("")).toBe(false);
+    expect(isOutboundDirection("sideways")).toBe(false);
   });
 });
