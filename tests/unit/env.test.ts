@@ -15,6 +15,20 @@ describe("parseEnv", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.NEXT_PUBLIC_APP_ENV).toBe("local");
     expect(env.NEXT_PUBLIC_APP_URL).toBe("http://localhost:3000");
+    // The Sentry DSN is optional — unset is the supported "off" state, not
+    // a validation failure.
+    expect(env.NEXT_PUBLIC_SENTRY_DSN).toBeUndefined();
+  });
+
+  it("passes through a Sentry DSN when set", () => {
+    const env = parseEnv({
+      ...REQUIRED,
+      NEXT_PUBLIC_SENTRY_DSN: "https://examplePublicKey@o0.ingest.sentry.io/0",
+    });
+
+    expect(env.NEXT_PUBLIC_SENTRY_DSN).toBe(
+      "https://examplePublicKey@o0.ingest.sentry.io/0",
+    );
   });
 
   it("accepts a valid production configuration", () => {

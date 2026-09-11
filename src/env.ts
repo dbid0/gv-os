@@ -32,6 +32,16 @@ export type Env = {
    */
   NEXT_PUBLIC_SUPABASE_URL: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
+  /**
+   * Sentry error-reporting DSN, exposed to the browser so client-side errors
+   * can be reported too. Optional by design: when unset, the Sentry config
+   * files (src/instrumentation-client.ts, sentry.server.config.ts,
+   * sentry.edge.config.ts) skip calling Sentry.init() entirely and the app
+   * behaves exactly as it does today — no SDK, no network calls, no noise in
+   * local dev. Daniel sets the real value in Vercel when he's ready to turn
+   * reporting on.
+   */
+  NEXT_PUBLIC_SENTRY_DSN?: string;
 };
 
 function isUrl(value: string): boolean {
@@ -88,6 +98,9 @@ export function parseEnv(raw: NodeJS.ProcessEnv | Record<string, unknown>): Env 
   if (!anonKey || anonKey.length < 20) {
     issues.push("  NEXT_PUBLIC_SUPABASE_ANON_KEY: anon key looks truncated");
   }
+  // No format check and no fallback: an empty/missing DSN is the supported
+  // "off" state, not an error.
+  const NEXT_PUBLIC_SENTRY_DSN = str(r.NEXT_PUBLIC_SENTRY_DSN);
 
   if (issues.length > 0) {
     throw new Error(`Invalid environment variables:\n${issues.join("\n")}`);
@@ -98,6 +111,7 @@ export function parseEnv(raw: NodeJS.ProcessEnv | Record<string, unknown>): Env 
     NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey as string,
+    NEXT_PUBLIC_SENTRY_DSN,
   };
 }
 
@@ -111,6 +125,7 @@ export const env = parseEnv({
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
 
 /** Alias used by the auth clients, to read as "the public half" at the call site. */
