@@ -97,9 +97,8 @@ export default async function RevSharePage() {
           </div>
         )}
         <p className="text-faint mt-3 text-[11px]">
-          The Visionary&apos;s 30% activates when the signing is confirmed. Racks&apos;
-          10%-after-ad-spend needs the deductions mechanism and is deliberately not a
-          flat rule.
+          Racks&apos; 10%-after-ad-spend needs the deductions mechanism and is
+          deliberately not a flat rule.
         </p>
       </Panel>
 

@@ -38,17 +38,6 @@ export const roster: RosterClient[] = [
     revShare: "20% of gross",
     summary: "AI phone farm for agencies",
   },
-  {
-    slug: "the-visionary",
-    name: "The Visionary",
-    owner: "Tico",
-    offer: "Videography & creative — Miami Heat / Baller League videographer",
-    category: "Done-for-you",
-    accent: "#2C6BFF",
-    since: "Aug 2026",
-    revShare: "30% after fees",
-    summary: "Videography growth for creators",
-  },
 ];
 
 export function clientBySlug(slug: string): RosterClient | undefined {
