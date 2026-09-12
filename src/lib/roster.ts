@@ -1,11 +1,11 @@
 /**
- * The agency roster — Global Ventures' active done-for-you clients.
+ * The `RosterClient` shape shared across the app — no client data lives here.
  *
- * Static for now, and deliberately so: this is display data for the dashboard
- * and the Clients section, NOT the DB `clients`/teams table (which holds the
- * sales engine's data). When the Clients module owns a source of truth this
- * reads from the database. Archived clients are absent on purpose — the roster
- * shows only what is live.
+ * The roster is 100% database-driven: `app.clients` (status="active") is the
+ * only source of truth for display data on the dashboard and the Clients
+ * section. Signing a client is a DB insert, nothing more — there is no file
+ * to edit and no static entry to keep in sync. See `lib/roster-server.ts`
+ * for the DB read and the honest per-field defaults it falls back to.
  *
  * `accent` is a client's own data colour. It is used to tag a client's rows and
  * cards, never as app chrome, so it never competes with the brand blue.
@@ -26,19 +26,7 @@ export type RosterClient = {
   summary: string;
 };
 
-export const roster: RosterClient[] = [
-  {
-    slug: "the-grid",
-    name: "The Grid",
-    owner: "Kaden",
-    offer: "AI phone farm — ban-resilient IG scaling for agencies",
-    category: "Done-for-you",
-    accent: "#4aa3ff",
-    since: "Jul 2026",
-    revShare: "20% of gross",
-    summary: "AI phone farm for agencies",
-  },
-];
+export const roster: RosterClient[] = [];
 
 export function clientBySlug(slug: string): RosterClient | undefined {
   return roster.find((c) => c.slug === slug);
