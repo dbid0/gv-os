@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRef } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -55,15 +55,22 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Warm the switcher's targets before the menu ever opens (punch-list 20):
-  // menu content only mounts on open, so Link's viewport prefetch never fires
-  // for these until it is too late to matter.
-  useEffect(() => {
+  // Warm the switcher's targets on intent, not on load (punch-list 20 was an
+  // on-mount useEffect here — it fired a full server render of every target
+  // on EVERY page mount and saturated the DB pool). Menu content only mounts
+  // on open, so Link's viewport prefetch never fires for these until it's
+  // too late to matter — instead we prefetch as soon as the trigger shows
+  // hover/focus intent, once per mount, so the switcher still feels instant
+  // when actually opened but nothing fires on initial page load.
+  const warmedSwitcherRef = useRef(false);
+  const warmSwitcherTargets = () => {
+    if (warmedSwitcherRef.current) return;
+    warmedSwitcherRef.current = true;
     router.prefetch("/clients");
     router.prefetch("/dashboard");
     router.prefetch("/sales/teams/new");
     for (const client of roster) router.prefetch(`/w/${client.slug}`);
-  }, [router]);
+  };
   // Preview shells (v2 §6): a role only sees nav it can actually open —
   // no dead links that bounce off the middleware.
   const visibleNavigation =
@@ -150,7 +157,11 @@ export function Sidebar({
       {!collapsed && (
         <div className="px-3 pb-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors">
+            <DropdownMenuTrigger
+              onMouseEnter={warmSwitcherTargets}
+              onFocus={warmSwitcherTargets}
+              className="border-border-strong bg-secondary/60 hover:border-brand/40 flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors"
+            >
               {activeClient ? (
                 <ClientLogo
                   slug={activeClient.slug}

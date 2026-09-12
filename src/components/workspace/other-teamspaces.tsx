@@ -67,6 +67,7 @@ function TeamspaceSection({ ts }: { ts: OtherTeamspace }) {
         </button>
         <Link
           href={base}
+          prefetch={false}
           className="flex min-w-0 flex-1 items-center gap-1.5 rounded text-left"
           title={`Open ${ts.name}`}
         >
@@ -121,6 +122,7 @@ function Row({ node, base, depth }: { node: PageNode; base: string; depth: numbe
         )}
         <Link
           href={`${base}?page=${node.id}`}
+          prefetch={false}
           className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
         >
           <span className="grid size-4 shrink-0 place-items-center text-[0.8125rem]">

@@ -63,6 +63,7 @@ export function WorkspaceNav({
           <Link
             key={s.label}
             href={href}
+            prefetch={false}
             className={cn(
               "rounded-md px-3 py-1.5 text-xs transition-colors",
               active
@@ -88,6 +89,7 @@ export function WorkspaceNav({
               <Link
                 key={s.label}
                 href={href}
+                prefetch={false}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs transition-colors",
                   active
