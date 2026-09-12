@@ -184,10 +184,16 @@ function UserMenu({
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/profile" />} className="gap-2">
+        <DropdownMenuItem
+          render={<Link href="/profile" prefetch={false} />}
+          className="gap-2"
+        >
           <User className="size-3.5" /> Profile
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/settings" />} className="gap-2">
+        <DropdownMenuItem
+          render={<Link href="/settings" prefetch={false} />}
+          className="gap-2"
+        >
           <Settings className="size-3.5" /> Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />

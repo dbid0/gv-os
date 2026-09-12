@@ -121,6 +121,7 @@ export function WorkspaceSidebar({
         <div className="px-3 pt-3">
           <Link
             href="/dashboard"
+            prefetch={false}
             className="text-faint hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Admin
@@ -160,6 +161,7 @@ export function WorkspaceSidebar({
                     <li key={item.label}>
                       <Link
                         href={hrefOf(item)}
+                        prefetch={false}
                         aria-current={active ? "page" : undefined}
                         className={cn(
                           "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors",

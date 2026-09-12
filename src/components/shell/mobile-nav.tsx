@@ -163,6 +163,7 @@ export function MobileNav() {
                             ) : (
                               <Link
                                 href={item.href}
+                                prefetch={false}
                                 aria-current={active ? "page" : undefined}
                               >
                                 {body}

@@ -241,6 +241,7 @@ export function HomeHeadline({
             <Link
               key={s.slug ?? s.name}
               href={s.slug ? `/w/${s.slug}` : "/accounting/transactions"}
+              prefetch={false}
               className="bg-card hover-lift hover:border-brand/40 rounded-lg border p-3"
             >
               <p className="flex items-center gap-1.5 truncate text-sm font-medium">

@@ -137,6 +137,7 @@ export function NotificationBell({
                   />
                   <Link
                     href={notificationHref(n.kind, n.clientSlug)}
+                    prefetch={false}
                     className="min-w-0 flex-1"
                   >
                     <span
@@ -170,6 +171,7 @@ export function NotificationBell({
 
         <Link
           href="/notifications"
+          prefetch={false}
           className="text-brand hover:bg-accent block border-t px-3 py-2 text-center text-xs font-medium transition-colors"
         >
           See all notifications

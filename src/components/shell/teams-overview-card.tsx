@@ -55,6 +55,7 @@ export async function TeamsOverviewCard({ overview }: { overview: TeamsOverview 
               <Link
                 key={t.slug}
                 href={`/w/${t.slug}`}
+                prefetch={false}
                 className="bg-card hover:border-brand/40 inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition-colors"
               >
                 <span

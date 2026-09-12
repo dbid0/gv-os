@@ -107,6 +107,7 @@ export function Sidebar({
       <Link
         href="/dashboard"
         aria-label="Global Ventures"
+        prefetch={false}
         className="group flex h-16 items-center gap-2.5 px-4"
       >
         <motion.span
@@ -180,7 +181,10 @@ export function Sidebar({
               <ChevronRight className="text-faint size-4 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem render={<Link href="/clients" />} className="gap-2">
+              <DropdownMenuItem
+                render={<Link href="/clients" prefetch={false} />}
+                className="gap-2"
+              >
                 <span className="bg-card grid size-6 place-items-center rounded-md border">
                   <Image
                     src="/brand/gv-mark-white.png"
@@ -196,7 +200,7 @@ export function Sidebar({
               {roster.map((client) => (
                 <DropdownMenuItem
                   key={client.slug}
-                  render={<Link href={`/w/${client.slug}`} />}
+                  render={<Link href={`/w/${client.slug}`} prefetch={false} />}
                   className="gap-2"
                 >
                   <ClientLogo
@@ -212,7 +216,7 @@ export function Sidebar({
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                render={<Link href="/sales/teams/new" />}
+                render={<Link href="/sales/teams/new" prefetch={false} />}
                 className="text-brand gap-2"
               >
                 <span className="border-brand/40 bg-brand-soft/50 grid size-6 place-items-center rounded-md border">
@@ -291,6 +295,7 @@ export function Sidebar({
               ? "/sales/deals/new"
               : "/accounting/log-deal"
           }
+          prefetch={false}
           className={cn(
             buttonVariants({ size: collapsed ? "icon" : "default" }),
             "press w-full justify-center gap-2",
@@ -325,7 +330,10 @@ export function Sidebar({
               </p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link href="/settings" />} className="gap-2">
+            <DropdownMenuItem
+              render={<Link href="/settings" prefetch={false} />}
+              className="gap-2"
+            >
               <CircleUserRound className="size-4" /> Account
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -412,7 +420,7 @@ function NavLink({
       {body}
     </span>
   ) : (
-    <Link href={item.href} aria-current={active ? "page" : undefined}>
+    <Link href={item.href} prefetch={false} aria-current={active ? "page" : undefined}>
       {body}
     </Link>
   );

@@ -28,6 +28,11 @@ interface Feed {
 const WATERMARK_KEY = "gv-deal-watermark";
 const POLL_MS = 30_000;
 const SHOW_MS = 4_000;
+// The first poll is delayed so it doesn't compete with the page's own initial
+// load — a deal announced a few seconds later than the theoretical minimum is
+// invisible to a human, but one more concurrent request during first paint is
+// not (see the shell-wide prefetch/poll congestion fix).
+const INITIAL_POLL_DELAY_MS = 4_000;
 
 const fmtUsd = (c: number) =>
   new Intl.NumberFormat("en-US", {
@@ -77,10 +82,14 @@ export function DealClosedToasts() {
       }
     };
 
-    void poll();
-    timerRef.current = setInterval(poll, POLL_MS);
+    const initialTimer = setTimeout(() => {
+      void poll();
+      timerRef.current = setInterval(poll, POLL_MS);
+    }, INITIAL_POLL_DELAY_MS);
+
     return () => {
       cancelled = true;
+      clearTimeout(initialTimer);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -100,7 +109,11 @@ export function DealClosedToasts() {
           </p>
           <p className="text-muted-foreground text-xs">
             {t.dealType ?? "Deal"} closed ·{" "}
-            <Link href="/accounting/transactions" className="underline">
+            <Link
+              href="/accounting/transactions"
+              prefetch={false}
+              className="underline"
+            >
               Click here for details
             </Link>
           </p>

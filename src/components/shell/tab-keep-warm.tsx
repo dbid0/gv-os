@@ -15,6 +15,10 @@ import { useEffect } from "react";
  */
 
 const HEARTBEAT_MS = 4 * 60 * 1000;
+// The very first ping is delayed off mount — the tab just finished loading
+// this page, so the backend is already warm; firing immediately only adds
+// another concurrent request into the page's own initial load.
+const INITIAL_PING_DELAY_MS = 4_000;
 
 export function TabKeepWarm() {
   useEffect(() => {
@@ -28,10 +32,11 @@ export function TabKeepWarm() {
       if (document.visibilityState === "visible") ping();
     };
 
-    ping();
+    const initialTimer = setTimeout(ping, INITIAL_PING_DELAY_MS);
     const interval = setInterval(ping, HEARTBEAT_MS);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
+      clearTimeout(initialTimer);
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
