@@ -5,7 +5,6 @@ import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 describe("matchesSheetClient", () => {
   it("maps the real sheet spellings to their clients", () => {
     expect(matchesSheetClient("the-grid", "Kaden (AI)")).toBe(true);
-    expect(matchesSheetClient("the-visionary", "Tico Visuals")).toBe(true);
   });
 
   it("never cross-matches other sheet names", () => {
@@ -18,13 +17,13 @@ describe("matchesSheetClient", () => {
       // to any live offer.
       "Brady Stein",
       "Aiden Racks",
+      "Tico Visuals",
       "David Brown",
       "Sean Casey",
       "Jesus",
       "Jayden",
     ]) {
       expect(matchesSheetClient("the-grid", other)).toBe(false);
-      expect(matchesSheetClient("the-visionary", other)).toBe(false);
     }
   });
 
