@@ -6,22 +6,20 @@ import { asc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
-import { roster as staticRoster, type RosterClient } from "@/lib/roster";
+import type { RosterClient } from "@/lib/roster";
 
 /**
  * THE roster, from the database — signing a client wires them in.
  *
- * lib/roster.ts was a hard-coded file, which answered "would everything wire
- * automatically if I added a client right now?" with NO: a client not in the
- * file 404'd their whole workspace and never appeared in the switcher. The
- * DB rows (clients table, status=active) are the truth now; the static file
- * remains only as a per-field fallback for the original two offers and as
- * the seed's source of record.
+ * lib/roster.ts used to be a hard-coded file, which answered "would
+ * everything wire automatically if I added a client right now?" with NO: a
+ * client not in the file 404'd their whole workspace and never appeared in
+ * the switcher. The DB rows (clients table, status=active) are the only
+ * truth now — there is no static file to fall back to.
  *
- * Fallback order per field: DB column → static file entry (same slug) →
- * honest default. The accent is never blank — a new client gets a stable
- * colour derived from their slug, so their rows and cards are themed from
- * minute one.
+ * Fallback order per field: DB column → honest default. The accent is never
+ * blank — a new client gets a stable colour derived from their slug, so
+ * their rows and cards are themed from minute one.
  *
  * Wrapped in React cache(): one query per request however many surfaces ask.
  */
@@ -66,24 +64,22 @@ async function loadRosterFromDb(): Promise<RosterClient[]> {
       .where(eq(clients.status, "active"))
       .orderBy(asc(clients.createdAt));
 
-    return rows.map((r) => {
-      const fallback = staticRoster.find((c) => c.slug === r.slug);
-      return {
-        slug: r.slug,
-        name: r.name,
-        owner: r.owner ?? fallback?.owner ?? "",
-        offer: r.offer ?? fallback?.offer ?? r.summary ?? "",
-        category: r.category ?? fallback?.category ?? "Done-for-you",
-        accent: r.accent ?? fallback?.accent ?? accentFromSlug(r.slug),
-        since: r.since ?? fallback?.since ?? "",
-        revShare: r.revShare ?? fallback?.revShare ?? "",
-        summary: r.summary ?? fallback?.summary ?? "",
-      };
-    });
+    return rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      owner: r.owner ?? "",
+      offer: r.offer ?? r.summary ?? "",
+      category: r.category ?? "Done-for-you",
+      accent: r.accent ?? accentFromSlug(r.slug),
+      since: r.since ?? "",
+      revShare: r.revShare ?? "",
+      summary: r.summary ?? "",
+    }));
   } catch {
-    // The database failing must not blank the app's navigation — the static
-    // two-client roster is stale but real.
-    return [...staticRoster];
+    // A DB failure must never surface hardcoded client data — clients are
+    // manual DB entries only. An empty roster (nav shows no clients) is the
+    // honest failure mode; it must never fall back to a static/hardcoded one.
+    return [];
   }
 }
 
