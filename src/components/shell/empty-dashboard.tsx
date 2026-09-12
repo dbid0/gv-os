@@ -144,6 +144,7 @@ export function SalesEngineCard({
               <Link
                 key={client.slug}
                 href={`/w/${client.slug}`}
+                prefetch={false}
                 className="group border-border-strong bg-secondary/50 hover:border-brand/40 hover:bg-brand-soft/40 text-muted-foreground hover:text-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors"
               >
                 <span
