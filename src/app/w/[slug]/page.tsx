@@ -4,11 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Siren } from "lucide-react";
 
 import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
-import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { RangeChips } from "@/components/ui/range-chips";
 import { CashGoalStrip } from "@/components/tracking/cash-goal";
 import { RightNowPanel } from "@/components/tracking/right-now";
 import { LeaderboardBand } from "@/components/tracking/leaderboard-band";
@@ -20,14 +17,13 @@ import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { portalVisibility } from "@/lib/clients/portal-visibility";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
-import { CashMixBar } from "@/components/tracking/cash-mix-bar";
-import { PeriodDelta } from "@/components/ui/period-delta";
+import { WorkspaceHero } from "@/components/tracking/workspace-hero";
 import { loadOfferHome } from "@/lib/tracking/offer-metrics-loader";
+import { buildWorkspaceVariants } from "@/lib/tracking/window-money";
 import { cents } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   customBounds,
-  homeRangeSeries,
   normalizeHomeRange,
   rangeBounds,
 } from "@/lib/transactions/homepage";
@@ -73,7 +69,16 @@ export default async function WorkspacePage({
   const portalView = cookieStore.get("gv-dev-role")?.value === "client";
 
   const [
-    { metrics, report, repName, mixSource, rangeRows, recentRows },
+    {
+      metrics,
+      report,
+      repName,
+      mixSource,
+      recentRows,
+      moneyFeed,
+      clientRows,
+      allTimeCashCents,
+    },
     drive,
     visibility,
   ] = await Promise.all([
@@ -82,14 +87,7 @@ export default async function WorkspacePage({
     portalVisibility(slug),
   ]);
   if (!report) notFound();
-  // Every number below comes from the ONE engine — funnel, mix, and window
-  // money are cuts of the same assembled object /sales reads, so the two
-  // surfaces can no longer disagree.
   const funnel = metrics.funnel;
-  const mix = metrics.cashMix;
-  const rangeCash = metrics.money?.rangeCash ?? 0;
-  const rangeRevenue = metrics.money?.rangeRevenue ?? 0;
-  const prevRangeCash = metrics.money?.prevRangeCash ?? null;
 
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
@@ -99,8 +97,18 @@ export default async function WorkspacePage({
   const showApps = show("apps", true);
   const showDrive = show("drive", true);
 
-  // The offer's own growth curve for the hero — same shape the dashboard uses.
-  const offerSeries = homeRangeSeries(rangeRows, "all", bounds);
+  // Every preset window precomputed once from the payment feed (Stripe/sheet)
+  // or, for a feed-less offer, the client-layer ledger — so the hero's range
+  // chips switch instantly, client-side, instead of round-tripping per click.
+  // The collected cash of each window IS its mix total, so the headline can
+  // never disagree with the mix bar beneath it, and never reads $0 while a
+  // window has cash.
+  const { variants: moneyVariants, custom: customVariant } = buildWorkspaceVariants(
+    moneyFeed,
+    clientRows,
+    todayKey,
+    custom,
+  );
 
   // This offer's most recent money — the workspace's own transaction feed.
   const offerRecent = recentRows.map((r) => ({
@@ -143,131 +151,15 @@ export default async function WorkspacePage({
       </div>
 
       {showCash && (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-          {/* LEFT — Cash collected: the window's headline with its curve. */}
-          <section className="card-grad elev-glow relative rounded-xl border">
-            {/* The offer's growth curve behind the number — clipped in its OWN
-                rounded layer, NOT on the section, so the date picker's dropdown
-                can overflow the card instead of being chopped off. */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
-              <div className="absolute inset-x-0 bottom-0 h-2/3">
-                <CollectedSparkline series={offerSeries} className="h-full w-full" />
-              </div>
-            </div>
-            <div className="relative flex h-full flex-col justify-between gap-4 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                {/* One canonical story (P0-1): never a bare $0.00 sitting above
-                    a non-zero figure — a quiet range falls back to the all-time
-                    number with an explicit label. */}
-                {rangeCash === 0 && report.mirror.cashCents > 0 ? (
-                  <div>
-                    <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                      Cash collected — all time
-                    </p>
-                    <p className="numeric text-success text-4xl font-bold tracking-tight">
-                      <CountUpMoney cents={report.mirror.cashCents} />
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      none in the {bounds.label.toLowerCase()}
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                      Cash collected — {bounds.label}
-                    </p>
-                    <p className="numeric text-success text-4xl font-bold tracking-tight">
-                      <CountUpMoney cents={rangeCash} />
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      collected
-                      {rangeRevenue > rangeCash && (
-                        <>
-                          {" "}
-                          · <Money amount={cents(rangeRevenue - rangeCash)} /> still due
-                        </>
-                      )}
-                    </p>
-                    <PeriodDelta
-                      currentCents={rangeCash}
-                      previousCents={prevRangeCash}
-                    />
-                  </div>
-                )}
-                <DateRangePicker
-                  basePath={`/w/${slug}`}
-                  activeRange={range}
-                  from={bounds.from}
-                  to={bounds.to}
-                  todayKey={todayKey}
-                />
-              </div>
-              <RangeChips basePath={`/w/${slug}`} activeRange={range} />
-            </div>
-          </section>
-
-          {/* RIGHT — Revenue generated: what was SOLD in the window, how it is
-              coming in, and whose money it is. Unknown rows stay dashes. */}
-          <section className="card-grad rounded-xl border p-5">
-            <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-              Revenue generated — {bounds.label}
-            </p>
-            <p className="numeric text-foreground text-3xl font-bold tracking-tight">
-              <CountUpMoney cents={rangeRevenue} />
-            </p>
-            <PeriodDelta
-              currentCents={rangeRevenue}
-              previousCents={metrics.money?.prevRangeRevenue ?? null}
-            />
-            <div className="text-muted-foreground mt-4 space-y-1.5 border-t pt-3 text-sm">
-              <p className="flex items-center justify-between gap-3">
-                <span>Cash collected</span>
-                <span className="numeric text-foreground">
-                  <Money amount={cents(rangeCash)} />
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-3">
-                <span>Cash left to collect</span>
-                <span className="numeric text-foreground">
-                  {rangeRevenue > rangeCash ? (
-                    <Money amount={cents(rangeRevenue - rangeCash)} />
-                  ) : (
-                    "—"
-                  )}
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-3">
-                <span>Cash after fees</span>
-                {/* Window rows don't carry processor fees yet — a dash, never
-                    an estimate. */}
-                <span className="numeric">—</span>
-              </p>
-            </div>
-            {mix && (
-              <div className="mt-4 border-t pt-3">
-                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                  Cash mix
-                  {mixSource && (
-                    <span className="text-faint/80 normal-case">
-                      {" "}
-                      ·{" "}
-                      {mixSource === "stripe"
-                        ? "via Stripe"
-                        : "from the tracking sheet"}
-                    </span>
-                  )}
-                </p>
-                <CashMixBar mix={mix} label={bounds.label} />
-                {mix.unplaceableCents > 0 && (
-                  <p className="text-faint mt-1 text-[11px]">
-                    ${(mix.unplaceableCents / 100).toLocaleString("en-US")} without a
-                    payer identity — shown, not guessed
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-        </div>
+        <WorkspaceHero
+          slug={slug}
+          variants={moneyVariants}
+          custom={customVariant}
+          initialRange={range}
+          todayKey={todayKey}
+          mixSource={mixSource}
+          allTimeCashCents={allTimeCashCents}
+        />
       )}
 
       {showCash && (
