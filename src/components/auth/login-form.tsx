@@ -5,7 +5,6 @@ import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { isAllowed } from "@/lib/auth/allowlist";
 import { createClient } from "@/lib/auth/browser";
 import { entrance } from "@/lib/motion";
 
@@ -14,12 +13,15 @@ type State = "idle" | "sending" | "sent" | "error";
 /**
  * Sign in with a magic link.
  *
- * No passwords: there is no password to leak, reuse, or reset, and for two
- * people a mailbox is already the strongest factor either of them has.
+ * No passwords: there is no password to leak, reuse, or reset, and a mailbox is
+ * already the strongest factor most people have.
  *
- * The allowlist check here is a COURTESY, so a typo fails immediately instead
- * of sending a link that will be rejected later. The real gate is the callback,
- * because anyone can request a link for any address.
+ * The form does NOT decide who is allowed in. It cannot: an invited member's
+ * access lives in the database, not in a value the browser can read, and
+ * anyone can request a link for any address anyway. So it validates only that
+ * the field is a well-formed email and sends the link — the real gate is the
+ * callback, which OR's the owner list with an active team-member lookup. Not
+ * revealing whether an address is on the list here is also the safer default.
  */
 export function LoginForm({ next }: { next?: string }) {
   const [email, setEmail] = useState("");
@@ -29,12 +31,6 @@ export function LoginForm({ next }: { next?: string }) {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     const address = email.trim().toLowerCase();
-
-    if (!isAllowed(address)) {
-      setState("error");
-      setMessage("That address does not have access to GV OS.");
-      return;
-    }
 
     setState("sending");
 

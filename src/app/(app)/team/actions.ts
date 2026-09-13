@@ -8,6 +8,7 @@ import { getDb } from "@/db/client";
 import { teamMembers } from "@/db/schema/app";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
+import { resolveRealRole } from "@/lib/auth/resolve-role";
 import { currentUser } from "@/lib/auth/server";
 import {
   MEMBER_SUBTYPE_VALUES,
@@ -77,6 +78,31 @@ async function requireRosterWriter(): Promise<RosterWriter> {
   return best;
 }
 
+/**
+ * The gate for INVITING (and revoking) a member.
+ *
+ * Inviting is not roster bookkeeping — creating a member with an email GRANTS
+ * them app login through the DB-aware allowlist, and deactivating one revokes
+ * it. That is an owner/admin action, never a manager one, so it is gated
+ * harder than `requireRosterWriter`:
+ *   - owners pass on the env allowlist, with no DB call
+ *   - a DB-invited admin passes on their resolved platform role
+ *   - everyone else — reps, managers, team members — is refused
+ *
+ * It reads the REAL role (not the "View as" preview), because this is the
+ * security boundary, not chrome. It can only ever restrict; it never widens.
+ */
+async function requireAdmin(): Promise<void> {
+  if (devAuthBypass()) return;
+  const user = await currentUser();
+  if (!user?.email) throw new Error("Not authorized.");
+  // Owners are always admins and never need a lookup.
+  if (isAllowed(user.email)) return;
+  if ((await resolveRealRole(user.email)) !== "admin") {
+    throw new Error("Only an admin can invite team members.");
+  }
+}
+
 /** The role fields the add/edit form collects, shared by create and update. */
 const roleInput = z.object({
   platformRole: z.enum(PLATFORM_ROLE_VALUES),
@@ -93,19 +119,47 @@ const detailInput = z.object({
 
 const createInput = roleInput.and(detailInput);
 
+/**
+ * Invite a member: create an ACTIVE team_members row that grants app login.
+ *
+ * Admin/owner only. An email is required (it is the login identity), and no two
+ * active members may share one. The row's platform role decides what they can
+ * open — the default is `sales_rep`, and this never mints an admin unless the
+ * inviter explicitly chose that role.
+ */
 export async function createTeamMember(raw: z.input<typeof createInput>) {
-  const writer = await requireRosterWriter();
+  await requireAdmin();
   const input = createInput.parse(raw);
-  assertManagerMayWrite(writer, {
-    platformRole: input.platformRole,
-    clientId: input.clientId ?? null,
-  });
+
+  // An email is the login identity, so an invite must carry one — even though
+  // the column is nullable for members we only ever assign work to.
+  const email = input.email?.trim();
+  if (!email) {
+    throw new Error("An email is required — it is how they sign in.");
+  }
+
+  const db = getDb();
+  // One address, one active login. A second active row for the same email would
+  // be a duplicate identity and would show the person twice on the roster.
+  const [existing] = await db
+    .select({ id: teamMembers.id })
+    .from(teamMembers)
+    .where(
+      and(
+        eq(sql`lower(${teamMembers.email})`, email.toLowerCase()),
+        eq(teamMembers.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (existing) {
+    throw new Error("Someone with that email is already on the active roster.");
+  }
+
   const cols = memberRoleColumns({
     platformRole: input.platformRole,
     repKind: input.repKind ?? null,
     subtype: input.subtype ?? null,
   });
-  const db = getDb();
   const [member] = await db
     .insert(teamMembers)
     .values({
@@ -113,11 +167,14 @@ export async function createTeamMember(raw: z.input<typeof createInput>) {
       role: cols.role,
       roleKey: cols.roleKey,
       repKind: cols.repKind,
-      email: input.email?.trim() || null,
+      email,
       clientId: input.clientId ?? null,
       notes: input.notes?.trim() || null,
     })
     .returning();
+  // Their login becomes usable within the allowlist cache TTL (see
+  // allowlist-server.ts) — the middleware picks the new active email up on
+  // their next navigation.
   revalidatePath("/team");
   return { id: member.id };
 }
@@ -196,18 +253,21 @@ export async function linkMemberToRep(id: string, repId: string | null) {
   return { ok: true };
 }
 
+/**
+ * Activate or deactivate a member. Admin/owner only, because setting a member
+ * inactive REVOKES their login — the mirror image of inviting them.
+ */
 export async function setTeamMemberStatus(id: string, status: string) {
-  const writer = await requireRosterWriter();
+  await requireAdmin();
   const memberId = z.string().uuid().parse(id);
-  if (writer.role !== "admin") {
-    assertManagerMayWrite(writer, await loadTargetShape(memberId));
-  }
   const next = z.enum(["active", "inactive"]).parse(status);
   const db = getDb();
   await db
     .update(teamMembers)
     .set({ status: next, updatedAt: new Date() })
     .where(eq(teamMembers.id, memberId));
+  // Deactivating revokes login; the middleware drops them within the allowlist
+  // cache TTL (see allowlist-server.ts) on their next request.
   revalidatePath("/team");
   revalidatePath(`/team/${memberId}`);
   return { ok: true };

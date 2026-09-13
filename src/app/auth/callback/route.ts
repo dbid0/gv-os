@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isAllowed } from "@/lib/auth/allowlist";
+import { isAllowedAsync } from "@/lib/auth/allowlist-server";
 import { createClient } from "@/lib/auth/server";
 
 /**
@@ -27,9 +27,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/error?reason=exchange-failed`);
   }
 
-  if (!isAllowed(data.user.email)) {
-    // A valid link for an address that is not permitted. Destroy the session
-    // immediately rather than leaving it to the middleware to catch later.
+  if (!(await isAllowedAsync(data.user.email))) {
+    // A valid link for an address that is not permitted — neither an owner nor
+    // an active team member. Destroy the session immediately rather than
+    // leaving it to the middleware to catch later.
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/auth/error?reason=not-allowed`);
   }

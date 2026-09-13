@@ -4,7 +4,7 @@ import { verifyAccessToken } from "@/lib/auth/verify-jwt";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
-import { isAllowed } from "@/lib/auth/allowlist";
+import { isAllowedAsync } from "@/lib/auth/allowlist-server";
 import { effectiveRole, guardTarget, ROLES, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
 
@@ -20,8 +20,10 @@ import { resolveRealRole } from "@/lib/auth/resolve-role";
  *
  * The allowlist is checked HERE as well as at the callback, deliberately. If a
  * session ever exists for an address that should not have one — removed from
- * the list, or issued before the list tightened — it is signed out on its very
- * next request rather than lingering until it expires.
+ * the list, or an invited member set inactive — it is signed out on its very
+ * next request rather than lingering until it expires. The check is DB-aware
+ * (owners OR an active team member) and cached, so it costs no per-request
+ * query on the common path; see allowlist-server.ts.
  */
 
 const PUBLIC_PATHS = [
@@ -161,8 +163,9 @@ export async function middleware(request: NextRequest) {
     user = data.user;
   }
 
-  // A signed-in user has no reason to sit on the login page.
-  if (user && isAllowed(user.email) && pathname === "/login") {
+  // A signed-in user has no reason to sit on the login page. Check the path
+  // first so the DB-aware lookup only runs for someone actually on /login.
+  if (user && pathname === "/login" && (await isAllowedAsync(user.email))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -175,7 +178,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (!isAllowed(user.email)) {
+  // The DB-aware gate: owners (env) always pass with no DB call; an invited
+  // member passes while their team_members row is active, and is signed out on
+  // the first request after it goes inactive. Owners are never locked out even
+  // if the member lookup fails.
+  if (!(await isAllowedAsync(user.email))) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL("/auth/error?reason=not-allowed", request.url),
