@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { Link2, Mail, Plus, Search, UserPlus } from "lucide-react";
+import { Fragment, useMemo, useState, useTransition } from "react";
+import { Check, Copy, Link2, Mail, Search, UserPlus } from "lucide-react";
 
 import { createTeamMember, setTeamMemberStatus } from "@/app/(app)/team/actions";
 import { PageHeader } from "@/components/shell/page-header";
@@ -94,7 +94,7 @@ export function TeamRoster({
   const { toast } = useToast();
   const [pending, start] = useTransition();
 
-  // Add form
+  // Invite form
   const [name, setName] = useState("");
   const [platformRole, setPlatformRole] = useState<PlatformRole>("sales_rep");
   const [repKind, setRepKind] = useState<RepKind>("closer");
@@ -102,6 +102,9 @@ export function TeamRoster({
   const [email, setEmail] = useState("");
   const [scope, setScope] = useState("");
   const [adding, setAdding] = useState(false);
+  // After a successful invite: who to show the "how they log in" note for.
+  const [invited, setInvited] = useState<{ name: string; email: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -131,27 +134,130 @@ export function TeamRoster({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [members, search, roleFilter, laneFilter]);
 
+  // Roster reads by the team someone is assigned to: agency-wide first, then
+  // each client lane alphabetically. A member's clientId is their lane; a null
+  // clientId is agency-wide.
+  const groups = useMemo(() => {
+    const byLane = new Map<
+      string,
+      { label: string; sort: string; members: TeamMemberRow[] }
+    >();
+    for (const m of filtered) {
+      const key = m.clientId ?? "__agency__";
+      let group = byLane.get(key);
+      if (!group) {
+        group = {
+          label: m.clientId ? (m.clientName ?? "Unassigned lane") : "Agency-wide",
+          // Agency-wide sorts before every named lane.
+          sort: m.clientId ? (m.clientName ?? "zzz").toLowerCase() : "",
+          members: [],
+        };
+        byLane.set(key, group);
+      }
+      group.members.push(m);
+    }
+    return [...byLane.values()].sort((a, b) => a.sort.localeCompare(b.sort));
+  }, [filtered]);
+
+  const renderMemberRow = (m: TeamMemberRow) => (
+    <tr
+      key={m.id}
+      className={cn(
+        "hover:bg-secondary/30 border-b transition-colors last:border-0",
+        m.status !== "active" && "opacity-55",
+      )}
+    >
+      <td className="px-4 py-2.5">
+        <Link
+          href={`/team/${m.id}`}
+          className="group inline-flex items-center gap-2.5 font-medium transition-colors"
+        >
+          <MemberAvatar name={m.name} />
+          <span className="group-hover:text-brand inline-flex items-center gap-1.5 transition-colors">
+            {m.name}
+            {m.repId && (
+              <Link2 className="text-brand size-3" aria-label="Linked to a sales rep" />
+            )}
+          </span>
+        </Link>
+      </td>
+      <td className="text-muted-foreground px-4 py-2.5">{memberRoleLabel(m)}</td>
+      <td className="px-4 py-2.5">
+        <span
+          className={cn(
+            "rounded-full border px-1.5 text-[11px]",
+            m.clientName ? "text-muted-foreground" : "border-brand/30 text-brand",
+          )}
+        >
+          {m.clientName ?? "Agency"}
+        </span>
+      </td>
+      <td className="text-muted-foreground px-4 py-2.5">
+        {m.email ? (
+          <a
+            href={`mailto:${m.email}`}
+            className="hover:text-brand inline-flex items-center gap-1.5 transition-colors"
+          >
+            <Mail className="size-3" /> {m.email}
+          </a>
+        ) : (
+          <span className="text-faint">—</span>
+        )}
+      </td>
+      <td className="px-4 py-2.5">
+        <StatusPill tone={m.status === "active" ? "live" : "muted"}>
+          {m.status === "active" ? "Active" : "Inactive"}
+        </StatusPill>
+      </td>
+      <td className="px-4 py-2.5 text-right">
+        {/* Toggling status grants or revokes login — admin only. */}
+        {canManageAllRoles && <StatusToggle member={m} />}
+      </td>
+    </tr>
+  );
+
+  // Email is the login identity, so it is required and must be well-formed
+  // before we send an invite the server would only reject.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = name.trim() !== "" && emailValid;
+
+  function openInvite() {
+    setInvited(null);
+    setCopied(false);
+    setAdding(true);
+  }
+
+  function closeSheet() {
+    setAdding(false);
+    setInvited(null);
+  }
+
   function add() {
-    if (name.trim() === "") return;
+    if (!canSubmit) return;
+    const invitedName = name.trim();
+    const invitedEmail = email.trim();
     start(async () => {
       try {
         await createTeamMember({
-          name,
+          name: invitedName,
           platformRole,
           repKind: platformRole === "sales_rep" ? repKind : null,
           subtype: platformRole === "team_member" ? subtype : null,
-          email: email || "",
+          email: invitedEmail,
           clientId: scope || null,
         });
-        toast({ tone: "success", title: `${name.trim()} added to the roster` });
-        setAdding(false);
+        // Keep the sheet open on a success panel that tells the operator how
+        // the new member actually signs in — the invite email is the rep's own
+        // action at /login, not something we send from here.
+        setInvited({ name: invitedName, email: invitedEmail });
+        setCopied(false);
         setName("");
         setEmail("");
         router.refresh();
       } catch (e) {
         toast({
           tone: "error",
-          title: "Couldn't add the member",
+          title: "Couldn't send the invite",
           detail: e instanceof Error ? e.message : undefined,
         });
       }
@@ -182,146 +288,240 @@ export function TeamRoster({
             ? "No one on the roster yet."
             : `${filtered.length} of ${members.length} shown`}
         </p>
-        <Button onClick={() => setAdding(true)}>
-          <UserPlus className="size-4" /> Add member
-        </Button>
+        {/* Inviting grants app login, so only an admin sees this. The server
+            action is the real boundary; this just hides the control. */}
+        {canManageAllRoles && (
+          <Button onClick={openInvite}>
+            <UserPlus className="size-4" /> Invite
+          </Button>
+        )}
       </div>
 
       {/* Adding someone is a deliberate, guided step rather than a cramped strip
           of inputs: pick WHAT THEY DO from real role cards (each with the blurb
           that already describes it), then who they are and whose lane they run. */}
-      <Sheet open={adding} onOpenChange={(o) => !o && setAdding(false)}>
+      <Sheet open={adding} onOpenChange={(o) => !o && closeSheet()}>
         <SheetContent className="gap-0 sm:max-w-lg">
           <SheetHeader className="border-b">
-            <SheetTitle>Add a team member</SheetTitle>
+            <SheetTitle>{invited ? "Invite sent" : "Invite a team member"}</SheetTitle>
             <SheetDescription>
-              Their role decides what they can open in GV OS.
+              {invited
+                ? "Adding them to the roster granted them login. Here is how they get in."
+                : "Their role decides what they can open in GV OS. The email is how they sign in."}
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 space-y-5 overflow-y-auto p-4">
-            <section className="space-y-2">
-              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                What they do
-              </h3>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {PLATFORM_ROLES.filter(
-                  (r) => canManageAllRoles || r.value === "sales_rep",
-                ).map((r) => {
-                  const on = platformRole === r.value;
-                  return (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setPlatformRole(r.value as PlatformRole)}
-                      aria-pressed={on}
-                      className={cn(
-                        "rounded-lg border p-3 text-left transition-colors",
-                        on
-                          ? "border-brand bg-brand-soft/40"
-                          : "hover:bg-secondary/50 border-border",
-                      )}
-                    >
-                      <span className="block text-sm font-medium">{r.label}</span>
-                      <span className="text-faint mt-0.5 block text-xs">{r.blurb}</span>
-                    </button>
-                  );
-                })}
+          {invited ? (
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+              <div className="flex items-start gap-3">
+                <span className="dot-brand mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full">
+                  <Check className="text-primary-foreground size-4" />
+                </span>
+                <p className="text-sm leading-relaxed">
+                  <span className="font-medium">{invited.name}</span> is on the roster
+                  and can sign in as{" "}
+                  <span className="text-foreground font-medium">{invited.email}</span>.
+                </p>
               </div>
-            </section>
 
-            {(platformRole === "sales_rep" || platformRole === "team_member") && (
+              <div className="card-grad space-y-3 rounded-lg border p-4">
+                <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  How they log in
+                </h3>
+                <ol className="text-muted-foreground list-decimal space-y-1.5 pl-4 text-sm leading-relaxed">
+                  <li>
+                    Go to{" "}
+                    <span className="text-foreground font-medium">
+                      os.globalventures.app/login
+                    </span>
+                  </li>
+                  <li>
+                    Enter{" "}
+                    <span className="text-foreground font-medium">{invited.email}</span>{" "}
+                    and request the sign-in link
+                  </li>
+                  <li>
+                    Open the magic link from that inbox — they are in, scoped to their
+                    role
+                  </li>
+                </ol>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard
+                      ?.writeText(invited.email)
+                      .then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      })
+                      .catch(() => {});
+                  }}
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="size-3" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3" /> Copy email
+                    </>
+                  )}
+                </button>
+                <p className="text-faint text-xs leading-relaxed">
+                  We don&apos;t send the email for them — requesting the magic link is
+                  their own step at the login page.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 space-y-5 overflow-y-auto p-4">
               <section className="space-y-2">
                 <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                  Specifically
+                  What they do
                 </h3>
-                <div className="flex flex-wrap gap-2">
-                  {(platformRole === "sales_rep" ? REP_KINDS : MEMBER_SUBTYPES).map(
-                    (k) => {
-                      const on =
-                        platformRole === "sales_rep"
-                          ? repKind === k.value
-                          : subtype === k.value;
-                      return (
-                        <button
-                          key={k.value}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() =>
-                            platformRole === "sales_rep"
-                              ? setRepKind(k.value as RepKind)
-                              : setSubtype(k.value as MemberSubtype)
-                          }
-                          className={cn(
-                            "rounded-full border px-3 py-1 text-xs transition-colors",
-                            on
-                              ? "border-brand bg-brand-soft/40 text-foreground"
-                              : "text-muted-foreground hover:bg-secondary/50",
-                          )}
-                        >
-                          {k.label}
-                        </button>
-                      );
-                    },
-                  )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PLATFORM_ROLES.filter(
+                    (r) => canManageAllRoles || r.value === "sales_rep",
+                  ).map((r) => {
+                    const on = platformRole === r.value;
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setPlatformRole(r.value as PlatformRole)}
+                        aria-pressed={on}
+                        className={cn(
+                          "rounded-lg border p-3 text-left transition-colors",
+                          on
+                            ? "border-brand bg-brand-soft/40"
+                            : "hover:bg-secondary/50 border-border",
+                        )}
+                      >
+                        <span className="block text-sm font-medium">{r.label}</span>
+                        <span className="text-faint mt-0.5 block text-xs">
+                          {r.blurb}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
-            )}
 
-            <section className="space-y-3">
-              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                Who they are
-              </h3>
-              <label className="block space-y-1.5">
-                <span className="text-muted-foreground text-xs font-medium">Name</span>
-                <Input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && add()}
-                  placeholder="Full name"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-muted-foreground text-xs font-medium">
-                  Email <span className="text-faint">— how they sign in</span>
-                </span>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && add()}
-                  placeholder="Optional"
-                />
-              </label>
-            </section>
+              {(platformRole === "sales_rep" || platformRole === "team_member") && (
+                <section className="space-y-2">
+                  <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                    Specifically
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(platformRole === "sales_rep" ? REP_KINDS : MEMBER_SUBTYPES).map(
+                      (k) => {
+                        const on =
+                          platformRole === "sales_rep"
+                            ? repKind === k.value
+                            : subtype === k.value;
+                        return (
+                          <button
+                            key={k.value}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              platformRole === "sales_rep"
+                                ? setRepKind(k.value as RepKind)
+                                : setSubtype(k.value as MemberSubtype)
+                            }
+                            className={cn(
+                              "rounded-full border px-3 py-1 text-xs transition-colors",
+                              on
+                                ? "border-brand bg-brand-soft/40 text-foreground"
+                                : "text-muted-foreground hover:bg-secondary/50",
+                            )}
+                          >
+                            {k.label}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                </section>
+              )}
 
-            <section className="space-y-2">
-              <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                Whose lane
-              </h3>
-              <select
-                className={cn(selectClass, "w-full")}
-                value={scope}
-                onChange={(e) => setScope(e.target.value)}
-              >
-                <option value="">Agency-wide</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-faint text-xs">
-                Agency-wide sees every offer; a lane scopes them to that one.
-              </p>
-            </section>
-          </div>
+              <section className="space-y-3">
+                <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Who they are
+                </h3>
+                <label className="block space-y-1.5">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    Name
+                  </span>
+                  <Input
+                    autoFocus
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && add()}
+                    placeholder="Full name"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    Email{" "}
+                    <span className="text-faint">— required, how they sign in</span>
+                  </span>
+                  <Input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && add()}
+                    placeholder="name@company.com"
+                    aria-invalid={email.trim() !== "" && !emailValid}
+                  />
+                  {email.trim() !== "" && !emailValid && (
+                    <span className="text-destructive text-xs">
+                      Enter a valid email address.
+                    </span>
+                  )}
+                </label>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-faint text-[11px] font-medium tracking-wider uppercase">
+                  Whose lane
+                </h3>
+                <select
+                  className={cn(selectClass, "w-full")}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                >
+                  <option value="">Agency-wide</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-faint text-xs">
+                  Agency-wide sees every offer; a lane scopes them to that one.
+                </p>
+              </section>
+            </div>
+          )}
 
           <SheetFooter className="border-t">
-            <Button onClick={add} disabled={pending || name.trim() === ""}>
-              {pending ? "Adding…" : "Add to the roster"}
-            </Button>
+            {invited ? (
+              <div className="flex w-full gap-2">
+                <Button variant="outline" className="flex-1" onClick={openInvite}>
+                  Invite another
+                </Button>
+                <Button className="flex-1" onClick={closeSheet}>
+                  Done
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={add} disabled={pending || !canSubmit}>
+                {pending ? "Sending…" : "Send invite"}
+              </Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -400,67 +600,18 @@ export function TeamRoster({
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((m) => (
-                    <tr
-                      key={m.id}
-                      className={cn(
-                        "hover:bg-secondary/30 border-b transition-colors last:border-0",
-                        m.status !== "active" && "opacity-55",
-                      )}
-                    >
-                      <td className="px-4 py-2.5">
-                        <Link
-                          href={`/team/${m.id}`}
-                          className="group inline-flex items-center gap-2.5 font-medium transition-colors"
+                  groups.map((g) => (
+                    <Fragment key={g.label}>
+                      <tr className="bg-secondary/40 border-b">
+                        <td
+                          colSpan={6}
+                          className="text-faint px-4 py-1.5 text-[11px] font-medium tracking-wider uppercase"
                         >
-                          <MemberAvatar name={m.name} />
-                          <span className="group-hover:text-brand inline-flex items-center gap-1.5 transition-colors">
-                            {m.name}
-                            {m.repId && (
-                              <Link2
-                                className="text-brand size-3"
-                                aria-label="Linked to a sales rep"
-                              />
-                            )}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="text-muted-foreground px-4 py-2.5">
-                        {memberRoleLabel(m)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span
-                          className={cn(
-                            "rounded-full border px-1.5 text-[11px]",
-                            m.clientName
-                              ? "text-muted-foreground"
-                              : "border-brand/30 text-brand",
-                          )}
-                        >
-                          {m.clientName ?? "Agency"}
-                        </span>
-                      </td>
-                      <td className="text-muted-foreground px-4 py-2.5">
-                        {m.email ? (
-                          <a
-                            href={`mailto:${m.email}`}
-                            className="hover:text-brand inline-flex items-center gap-1.5 transition-colors"
-                          >
-                            <Mail className="size-3" /> {m.email}
-                          </a>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <StatusPill tone={m.status === "active" ? "live" : "muted"}>
-                          {m.status === "active" ? "Active" : "Inactive"}
-                        </StatusPill>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <StatusToggle member={m} />
-                      </td>
-                    </tr>
+                          {g.label} · {g.members.length}
+                        </td>
+                      </tr>
+                      {g.members.map((m) => renderMemberRow(m))}
+                    </Fragment>
                   ))
                 )}
               </tbody>
