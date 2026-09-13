@@ -3,21 +3,28 @@ name: keep-warm
 # A dedicated, frequent warm ping — split out of integration-sync so warming
 # isn't coupled to the data-pull cadence.
 #
-# This used to be folded into integration-sync (*/30) because the repo was
-# PRIVATE: GitHub bills a private repo's Actions by the run, rounded up to the
-# minute, and a separate */5 keep-warm alongside the sync was costing ~8,640
-# billed minutes/month for a few seconds of curl each run — expensive enough
-# that it got retired and folded into the sync's own warm step instead.
+# WHY THIS EXISTS: the app is serverless (Vercel Functions). After an idle
+# stretch Vercel reclaims the instance well before the next 30-minute sync, so
+# the first signed-in visit pays the full cold boot AND cold data loaders —
+# 3-4s on the query-heavy routes before anything paints. A scheduled ping keeps
+# the function process, the DB pool, and every heavy route's own caches hot, so
+# that first click lands warm instead.
 #
-# The repo is PUBLIC now, so Actions minutes are free/unlimited — the cost
-# reason for throttling the warm is gone. This restores a standalone,
-# frequent cadence so a cold start (1-2s on the query-heavy routes) stays
-# rare, without adding load to the actual integration pulls.
+# WHY */5 IS SAFE NOW: warming used to be throttled purely for money. GitHub
+# bills a PRIVATE repo's Actions by the run, rounded up to the minute, so a
+# standalone */5 keep-warm cost ~8,640 billed minutes/month for a few seconds
+# of curl each — expensive enough that it once got retired and folded into the
+# */30 sync. The repo is PUBLIC now: Actions minutes are free/unlimited, so the
+# cost reason is gone and a tight */5 cadence — well inside Vercel's idle
+# reclaim window — is the cheapest way to make cold starts rare. The warm route
+# itself is read-only and pool-safe by construction: it runs its loaders in
+# sequential phases so a single ping never tips the DB pool over (see
+# src/app/api/warm/route.ts), so a tighter cadence adds no write load.
 #
-# Cadence: every 15 minutes. Do NOT go below ~10 minutes — Vercel functions
-# and the DB pool stay warm on their own for several minutes after the last
-# hit, so anything much tighter than 10 minutes is diminishing returns for
-# more billed minutes and more load on the DB pool.
+# SCOPE: warm-ONLY. The actual integration pulls (Close, Calendly, Typeform,
+# Kit, Stripe, Fathom) still live in integration-sync.yml on its own */30
+# schedule — this workflow does no sync work, which is exactly why it's cheap
+# enough to run every 5 minutes.
 #
 # Setup: same repo secret as integration-sync, `SYNC_SECRET`, matching the
 # app's SYNC_SECRET env. Until it's set, the /api/warm leg skips cleanly.
@@ -27,35 +34,42 @@ name: keep-warm
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}
 
 jobs:
   warm:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     continue-on-error: true
     steps:
       - name: Warm the function + DB pool + signed-in path
         env:
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
         run: |
-          # /api/health = process + DB socket; /dashboard = the middleware
-          # function (a 307 off the login wall) — both public, no secret
-          # needed. /api/warm runs every heavy page's own read-only loaders
-          # (dashboard, reconciliation, sales/client reports, the daily
-          # brief) under the bearer secret — the actual paths a signed-in
-          # visitor takes.
+          # Ping in the order a real visit warms things:
+          #   /api/health = process + DB socket (public, no secret)
+          #   /dashboard  = the signed-in page route's function — the actual
+          #                 thing a visitor hits; it 307s off the login wall,
+          #                 but that still warms the middleware + page function
+          #                 (public, no secret)
+          #   /api/warm   = THE real warmer — runs every heavy page's own
+          #                 read-only loaders (dashboard queries, roster +
+          #                 settings caches, reconciliation, sales/client
+          #                 reports, the daily brief, JWKS prewarm) under the
+          #                 sync bearer secret. See src/app/api/warm/route.ts.
           for path in /api/health /dashboard; do
-            code=$(curl -s -o /dev/null -m 20 --retry 1 --retry-delay 3 --retry-all-errors \
+            code=$(curl -s -o /dev/null -m 40 --retry 2 --retry-delay 6 --retry-all-errors \
               -w "%{http_code} %{time_total}s" "https://os.globalventures.app$path" || echo "ERR")
             echo "$path -> $code"
           done
+          # Guard exactly like integration-sync: only call /api/warm when the
+          # bearer secret is present, otherwise skip cleanly (never error).
           if [ -z "$SYNC_SECRET" ]; then
             echo "SYNC_SECRET repo secret not set — skipping /api/warm."
             exit 0
           fi
-          curl -s -m 30 --retry 1 --retry-delay 3 --retry-all-errors \
+          code=$(curl -s -o /dev/null -m 40 --retry 2 --retry-delay 6 --retry-all-errors \
             -H "Authorization: Bearer $SYNC_SECRET" \
-            -w "\n%{http_code}\n" \
-            "https://os.globalventures.app/api/warm" || true
+            -w "%{http_code} %{time_total}s" "https://os.globalventures.app/api/warm" || echo "ERR")
+          echo "/api/warm -> $code"
