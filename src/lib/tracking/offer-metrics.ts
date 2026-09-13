@@ -24,7 +24,12 @@ import {
   type RepActivityStats,
 } from "@/lib/sales/call-activity";
 import { closesPaid, type ClosesPaid } from "@/lib/tracking/closes-paid";
-import { cashMix, type CashMix, type MixPayment } from "@/lib/tracking/cash-mix";
+import {
+  cashMix,
+  mixTotalCents,
+  type CashMix,
+  type MixPayment,
+} from "@/lib/tracking/cash-mix";
 import type { AliasMap } from "@/lib/tracking/aliases";
 import {
   buildOfferFunnel,
@@ -72,14 +77,31 @@ export type OfferMetricsInputs = {
   stl: OfferStl;
   /** Lead-stitched funnel inputs; absent = the surface didn't load leads. */
   funnelLeads?: { leads: LeadSummary[]; stageKeys: FunnelStageKey[] } | null;
-  /** Windowed payments for the cash mix; absent = no processor/sheet feed. */
+  /**
+   * Windowed payments for the cash mix; absent = no processor/sheet feed. When
+   * present, this feed ALSO owns the window money (headline + revenue): the
+   * collected cash is the mix's own total, so the headline equals the mix by
+   * construction. The window's contracted value and the previous window's
+   * figures ride alongside, precomputed by the loader from the same feed.
+   */
   mixWindow?: {
     payments: MixPayment[];
     from: Date;
     to: Date;
     aliases?: AliasMap;
+    /** Contracted value sold in the window (feed deals); null = no deals feed. */
+    windowRevenueCents?: number | null;
+    /** Previous window's collected cash, for the "vs last period" delta. */
+    prevCollectedCents?: number | null;
+    /** Previous window's contracted value. */
+    prevWindowRevenueCents?: number | null;
   } | null;
-  /** The window's client-layer money rows + the previous window's cash. */
+  /**
+   * The window's client-layer money rows + the previous window's cash. The
+   * LEDGER fallback — used only when there is no payment feed (mixWindow). A
+   * feed always wins, so an empty ledger can never zero a headline the mix
+   * shows as non-zero.
+   */
   rangeMoney?: {
     rows: { cashCents: number; revenueCents: number }[];
     prevCash: number | null;
@@ -147,6 +169,17 @@ export function assembleOfferMetrics(
   ).length;
   const stuck = stuckCalls(inputs.bookings, inputs.reportedEmails, now);
 
+  // The window's cash mix — and, when a feed is present, the window money is a
+  // cut of this SAME mix, so the headline can never disagree with the bar.
+  const mix = inputs.mixWindow
+    ? cashMix(
+        inputs.mixWindow.payments,
+        inputs.mixWindow.from,
+        inputs.mixWindow.to,
+        inputs.mixWindow.aliases,
+      )
+    : null;
+
   return {
     apps: { count: inputs.appDates.length },
     activity: summarizeActivity(inputs.calls),
@@ -156,22 +189,8 @@ export function assembleOfferMetrics(
     funnel: inputs.funnelLeads
       ? buildOfferFunnel(inputs.funnelLeads.leads, inputs.funnelLeads.stageKeys)
       : null,
-    cashMix: inputs.mixWindow
-      ? cashMix(
-          inputs.mixWindow.payments,
-          inputs.mixWindow.from,
-          inputs.mixWindow.to,
-          inputs.mixWindow.aliases,
-        )
-      : null,
-    money: inputs.rangeMoney
-      ? {
-          rangeCash: inputs.rangeMoney.rows.reduce((s, r) => s + r.cashCents, 0),
-          rangeRevenue: inputs.rangeMoney.rows.reduce((s, r) => s + r.revenueCents, 0),
-          prevRangeCash: inputs.rangeMoney.prevCash,
-          prevRangeRevenue: inputs.rangeMoney.prevRevenue,
-        }
-      : null,
+    cashMix: mix,
+    money: buildWindowMoney(mix, inputs.mixWindow, inputs.rangeMoney),
     rightNow: {
       upcoming,
       stuck: stuck.length,
@@ -185,4 +204,40 @@ export function assembleOfferMetrics(
     },
     stl: inputs.stl,
   };
+}
+
+/**
+ * The window's headline money. Precedence matches the cash mix: a payment feed
+ * (Stripe, else the sheet) WINS — its collected cash is the mix's own total, so
+ * the "cash collected" headline equals the mix beneath it by construction, and
+ * revenue is the window's contracted value floored at that cash (never a false
+ * $0, never below what was collected). The client-layer ledger is the fallback
+ * ONLY when there is no feed at all (a ledger-native client); an empty ledger
+ * can no longer zero a headline the mix shows as non-zero. Null when neither
+ * source was loaded.
+ */
+function buildWindowMoney(
+  mix: CashMix | null,
+  mixWindow: OfferMetricsInputs["mixWindow"],
+  rangeMoney: OfferMetricsInputs["rangeMoney"],
+): OfferMetrics["money"] {
+  if (mix && mixWindow) {
+    const rangeCash = mixTotalCents(mix);
+    const rangeRevenue = Math.max(mixWindow.windowRevenueCents ?? 0, rangeCash);
+    const prevRangeCash = mixWindow.prevCollectedCents ?? null;
+    const prevRangeRevenue =
+      prevRangeCash === null
+        ? null
+        : Math.max(mixWindow.prevWindowRevenueCents ?? 0, prevRangeCash);
+    return { rangeCash, rangeRevenue, prevRangeCash, prevRangeRevenue };
+  }
+  if (rangeMoney) {
+    return {
+      rangeCash: rangeMoney.rows.reduce((s, r) => s + r.cashCents, 0),
+      rangeRevenue: rangeMoney.rows.reduce((s, r) => s + r.revenueCents, 0),
+      prevRangeCash: rangeMoney.prevCash,
+      prevRangeRevenue: rangeMoney.prevRevenue,
+    };
+  }
+  return null;
 }

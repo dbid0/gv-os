@@ -118,3 +118,46 @@ export function cashMix(
   mix.returningPayers = returningKeys.size;
   return mix;
 }
+
+/**
+ * The window's FULL collected cash — every bucket the mix split it into, the
+ * unplaceable remainder included. This is the same set the mix sums, so wiring
+ * a "cash collected" headline to this makes the headline equal the mix beneath
+ * it by construction (the bar shows the placeable split; the headline is the
+ * whole window). Never a false zero when the mix is non-zero.
+ */
+export function mixTotalCents(mix: CashMix): number {
+  return (
+    mix.newCents +
+    mix.recurringSameMonthCents +
+    mix.afterFirstMonthCents +
+    mix.unplaceableCents
+  );
+}
+
+/**
+ * Collected cash inside [from, to] from a payment history — the mix's own
+ * total before it is split into buckets. Identical to summing the four buckets
+ * of `cashMix(history, from, to)`; kept separate for windows where only the
+ * total is needed (a previous period's comparison figure) without paying to
+ * classify payers. Refunds and failed charges never count (classifyPayment).
+ */
+export function collectedInWindow(
+  history: MixPayment[],
+  windowFrom: Date,
+  windowTo: Date,
+): number {
+  let sum = 0;
+  for (const p of history) {
+    if (!p.occurredAt) continue;
+    const t = p.occurredAt.getTime();
+    if (t < windowFrom.getTime() || t > windowTo.getTime()) continue;
+    if (classifyPayment({ cashCents: p.cashCents, status: p.status }) !== "collected") {
+      continue;
+    }
+    const cents = p.cashCents ?? 0;
+    if (cents <= 0) continue;
+    sum += cents;
+  }
+  return sum;
+}

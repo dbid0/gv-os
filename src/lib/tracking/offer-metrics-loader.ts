@@ -29,6 +29,11 @@ import {
   latestSnapshotsBySource,
   leadsForClient,
 } from "@/lib/tracking/queries";
+import { collectedInWindow } from "@/lib/tracking/cash-mix";
+import {
+  dealsRevenueInWindow,
+  type WindowMoneyFeed,
+} from "@/lib/tracking/window-money";
 import { offerModelOf, stagesForModel } from "@/lib/clients/offer-model";
 import { rowsForClient } from "@/lib/clients/attribution";
 import {
@@ -204,6 +209,16 @@ export type OfferHomeData = {
   rangeRows: BacklogRow[];
   /** The offer's recent client-layer money, newest first. */
   recentRows: BacklogRow[];
+  /**
+   * The payment feed behind the window money (Stripe, else the sheet), or null
+   * for a ledger-native offer. The page precomputes every preset window from
+   * this so the hero's range chips switch instantly, client-side.
+   */
+  moneyFeed: WindowMoneyFeed | null;
+  /** All of this offer's client-layer money rows — the ledger fallback feed. */
+  clientRows: BacklogRow[];
+  /** The offer's all-time collected cash, for the empty-window fallback label. */
+  allTimeCashCents: number;
 };
 
 type BacklogRow =
@@ -305,24 +320,47 @@ export async function loadOfferHome(
       }
     : null;
 
-  // Cash mix: processor snapshot first, sheet as the fallback feed.
+  // Cash mix AND window money: processor snapshot first, sheet as the fallback
+  // feed. When present, this feed OWNS the window money — its collected cash is
+  // the mix's own total, so the headline equals the mix beneath it. The ledger
+  // (below) is the fallback only for feed-less, ledger-native offers.
   const paySource =
     snaps.find((x) => x.source === "stripe") ??
     snaps.find((x) => x.source === "sheet") ??
     null;
+  let moneyFeed: WindowMoneyFeed | null = null;
   let mixWindow = null;
   if (paySource && row) {
-    const [{ payments }, aliases] = await Promise.all([
+    const [{ payments, deals }, aliases] = await Promise.all([
       cashRowsForClient(paySource.snapshot.syncId),
       aliasMapForClient(row.id),
     ]);
+    moneyFeed = { payments, deals, aliases };
+    const winFrom = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
+    const winTo = bounds.to
+      ? new Date(`${bounds.to}T23:59:59Z`)
+      : new Date(`${todayKey}T23:59:59Z`);
+    // The previous window, same length — the honest "vs last period" base for
+    // the delta (computed from the SAME feed, not the ledger).
+    const prevB = previousBounds(bounds);
+    const prevFrom = prevB?.from != null ? new Date(`${prevB.from}T00:00:00Z`) : null;
+    const prevTo = prevB?.to != null ? new Date(`${prevB.to}T23:59:59Z`) : null;
     mixWindow = {
       payments,
-      from: bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0),
-      to: bounds.to
-        ? new Date(`${bounds.to}T23:59:59Z`)
-        : new Date(`${todayKey}T23:59:59Z`),
+      from: winFrom,
+      to: winTo,
       aliases,
+      // Contracted value from the feed's own deals; a processor-only feed has
+      // none, and revenue then falls back to the collected cash.
+      windowRevenueCents: deals.length
+        ? dealsRevenueInWindow(deals, winFrom, winTo)
+        : null,
+      prevCollectedCents:
+        prevFrom && prevTo ? collectedInWindow(payments, prevFrom, prevTo) : null,
+      prevWindowRevenueCents:
+        prevFrom && prevTo && deals.length
+          ? dealsRevenueInWindow(deals, prevFrom, prevTo)
+          : null,
     };
   }
 
@@ -368,11 +406,14 @@ export async function loadOfferHome(
     now,
   );
 
-  const recentRows = rowsForClient(
+  // Every client-layer row for this offer — recent feed (top 8) AND the ledger
+  // fallback the page windows per-range when there is no payment feed.
+  const clientRows = rowsForClient(
     backlog.filter((r) => r.layer === "client"),
     report?.clientId ?? null,
     slug,
-  ).slice(0, 8);
+  );
+  const recentRows = clientRows.slice(0, 8);
 
   return {
     metrics,
@@ -381,5 +422,8 @@ export async function loadOfferHome(
     mixSource: paySource ? (paySource.source === "stripe" ? "stripe" : "sheet") : null,
     rangeRows,
     recentRows,
+    moneyFeed,
+    clientRows,
+    allTimeCashCents: report?.mirror.cashCents ?? 0,
   };
 }

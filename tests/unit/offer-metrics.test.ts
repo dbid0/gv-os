@@ -222,6 +222,81 @@ describe("assembleOfferMetrics", () => {
     });
   });
 
+  it("a payment feed WINS over the ledger — the headline is the mix total, never a false $0", () => {
+    // The bug: a client whose payments live in a snapshot has an EMPTY ledger,
+    // so the ledger path returned $0 while the mix showed real cash. The feed
+    // must win: the headline equals the mix total, and revenue is never $0.
+    const payments = [
+      {
+        email: "a@x.com",
+        cashCents: 100000,
+        status: "succeeded",
+        occurredAt: T("2026-09-05T10:00:00Z"),
+      },
+      {
+        email: null,
+        phone: null,
+        cashCents: 8000,
+        status: "succeeded",
+        occurredAt: T("2026-09-12T10:00:00Z"),
+      },
+    ];
+    const m = assembleOfferMetrics(
+      inputs({
+        mixWindow: {
+          payments,
+          from: T("2026-09-01T00:00:00Z"),
+          to: T("2026-09-30T23:59:59Z"),
+          windowRevenueCents: null, // processor-only feed: revenue == collected
+          prevCollectedCents: 50000,
+          prevWindowRevenueCents: null,
+        },
+        // An empty ledger that would have zeroed the headline before the fix.
+        rangeMoney: { rows: [], prevCash: 0, prevRevenue: 0 },
+      }),
+      NOW,
+    );
+    const mixTotal =
+      m.cashMix!.newCents +
+      m.cashMix!.recurringSameMonthCents +
+      m.cashMix!.afterFirstMonthCents +
+      m.cashMix!.unplaceableCents;
+    expect(mixTotal).toBe(108000);
+    // Headline equals the mix — the feed won, the empty ledger did not zero it.
+    expect(m.money?.rangeCash).toBe(108000);
+    expect(m.money?.rangeCash).toBe(mixTotal);
+    // Revenue falls back to collected (no deals) — never $0 under non-zero cash.
+    expect(m.money?.rangeRevenue).toBe(108000);
+    expect(m.money?.prevRangeCash).toBe(50000);
+  });
+
+  it("uses the feed's contracted value for revenue when it carries deals", () => {
+    const m = assembleOfferMetrics(
+      inputs({
+        mixWindow: {
+          payments: [
+            {
+              email: "a@x.com",
+              cashCents: 100000,
+              status: "succeeded",
+              occurredAt: T("2026-09-05T10:00:00Z"),
+            },
+          ],
+          from: T("2026-09-01T00:00:00Z"),
+          to: T("2026-09-30T23:59:59Z"),
+          windowRevenueCents: 250000,
+          prevCollectedCents: null,
+          prevWindowRevenueCents: null,
+        },
+      }),
+      NOW,
+    );
+    expect(m.money?.rangeCash).toBe(100000);
+    expect(m.money?.rangeRevenue).toBe(250000); // contract value > collected
+    expect(m.money?.prevRangeCash).toBeNull();
+    expect(m.money?.prevRangeRevenue).toBeNull();
+  });
+
   it("funnel section builds from stitched leads with the offer's stages", () => {
     const lead = {
       email: "a@x.com",
