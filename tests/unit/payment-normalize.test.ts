@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dollarsToCents,
-  normalizeFanbasis,
+  normalizeCommas,
   normalizeGeneric,
   normalizePayment,
   normalizeStripe,
@@ -129,9 +129,9 @@ describe("normalizeStripe", () => {
   });
 });
 
-describe("normalizeFanbasis (defensive probing)", () => {
+describe("normalizeCommas (defensive probing; formerly Fanbasis)", () => {
   it("finds dollars + email across the known field spellings", () => {
-    const out = normalizeFanbasis({
+    const out = normalizeCommas({
       transaction_id: "fb_123",
       total: 1400,
       buyer_email: "Buyer@Client.com",
@@ -148,13 +148,13 @@ describe("normalizeFanbasis (defensive probing)", () => {
 
   it("captures refunds negative and unknown-amount payloads as unknown", () => {
     expect(
-      normalizeFanbasis({ id: "fb_9", amount: 49, type: "Refund Issued" }),
+      normalizeCommas({ id: "fb_9", amount: 49, type: "Refund Issued" }),
     ).toMatchObject({ kind: "refund", amountCents: -4900 });
-    expect(normalizeFanbasis({ id: "fb_10" })).toMatchObject({
+    expect(normalizeCommas({ id: "fb_10" })).toMatchObject({
       kind: "unknown",
       amountCents: 0,
     });
-    expect(normalizeFanbasis({ type: "New Sale" })).toBeNull();
+    expect(normalizeCommas({ type: "New Sale" })).toBeNull();
   });
 });
 
@@ -199,14 +199,17 @@ describe("normalizeGeneric + dispatch", () => {
     expect(
       normalizePayment("stripe", { id: "evt_1", type: "charge.succeeded", data: {} }),
     ).toMatchObject({ externalId: "evt_1" });
-    expect(normalizePayment("fanbasis", { id: "fb_1", amount: 10 })).toMatchObject({
-      amountCents: 1000,
-    });
     expect(
       normalizePayment("whop", { data: { id: "w_1", final_amount: 10 } }),
     ).toMatchObject({ externalId: "w_1" });
+    // Commas is canonical AND the retired "fanbasis" string both route to the
+    // same normalizer — a real charge, not the generic unknown fallback.
     expect(normalizePayment("commas", { id: "c_1", amount: 10 })).toMatchObject({
-      kind: "unknown",
+      kind: "charge",
+      amountCents: 1000,
+    });
+    expect(normalizePayment("fanbasis", { id: "fb_1", amount: 10 })).toMatchObject({
+      kind: "charge",
       amountCents: 1000,
     });
   });

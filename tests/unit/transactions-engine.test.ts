@@ -113,7 +113,7 @@ describe("catalog constants", () => {
   it("carry the spec's deal types and payment methods", () => {
     expect(DEAL_TYPES).toContain("Rev-Share");
     expect(DEAL_TYPES).toContain("Client Handoff");
-    expect(PAYMENT_METHODS).toContain("Fanbasis");
+    expect(PAYMENT_METHODS).toContain("Commas");
     expect(PAYMENT_METHODS).toContain("Wire");
   });
 });

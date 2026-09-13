@@ -21,7 +21,7 @@ describe("integration catalog", () => {
       "slack",
       "discord",
       "whop",
-      "fanbasis",
+      "commas",
       "stripe",
       "shopify",
       "vidalytics",

@@ -54,7 +54,7 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
   const [offer, setOffer] = useState("");
   const [revenue, setRevenue] = useState("");
   const [cash, setCash] = useState("");
-  const [method, setMethod] = useState("Fanbasis");
+  const [method, setMethod] = useState("Commas");
   const [pct, setPct] = useState("");
   const [fee, setFee] = useState("");
   const [agreement, setAgreement] = useState("");

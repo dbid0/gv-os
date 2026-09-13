@@ -28,7 +28,7 @@ export const FACT_SOURCES = [
   "iclosed",
   "stripe",
   "whop",
-  "fanbasis",
+  "commas",
   "typeform",
   "fathom",
 ] as const;
@@ -57,7 +57,7 @@ export type FactKind =
  */
 const OWNERSHIP: Record<FactKind, Partial<Record<FactSource, number>>> = {
   // Who the lead is. The form they filled in is definitive.
-  identity: { sheet: 1, typeform: 5, close: 4, stripe: 2, whop: 2, fanbasis: 2 },
+  identity: { sheet: 1, typeform: 5, close: 4, stripe: 2, whop: 2, commas: 2 },
   // That they applied, and when.
   application: { sheet: 1, typeform: 5, close: 3 },
   // When a call was booked. The calendar that created it knows.
@@ -68,7 +68,7 @@ const OWNERSHIP: Record<FactKind, Partial<Record<FactSource, number>>> = {
   // this: no API knows whether the prospect said yes, only the human on it.
   callOutcome: { sheet: 4, close: 3, fathom: 2 },
   // Money. The processor is the only honest answer.
-  payment: { sheet: 1, stripe: 5, whop: 5, fanbasis: 5, close: 2 },
+  payment: { sheet: 1, stripe: 5, whop: 5, commas: 5, close: 2 },
   // The recording itself.
   recording: { sheet: 3, fathom: 5 },
 };
@@ -183,7 +183,7 @@ export const SOURCE_LABEL: Record<FactSource, string> = {
   iclosed: "iClosed",
   stripe: "Stripe",
   whop: "Whop",
-  fanbasis: "Fanbasis",
+  commas: "Commas",
   typeform: "Typeform",
   fathom: "Fathom",
 };
@@ -240,6 +240,8 @@ export function processorMatchesSource(
 ): boolean {
   const p = (processor ?? "").trim().toLowerCase();
   if (p === "") return false;
-  if (source === "fanbasis") return p.includes("fanbasis") || p.includes("commas");
+  // Commas is canonical, but the sheet's Processor cell may still say either
+  // "Commas" or the retired "Fanbasis" — both belong to the commas source.
+  if (source === "commas") return p.includes("commas") || p.includes("fanbasis");
   return p.includes(source);
 }

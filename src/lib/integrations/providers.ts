@@ -44,13 +44,6 @@ export const PROVIDERS: Provider[] = [
     feeds: "Payment events → ledger",
   },
   {
-    value: "fanbasis",
-    label: "Fanbasis",
-    group: "Payments",
-    credential: "api_key",
-    feeds: "Payment events → ledger",
-  },
-  {
     value: "stripe",
     label: "Stripe",
     group: "Payments",
@@ -65,6 +58,10 @@ export const PROVIDERS: Provider[] = [
     feeds: "Payment events → ledger",
   },
   {
+    // Commas is the canonical payment processor (formerly Fanbasis — same rail,
+    // same fee). Stored/legacy "fanbasis" is still recognized as input elsewhere
+    // (fee table, source matcher, processor-connected checks), but Commas is the
+    // only name offered in the catalog going forward.
     value: "commas",
     label: "Commas",
     group: "Payments",
@@ -274,7 +271,7 @@ const AUTO_SYNC = new Set([
   "google_sheets",
 ]);
 /** Payments/Bookings tools that push to a minted webhook URL (no pull API wired). */
-const WEBHOOK_ONLY = new Set(["whop", "fanbasis", "shopify", "commas"]);
+const WEBHOOK_ONLY = new Set(["whop", "shopify", "commas"]);
 
 export function providerSyncStatus(value: string): SyncStatus {
   if (AUTO_SYNC.has(value)) return "auto";

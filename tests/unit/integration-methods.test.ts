@@ -59,7 +59,7 @@ describe("providerSyncStatus", () => {
   });
 
   it("marks push-only payment/booking tools as webhook", () => {
-    for (const value of ["whop", "fanbasis", "shopify", "commas"]) {
+    for (const value of ["whop", "shopify", "commas"]) {
       expect(providerSyncStatus(value)).toBe("webhook");
     }
   });

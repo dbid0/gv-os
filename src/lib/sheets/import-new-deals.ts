@@ -146,7 +146,9 @@ async function upsertDealAndSplits(
 
 const NEW_DEALS_RANGE = "'🤝 New Deals'!A1:AZ2000";
 
-const PROCESSOR_PROVIDERS = ["stripe", "whop", "fanbasis"];
+// "commas" is canonical; "fanbasis" (the retired name) is kept so legacy
+// processor connections still count and cash never double-counts.
+const PROCESSOR_PROVIDERS = ["stripe", "whop", "commas", "fanbasis"];
 
 export interface ImportResult {
   read: number;

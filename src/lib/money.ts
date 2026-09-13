@@ -6,7 +6,7 @@
  *
  * Why this file is paranoid: `parseFloat("0.29") * 100` is 28.999999999999996.
  * Round that the wrong way once, on the wrong row, and a payout is off by a
- * cent. Do it across a month of Fanbasis fees and the reconciliation stops
+ * cent. Do it across a month of Commas fees and the reconciliation stops
  * tying out. So dollar strings are parsed with STRING math, not arithmetic.
  *
  * Safe range: cents up to Number.MAX_SAFE_INTEGER is about $90 trillion. Every
