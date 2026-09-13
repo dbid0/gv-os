@@ -267,13 +267,14 @@ const AUTO_SYNC = new Set([
   "kit",
   "close",
   "calendly",
+  "iclosed",
   "typeform",
   "pandadoc",
   "stripe",
   "google_sheets",
 ]);
 /** Payments/Bookings tools that push to a minted webhook URL (no pull API wired). */
-const WEBHOOK_ONLY = new Set(["whop", "fanbasis", "shopify", "commas", "iclosed"]);
+const WEBHOOK_ONLY = new Set(["whop", "fanbasis", "shopify", "commas"]);
 
 export function providerSyncStatus(value: string): SyncStatus {
   if (AUTO_SYNC.has(value)) return "auto";
