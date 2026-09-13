@@ -5,9 +5,9 @@ import { SHEET_FEE_RATES_BPS } from "@/lib/accounting/sheet-mirror";
  *
  * The fee a deal carries is decided by its payment method, so the method
  * offered on the form has to match the vocabulary the fee table actually
- * knows. It did not: the live finance sheet records Fanbasis, Wire, Zelle and
- * ACH, while the in-app form offered only Stripe, Fanbasis, Whop, Wire,
- * PayPal, Cash and Other.
+ * knows. It did not: the live finance sheet records Fanbasis (now Commas),
+ * Wire, Zelle and ACH, while the in-app form offered only Stripe, the
+ * processor, Whop, Wire, PayPal, Cash and Other.
  *
  * Zelle and ACH therefore had to be logged as "Other", which falls through to
  * the 3% catch-all — a fee that does not exist on a bank transfer. On a
@@ -15,9 +15,11 @@ import { SHEET_FEE_RATES_BPS } from "@/lib/accounting/sheet-mirror";
  * one flow the partners use for all of their own accounting precisely because
  * wires and Zelle never appear in a processor's API.
  *
- * Aliases matter for the same reason. Commas IS Fanbasis, so a deal logged
- * under either name must carry Fanbasis's 2.9% + $0.29. Shopify is retired but
- * a form naming it still has to price correctly.
+ * Aliases matter for the same reason. Commas IS Fanbasis (same company, same
+ * rail — Commas is the current name, Fanbasis the retired one), so a deal
+ * logged under either name must carry Commas's 2.9% + $0.29 and count as ONE
+ * processor. Shopify is retired but a form naming it still has to price
+ * correctly.
  */
 
 /** What a method costs, for grouping on the form. */
@@ -35,10 +37,11 @@ export interface PaymentMethod {
  * Every method a deal can be logged under.
  *
  * Ordered by how often GV actually sees them, so the common case is the short
- * reach: Fanbasis and Wire are most of the book, Zelle and ACH next.
+ * reach: Commas (formerly Fanbasis) and Wire are most of the book, Zelle and
+ * ACH next.
  */
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  { name: "Fanbasis", kind: "processor", note: "2.9% + $0.29 · also called Commas" },
+  { name: "Commas", kind: "processor", note: "2.9% + $0.29 · formerly Fanbasis" },
   { name: "Wire", kind: "bank", note: "no fee" },
   { name: "Zelle", kind: "bank", note: "no fee" },
   { name: "ACH", kind: "bank", note: "no fee" },
@@ -66,7 +69,9 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
  * method while a deal imported under any spelling still prices correctly.
  */
 const ALIASES: Record<string, string> = {
-  commas: "Fanbasis",
+  // Fanbasis is the retired name for Commas — same processor, same fee. Every
+  // stored/imported "fanbasis" row resolves to the canonical "Commas".
+  fanbasis: "Commas",
   shopify: "Shopify Affirm",
   "shopify payments": "Shopify Affirm",
   cash: "Check / Cash",

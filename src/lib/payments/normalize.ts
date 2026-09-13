@@ -122,10 +122,11 @@ export function normalizeStripe(payload: Payload): NormalizedPayment | null {
 }
 
 /**
- * Fanbasis. No public payload docs — field names probed defensively (the
- * proven GGV-portal pattern). Amounts arrive as DOLLARS.
+ * Commas (formerly Fanbasis — same processor). No public payload docs — field
+ * names probed defensively (the proven GGV-portal pattern). Amounts arrive as
+ * DOLLARS.
  */
-export function normalizeFanbasis(payload: Payload): NormalizedPayment | null {
+export function normalizeCommas(payload: Payload): NormalizedPayment | null {
   const id = str(payload.id) ?? str(payload.transaction_id) ?? str(payload.sale_id);
   if (!id) return null;
   const data = asRecord(payload.data);
@@ -152,7 +153,7 @@ export function normalizeFanbasis(payload: Payload): NormalizedPayment | null {
     currency: "usd",
     email,
     occurredAt: when,
-    label: str(payload.type) ?? str(payload.event) ?? "fanbasis sale",
+    label: str(payload.type) ?? str(payload.event) ?? "commas sale",
     failureCode: null,
     failureMessage: null,
     customerRef: null,
@@ -218,8 +219,11 @@ export function normalizePayment(
   switch (provider) {
     case "stripe":
       return normalizeStripe(payload);
+    // Commas is canonical; "fanbasis" is the retired provider string still
+    // present on stored/legacy connections — both route to the same normalizer.
+    case "commas":
     case "fanbasis":
-      return normalizeFanbasis(payload);
+      return normalizeCommas(payload);
     case "whop":
       return normalizeWhop(payload);
     default:

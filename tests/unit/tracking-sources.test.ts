@@ -215,9 +215,9 @@ describe("processorMatchesSource", () => {
     expect(processorMatchesSource("Shopify", "stripe")).toBe(false);
   });
 
-  it("knows Fanbasis also goes by Commas", () => {
-    expect(processorMatchesSource("Commas", "fanbasis")).toBe(true);
-    expect(processorMatchesSource("Fanbasis", "fanbasis")).toBe(true);
+  it("resolves both the Commas and the retired Fanbasis cell to the commas source", () => {
+    expect(processorMatchesSource("Commas", "commas")).toBe(true);
+    expect(processorMatchesSource("Fanbasis", "commas")).toBe(true);
   });
 
   it("an unrecorded processor never matches — no guessing", () => {

@@ -10,9 +10,9 @@ import { sheetFeeCents } from "@/lib/accounting/sheet-mirror";
 
 describe("the methods GV actually uses are all offered", () => {
   it("covers every method on the live finance sheet", () => {
-    // Fanbasis 26, Wire 14, Zelle 5, ACH 4 — Zelle and ACH had no entry on
-    // the form at all, so they had to be logged as "Other".
-    for (const used of ["Fanbasis", "Wire", "Zelle", "ACH"]) {
+    // Commas (formerly Fanbasis) 26, Wire 14, Zelle 5, ACH 4 — Zelle and ACH
+    // had no entry on the form at all, so they had to be logged as "Other".
+    for (const used of ["Commas", "Wire", "Zelle", "ACH"]) {
       expect(PAYMENT_METHODS.some((m) => m.name === used)).toBe(true);
     }
   });
@@ -42,12 +42,14 @@ describe("a bank transfer costs nothing", () => {
 });
 
 describe("aliases", () => {
-  it("treats Commas as Fanbasis", () => {
-    // Daniel: "commas are fanbasis".
-    expect(canonicalMethod("Commas")).toBe("Fanbasis");
-    expect(canonicalMethod("commas")).toBe("Fanbasis");
-    expect(sheetFeeCents(100_000, canonicalMethod("Commas")!, null)).toBe(
-      sheetFeeCents(100_000, "Fanbasis", null),
+  it("treats Fanbasis as Commas (Commas is canonical, Fanbasis the retired name)", () => {
+    // Daniel: "commas are fanbasis" — same processor, one fee. Commas is now
+    // the canonical method; a stored/imported "Fanbasis" must resolve to it.
+    expect(canonicalMethod("Fanbasis")).toBe("Commas");
+    expect(canonicalMethod("fanbasis")).toBe("Commas");
+    // And a payment recorded under either name carries the identical fee.
+    expect(sheetFeeCents(100_000, canonicalMethod("Fanbasis")!, null)).toBe(
+      sheetFeeCents(100_000, "Commas", null),
     );
   });
 
@@ -70,7 +72,7 @@ describe("aliases", () => {
   });
 
   it("is case and space insensitive", () => {
-    expect(canonicalMethod("  fanbasis  ")).toBe("Fanbasis");
+    expect(canonicalMethod("  fanbasis  ")).toBe("Commas");
     expect(canonicalMethod("ZELLE")).toBe("Zelle");
   });
 });
@@ -85,8 +87,9 @@ describe("methodsByKind", () => {
     expect(bank.label).toContain("no fee");
   });
 
-  it("puts Fanbasis first — it is most of the book", () => {
-    expect(PAYMENT_METHODS[0].name).toBe("Fanbasis");
-    expect(PAYMENT_METHODS[0].note).toContain("Commas");
+  it("puts Commas first — it is most of the book", () => {
+    expect(PAYMENT_METHODS[0].name).toBe("Commas");
+    // The note keeps the retired name visible so old deals are recognizable.
+    expect(PAYMENT_METHODS[0].note).toContain("Fanbasis");
   });
 });

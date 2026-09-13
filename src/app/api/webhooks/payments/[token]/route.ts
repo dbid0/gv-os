@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 /**
  * Payment webhook catch endpoint — one URL per connection, keyed by the
  * long random token minted when the integration was connected (the Zapier
- * catch-hook model; no signature scheme is portable across Fanbasis, Whop,
- * Commas, and Shopify, so the capability URL is the shared secret).
+ * catch-hook model; no signature scheme is portable across Commas, Whop,
+ * and Shopify, so the capability URL is the shared secret).
  *
  * DEFENSE IN DEPTH: a connection that has saved its Stripe signing secret
  * additionally requires a valid Stripe-Signature on every delivery —

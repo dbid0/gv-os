@@ -19,7 +19,7 @@ export const DEAL_TYPES = [
 export const PAYMENT_METHODS = [
   "Wire",
   "ACH",
-  "Fanbasis",
+  "Commas",
   "Stripe",
   "Shopify Affirm",
   "Whop",

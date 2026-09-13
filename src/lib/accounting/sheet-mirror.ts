@@ -10,7 +10,7 @@
  *
  *   AR      = max(revenue − cash, 0)
  *   fee     = raw override if present
- *             else cash × rate(method) + (method = "Fanbasis" && cash > 0 ? $0.29 : 0)
+ *             else cash × rate(method) + (method = Commas/Fanbasis && cash > 0 ? $0.29 : 0)
  *   net     = cash − fee
  *   pct     = 50% if deal type = "Client Handoff", 50% if blank, else entered% ÷ 100
  *   daniel  = net × pct
@@ -32,6 +32,9 @@ export const SHEET_FEE_RATES_BPS: Record<string, number> = {
   Zelle: 0,
   Wise: 0,
   "Check / Cash": 0,
+  // Commas is canonical; "Fanbasis" (the retired name) is kept because the live
+  // finance sheet's Raw Data still records that string. Both price identically.
+  Commas: 290,
   Fanbasis: 290,
   Stripe: 290,
   "Shopify Affirm": 290,
@@ -48,8 +51,8 @@ export const SHEET_FEE_RATES_BPS: Record<string, number> = {
 /** The formula's catch-all for a method it doesn't list. */
 export const SHEET_FEE_FALLBACK_BPS = 300;
 
-/** Fanbasis adds a flat $0.29 per transaction when any cash moved. */
-export const FANBASIS_FLAT_CENTS = 29;
+/** Commas (formerly Fanbasis) adds a flat $0.29 per transaction when any cash moved. */
+export const COMMAS_FLAT_CENTS = 29;
 
 const DANIEL_DEFAULT_BPS = 5000;
 
@@ -111,7 +114,12 @@ export function sheetFeeCents(
   if (feeOverrideCents !== null) return feeOverrideCents;
   const bps = SHEET_FEE_RATES_BPS[method] ?? SHEET_FEE_FALLBACK_BPS;
   const pctFee = roundHalfAway((cashCents * bps) / 10_000);
-  const flat = method === "Fanbasis" && cashCents > 0 ? FANBASIS_FLAT_CENTS : 0;
+  // The flat $0.29 applies to the Commas processor under either name it is
+  // recorded by (canonical "Commas" or the retired "Fanbasis" the sheet still uses).
+  const flat =
+    (method === "Commas" || method === "Fanbasis") && cashCents > 0
+      ? COMMAS_FLAT_CENTS
+      : 0;
   return pctFee + flat;
 }
 

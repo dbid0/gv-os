@@ -57,12 +57,12 @@ export const moneyEvents = ledgerSchema.table(
     /** The rep a payout event pays. Null for deal-level events (payments, fees). */
     repId: uuid("rep_id").references(() => reps.id),
 
-    /** fanbasis · wire · ach · zelle · stripe … */
+    /** commas · wire · ach · zelle · stripe … (legacy rows may say "fanbasis") */
     processor: text("processor"),
 
     /** Who recorded it. Null for automated imports. */
     actorId: uuid("actor_id").references(() => profiles.id),
-    /** ui · import · webhook:fanbasis */
+    /** ui · import · webhook:commas */
     source: text("source").notNull(),
 
     /** The double-counting guard. Unique, always present. */

@@ -106,8 +106,8 @@ export default async function RevSharePage() {
         <Panel title="No client-layer cash captured yet">
           <p className="text-faint py-8 text-center text-sm">
             Rev-share computes on each offer&apos;s own collected cash, which flows in
-            with the processor integrations (Fanbasis webhook, Stripe key). The engine
-            is live and rated — the moment client cash lands, lines appear here.
+            with the processor integrations (Commas webhook, Stripe key). The engine is
+            live and rated — the moment client cash lands, lines appear here.
           </p>
         </Panel>
       ) : (

@@ -4,7 +4,8 @@ import { type Cents, ZERO, applyBps, cents } from "@/lib/money";
  * The processor fee taken out of a cash collection.
  *
  * A percentage (in basis points) plus a flat per-transaction charge — the
- * Fanbasis shape (2.9% + $0.30) the finance sheet already models. The fee can
+ * Commas shape (2.9% + $0.30; formerly Fanbasis) the finance sheet already
+ * models. The fee can
  * never exceed the cash it is taken from, and never goes negative. Money math,
  * so it ships fully covered.
  */
