@@ -1,6 +1,6 @@
 import "server-only";
 
-import { pullCalendlyBookings } from "@/lib/bookings/capture";
+import { pullCalendlyBookings, pullIclosedBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
@@ -11,6 +11,7 @@ const PULLS: Record<string, () => Promise<unknown>> = {
   kit: pullKitSnapshots,
   close: pullCloseActivity,
   calendly: pullCalendlyBookings,
+  iclosed: pullIclosedBookings,
   typeform: pullTypeformApplications,
   pandadoc: pullPandaDocSigned,
   stripe: pullStripeEvents,

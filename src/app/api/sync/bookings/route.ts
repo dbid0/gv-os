@@ -2,12 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
-import { pullCalendlyBookings } from "@/lib/bookings/capture";
+import { pullCalendlyBookings, pullIclosedBookings } from "@/lib/bookings/capture";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Calendly bookings pull. Secret-gated; no DISABLE_AUTH bypass. */
+/** Calendly + iClosed bookings pull. Secret-gated; no DISABLE_AUTH bypass. */
 async function authorized(req: NextRequest): Promise<boolean> {
   const secret = process.env.SYNC_SECRET;
   const header = req.headers.get("authorization");
@@ -21,8 +21,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
   try {
-    const results = await pullCalendlyBookings();
-    return NextResponse.json({ ok: true, connections: results });
+    // Independent providers, independent failure domains — one pull erroring
+    // must never hide the other's results.
+    const [calendly, iclosed] = await Promise.all([
+      pullCalendlyBookings(),
+      pullIclosedBookings(),
+    ]);
+    return NextResponse.json({ ok: true, connections: [...calendly, ...iclosed] });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Pull failed." },

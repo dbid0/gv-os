@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
-import { pullCalendlyBookings } from "@/lib/bookings/capture";
+import { pullCalendlyBookings, pullIclosedBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
@@ -34,6 +34,7 @@ async function runAll() {
   for (const [name, fn] of [
     ["close", pullCloseActivity],
     ["bookings", pullCalendlyBookings],
+    ["iclosedBookings", pullIclosedBookings],
     ["pandadoc", pullPandaDocSigned],
     ["typeform", pullTypeformApplications],
     ["kit", pullKitSnapshots],

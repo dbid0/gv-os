@@ -1,7 +1,8 @@
 /**
- * Booking normalizers — pure. Calendly's API shape is documented; everything
- * else (iClosed webhooks, future schedulers) goes through the defensive
- * generic probe. No id = rejected: without an id there is no idempotency.
+ * Booking normalizers — pure. Calendly's and iClosed's API shapes are both
+ * documented/probed directly; anything else (webhooks from schedulers with no
+ * usable API) goes through the defensive generic probe. No id = rejected:
+ * without an id there is no idempotency.
  */
 
 export interface NormalizedBooking {
@@ -41,6 +42,37 @@ export function normalizeCalendlyEvent(
       status === "canceled" ? "canceled" : status === "active" ? "booked" : "unknown",
     startsAt: str(payload.start_time),
     bookedAt: str(payload.created_at),
+  };
+}
+
+/**
+ * iClosed `/v1/eventCalls` entries (probed directly against the live API,
+ * 2026-09-12 — no public schema doc for this shape).
+ *
+ * The invitee's email ships INLINE as `inviteeEmail`, with a duplicate copy
+ * on `contact.email` — no separate `/v1/contacts` join is needed (both are
+ * present on every record observed; `contact.email` is kept only as a
+ * defensive fallback). `dateTimeUTC` is the real ISO timestamp; the sibling
+ * `dateTime` field is rendered in some other, unspecified timezone (its clock
+ * value does not match `dateTimeUTC`), so it is never used here — a wrong
+ * guess at its offset is worse than a null `startsAt`. `eventType` on the
+ * payload itself is iClosed's temporal bucket (PAST/UPCOMING), not a
+ * booked/canceled status — that only comes from `cancelReason`.
+ */
+export function normalizeIclosedEventCall(payload: Payload): NormalizedBooking | null {
+  const rawId = payload.id;
+  const id = typeof rawId === "number" ? String(rawId) : str(rawId);
+  if (!id) return null;
+  const event = asRecord(payload.event);
+  const contact = asRecord(payload.contact);
+  return {
+    externalId: id,
+    eventType: str(event.name) ?? str(payload.callType),
+    inviteeName: str(payload.inviteeName),
+    inviteeEmail: str(payload.inviteeEmail) ?? str(contact.email),
+    status: str(payload.cancelReason) ? "canceled" : "booked",
+    startsAt: str(payload.dateTimeUTC),
+    bookedAt: str(payload.createdAt),
   };
 }
 
