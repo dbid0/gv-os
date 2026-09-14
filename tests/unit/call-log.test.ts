@@ -145,6 +145,25 @@ describe("buildCallLog", () => {
     });
   });
 
+  it("marks a moved booking as rescheduled, everything else not", () => {
+    const [moved, plain] = buildCallLog({
+      bookings: [
+        booking("moved", -30, { status: "canceled", rescheduled: true }),
+        booking("plain", -40, { status: "canceled" }),
+      ],
+      confirmations: [],
+      filed: [],
+      sheet: [],
+      now: NOW,
+    });
+    expect([moved.bookingId, moved.state, moved.rescheduled]).toEqual([
+      "moved",
+      "cancelled",
+      true,
+    ]);
+    expect([plain.bookingId, plain.rescheduled]).toEqual(["plain", false]);
+  });
+
   it("keeps a cancelled call cancelled even when a report exists", () => {
     const [row] = buildCallLog({
       bookings: [booking("c", -5, { status: "canceled" })],

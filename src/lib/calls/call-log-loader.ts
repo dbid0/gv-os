@@ -45,6 +45,7 @@ export async function loadCallLog(
         status: bookings.status,
         eventType: bookings.eventType,
         provider: bookings.provider,
+        rescheduled: bookings.rescheduled,
       })
       .from(bookings)
       .where(eq(bookings.clientId, clientId))

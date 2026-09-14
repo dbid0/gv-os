@@ -261,7 +261,7 @@ export default async function WorkspaceCallsPage({
                     <span className="flex min-w-[9rem] justify-end">
                       {r.state === "cancelled" ? (
                         <span className="text-faint rounded-full border px-2 py-0.5 text-[11px]">
-                          Cancelled
+                          {r.rescheduled ? "Rescheduled" : "Cancelled"}
                         </span>
                       ) : r.outcome ? (
                         <span className="flex items-center gap-2">
