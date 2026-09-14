@@ -55,6 +55,8 @@ const PUBLIC_PATHS = [
   "/api/sync/notifications",
   "/api/sync/new-deals",
   "/api/sync/tracking",
+  // Public UTM short links (/l/<code>): a redirect to the stored link only.
+  "/l",
   // The MCP server — carries its own owner-created, read-only API key bearer
   // and refuses every request without one.
   "/api/mcp",

@@ -2019,10 +2019,20 @@ export const utmLinks = appSchema.table(
      * column existed or by a non-interactive path. */
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The /l/<code> short link that redirects to `assembledUrl`. */
+    shortCode: text("short_code"),
+    /** Redirects served through the short link (every hit, bots included). */
+    clickCount: integer("click_count").notNull().default(0),
+    lastClickedAt: timestamp("last_clicked_at", { withTimezone: true }),
   },
   (table) => [
     index("utm_links_client_idx").on(table.clientId),
     index("utm_links_created_idx").on(table.createdAt),
+    uniqueIndex("utm_links_short_code_key").on(table.shortCode),
+    check(
+      "utm_links_short_code_check",
+      sql`${table.shortCode} is null or ${table.shortCode} ~ '^[a-z0-9]{7}$'`,
+    ),
   ],
 );
 

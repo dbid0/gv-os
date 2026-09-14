@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
+import { shortUrl } from "@/lib/marketing/short-link";
 import { z } from "zod";
 
 import { isAllowed } from "@/lib/auth/allowlist";
@@ -33,7 +35,7 @@ const input = z.object({
 });
 
 export type GenerateUtmLinkResult =
-  { ok: true; row: UtmLinkRow } | { ok: false; error: string };
+  { ok: true; row: UtmLinkRow; shortUrl: string | null } | { ok: false; error: string };
 
 /**
  * Generates a UTM'd link and writes it into the registry in the same call —
@@ -49,5 +51,11 @@ export async function generateUtmLink(raw: unknown): Promise<GenerateUtmLinkResu
   if (!result.ok) return { ok: false, error: describeBuildFailure(result) };
 
   revalidatePath("/marketing/utm");
-  return { ok: true, row: result.row };
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  return {
+    ok: true,
+    row: result.row,
+    shortUrl:
+      result.row.shortCode && origin ? shortUrl(origin, result.row.shortCode) : null,
+  };
 }
