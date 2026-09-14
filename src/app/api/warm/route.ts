@@ -19,7 +19,9 @@ import { getEodCompliance, listActivityReports, listDeals } from "@/lib/sales/qu
 import { listQuotasWithPacing } from "@/lib/sales/quota-queries";
 import { getRepTrends } from "@/lib/sales/rep-trends-query";
 import { getSettings } from "@/lib/settings";
+import { normalizeHomeRange, rangeBounds } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+import { loadOfferHome } from "@/lib/tracking/offer-metrics-loader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +33,11 @@ export const dynamic = "force-dynamic";
  * JWKS fetch) stayed cold and the first signed-in visit after an idle
  * stretch paid all of it at once. This route runs that same work under the
  * sync routes' bearer secret, so a scheduled ping keeps the paths a real
- * visitor takes hot — now the dashboard AND the query-heaviest pages
- * (reconciliation, sales/client reports, the daily brief). Read-only by
- * construction: every callee below is a query or a report, nothing writes
- * and nothing touches the ledger.
+ * visitor takes hot — now the dashboard, the query-heaviest pages
+ * (reconciliation, sales/client reports, the daily brief) AND each client's
+ * workspace home (/w/[slug], via loadOfferHome — its own ~8-query offer path).
+ * Read-only by construction: every callee below is a query or a report,
+ * nothing writes and nothing touches the ledger.
  *
  * THE POOL LAW (src/db/client.ts) — a single request must keep its own
  * burst well under the pool's max, because queries in flight beyond max get
@@ -139,6 +142,32 @@ export async function GET(req: NextRequest) {
     timed(() => listQuotasWithPacing(Date.now())),
   ]);
 
+  // Phase 7 — the client workspace query path (/w/[slug]). Every workspace
+  // home runs loadOfferHome, which bursts ~8 queries internally (leadsForClient,
+  // cashRowsForClient, currentSnapshot, latestSnapshotsBySource,
+  // aliasMapForClient, offerSpeedToLead, listConfirmations, plus the client
+  // report — itself a 6-query burst). NONE of the phases above touch it, so the
+  // offer-specific paths stayed cold and the first workspace visit after an idle
+  // stretch paid all of it at once. Sequential per client on purpose (same
+  // reasoning as Phase 4): one client's loadOfferHome burst already sits near a
+  // single real visit's peak, so warming clients one at a time never stacks two
+  // bursts on top of each other and can't tip the pool over. Bounds + todayKey
+  // are built exactly as the offer home page builds them for a visitor who
+  // names no range — the default rolling-30 window. Each client is caught on
+  // its own so one bad offer can't stop the rest of the roster from warming.
+  const workspaces = await timed(async () => {
+    const clients = await loadRoster();
+    const todayKey = dayKeyCT(new Date());
+    const bounds = rangeBounds(normalizeHomeRange(undefined), todayKey);
+    for (const c of clients) {
+      try {
+        await loadOfferHome(c.slug, c.name, bounds, todayKey);
+      } catch {
+        // A single client's workspace warm failing must not skip the rest.
+      }
+    }
+  });
+
   return NextResponse.json({
     ok: true,
     ms: Date.now() - started,
@@ -162,6 +191,7 @@ export async function GET(req: NextRequest) {
       briefEodReports,
       briefBodReports,
       briefQuotas,
+      workspaces,
     },
   });
 }
