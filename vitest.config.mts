@@ -169,16 +169,15 @@ export default defineConfig({
         },
         // Payment normalizers shape real money amounts from processor
         // payloads — a wrong sign or scale here misstates cash. Fully covered.
-        // Show/close rates split by confirmation — the number that says whether
-        // confirming calls works. Pure, fully covered.
-        "src/lib/crm/confirmation-rates.ts": {
+        // Payment tag rules decide which payments an offer's dashboard cash
+        // counts, and the payment-field readers feed them. Fully covered.
+        "src/lib/tracking/tag-rules.ts": {
           statements: 100,
           branches: 100,
           functions: 100,
           lines: 100,
         },
-        // Which money alarms reach the owner banner, and in what order.
-        "src/lib/notifications/integrity.ts": {
+        "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
           functions: 100,

@@ -24,7 +24,7 @@ import { refreshTrackingSnapshotsOnView } from "@/lib/integrations/refresh-on-vi
 import { snapshotFreshness } from "@/lib/tracking/freshness";
 import { loadOfferHome } from "@/lib/tracking/offer-metrics-loader";
 import { buildWorkspaceVariants } from "@/lib/tracking/window-money";
-import { cents } from "@/lib/money";
+import { cents, formatUSD } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import {
   customBounds,
@@ -84,6 +84,7 @@ export default async function WorkspacePage({
       moneyFeed,
       clientRows,
       allTimeCashCents,
+      tagSummary,
     },
     drive,
     visibility,
@@ -180,6 +181,26 @@ export default async function WorkspacePage({
           moneyFreshness={moneyFreshness}
           allTimeCashCents={allTimeCashCents}
         />
+      )}
+
+      {showCash && tagSummary.hiddenCount > 0 && (
+        <p className="text-faint -mt-3 text-xs">
+          Payment tag rules keep{" "}
+          <span className="numeric text-muted-foreground font-medium">
+            {formatUSD(cents(tagSummary.hiddenCashCents))}
+          </span>{" "}
+          across {tagSummary.hiddenCount} payment
+          {tagSummary.hiddenCount === 1 ? "" : "s"} out of these figures (whole feed,
+          all time).{" "}
+          {!portalView && (
+            <Link
+              href={`/clients/${slug}/setup#tracking-money`}
+              className="text-brand hover:underline"
+            >
+              Review the rules
+            </Link>
+          )}
+        </p>
       )}
 
       {showCash && (

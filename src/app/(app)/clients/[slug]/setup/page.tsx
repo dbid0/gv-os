@@ -15,6 +15,7 @@ import {
   Receipt,
   Rocket,
   Sheet,
+  Tags,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -31,6 +32,7 @@ import {
   OfferSettingsPanel,
   type OfferSettingsRow,
 } from "@/components/settings/offer-settings-panel";
+import { PaymentTagRulesPanel } from "@/components/settings/payment-tag-rules-panel";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
@@ -42,6 +44,10 @@ import type { OfferSettings } from "@/db/schema/app";
 import { onboardingProgress, onboardingSteps } from "@/lib/clients/onboarding";
 import { listIntegrations } from "@/lib/integrations/queries";
 import { listRates } from "@/lib/payments/rates-store";
+import {
+  loadTagRulesPanel,
+  type TagRulesPanelData,
+} from "@/lib/tracking/tag-rules-panel";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { getTeamBySlug, listEodTemplates } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
@@ -101,7 +107,13 @@ export default async function ClientSetupPage({
   let offerRow: OfferSettings | undefined;
   let monthlyGoalCents: number | null = null;
   let rateRows: Awaited<ReturnType<typeof listRates>> = [];
+  let tagRules: TagRulesPanelData | null = null;
   if (team) {
+    try {
+      tagRules = await loadTagRulesPanel(team.id);
+    } catch {
+      // A rules read error leaves the section in its "couldn't load" state.
+    }
     try {
       const [rev, offRows, cliRows, rates] = await Promise.all([
         db
@@ -410,6 +422,21 @@ export default async function ClientSetupPage({
                   description="Setter, closer, and DM-setter rates for this offer. Empty means unset — commissions derive unknown, never zero. Overrides on individual claims beat these."
                 >
                   <CommissionRatesPanel rows={ratesRows} />
+                </SettingsSection>
+
+                <SettingsSection
+                  icon={Tags}
+                  title="Payment tag rules"
+                  description="What each payment in this offer's feed means. Label products, and keep test charges, internal transfers and pass-throughs out of dashboard cash. The payments themselves are never changed; delete a rule and its money comes back."
+                >
+                  {tagRules ? (
+                    <PaymentTagRulesPanel slug={slug} data={tagRules} />
+                  ) : (
+                    <p className="text-warning text-sm">
+                      Couldn&apos;t load the tag rules just now. Nothing about them has
+                      changed; reload to try again.
+                    </p>
+                  )}
                 </SettingsSection>
               </>
             ) : (

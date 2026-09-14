@@ -16,6 +16,12 @@ import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
+import {
+  applyTagRulesToFeed,
+  emptyTagSummary,
+  type FeedTagSummary,
+} from "@/lib/tracking/tag-rules";
+import { listTagRules } from "@/lib/tracking/tag-rules-store";
 import { offerSpeedToLead } from "@/lib/crm/offer-stl";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { listDeals } from "@/lib/sales/queries";
@@ -245,6 +251,11 @@ export type OfferHomeData = {
   clientRows: BacklogRow[];
   /** The offer's all-time collected cash, for the empty-window fallback label. */
   allTimeCashCents: number;
+  /**
+   * What this offer's payment tag rules took out of the dashboard feed, across
+   * the whole feed (not one window). Empty when there are no rules or no feed.
+   */
+  tagSummary: FeedTagSummary;
 };
 
 type BacklogRow =
@@ -358,11 +369,20 @@ export async function loadOfferHome(
     null;
   let moneyFeed: WindowMoneyFeed | null = null;
   let mixWindow = null;
+  let tagSummary = emptyTagSummary();
   if (paySource && row) {
-    const [{ payments, deals }, aliases] = await Promise.all([
+    const [{ payments: rawPayments, deals }, aliases, rules] = await Promise.all([
       cashRowsForClient(paySource.snapshot.syncId),
       aliasMapForClient(row.id),
+      // Fail-soft: a rules read that throws must never take the dashboard
+      // down. No rules is exactly the untagged feed.
+      listTagRules(row.id).catch(() => []),
     ]);
+    // The offer's tag rules decide what this dashboard counts. With no active
+    // rules the feed passes through as the same array — identical figures.
+    const tagged = applyTagRulesToFeed(rawPayments, rules);
+    const payments = tagged.kept;
+    tagSummary = tagged.summary;
     moneyFeed = { payments, deals, aliases };
     const winFrom = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
     const winTo = bounds.to
@@ -456,5 +476,6 @@ export async function loadOfferHome(
     moneyFeed,
     clientRows,
     allTimeCashCents: report?.mirror.cashCents ?? 0,
+    tagSummary,
   };
 }
