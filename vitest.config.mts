@@ -246,6 +246,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // What a fresh pull may change on a stored booking — never erasing a
+        // known invitee or status. Fully covered.
+        "src/lib/bookings/merge.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,

@@ -484,6 +484,13 @@
       "when": 1789425274167,
       "tag": "0068_mcp_api_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1789426517929,
+      "tag": "0069_bookings_rescheduled",
+      "breakpoints": true
     }
   ]
 }

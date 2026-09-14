@@ -12,9 +12,13 @@ export interface NormalizedBooking {
   inviteeEmail: string | null;
   /** booked · canceled · unknown */
   status: string;
+  /** Cancelled because it moved to another time — a reschedule, not a no. */
+  rescheduled: boolean;
   startsAt: string | null;
   bookedAt: string | null;
 }
+
+const RESCHEDULE_WORDS = /resched/i;
 
 type Payload = Record<string, unknown>;
 
@@ -40,6 +44,9 @@ export function normalizeCalendlyEvent(
     inviteeEmail: str(inv.email),
     status:
       status === "canceled" ? "canceled" : status === "active" ? "booked" : "unknown",
+    // Calendly marks the OLD invitee of a moved booking `rescheduled: true`;
+    // its event is cancelled and a new event carries the new time.
+    rescheduled: inv.rescheduled === true,
     startsAt: str(payload.start_time),
     bookedAt: str(payload.created_at),
   };
@@ -71,6 +78,7 @@ export function normalizeIclosedEventCall(payload: Payload): NormalizedBooking |
     inviteeName: str(payload.inviteeName),
     inviteeEmail: str(payload.inviteeEmail) ?? str(contact.email),
     status: str(payload.cancelReason) ? "canceled" : "booked",
+    rescheduled: RESCHEDULE_WORDS.test(str(payload.cancelReason) ?? ""),
     startsAt: str(payload.dateTimeUTC),
     bookedAt: str(payload.createdAt),
   };
@@ -108,6 +116,7 @@ export function normalizeGenericBooking(payload: Payload): NormalizedBooking | n
       str(data.email) ??
       str(data.invitee_email),
     status: canceled ? "canceled" : rawStatus ? "booked" : "unknown",
+    rescheduled: RESCHEDULE_WORDS.test(rawStatus),
     startsAt: str(payload.start_time) ?? str(payload.starts_at) ?? str(data.start_time),
     bookedAt: str(payload.created_at) ?? str(payload.booked_at) ?? str(data.created_at),
   };

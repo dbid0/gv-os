@@ -27,6 +27,8 @@ export type CallLogBooking = {
   status: string;
   eventType: string | null;
   provider: string;
+  /** The booking moved to another time (a cancelled row that moved, or a moved booking). */
+  rescheduled?: boolean;
 };
 
 /** An in-app report tied to the booking it was filed against. */
@@ -43,6 +45,8 @@ export type CallLogRow = {
   startsAt: Date | null;
   eventType: string | null;
   provider: string;
+  /** Moved to another time — a cancelled row here is a reschedule, not a no. */
+  rescheduled: boolean;
   state: CallState;
   confirmation: ConfirmationState;
   /** What the report says happened, or null with no usable report. */
@@ -106,6 +110,7 @@ export function buildCallLog(input: {
       startsAt: b.startsAt,
       eventType: b.eventType,
       provider: b.provider,
+      rescheduled: b.rescheduled === true,
       confirmation: confirmationStateOf(confirmedAt.get(b.id) ?? null, b.startsAt),
     };
 

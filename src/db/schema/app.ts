@@ -669,6 +669,8 @@ export const bookings = appSchema.table(
     inviteeEmail: text("invitee_email"),
     /** booked · canceled · unknown */
     status: text("status").notNull().default("booked"),
+    /** The booking was cancelled BECAUSE it moved to another time (not a no). */
+    rescheduled: boolean("rescheduled").notNull().default(false),
     startsAt: timestamp("starts_at", { withTimezone: true }),
     bookedAt: timestamp("booked_at", { withTimezone: true }),
     raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
