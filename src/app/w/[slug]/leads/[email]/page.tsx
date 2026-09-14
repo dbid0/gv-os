@@ -12,6 +12,8 @@ import { cents, formatUSD } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { transcriptByShareUrl } from "@/lib/calls/share-transcripts";
 import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
+import { APP_EOC_ROW_BASE } from "@/lib/calls/eoc-form";
+import { appEocLeadRows } from "@/lib/calls/eoc-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import { resolveEmail } from "@/lib/tracking/aliases";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
@@ -74,7 +76,14 @@ export default async function LeadDetailPage({
   for (const [alias, target] of aliases) {
     if (target === canonical && !inboxes.includes(alias)) inboxes.push(alias);
   }
-  const lead = snapshot ? await leadByEmail(snapshot.syncId, canonical, inboxes) : null;
+  const lead = snapshot
+    ? await leadByEmail(
+        snapshot.syncId,
+        canonical,
+        inboxes,
+        await appEocLeadRows(row.id),
+      )
+    : null;
   if (!lead) notFound();
 
   // The scheduler's record of this person, with confirmation state — folded
@@ -271,7 +280,9 @@ export default async function LeadDetailPage({
                 {Object.keys(e.payload).length > 0 && (
                   <details className="mt-1.5">
                     <summary className="text-faint cursor-pointer text-xs">
-                      Row {e.rowIndex} on the sheet
+                      {e.rowIndex >= APP_EOC_ROW_BASE
+                        ? "Filed in GV OS"
+                        : `Row ${e.rowIndex} on the sheet`}
                     </summary>
                     <dl className="mt-1.5 grid gap-x-4 gap-y-1 sm:grid-cols-2">
                       {Object.entries(e.payload).map(([k, v]) => (
