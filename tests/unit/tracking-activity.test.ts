@@ -227,6 +227,16 @@ describe("canonicalRepNames", () => {
     expect(map.get("sam carter")).toBe("Sam Carter");
   });
 
+  it("shows the capitalised spelling whichever order the rows arrive in", () => {
+    for (const names of [
+      ["sam carter", "SAM carter", "Sam Carter", "SAM CARTER"],
+      ["Sam Carter", "sam carter"],
+    ]) {
+      expect(canonicalRepNames(names).get("sam carter")).toBe("Sam Carter");
+    }
+    expect(canonicalRepNames(["sam", "Sam Carter"]).get("sam")).toBe("Sam Carter");
+  });
+
   it("ignores blanks", () => {
     expect(canonicalRepNames(["", "   "]).size).toBe(0);
   });

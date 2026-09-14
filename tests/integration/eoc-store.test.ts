@@ -14,6 +14,7 @@ import { runMigrations } from "@/db/migrate";
 import type { CleanEoc } from "@/lib/calls/eoc-form";
 import {
   activeEocReports,
+  activeFiledReports,
   fileEoc,
   listEocReports,
   restoreEoc,
@@ -179,6 +180,29 @@ describe.skipIf(!databaseUrl)("end-of-call reports store", () => {
     expect(await restoreEoc(other, id)).toEqual({ ok: false, reason: "not_found" });
     expect(await restoreEoc(clientId, id)).toEqual({ ok: true });
     expect(await activeEocReports(clientId)).toHaveLength(1);
+  });
+
+  it("names the closer on filed reports, and null when none was picked", async () => {
+    const clientId = await makeClient("closer");
+    const [rep] = await sql<{ id: string }[]>`
+      insert into app.reps (client_id, name, role) values (${clientId}, 'Test Closer', 'closer')
+      returning id`;
+    const bookingId = await makeBooking(clientId);
+    const base = { clientId, callAt: new Date(), submittedBy: null };
+    await fileEoc({
+      ...base,
+      bookingId,
+      eoc: { ...closed, closerRepId: rep.id },
+      submissionKey: key(),
+    });
+    await fileEoc({ ...base, bookingId: null, eoc: noShow, submissionKey: key() });
+    const filed = await activeFiledReports(clientId);
+    expect(filed.map((r) => [r.bookingId, r.rep]).sort()).toEqual(
+      [
+        [bookingId, "Test Closer"],
+        [null, null],
+      ].sort(),
+    );
   });
 
   it("refuses rows the counters could not read", async () => {

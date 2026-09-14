@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vitest";
+
+import type { CallLogRow } from "@/lib/calls/call-log";
+import { NO_CLOSER, NO_REPORT, segmentByCloser } from "@/lib/calls/closer-segments";
+
+function row(extra: Partial<CallLogRow>): CallLogRow {
+  return {
+    bookingId: Math.random().toString(36).slice(2),
+    inviteeName: null,
+    inviteeEmail: "lead@x.com",
+    startsAt: new Date("2026-09-10T15:00:00Z"),
+    eventType: null,
+    provider: "calendly",
+    rescheduled: false,
+    state: "reported",
+    confirmation: "none",
+    outcome: "showed",
+    outcomeWords: "follow up",
+    reportSource: "sheet",
+    closer: "Jordan Rivers",
+    ...extra,
+  };
+}
+
+describe("segmentByCloser", () => {
+  const log: CallLogRow[] = [
+    row({ closer: "Jordan Rivers", outcome: "closed" }),
+    row({ closer: "jordan rivers", outcome: "showed" }),
+    row({ closer: "Jordan", outcome: "no_show" }),
+    row({ closer: "Sam Carter", outcome: "closed" }),
+    row({ closer: "Sam Carter", outcome: "closed" }),
+    row({ closer: null, outcome: "showed" }),
+    row({ closer: "  ", outcome: "no_show" }),
+    row({ state: "needs_outcome", outcome: null, closer: null }),
+    // Not held: excluded everywhere.
+    row({ closer: "Jordan Rivers", outcome: "not_held" }),
+    row({ state: "upcoming", outcome: null }),
+    row({ state: "cancelled", outcome: "closed" }),
+    row({ state: "reported", outcome: null, closer: "Sam Carter" }),
+  ];
+  const { rows, total } = segmentByCloser(log);
+
+  it("re-cuts held calls per closer, merging name variants, unattributed rows last", () => {
+    expect(rows.map((r) => [r.closer, r.held, r.shows, r.noShows, r.closes])).toEqual([
+      ["Sam Carter", 2, 2, 0, 2],
+      ["Jordan Rivers", 3, 2, 1, 1],
+      [NO_CLOSER, 2, 1, 1, 0],
+      [NO_REPORT, 1, 0, 0, 0],
+    ]);
+    expect(rows.map((r) => r.unattributed)).toEqual([false, false, true, true]);
+  });
+
+  it("names rates against their denominators, null when there is nothing to divide", () => {
+    const jordan = rows.find((r) => r.closer === "Jordan Rivers")!;
+    expect(jordan.showRate).toBeCloseTo((2 / 3) * 100);
+    expect(jordan.closeRate).toBe(50);
+    const noReport = rows.find((r) => r.closer === NO_REPORT)!;
+    expect(noReport.showRate).toBeNull();
+    expect(noReport.closeRate).toBeNull();
+  });
+
+  it("always reconciles: the rows add up to the total", () => {
+    const sum = (k: "held" | "shows" | "noShows" | "closes") =>
+      rows.reduce((n, r) => n + r[k], 0);
+    expect(total).toMatchObject({
+      closer: "All held calls",
+      held: sum("held"),
+      shows: sum("shows"),
+      noShows: sum("noShows"),
+      closes: sum("closes"),
+    });
+    expect(total).toMatchObject({ held: 8, shows: 5, noShows: 2, closes: 3 });
+    expect(total.closeRate).toBe(60);
+  });
+
+  it("breaks ties by held calls, then by name", () => {
+    const tied = segmentByCloser([
+      row({ closer: "Beth Zed", outcome: "showed" }),
+      row({ closer: "Ann Young", outcome: "showed" }),
+      row({ closer: "Cal Xu", outcome: "showed" }),
+      row({ closer: "Cal Xu", outcome: "no_show" }),
+    ]);
+    expect(tied.rows.map((r) => r.closer)).toEqual(["Cal Xu", "Ann Young", "Beth Zed"]);
+  });
+
+  it("is empty with no held calls", () => {
+    const empty = segmentByCloser([row({ state: "upcoming", outcome: null })]);
+    expect(empty.rows).toEqual([]);
+    expect(empty.total).toMatchObject({ held: 0, showRate: null, closeRate: null });
+  });
+});

@@ -102,6 +102,9 @@ export interface RepActivity {
   totals: ActivityCounts;
 }
 
+/** How many words start with a capital letter. */
+const capitals = (s: string) => s.split(/\s+/).filter((w) => /^[A-Z]/.test(w)).length;
+
 /**
  * Resolve drifting rep names to one canonical name each.
  *
@@ -123,8 +126,15 @@ export function canonicalRepNames(names: string[]): Map<string, string> {
     if (name === "") continue;
     const key = name.toLowerCase();
     const existing = seen.get(key);
-    // Keep the fullest spelling of an exact match.
-    if (!existing || name.length > existing.length) seen.set(key, name);
+    // Keep the fullest spelling of an exact match; on a tie, the one typed
+    // with capitals ("Sam Carter" over "sam carter"), whichever came first.
+    if (
+      !existing ||
+      name.length > existing.length ||
+      (name.length === existing.length && capitals(name) > capitals(existing))
+    ) {
+      seen.set(key, name);
+    }
   }
 
   const keys = [...seen.keys()];

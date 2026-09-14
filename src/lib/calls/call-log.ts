@@ -55,6 +55,8 @@ export type CallLogRow = {
   outcomeWords: string | null;
   /** Where the report came from. */
   reportSource: "app" | "sheet" | null;
+  /** The closer the report names, or null. */
+  closer: string | null;
 };
 
 export const CALL_STATES: readonly { key: CallState; label: string }[] = [
@@ -129,6 +131,7 @@ export function buildCallLog(input: {
         : sheetReport
           ? ("sheet" as const)
           : null,
+      closer: report?.rep?.trim() || null,
     };
 
     if (b.status === "canceled") {

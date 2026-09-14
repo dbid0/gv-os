@@ -104,10 +104,16 @@ export async function activeFiledReports(clientId: string): Promise<FiledReport[
       outcome: callEocReports.outcome,
       callAt: callEocReports.callAt,
       bookingId: callEocReports.bookingId,
+      closerName: reps.name,
     })
     .from(callEocReports)
+    .leftJoin(reps, eq(reps.id, callEocReports.closerRepId))
     .where(and(eq(callEocReports.clientId, clientId), isNull(callEocReports.voidedAt)));
-  return rows.map((r) => ({ ...eocAsReport(r), bookingId: r.bookingId }));
+  return rows.map((r) => ({
+    ...eocAsReport(r),
+    rep: r.closerName,
+    bookingId: r.bookingId,
+  }));
 }
 
 /** Active in-app reports as lead events, for the lead builder. */

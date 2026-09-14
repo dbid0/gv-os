@@ -59,6 +59,7 @@ export async function loadCallLog(
             status: clientTrackingRows.status,
             outcome: clientTrackingRows.outcome,
             occurredAt: clientTrackingRows.occurredAt,
+            rep: clientTrackingRows.rep,
           })
           .from(clientTrackingRows)
           .where(
