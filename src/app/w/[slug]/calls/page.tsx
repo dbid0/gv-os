@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { CheckCircle2, Clock, Phone, PhoneCall } from "lucide-react";
 
+import { CloserSegmentsTable } from "@/components/calls/closer-segments-table";
 import { EocFormSheet } from "@/components/calls/eoc-form-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Kpi } from "@/components/ui/metric";
@@ -17,6 +18,7 @@ import {
   type CallState,
 } from "@/lib/calls/call-log";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
+import { segmentByCloser } from "@/lib/calls/closer-segments";
 import { outcomeLabelForWords } from "@/lib/calls/eoc-form";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
@@ -201,6 +203,8 @@ export default async function WorkspaceCallsPage({
         <Kpi variant="tile" label="Reported" value={String(counts.reported)} />
         <Kpi variant="tile" label="Cancelled" value={String(counts.cancelled)} />
       </div>
+
+      <CloserSegmentsTable segments={segmentByCloser(log)} />
 
       <nav className="flex flex-wrap gap-1.5" aria-label="Filter calls">
         {tabs.map((t) => (
