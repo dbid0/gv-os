@@ -38,6 +38,7 @@ async function requireFiler(): Promise<string | null> {
 function revalidateCallSurfaces(slug: string) {
   revalidatePath(`/w/${slug}/crm`);
   revalidatePath(`/w/${slug}/sales`);
+  revalidatePath(`/w/${slug}/calls`);
   revalidatePath(`/w/${slug}`);
 }
 

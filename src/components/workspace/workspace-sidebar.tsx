@@ -11,6 +11,7 @@ import {
   FileText,
   GraduationCap,
   Kanban,
+  PhoneCall,
   LayoutGrid,
   Mail,
   Receipt,
@@ -65,6 +66,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       // something to hand a client inside their own portal (same call as
       // Tracking below), so it is admin-only in both nav and page gate.
       { label: "Pipeline", icon: Columns3, path: "/pipeline", adminOnly: true },
+      { label: "Calls", icon: PhoneCall, path: "/calls", adminOnly: true },
       { label: "Sales", icon: BarChart3, path: "/sales" },
     ],
   },

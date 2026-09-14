@@ -4,6 +4,7 @@ import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { bookings, callEocReports, reps } from "@/db/schema/app";
+import type { FiledReport } from "@/lib/calls/call-log";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
 import { eocAsLeadRow, eocAsReport, type CleanEoc } from "@/lib/calls/eoc-form";
 import type { LeadEventInput } from "@/lib/tracking/leads";
@@ -86,16 +87,27 @@ export async function fileEoc(input: {
 
 /** Active reports in the shape every outcome reader speaks. */
 export async function activeEocReports(clientId: string): Promise<EocReport[]> {
+  return (await activeFiledReports(clientId)).map((r) => ({
+    email: r.email,
+    status: r.status,
+    outcome: r.outcome,
+    occurredAt: r.occurredAt,
+  }));
+}
+
+/** Active reports with the booking each was filed against (null when unbooked). */
+export async function activeFiledReports(clientId: string): Promise<FiledReport[]> {
   const db = getDb();
   const rows = await db
     .select({
       leadEmail: callEocReports.leadEmail,
       outcome: callEocReports.outcome,
       callAt: callEocReports.callAt,
+      bookingId: callEocReports.bookingId,
     })
     .from(callEocReports)
     .where(and(eq(callEocReports.clientId, clientId), isNull(callEocReports.voidedAt)));
-  return rows.map(eocAsReport);
+  return rows.map((r) => ({ ...eocAsReport(r), bookingId: r.bookingId }));
 }
 
 /** Active in-app reports as lead events, for the lead builder. */

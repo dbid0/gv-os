@@ -24,6 +24,7 @@ const SECTIONS = [
   { label: "CRM", path: "/crm" },
   { label: "Leads", path: "/leads" },
   { label: "Pipeline", path: "/pipeline", adminOnly: true },
+  { label: "Calls", path: "/calls", adminOnly: true },
   { label: "Tracking", path: "/tracking", adminOnly: true },
   { label: "Students", path: "/students" },
   { label: "Onboarding", path: "/onboarding" },
