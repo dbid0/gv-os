@@ -15,6 +15,7 @@ import {
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
+import { activeEocReports } from "@/lib/calls/eoc-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import {
   applyTagRulesToFeed,
@@ -57,6 +58,20 @@ const EOC_REPORT_COLUMNS = {
   outcome: clientTrackingRows.outcome,
   occurredAt: clientTrackingRows.occurredAt,
 };
+
+/**
+ * Sheet reports plus reports filed in GV OS, read as one list. Null only when
+ * there is no sheet snapshot AND nothing was filed in the app — an offer with
+ * no report source at all keeps its "reports not loaded" state instead of
+ * reading every past call as unreported.
+ */
+function mergeEocSources(
+  sheet: EocReport[] | null,
+  app: EocReport[],
+): EocReport[] | null {
+  if (sheet === null && app.length === 0) return null;
+  return [...(sheet ?? []), ...app];
+}
 
 /** Emails with an end-of-call report on file (lowercased) — clears stuck calls. */
 function reportedEmailsOf(rows: { email: string | null }[]): Set<string> {
@@ -165,8 +180,8 @@ export async function loadOfferSales(
     revenueCents: number | null;
     label: string | null;
   }[] = [];
-  let reportedEmails = new Set<string>();
-  let eocReports: EocReport[] | null = null;
+  let sheetEoc: EocReport[] | null = null;
+  const appEoc = clientId ? await activeEocReports(clientId) : [];
   if (report?.clientId) {
     const snap = await currentSnapshot(report.clientId);
     if (snap) {
@@ -187,10 +202,11 @@ export async function loadOfferSales(
         revenueCents: d.revenueCents,
         label: d.closeType,
       }));
-      reportedEmails = reportedEmailsOf(eocRows);
-      eocReports = eocRows;
+      sheetEoc = eocRows;
     }
   }
+  const eocReports = mergeEocSources(sheetEoc, appEoc);
+  const reportedEmails = reportedEmailsOf(eocReports ?? []);
 
   const stl = report?.clientId
     ? await offerSpeedToLead(report.clientId)
@@ -334,22 +350,23 @@ export async function loadOfferHome(
   ]);
 
   // The outcomes that clear stuck calls AND feed the confirmed-vs-unconfirmed
-  // rates — the sheet's end-of-call reports.
-  let reportedEmails = new Set<string>();
-  let eocReports: EocReport[] | null = null;
-  if (snapshot) {
-    const eocRows = await db
-      .select(EOC_REPORT_COLUMNS)
-      .from(clientTrackingRows)
-      .where(
-        and(
-          eq(clientTrackingRows.syncId, snapshot.syncId),
-          eq(clientTrackingRows.tab, "eoc"),
-        ),
-      );
-    reportedEmails = reportedEmailsOf(eocRows);
-    eocReports = eocRows;
-  }
+  // rates — the sheet's end-of-call reports plus the ones filed in GV OS.
+  const [sheetEoc, appEoc] = await Promise.all([
+    snapshot
+      ? db
+          .select(EOC_REPORT_COLUMNS)
+          .from(clientTrackingRows)
+          .where(
+            and(
+              eq(clientTrackingRows.syncId, snapshot.syncId),
+              eq(clientTrackingRows.tab, "eoc"),
+            ),
+          )
+      : Promise.resolve(null),
+    row ? activeEocReports(row.id) : Promise.resolve([]),
+  ]);
+  const eocReports = mergeEocSources(sheetEoc, appEoc);
+  const reportedEmails = reportedEmailsOf(eocReports ?? []);
 
   // Funnel: the offer's lead-stitched stages, shaped to its offer model.
   const funnelLeads = snapshot
