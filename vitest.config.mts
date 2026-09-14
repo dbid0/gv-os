@@ -254,6 +254,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Short links: code shape and the redirect-target guard. Fully covered.
+        "src/lib/marketing/short-link.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
