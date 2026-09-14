@@ -49,7 +49,17 @@ export default async function UtmLinksPage() {
       />
 
       <Panel title="Generate a link">
-        <UtmLinkForm clients={clients} />
+        <UtmLinkForm
+          clients={clients}
+          remembered={rows.map((r) => ({
+            clientId: r.clientId,
+            destinationUrl: r.destinationUrl,
+            utmSource: r.utmSource,
+            utmMedium: r.utmMedium,
+            utmCampaign: r.utmCampaign,
+            createdAt: r.createdAt,
+          }))}
+        />
       </Panel>
 
       {rows.length === 0 ? (
