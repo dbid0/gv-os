@@ -60,7 +60,7 @@ export async function loadStudentsBoard(
   // Names from the lead record when the payment rows carry none.
   const namesByEmail = new Map<string, string>();
   if (sheet) {
-    for (const lead of await leadsForClient(sheet.syncId)) {
+    for (const lead of await leadsForClient(sheet.syncId, [], aliases)) {
       if (lead.name) namesByEmail.set(lead.email.trim().toLowerCase(), lead.name);
     }
   }

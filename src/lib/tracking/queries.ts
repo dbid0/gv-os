@@ -12,6 +12,8 @@ import {
   type LeadEventInput,
   type LeadSummary,
 } from "@/lib/tracking/leads";
+import { EMPTY_ALIASES, type AliasMap } from "@/lib/tracking/aliases";
+import { resolveLeadRows } from "@/lib/tracking/identity";
 import {
   paymentKind,
   paymentLabel,
@@ -180,6 +182,8 @@ export async function leadsForClient(
   syncId: string,
   /** Lead events from outside the sheet (reports filed in GV OS), merged in. */
   extraRows: LeadEventInput[] = [],
+  /** Same-person inboxes: rows are keyed under each person's canonical email. */
+  aliases: AliasMap = EMPTY_ALIASES,
 ): Promise<LeadSummary[]> {
   const db = getDb();
   const rows = await db
@@ -206,7 +210,7 @@ export async function leadsForClient(
         inArray(clientTrackingRows.tab, LEAD_TABS),
       ),
     );
-  return buildLeadSummaries([...rows, ...extraRows]);
+  return buildLeadSummaries(resolveLeadRows([...rows, ...extraRows], aliases));
 }
 
 /**
