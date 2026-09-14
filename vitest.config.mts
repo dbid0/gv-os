@@ -216,6 +216,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Clawbacks move what reps are owed: link rules, proportional
+        // clawback math, waivers. Fully covered.
+        "src/lib/payments/clawbacks.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
