@@ -26,6 +26,7 @@ describe("normalizeCalendlyEvent", () => {
       inviteeName: "Lead Person",
       inviteeEmail: "lead@example.com",
       status: "booked",
+      rescheduled: false,
       startsAt: "2026-08-22T15:00:00.000000Z",
       bookedAt: "2026-08-21T14:05:00.000000Z",
     });
@@ -96,6 +97,7 @@ describe("normalizeIclosedEventCall", () => {
       inviteeName: "Christopher Lérant",
       inviteeEmail: "kikolerant@gmail.com",
       status: "booked",
+      rescheduled: false,
       startsAt: "2026-09-13T13:00:00.000Z",
       bookedAt: "2026-09-11T23:27:48.632Z",
     });

@@ -1,0 +1,1 @@
+ALTER TABLE "app"."bookings" ADD COLUMN "rescheduled" boolean DEFAULT false NOT NULL;

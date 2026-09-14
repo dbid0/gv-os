@@ -175,6 +175,7 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           invitee: r.inviteeName ?? r.inviteeEmail,
           email: r.inviteeEmail,
           state: r.state,
+          rescheduled: r.rescheduled,
           confirmation: r.confirmation,
           outcome: r.outcome,
           outcomeWords: r.outcomeWords,
