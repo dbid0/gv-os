@@ -105,15 +105,15 @@ export interface RepActivity {
 /**
  * Resolve drifting rep names to one canonical name each.
  *
- * Reps type their own name and it drifts: The Grid's setter tab carries "Yel",
- * "Yel Akot" and "yel akot" for one person. Leaving them apart splits a rep's
+ * Reps type their own name and it drifts: a live client's setter tab carries "Sam",
+ * "Sam Carter" and "sam carter" for one person. Leaving them apart splits a rep's
  * dials across three rows; merging blindly on a prefix would merge two
- * different people the first time a floor has an "Ethan Barron" and an
+ * different people the first time a floor has an "Ethan Morgan" and an
  * "Ethan Cole".
  *
  * So a short name folds into a longer one ONLY when it is a whole-word prefix
- * of exactly ONE of them. "Yel" resolves to "Yel Akot" because nothing else
- * starts with Yel; a bare "Ethan" on a floor with two Ethans stays on its own,
+ * of exactly ONE of them. "Sam" resolves to "Sam Carter" because nothing else
+ * starts with Sam; a bare "Ethan" on a floor with two Ethans stays on its own,
  * because which one it means is genuinely unknown.
  */
 export function canonicalRepNames(names: string[]): Map<string, string> {
@@ -220,7 +220,7 @@ export function activityRates(t: ActivityCounts): ActivityRates {
 /**
  * Rep names that look like the same person typed twice.
  *
- * "Ethan baron" and "Ethan Barron" are on The Grid's EOD tabs right now — one
+ * "Ethan morgen" and "Ethan Morgan" are on a live client's EOD tabs — one
  * letter apart, so they are almost certainly one rep whose numbers are split
  * across two rows. This does NOT merge them: a single character is also all
  * that separates two real people, and crediting one rep with another's dials
@@ -228,8 +228,8 @@ export function activityRates(t: ActivityCounts): ActivityRates {
  * fixed at the source, which is the only place it can be fixed correctly.
  */
 export function nearDuplicateRepNames(names: string[]): [string, string][] {
-  // Compare CASED-ALIKE names. "Ethan Barron" and "ethan barron" are already
-  // one rep, so listing each of them against "Ethan baron" would report the
+  // Compare CASED-ALIKE names. "Ethan Morgan" and "ethan morgan" are already
+  // one rep, so listing each of them against "Ethan morgen" would report the
   // same problem twice and read like two separate mistakes.
   const unique = [
     ...new Map(

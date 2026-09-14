@@ -49,11 +49,11 @@ describe("buildLeadSummaries", () => {
         occurredAt: d("2026-08-01T10:00:00Z"),
         name: "Julian",
       }),
-      ev({ tab: "calls", occurredAt: d("2026-08-03T15:00:00Z"), rep: "Lorenzo" }),
+      ev({ tab: "calls", occurredAt: d("2026-08-03T15:00:00Z"), rep: "Jordan" }),
       ev({
         tab: "eoc",
         occurredAt: d("2026-08-03T16:00:00Z"),
-        rep: "Lorenzo",
+        rep: "Jordan",
         status: "Follow Up — Strong Interest",
         recordingUrl: "https://fathom.video/share/x",
       }),
@@ -99,19 +99,19 @@ describe("buildLeadSummaries", () => {
   it("prefers the fullest spelling of a hand-typed name", () => {
     const leads = buildLeadSummaries([
       ev({ tab: "applications", name: "Julian" }),
-      ev({ tab: "deals", name: "Julian Schiederer" }),
+      ev({ tab: "deals", name: "Julian Parker" }),
     ]);
-    expect(leads[0].name).toBe("Julian Schiederer");
+    expect(leads[0].name).toBe("Julian Parker");
   });
 
   it("collapses a rep's name typed three different ways", () => {
-    // Live data: "lorenzo saponara", "Lorenzo Saponara", "Lorenzo  Saponara".
+    // Live data: "jordan rivers", "Jordan Rivers", "Jordan  Rivers".
     const leads = buildLeadSummaries([
-      ev({ tab: "calls", rep: "lorenzo saponara" }),
-      ev({ tab: "eoc", rep: "Lorenzo Saponara" }),
-      ev({ tab: "deals", rep: "Lorenzo Saponara " }),
+      ev({ tab: "calls", rep: "jordan rivers" }),
+      ev({ tab: "eoc", rep: "Jordan Rivers" }),
+      ev({ tab: "deals", rep: "Jordan Rivers " }),
     ]);
-    expect(leads[0].reps).toEqual(["lorenzo saponara"]);
+    expect(leads[0].reps).toEqual(["jordan rivers"]);
   });
 
   it("never shows a payment above the call that was booked to win it", () => {
@@ -119,7 +119,7 @@ describe("buildLeadSummaries", () => {
     // Sorting dated events first put the payment at the top of his journey.
     const leads = buildLeadSummaries([
       ev({ tab: "payments", occurredAt: d("2026-09-03T04:01:00Z"), cashCents: 4900 }),
-      ev({ tab: "calls", occurredAt: null, rep: "Yel Akot" }),
+      ev({ tab: "calls", occurredAt: null, rep: "Sam Carter" }),
     ]);
     expect(leads[0].events.map((e) => e.tab)).toEqual(["calls", "payments"]);
   });
@@ -186,14 +186,14 @@ describe("buildLeadSummaries", () => {
 
 describe("searchLeads", () => {
   const leads = buildLeadSummaries([
-    ev({ tab: "applications", email: "julian@mail.com", name: "Julian Schiederer" }),
-    ev({ tab: "eoc", email: "other@mail.com", rep: "Lorenzo Saponara" }),
+    ev({ tab: "applications", email: "julian@mail.com", name: "Julian Parker" }),
+    ev({ tab: "eoc", email: "other@mail.com", rep: "Jordan Rivers" }),
   ]);
 
   it("finds by email, name or rep", () => {
     expect(searchLeads(leads, "julian")).toHaveLength(1);
-    expect(searchLeads(leads, "schieder")).toHaveLength(1);
-    expect(searchLeads(leads, "lorenzo")).toHaveLength(1);
+    expect(searchLeads(leads, "parke")).toHaveLength(1);
+    expect(searchLeads(leads, "jordan")).toHaveLength(1);
   });
 
   it("returns everything for an empty query and nothing for a miss", () => {

@@ -70,7 +70,7 @@ describe("parseTranscriptPayload", () => {
     "(YA) Louie Pablo | AI Strategy Call - September 02\n" +
     "VIEW RECORDING - 52 mins (No highlights): \n\n---\n\n" +
     "0:00 - Maximilian Pablo\n  All good, good stuff.\n\n" +
-    "0:11 - lorenzo s\n  Whereabouts are you based?";
+    "0:11 - jordan s\n  Whereabouts are you based?";
 
   it("prefers the plain-text rendering and keeps the speakers", () => {
     const out = parseTranscriptPayload({ plain_text: plain, html: "<p>ignored</p>" });

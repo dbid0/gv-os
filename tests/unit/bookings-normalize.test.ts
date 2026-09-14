@@ -81,10 +81,10 @@ describe("normalizeIclosedEventCall", () => {
     cancelledBy: null,
     createdAt: "2026-09-11T23:27:48.632Z",
     callType: "STRATEGY_EVENT",
-    inviteeEmail: "kikolerant@gmail.com",
-    inviteeName: "Christopher Lérant ",
-    contact: { email: "kikolerant@gmail.com", phoneNumber: "+421917975328" },
-    event: { name: "Phone Farm Strategy Call ⚡️" },
+    inviteeEmail: "casey.lead@example.com",
+    inviteeName: "Casey Example ",
+    contact: { email: "casey.lead@example.com", phoneNumber: "+15550100000" },
+    event: { name: "Strategy Call ⚡️" },
     eventType: "UPCOMING",
   };
 
@@ -92,9 +92,9 @@ describe("normalizeIclosedEventCall", () => {
     const out = normalizeIclosedEventCall(eventCall);
     expect(out).toEqual({
       externalId: "2592206",
-      eventType: "Phone Farm Strategy Call ⚡️",
-      inviteeName: "Christopher Lérant",
-      inviteeEmail: "kikolerant@gmail.com",
+      eventType: "Strategy Call ⚡️",
+      inviteeName: "Casey Example",
+      inviteeEmail: "casey.lead@example.com",
       status: "booked",
       startsAt: "2026-09-13T13:00:00.000Z",
       bookedAt: "2026-09-11T23:27:48.632Z",
@@ -105,7 +105,7 @@ describe("normalizeIclosedEventCall", () => {
     const out = normalizeIclosedEventCall({
       ...eventCall,
       cancelReason: "Host declined event from Google Calendar",
-      cancelledBy: "closer (lorenzo)",
+      cancelledBy: "closer (jordan)",
     });
     expect(out?.status).toBe("canceled");
   });
@@ -113,7 +113,7 @@ describe("normalizeIclosedEventCall", () => {
   it("falls back to contact.email when inviteeEmail is missing, and to null when neither is present", () => {
     expect(
       normalizeIclosedEventCall({ ...eventCall, inviteeEmail: null })?.inviteeEmail,
-    ).toBe("kikolerant@gmail.com");
+    ).toBe("casey.lead@example.com");
     expect(
       normalizeIclosedEventCall({ ...eventCall, inviteeEmail: null, contact: {} })
         ?.inviteeEmail,
