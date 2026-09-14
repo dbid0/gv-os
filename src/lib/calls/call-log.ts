@@ -179,6 +179,9 @@ const dayKey = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+/** The Central-time calendar day a call starts on, YYYY-MM-DD. */
+export const callDayKey = (d: Date): string => dayKey.format(d);
+
 export type CallDay = { key: string; rows: CallLogRow[] };
 
 /** Group rows by Central-time calendar day, keeping row order; undated → "undated". */

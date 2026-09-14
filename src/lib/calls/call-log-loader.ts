@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { bookings, clientTrackingRows } from "@/db/schema/app";
@@ -49,6 +49,9 @@ export async function loadCallLog(
       })
       .from(bookings)
       .where(eq(bookings.clientId, clientId))
+      // The newest 1000 by start: without an order the cap kept an arbitrary
+      // 1000, which could drop this week's calls on a busy offer.
+      .orderBy(sql`${bookings.startsAt} desc nulls last`)
       .limit(1000),
     listConfirmations(clientId),
     activeFiledReports(clientId),
