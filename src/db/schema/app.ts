@@ -2247,3 +2247,36 @@ export const paymentClawbackWaivers = appSchema.table(
     ),
   ],
 );
+
+/**
+ * API keys for the GV OS MCP server — how an owner's own Claude reads GV OS.
+ *
+ * The key itself is shown exactly once, at creation; only its SHA-256 hash is
+ * stored, so a database read can never leak a working key. `key_prefix` is the
+ * non-secret start of the key, for recognising it in the list. v1 is READ-ONLY:
+ * the scope check allows nothing but `read`, so no key can write even if a
+ * write tool were added by mistake.
+ */
+export const mcpApiKeys = appSchema.table(
+  "mcp_api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    keyHash: text("key_hash").notNull(),
+    scopes: text("scopes")
+      .array()
+      .notNull()
+      .default(sql`'{read}'::text[]`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("mcp_api_keys_hash_key").on(table.keyHash),
+    check("mcp_api_keys_scopes_check", sql`${table.scopes} <@ '{read}'::text[]`),
+    check("mcp_api_keys_name_check", sql`length(trim(${table.name})) between 1 and 60`),
+    check("mcp_api_keys_hash_check", sql`${table.keyHash} ~ '^[0-9a-f]{64}$'`),
+  ],
+);

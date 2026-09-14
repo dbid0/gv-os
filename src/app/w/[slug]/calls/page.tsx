@@ -8,24 +8,19 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Kpi } from "@/components/ui/metric";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
-import { bookings, clients, clientTrackingRows, reps } from "@/db/schema/app";
+import { clients, reps } from "@/db/schema/app";
 import { viewerRole } from "@/lib/auth/viewer";
-import { filterCountedBookings } from "@/lib/bookings/counted";
 import {
-  buildCallLog,
   CALL_STATES,
-  countByState,
   groupByDay,
   type CallLogRow,
   type CallState,
 } from "@/lib/calls/call-log";
-import { activeFiledReports } from "@/lib/calls/eoc-store";
+import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { outcomeLabelForWords } from "@/lib/calls/eoc-form";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
-import { listConfirmations } from "@/lib/crm/confirmation-store";
 import { rosterClientBySlug } from "@/lib/roster-server";
-import { currentSnapshot } from "@/lib/tracking/queries";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -149,48 +144,13 @@ export default async function WorkspaceCallsPage({
   }
 
   const now = new Date();
-  const snapshot = await currentSnapshot(row.id);
-  const [bookingRows, confirmations, filed, sheet, teamReps] = await Promise.all([
-    db
-      .select({
-        id: bookings.id,
-        inviteeName: bookings.inviteeName,
-        inviteeEmail: bookings.inviteeEmail,
-        startsAt: bookings.startsAt,
-        status: bookings.status,
-        eventType: bookings.eventType,
-        provider: bookings.provider,
-      })
-      .from(bookings)
-      .where(eq(bookings.clientId, row.id))
-      .limit(1000),
-    listConfirmations(row.id),
-    activeFiledReports(row.id),
-    snapshot
-      ? db
-          .select({
-            email: clientTrackingRows.email,
-            status: clientTrackingRows.status,
-            outcome: clientTrackingRows.outcome,
-            occurredAt: clientTrackingRows.occurredAt,
-          })
-          .from(clientTrackingRows)
-          .where(
-            and(
-              eq(clientTrackingRows.syncId, snapshot.syncId),
-              eq(clientTrackingRows.tab, "eoc"),
-            ),
-          )
-      : Promise.resolve([]),
+  const [{ totalBookings, log, counts }, teamReps] = await Promise.all([
+    loadCallLog(row.id, row.countedCallSources ?? null, now),
     db
       .select({ id: reps.id, name: reps.name, role: reps.role })
       .from(reps)
       .where(and(eq(reps.clientId, row.id), eq(reps.status, "active"))),
   ]);
-
-  const counted = filterCountedBookings(bookingRows, row.countedCallSources ?? null);
-  const log = buildCallLog({ bookings: counted, confirmations, filed, sheet, now });
-  const counts = countByState(log);
   const visible = filter === "all" ? log : log.filter((r) => r.state === filter);
   const days = groupByDay(visible);
 
@@ -204,7 +164,7 @@ export default async function WorkspaceCallsPage({
   const tomorrowKey = dayKeyFmt.format(new Date(now.getTime() + 86_400_000));
   const yesterdayKey = dayKeyFmt.format(new Date(now.getTime() - 86_400_000));
 
-  if (bookingRows.length === 0) {
+  if (totalBookings === 0) {
     return (
       <div className="space-y-6">
         {header}

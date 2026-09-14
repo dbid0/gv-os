@@ -224,6 +224,20 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The MCP server's protocol and key handling: auth by hash, read-only
+        // tools, teaching errors, nothing internal leaked. Fully covered.
+        "src/lib/mcp/protocol.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/mcp/keys.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
