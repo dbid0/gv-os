@@ -150,7 +150,12 @@ export interface DealListRow {
   status: string;
 }
 
-export async function listDeals(): Promise<DealListRow[]> {
+/**
+ * The whole book of deals, newest first. Pass `clientId` to scope to one
+ * offer's deals in SQL (uses `deals_client_idx`) — omit it for the full,
+ * unfiltered book, which is exactly what every other caller gets today.
+ */
+export async function listDeals(clientId?: string): Promise<DealListRow[]> {
   const db = getDb();
   const rows = await db
     .select({
@@ -168,6 +173,7 @@ export async function listDeals(): Promise<DealListRow[]> {
     .from(deals)
     .leftJoin(reps, eq(deals.repId, reps.id))
     .leftJoin(clients, eq(deals.clientId, clients.id))
+    .where(clientId ? eq(deals.clientId, clientId) : undefined)
     .orderBy(desc(deals.closedAt));
 
   const cash = await cashByDeal(rows.map((r) => r.id));
@@ -192,19 +198,29 @@ export async function getCommissionRollup(
   basis: CommissionBasis = "cash_collected",
 ): Promise<CommissionRollup> {
   const db = getDb();
-  const dealRows = await db.select().from(deals);
-  const repRows = await db.select().from(reps);
-  const teamRows = await db
-    .select({ id: clients.id, defaultCloserBps: clients.defaultCloserBps })
-    .from(clients);
+
+  // The deals, the reps, and the per-team default rates are independent reads,
+  // so they run in one wave.
+  const [dealRows, repRows, teamRows] = await Promise.all([
+    db.select().from(deals),
+    db.select().from(reps),
+    db
+      .select({ id: clients.id, defaultCloserBps: clients.defaultCloserBps })
+      .from(clients),
+  ]);
+
+  // Splits and collected cash both hang off the deal ids and nothing else, so
+  // they run together in a second wave.
   const dealIds = dealRows.map((d) => d.id);
-  const splitRows = dealIds.length
-    ? await db
-        .select()
-        .from(commissionSplits)
-        .where(inArray(commissionSplits.dealId, dealIds))
-    : [];
-  const cash = await cashByDeal(dealIds);
+  const [splitRows, cash] = await Promise.all([
+    dealIds.length
+      ? db
+          .select()
+          .from(commissionSplits)
+          .where(inArray(commissionSplits.dealId, dealIds))
+      : [],
+    cashByDeal(dealIds),
+  ]);
 
   // A deal with no explicit split falls back to its team's default closer rate.
   const teamDefaultCloserBps = new Map<string, Bps>();
@@ -253,13 +269,13 @@ export interface SalesOverviewStats {
 
 export async function getSalesOverview(): Promise<SalesOverviewStats> {
   const db = getDb();
-  const dealRows = await db
-    .select({ id: deals.id, revenueCents: deals.contractValueCents })
-    .from(deals);
-  const teams = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.status, "active"));
+
+  // The deals and the active-team count are independent, so they run together;
+  // only the ledger lookup depends on the deal ids.
+  const [dealRows, teams] = await Promise.all([
+    db.select({ id: deals.id, revenueCents: deals.contractValueCents }).from(deals),
+    db.select({ id: clients.id }).from(clients).where(eq(clients.status, "active")),
+  ]);
   const cash = await cashByDeal(dealRows.map((d) => d.id));
   return {
     cashCollectedCents: sum([...cash.values()]),
@@ -295,26 +311,33 @@ export async function getEodCompliance(
   now: Date = new Date(),
 ): Promise<EodCompliance> {
   const db = getDb();
-  const activeReps = await db
-    .select({ id: reps.id, name: reps.name })
-    .from(reps)
-    .leftJoin(clients, eq(reps.clientId, clients.id))
-    .where(
-      and(
-        eq(reps.status, "active"),
-        or(isNull(reps.clientId), ne(clients.status, "archived")),
-      ),
-    );
-  const total = activeReps.length;
 
   // A 48h window bucketed by CT day key — immune to the UTC-midnight trap
   // and to DST, because dayKeyCT owns the timezone math in one place.
   const todayKey = dayKeyCT(now);
   const since = new Date(now.getTime() - 48 * 3600 * 1000);
-  const recent = await db
-    .select({ repId: activityReports.repId, reportDate: activityReports.reportDate })
-    .from(activityReports)
-    .where(and(eq(activityReports.kind, kind), gte(activityReports.reportDate, since)));
+
+  // The active-rep roster and the recent reports are fully independent reads,
+  // so they run in one wave.
+  const [activeReps, recent] = await Promise.all([
+    db
+      .select({ id: reps.id, name: reps.name })
+      .from(reps)
+      .leftJoin(clients, eq(reps.clientId, clients.id))
+      .where(
+        and(
+          eq(reps.status, "active"),
+          or(isNull(reps.clientId), ne(clients.status, "archived")),
+        ),
+      ),
+    db
+      .select({ repId: activityReports.repId, reportDate: activityReports.reportDate })
+      .from(activityReports)
+      .where(
+        and(eq(activityReports.kind, kind), gte(activityReports.reportDate, since)),
+      ),
+  ]);
+  const total = activeReps.length;
 
   const submittedSet = new Set(
     recent.filter((r) => dayKeyCT(r.reportDate) === todayKey).map((r) => r.repId),
@@ -362,26 +385,36 @@ export interface LeaderboardRow {
  */
 export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
   const db = getDb();
-  const repRows = await db
-    .select({
-      id: reps.id,
-      name: reps.name,
-      role: reps.role,
-      clientId: reps.clientId,
-      teamName: clients.name,
-    })
-    .from(reps)
-    .leftJoin(clients, eq(reps.clientId, clients.id))
-    .where(
-      role
-        ? and(eq(reps.status, "active"), eq(reps.role, role))
-        : eq(reps.status, "active"),
-    );
+
+  // The reps to rank, every activity report, and the deals to attribute are
+  // three independent reads with no data dependency between them, so they run
+  // in one wave instead of three serial round-trips.
+  const [repRows, acts, dealRows] = await Promise.all([
+    db
+      .select({
+        id: reps.id,
+        name: reps.name,
+        role: reps.role,
+        clientId: reps.clientId,
+        teamName: clients.name,
+      })
+      .from(reps)
+      .leftJoin(clients, eq(reps.clientId, clients.id))
+      .where(
+        role
+          ? and(eq(reps.status, "active"), eq(reps.role, role))
+          : eq(reps.status, "active"),
+      ),
+    db
+      .select({ repId: activityReports.repId, metrics: activityReports.metrics })
+      .from(activityReports),
+    db.select({ id: deals.id, repId: deals.repId }).from(deals),
+  ]);
+
+  // Cash truly depends on the deal ids, so it runs after that wave resolves.
+  const cash = await cashByDeal(dealRows.map((d) => d.id));
 
   // Sum each rep's activity metrics across all their reports.
-  const acts = await db
-    .select({ repId: activityReports.repId, metrics: activityReports.metrics })
-    .from(activityReports);
   const actByRep = new Map<string, Record<string, number>>();
   for (const a of acts) {
     const cur = actByRep.get(a.repId) ?? {};
@@ -392,8 +425,6 @@ export async function getLeaderboard(role?: string): Promise<LeaderboardRow[]> {
   }
 
   // Deals closed and cash collected, per rep, from real rows + the ledger.
-  const dealRows = await db.select({ id: deals.id, repId: deals.repId }).from(deals);
-  const cash = await cashByDeal(dealRows.map((d) => d.id));
   const dealsByRep = new Map<string, number>();
   const cashByRep = new Map<string, Cents>();
   for (const d of dealRows) {

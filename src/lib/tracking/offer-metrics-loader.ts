@@ -83,7 +83,7 @@ export async function loadOfferSales(
         .limit(1)
     : [undefined];
 
-  const [apps, allCalls, allDeals, report, repRows, bookingRows, confirmations] =
+  const [apps, calls, deals, report, repRows, bookingRows, confirmations] =
     await Promise.all([
       clientId
         ? db
@@ -104,8 +104,12 @@ export async function loadOfferSales(
             .orderBy(desc(applications.createdAt))
             .limit(100)
         : Promise.resolve([]),
-      listCallLogs(500),
-      listDeals(),
+      // Client filter pushed into SQL (activity_logs_client_idx / deals_client_idx)
+      // instead of loading every client's rows and filtering in JS. A null offer
+      // matched nothing before (both client_id columns are NOT NULL), so it stays
+      // an empty list — same rows, same order, one client's rows fetched.
+      clientId ? listCallLogs(500, clientId) : Promise.resolve([]),
+      clientId ? listDeals(clientId) : Promise.resolve([]),
       getClientReport(slug, clientName).catch(() => null),
       clientId
         ? db
@@ -129,9 +133,6 @@ export async function loadOfferSales(
         : Promise.resolve([]),
       clientId ? listConfirmations(clientId) : Promise.resolve([]),
     ]);
-
-  const calls = allCalls.filter((c) => c.clientId === clientId);
-  const deals = allDeals.filter((d) => d.clientId === clientId);
 
   // Second wave — rows that hang off the current tracking snapshot: the
   // deals tab (paid-mix strip) and the EOC emails that clear stuck calls.
@@ -269,7 +270,7 @@ export async function loadOfferHome(
     snaps,
     bookingRows,
     confirmations,
-    allCalls,
+    calls,
     repRows,
   ] = await Promise.all([
     getClientReport(slug, clientName).catch(() => null),
@@ -291,7 +292,11 @@ export async function loadOfferHome(
           .limit(500)
       : Promise.resolve([]),
     row ? listConfirmations(row.id) : Promise.resolve([]),
-    listCallLogs(500),
+    // Client filter pushed into SQL (activity_logs_client_idx) instead of loading
+    // every client's rows and filtering in JS. No offer row => no client => the
+    // JS filter matched nothing (activity_logs.client_id is NOT NULL), so an
+    // empty list is the same result.
+    row ? listCallLogs(500, row.id) : Promise.resolve([]),
     row
       ? db
           .select({ id: repsTable.id, name: repsTable.name })
@@ -299,7 +304,6 @@ export async function loadOfferHome(
           .where(eq(repsTable.clientId, row.id))
       : Promise.resolve([]),
   ]);
-  const calls = allCalls.filter((c) => c.clientId === (row?.id ?? null));
 
   // The outcomes that clear stuck calls — the sheet's EOC emails.
   let reportedEmails = new Set<string>();
