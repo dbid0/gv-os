@@ -16,6 +16,7 @@ import {
   Rocket,
   Sheet,
   Tags,
+  GraduationCap,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -33,6 +34,7 @@ import {
   type OfferSettingsRow,
 } from "@/components/settings/offer-settings-panel";
 import { PaymentTagRulesPanel } from "@/components/settings/payment-tag-rules-panel";
+import { StudentProgramPanel } from "@/components/settings/student-program-panel";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
@@ -422,6 +424,26 @@ export default async function ClientSetupPage({
                   description="Setter, closer, and DM-setter rates for this offer. Empty means unset — commissions derive unknown, never zero. Overrides on individual claims beat these."
                 >
                   <CommissionRatesPanel rows={ratesRows} />
+                </SettingsSection>
+
+                <SettingsSection
+                  icon={GraduationCap}
+                  title="Students program"
+                  description="Who counts as a student and how long the program runs. With a minimum, only payers who made a single payment of at least that much appear on the Students board, and their week counts from that payment. With a length, students past the last week move to Program complete. Blank keeps both open."
+                >
+                  <StudentProgramPanel
+                    slug={slug}
+                    minPaymentDollars={
+                      offerRow?.studentMinPaymentCents
+                        ? (offerRow.studentMinPaymentCents / 100).toFixed(2)
+                        : ""
+                    }
+                    lengthWeeks={
+                      offerRow?.programLengthWeeks
+                        ? String(offerRow.programLengthWeeks)
+                        : ""
+                    }
+                  />
                 </SettingsSection>
 
                 <SettingsSection

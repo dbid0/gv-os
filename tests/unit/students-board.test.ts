@@ -209,12 +209,14 @@ describe("groupByCohort / summarizeStudents / moneyLine", () => {
     expect(summarizeStudents(students)).toEqual({
       total: 3,
       firstMonth: 2,
+      complete: 0,
       refunded: 1,
       netCents: 99_700 * 2,
     });
     expect(summarizeStudents([])).toEqual({
       total: 0,
       firstMonth: 0,
+      complete: 0,
       refunded: 0,
       netCents: 0,
     });

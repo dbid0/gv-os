@@ -1,10 +1,16 @@
 import "server-only";
 
+import { eq } from "drizzle-orm";
+
+import { getDb } from "@/db/client";
+import { offerSettings } from "@/db/schema/app";
 import {
   buildStudents,
   groupByCohort,
+  OPEN_PROGRAM,
   summarizeStudents,
   type CohortColumn,
+  type ProgramSettings,
   type StudentsBoard,
   type StudentsSummary,
 } from "@/lib/students/board";
@@ -26,7 +32,22 @@ export type StudentsBoardData = {
   board: StudentsBoard;
   columns: CohortColumn[];
   summary: StudentsSummary;
+  program: ProgramSettings;
 };
+
+/** An offer's student program settings; open-ended when none are saved. */
+export async function programSettingsFor(clientId: string): Promise<ProgramSettings> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      minPaymentCents: offerSettings.studentMinPaymentCents,
+      lengthWeeks: offerSettings.programLengthWeeks,
+    })
+    .from(offerSettings)
+    .where(eq(offerSettings.clientId, clientId))
+    .limit(1);
+  return row ?? OPEN_PROGRAM;
+}
 
 /**
  * The students board for one offer, from the same dashboard payment feed the
@@ -37,16 +58,24 @@ export async function loadStudentsBoard(
   clientId: string,
   now: Date,
 ): Promise<StudentsBoardData> {
-  const snaps = await latestSnapshotsBySource(clientId);
+  const [snaps, program] = await Promise.all([
+    latestSnapshotsBySource(clientId),
+    programSettingsFor(clientId).catch(() => OPEN_PROGRAM),
+  ]);
   const paySource = pickPaySource(snaps);
   if (!paySource) {
-    const board: StudentsBoard = { students: [], undatedPayers: 0 };
+    const board: StudentsBoard = {
+      students: [],
+      undatedPayers: 0,
+      belowMinimumPayers: 0,
+    };
     return {
       source: null,
       syncedAt: null,
       board,
-      columns: groupByCohort([]),
+      columns: groupByCohort([], program.lengthWeeks),
       summary: summarizeStudents([]),
+      program,
     };
   }
 
@@ -66,12 +95,13 @@ export async function loadStudentsBoard(
   }
 
   const { kept } = applyTagRulesToFeed(payments, rules);
-  const board = buildStudents(kept, now, { aliases, namesByEmail });
+  const board = buildStudents(kept, now, { aliases, namesByEmail, program });
   return {
     source: paySource.source === "stripe" ? "stripe" : "sheet",
     syncedAt: paySource.snapshot.syncedAt,
     board,
-    columns: groupByCohort(board.students),
+    columns: groupByCohort(board.students, program.lengthWeeks),
     summary: summarizeStudents(board.students),
+    program,
   };
 }

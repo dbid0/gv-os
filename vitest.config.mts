@@ -261,6 +261,12 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        "src/lib/students/program.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
