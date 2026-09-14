@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Columns3,
   FileText,
+  GraduationCap,
   Kanban,
   LayoutGrid,
   Mail,
@@ -71,6 +72,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     label: "Operations",
     items: [
       { label: "Email", icon: Mail, path: "/email" },
+      { label: "Students", icon: GraduationCap, path: "/students" },
       { label: "Onboarding", icon: ClipboardList, path: "/onboarding" },
       {
         label: "Docs",

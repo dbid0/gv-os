@@ -270,6 +270,19 @@ export async function eodRowsForClient(syncId: string) {
     .orderBy(desc(clientTrackingRows.occurredAt));
 }
 
+/**
+ * Which snapshot feeds an offer's dashboard money: the processor's own record
+ * first, the tracking sheet as the fallback. One rule, used by every surface
+ * that reads the payment feed, so they can never pick different feeds.
+ */
+export function pickPaySource<T extends { source: string }>(snaps: T[]): T | null {
+  return (
+    snaps.find((x) => x.source === "stripe") ??
+    snaps.find((x) => x.source === "sheet") ??
+    null
+  );
+}
+
 /** The deal and payment rows behind an offer's cash, for reconciliation. */
 export async function cashRowsForClient(syncId: string) {
   const db = getDb();
@@ -285,6 +298,7 @@ export async function cashRowsForClient(syncId: string) {
       payload: clientTrackingRows.payload,
       source: clientTrackingRows.source,
       notes: clientTrackingRows.notes,
+      name: clientTrackingRows.name,
     })
     .from(clientTrackingRows)
     .where(
@@ -315,6 +329,7 @@ export async function cashRowsForClient(syncId: string) {
     payments: dedupePaymentRows(rows.filter((r) => r.tab === "payments")).map((r) => ({
       email: r.email,
       phone: r.phone,
+      name: r.name,
       occurredAt: r.occurredAt,
       cashCents: r.cashCents,
       processor: r.payload?.["Processor"] ?? null,

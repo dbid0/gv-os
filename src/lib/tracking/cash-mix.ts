@@ -44,6 +44,14 @@ export interface CashMix {
   returningPayers: number;
 }
 
+/**
+ * A payer's identity key — the one the cash mix counts payers by. Exported so
+ * any per-payer view (the students board) groups people exactly as the mix
+ * does, and a person can never be one payer here and two there.
+ */
+export const payerKeyOf = (p: MixPayment, aliases: AliasMap): string | null =>
+  keyOf(p, aliases);
+
 const keyOf = (p: MixPayment, aliases: AliasMap): string | null => {
   // Identity resolves through the alias map FIRST — the same person paying
   // from two inboxes must land on one payer key or "new" over-counts.

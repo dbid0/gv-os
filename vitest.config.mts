@@ -185,6 +185,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Students board: who counts as a buyer, their week, and what they
+        // paid net of refunds. Pure, fully covered.
+        "src/lib/students/board.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
