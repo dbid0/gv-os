@@ -5,7 +5,8 @@ import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { bookings, callEocReports, reps } from "@/db/schema/app";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
-import { eocAsReport, type CleanEoc } from "@/lib/calls/eoc-form";
+import { eocAsLeadRow, eocAsReport, type CleanEoc } from "@/lib/calls/eoc-form";
+import type { LeadEventInput } from "@/lib/tracking/leads";
 
 export type FileEocResult =
   | { ok: true; id: string; replayed: boolean }
@@ -95,6 +96,28 @@ export async function activeEocReports(clientId: string): Promise<EocReport[]> {
     .from(callEocReports)
     .where(and(eq(callEocReports.clientId, clientId), isNull(callEocReports.voidedAt)));
   return rows.map(eocAsReport);
+}
+
+/** Active in-app reports as lead events, for the lead builder. */
+export async function appEocLeadRows(clientId: string): Promise<LeadEventInput[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      leadEmail: callEocReports.leadEmail,
+      outcome: callEocReports.outcome,
+      callAt: callEocReports.callAt,
+      closerName: reps.name,
+      cashCollectedCents: callEocReports.cashCollectedCents,
+      contractValueCents: callEocReports.contractValueCents,
+      recordingUrl: callEocReports.recordingUrl,
+      notes: callEocReports.notes,
+      closeType: callEocReports.closeType,
+    })
+    .from(callEocReports)
+    .leftJoin(reps, eq(reps.id, callEocReports.closerRepId))
+    .where(and(eq(callEocReports.clientId, clientId), isNull(callEocReports.voidedAt)))
+    .orderBy(callEocReports.callAt);
+  return rows.map(eocAsLeadRow);
 }
 
 export type EocListRow = {

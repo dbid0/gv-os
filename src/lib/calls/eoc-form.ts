@@ -17,6 +17,7 @@
 
 import { fromDollars } from "@/lib/money";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
+import type { LeadEventInput } from "@/lib/tracking/leads";
 
 export const EOC_OUTCOMES = [
   { key: "closed", label: "Closed", hint: "They bought on the call." },
@@ -231,4 +232,48 @@ export function callTimeFor(bookingStartsAt: Date | null, now: Date): Date {
   if (bookingStartsAt && bookingStartsAt.getTime() <= now.getTime())
     return bookingStartsAt;
   return now;
+}
+
+/** Row numbers for in-app reports sit after any sheet row, so ordering stays stable. */
+export const APP_EOC_ROW_BASE = 1_000_000;
+
+/**
+ * A stored in-app report as a lead EVENT on the "eoc" tab — the shape the lead
+ * builder reads from the sheet — so the funnel, the Leads table, the pipeline
+ * board and the person page count and show it exactly like a typed row.
+ */
+export function eocAsLeadRow(
+  row: {
+    leadEmail: string;
+    outcome: string;
+    callAt: Date;
+    closerName: string | null;
+    cashCollectedCents: number | null;
+    contractValueCents: number | null;
+    recordingUrl: string | null;
+    notes: string | null;
+    closeType: string | null;
+  },
+  index: number,
+): LeadEventInput {
+  return {
+    tab: "eoc",
+    rowIndex: APP_EOC_ROW_BASE + index,
+    occurredAt: row.callAt,
+    email: row.leadEmail,
+    name: null,
+    rep: row.closerName,
+    status: OUTCOME_WORDS[row.outcome as EocOutcomeKey] ?? row.outcome,
+    outcome: null,
+    cashCents: row.cashCollectedCents,
+    revenueCents: row.contractValueCents,
+    recordingUrl: row.recordingUrl,
+    notes: row.notes,
+    payload: {
+      Source: "Filed in GV OS",
+      ...(row.closeType
+        ? { "Close Type": closeTypeLabel(row.closeType) as string }
+        : {}),
+    },
+  };
 }
