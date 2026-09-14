@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { clients, integrations, paymentEvents } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
+import { failureNote } from "@/lib/integrations/sync-note";
 import { normalizePayment, normalizeStripe } from "@/lib/payments/normalize";
 
 /**
@@ -77,10 +78,12 @@ export async function capturePayment(
 
 /**
  * Pull recent Stripe events through a sealed vault key. Runs for every
- * connected stripe integration; returns per-connection capture counts.
+ * connected stripe integration; returns per-connection capture counts. Each
+ * connection is isolated: one dead key records a failure note and the loop
+ * continues to the next, exactly like the Calendly/iClosed/Close/Kit/doc pulls.
  */
 export async function pullStripeEvents(): Promise<
-  { integrationId: string; fetched: number; captured: number }[]
+  { integrationId: string; fetched?: number; captured?: number; error?: string }[]
 > {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
@@ -102,38 +105,51 @@ export async function pullStripeEvents(): Promise<
 
   const results = [];
   for (const conn of connections) {
-    const apiKey = open(conn.secretBox as string, key);
-    const res = await fetch(
-      "https://api.stripe.com/v1/events?limit=100&types[]=charge.succeeded&types[]=charge.refunded&types[]=charge.dispute.created&types[]=charge.failed",
-      {
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+    try {
+      const apiKey = open(conn.secretBox as string, key);
+      const res = await fetch(
+        "https://api.stripe.com/v1/events?limit=100&types[]=charge.succeeded&types[]=charge.refunded&types[]=charge.dispute.created&types[]=charge.failed",
+        {
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+          },
         },
-      },
-    );
-    if (!res.ok) {
-      throw new Error(`Stripe events pull failed (${res.status}): ${await res.text()}`);
-    }
-    const body = (await res.json()) as { data?: Record<string, unknown>[] };
-    const events = body.data ?? [];
-    let captured = 0;
-    for (const event of events) {
-      if (!normalizeStripe(event)) continue;
-      const out = await capturePayment(
-        { id: conn.id, provider: "stripe", clientId: conn.clientId },
-        event,
       );
-      if (out.captured) captured += 1;
+      if (!res.ok) {
+        throw new Error(
+          `Stripe events pull failed (${res.status}): ${await res.text()}`,
+        );
+      }
+      const body = (await res.json()) as { data?: Record<string, unknown>[] };
+      const events = body.data ?? [];
+      let captured = 0;
+      for (const event of events) {
+        if (!normalizeStripe(event)) continue;
+        const out = await capturePayment(
+          { id: conn.id, provider: "stripe", clientId: conn.clientId },
+          event,
+        );
+        if (out.captured) captured += 1;
+      }
+      await db
+        .update(integrations)
+        .set({
+          lastSyncAt: new Date(),
+          lastSyncNote: `pulled ${events.length}, captured ${captured} new`,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, conn.id));
+      results.push({ integrationId: conn.id, fetched: events.length, captured });
+    } catch (err) {
+      // One dead credential must not starve the other accounts or fail the
+      // route. lastSyncAt stays untouched — it always means last SUCCESS.
+      const note = failureNote(err);
+      await db
+        .update(integrations)
+        .set({ lastSyncNote: note, updatedAt: new Date() })
+        .where(eq(integrations.id, conn.id));
+      results.push({ integrationId: conn.id, error: note });
     }
-    await db
-      .update(integrations)
-      .set({
-        lastSyncAt: new Date(),
-        lastSyncNote: `pulled ${events.length}, captured ${captured} new`,
-        updatedAt: new Date(),
-      })
-      .where(eq(integrations.id, conn.id));
-    results.push({ integrationId: conn.id, fetched: events.length, captured });
   }
   return results;
 }
