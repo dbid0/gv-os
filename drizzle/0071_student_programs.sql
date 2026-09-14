@@ -1,0 +1,4 @@
+ALTER TABLE "app"."offer_settings" ADD COLUMN "student_min_payment_cents" bigint;--> statement-breakpoint
+ALTER TABLE "app"."offer_settings" ADD COLUMN "program_length_weeks" integer;--> statement-breakpoint
+ALTER TABLE "app"."offer_settings" ADD CONSTRAINT "offer_settings_student_min_check" CHECK ("app"."offer_settings"."student_min_payment_cents" is null or "app"."offer_settings"."student_min_payment_cents" > 0);--> statement-breakpoint
+ALTER TABLE "app"."offer_settings" ADD CONSTRAINT "offer_settings_program_length_check" CHECK ("app"."offer_settings"."program_length_weeks" is null or "app"."offer_settings"."program_length_weeks" between 1 and 260);

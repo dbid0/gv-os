@@ -92,7 +92,7 @@ export default async function WorkspaceStudentsPage({
     );
   }
 
-  const { summary, board, columns } = data;
+  const { summary, board, columns, program } = data;
   return (
     <div className="space-y-6">
       {header(<FeedFreshness freshness={snapshotFreshness(data.syncedAt, now)} />)}
@@ -109,7 +109,19 @@ export default async function WorkspaceStudentsPage({
           label="In their first month"
           value={String(summary.firstMonth)}
         />
-        <Kpi variant="tile" label="Refunded in full" value={String(summary.refunded)} />
+        {program.lengthWeeks !== null ? (
+          <Kpi
+            variant="tile"
+            label={`Completed the ${program.lengthWeeks}-week program`}
+            value={String(summary.complete)}
+          />
+        ) : (
+          <Kpi
+            variant="tile"
+            label="Refunded in full"
+            value={String(summary.refunded)}
+          />
+        )}
         <Kpi
           variant="tile"
           label="Paid, net of refunds — all time"
@@ -132,6 +144,10 @@ export default async function WorkspaceStudentsPage({
         after this offer&apos;s payment tag rules. A week is counted from each
         buyer&apos;s first collected payment; refunds subtract; failed charges never
         make anyone a student.
+        {program.minPaymentCents !== null &&
+          ` A student is anyone with a single payment of ${formatUSD(cents(program.minPaymentCents))} or more; their week counts from that payment.`}
+        {board.belowMinimumPayers > 0 &&
+          ` ${board.belowMinimumPayers} payer${board.belowMinimumPayers === 1 ? " hasn't" : "s haven't"} reached that minimum and ${board.belowMinimumPayers === 1 ? "isn't" : "aren't"} shown.`}
         {board.undatedPayers > 0 &&
           ` ${board.undatedPayers} payer${board.undatedPayers === 1 ? " has" : "s have"} money with no date and can't be placed in a week.`}
       </p>
