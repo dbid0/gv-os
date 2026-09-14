@@ -201,6 +201,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The call log: which state every booking is in and which report
+        // owns its outcome. Pure, fully covered.
+        "src/lib/calls/call-log.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,

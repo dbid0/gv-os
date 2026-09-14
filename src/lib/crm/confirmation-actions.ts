@@ -61,4 +61,5 @@ export async function confirmBooking(formData: FormData): Promise<void> {
 
   revalidatePath(`/w/${parsed.slug}/crm`);
   revalidatePath(`/w/${parsed.slug}/sales`);
+  revalidatePath(`/w/${parsed.slug}/calls`);
 }

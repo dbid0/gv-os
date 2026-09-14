@@ -60,6 +60,14 @@ export function outcomeLabel(key: string): string {
   return EOC_OUTCOMES.find((o) => o.key === key)?.label ?? key;
 }
 
+/** An outcome's stored words back to its form label ("closed won" → "Closed"). */
+export function outcomeLabelForWords(words: string): string {
+  const key = (Object.keys(OUTCOME_WORDS) as EocOutcomeKey[]).find(
+    (k) => OUTCOME_WORDS[k] === words,
+  );
+  return key ? outcomeLabel(key) : words;
+}
+
 export function closeTypeLabel(key: string | null): string | null {
   if (!key) return null;
   return CLOSE_TYPES.find((c) => c.key === key)?.label ?? key;
