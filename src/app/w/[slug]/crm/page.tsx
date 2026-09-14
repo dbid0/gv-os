@@ -17,7 +17,10 @@ import {
   clientTrackingRows,
   crmActivity,
   integrations,
+  reps as repsTable,
 } from "@/db/schema/app";
+import { EocPanel } from "@/components/calls/eoc-panel";
+import { activeEocReports, listEocReports } from "@/lib/calls/eoc-store";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
 import { DISCONNECTED_LIVE_STL, liveSpeedToLead } from "@/lib/crm/speed-to-lead-live";
 import { ActivityTable } from "@/components/tracking/activity-table";
@@ -157,6 +160,7 @@ export default async function WorkspaceCrmPage({
     const [bookingRows, eocRows] = await Promise.all([
       db
         .select({
+          id: bookings.id,
           provider: bookings.provider,
           inviteeName: bookings.inviteeName,
           inviteeEmail: bookings.inviteeEmail,
@@ -178,8 +182,10 @@ export default async function WorkspaceCrmPage({
             )
         : Promise.resolve([] as { email: string | null }[]),
     ]);
+    // Outcomes filed in GV OS clear a stuck call exactly like a sheet row.
+    const appReports = await activeEocReports(clientId);
     const reported = new Set(
-      eocRows
+      [...eocRows, ...appReports]
         .map((r) => r.email?.trim().toLowerCase())
         .filter((e): e is string => Boolean(e)),
     );
@@ -194,6 +200,32 @@ export default async function WorkspaceCrmPage({
       now,
     );
   }
+
+  // The end-of-call desk — GV ops, never the client portal.
+  const eocPanel =
+    clientId && !portalView
+      ? await (async () => {
+          const [filed, binned, teamReps] = await Promise.all([
+            listEocReports(clientId, { voided: false, limit: 10 }),
+            listEocReports(clientId, { voided: true, limit: 10 }),
+            db
+              .select({ id: repsTable.id, name: repsTable.name, role: repsTable.role })
+              .from(repsTable)
+              .where(
+                and(eq(repsTable.clientId, clientId), eq(repsTable.status, "active")),
+              ),
+          ]);
+          return (
+            <EocPanel
+              slug={slug}
+              stuck={stuck}
+              reports={filed}
+              voided={binned}
+              reps={teamReps}
+            />
+          );
+        })()
+      : null;
 
   const floorPanel =
     reps.length > 0 ? (
@@ -269,6 +301,7 @@ export default async function WorkspaceCrmPage({
         {/* The floor first: it has real numbers today. The missing CRM is
             stated underneath rather than being the whole page. */}
         {floorPanel}
+        {eocPanel}
         <EmptyState
           icon={PhoneOff}
           title="Close CRM isn't connected yet"
@@ -303,42 +336,13 @@ export default async function WorkspaceCrmPage({
         <UpcomingCalls clientId={clientId} slug={slug} now={now} />
       )}
 
-      {stuck.length > 0 && (
-        <section className="border-warning/40 bg-warning/5 rounded-xl border p-4">
-          <p className="text-warning text-[11px] font-medium tracking-wider uppercase">
-            Stuck — date passed, no outcome filed ({stuck.length})
+      {eocPanel ??
+        (stuck.length > 0 && (
+          <p className="text-warning text-xs">
+            {stuck.length} booked call{stuck.length === 1 ? "" : "s"} passed with no
+            outcome filed.
           </p>
-          <div className="gv-rows mt-2 space-y-1">
-            {stuck.slice(0, 6).map((c) => (
-              <div
-                key={`${c.inviteeEmail}-${c.startsAt.toISOString()}`}
-                className="flex flex-wrap items-center gap-x-3 text-sm"
-              >
-                <span className="font-medium">
-                  {c.inviteeName ?? c.inviteeEmail ?? "Unknown invitee"}
-                </span>
-                <span className="text-faint text-xs">
-                  {c.startsAt.toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}{" "}
-                  · {c.hoursOverdue}h overdue
-                </span>
-              </div>
-            ))}
-            {stuck.length > 6 && (
-              <p className="text-faint text-xs">and {stuck.length - 6} more</p>
-            )}
-          </div>
-          <p className="text-faint mt-2 text-xs">
-            Booked, never cancelled, and no end-of-call report for the invitee. Either
-            it happened and nobody wrote it down, or it never happened — both are worth
-            a look.
-          </p>
-        </section>
-      )}
+        ))}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard

@@ -12,6 +12,8 @@
  */
 
 export interface StuckCandidate {
+  /** The booking's id when the caller has it — lets a stuck call be acted on. */
+  id?: string;
   inviteeName: string | null;
   inviteeEmail: string | null;
   startsAt: Date | null;
@@ -19,6 +21,8 @@ export interface StuckCandidate {
 }
 
 export interface StuckCall {
+  /** The booking this stuck call is, or null when the caller didn't pass ids. */
+  bookingId: string | null;
   inviteeName: string | null;
   inviteeEmail: string | null;
   startsAt: Date;
@@ -46,6 +50,7 @@ export function stuckCalls(
       return true;
     })
     .map((b) => ({
+      bookingId: b.id ?? null,
       inviteeName: b.inviteeName,
       inviteeEmail: b.inviteeEmail,
       startsAt: b.startsAt as Date,

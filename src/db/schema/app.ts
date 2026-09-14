@@ -2087,3 +2087,94 @@ export const paymentTagRules = appSchema.table(
 );
 
 export type PaymentTagRuleRow = typeof paymentTagRules.$inferSelect;
+
+/**
+ * End-of-call reports filed IN GV OS — the closer's record of what happened on
+ * a call, as a first-class form instead of a row on the tracking sheet.
+ *
+ * The counted fields are LOCKED: outcome, close type, cash taken on the call
+ * and contract value are what the funnel, stuck calls and confirmation rates
+ * count, so their vocabulary is fixed here and in the CHECKs below. A report
+ * is a REPORT, never money: nothing here writes the ledger. Processors stay
+ * the truth for what was paid; `cash_collected_cents` is the closer's own
+ * number, shown beside it.
+ *
+ * Reports are never deleted. Voiding sets `voided_at` (the restore bin), and
+ * every read filters voided rows out. One ACTIVE report per booking, and a
+ * per-submission key makes a double-submitted form file once.
+ */
+export const callEocReports = appSchema.table(
+  "call_eoc_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id").references(() => bookings.id, {
+      onDelete: "set null",
+    }),
+    /** The lead's email as booked — the join key to funnel and bookings. */
+    leadEmail: text("lead_email").notNull(),
+    /** Set when they paid from a different inbox than they booked with. */
+    paymentEmail: text("payment_email"),
+    /** closed · follow_up · not_a_fit · no_show · rescheduled · cancelled */
+    outcome: text("outcome").notNull(),
+    /** pif · split · deposit · installments — only on a close. */
+    closeType: text("close_type"),
+    /** Cash the closer took on the call (their number, not the processor's). */
+    cashCollectedCents: bigint("cash_collected_cents", { mode: "number" }),
+    /** Total contract value sold — only on a close. */
+    contractValueCents: bigint("contract_value_cents", { mode: "number" }),
+    closerRepId: uuid("closer_rep_id").references(() => reps.id, {
+      onDelete: "set null",
+    }),
+    setterRepId: uuid("setter_rep_id").references(() => reps.id, {
+      onDelete: "set null",
+    }),
+    recordingUrl: text("recording_url"),
+    notes: text("notes"),
+    /** When the call happened (defaults to the booking start, else filing time). */
+    callAt: timestamp("call_at", { withTimezone: true }).notNull(),
+    /** A per-form-open key: the same submission twice files once. */
+    submissionKey: text("submission_key").notNull(),
+    submittedBy: text("submitted_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("call_eoc_reports_client_idx").on(table.clientId, table.callAt),
+    index("call_eoc_reports_lead_idx").on(table.clientId, table.leadEmail),
+    uniqueIndex("call_eoc_reports_submission_key").on(table.submissionKey),
+    uniqueIndex("call_eoc_reports_active_booking_key")
+      .on(table.bookingId)
+      .where(sql`${table.voidedAt} is null and ${table.bookingId} is not null`),
+    check(
+      "call_eoc_reports_outcome_check",
+      sql`${table.outcome} in ('closed', 'follow_up', 'not_a_fit', 'no_show', 'rescheduled', 'cancelled')`,
+    ),
+    check(
+      "call_eoc_reports_close_type_check",
+      sql`${table.closeType} is null or ${table.closeType} in ('pif', 'split', 'deposit', 'installments')`,
+    ),
+    check(
+      "call_eoc_reports_close_fields_check",
+      sql`${table.outcome} = 'closed' or (${table.closeType} is null and ${table.cashCollectedCents} is null and ${table.contractValueCents} is null)`,
+    ),
+    check(
+      "call_eoc_reports_closed_needs_value_check",
+      sql`${table.outcome} <> 'closed' or (${table.closeType} is not null and ${table.contractValueCents} is not null and ${table.cashCollectedCents} is not null)`,
+    ),
+    check(
+      "call_eoc_reports_money_nonnegative_check",
+      sql`coalesce(${table.cashCollectedCents}, 0) >= 0 and coalesce(${table.contractValueCents}, 0) >= 0`,
+    ),
+    check(
+      "call_eoc_reports_cash_within_contract_check",
+      sql`${table.cashCollectedCents} is null or ${table.contractValueCents} is null or ${table.cashCollectedCents} <= ${table.contractValueCents}`,
+    ),
+    check("call_eoc_reports_email_check", sql`position('@' in ${table.leadEmail}) > 1`),
+  ],
+);
+
+export type CallEocReportRow = typeof callEocReports.$inferSelect;

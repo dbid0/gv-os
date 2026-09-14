@@ -193,6 +193,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The end-of-call form's locked vocabulary and validation: what counts
+        // as a close and what money a report may carry. Fully covered.
+        "src/lib/calls/eoc-form.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
