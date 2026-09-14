@@ -216,14 +216,22 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           paidNetOfRefundsAllTime: dollars(data.summary.netCents),
         },
         undatedPayers: data.board.undatedPayers,
+        belowStudentMinimum: data.board.belowMinimumPayers,
+        program: {
+          minimumPayment: dollars(data.program.minPaymentCents),
+          lengthWeeks: data.program.lengthWeeks,
+        },
         students: data.board.students
           .filter((s) => !cohort || s.cohort === cohort)
           .map((s) => ({
             name: s.name,
             email: s.email,
             weeksIn: s.weeksIn,
+            programWeeks: s.programWeeks,
+            programComplete: s.programComplete,
             cohort: s.cohort,
             firstPaidAt: iso(s.firstPaidAt),
+            startedAt: iso(s.startedAt),
             payments: s.payments,
             paidNet: dollars(s.netCents),
             refunded: s.refunded,

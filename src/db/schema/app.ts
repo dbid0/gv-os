@@ -1416,9 +1416,27 @@ export const offerSettings = appSchema.table(
       .$type<Record<string, boolean>>()
       .notNull()
       .default({}),
+    /**
+     * The smallest single payment that makes a payer a STUDENT of the
+     * program. Null = any collected payment does. Lets an offer with a
+     * low-ticket membership keep its students board to program buyers.
+     */
+    studentMinPaymentCents: bigint("student_min_payment_cents", { mode: "number" }),
+    /** How many weeks the program runs. Null = open-ended, no "complete" column. */
+    programLengthWeeks: integer("program_length_weeks"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("offer_settings_client_key").on(table.clientId)],
+  (table) => [
+    uniqueIndex("offer_settings_client_key").on(table.clientId),
+    check(
+      "offer_settings_student_min_check",
+      sql`${table.studentMinPaymentCents} is null or ${table.studentMinPaymentCents} > 0`,
+    ),
+    check(
+      "offer_settings_program_length_check",
+      sql`${table.programLengthWeeks} is null or ${table.programLengthWeeks} between 1 and 260`,
+    ),
+  ],
 );
 
 export type OfferSettings = typeof offerSettings.$inferSelect;

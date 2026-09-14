@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 import { cents, formatUSD } from "@/lib/money";
-import type { CohortColumn, Student } from "@/lib/students/board";
+import { weekLabel, type CohortColumn, type Student } from "@/lib/students/board";
 import { displayName } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
@@ -34,14 +34,14 @@ function StudentCard({
       <div className="flex items-start justify-between gap-2">
         <p className="truncate text-sm font-medium">{label}</p>
         <span className="text-faint shrink-0 text-[11px] tabular-nums">
-          wk {student.weeksIn}
+          {weekLabel(student)}
         </span>
       </div>
       {student.name && student.email && (
         <p className="text-faint truncate text-[11px]">{student.email}</p>
       )}
       <p className="text-muted-foreground mt-2 text-[11px]">
-        Started {shortDate(new Date(student.firstPaidAt))}
+        Started {shortDate(new Date(student.startedAt))}
         {student.payments > 1 && (
           <> · last paid {shortDate(new Date(student.lastPaidAt))}</>
         )}
