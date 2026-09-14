@@ -1,7 +1,8 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   date,
   index,
   integer,
@@ -2022,3 +2023,67 @@ export const utmLinks = appSchema.table(
     index("utm_links_created_idx").on(table.createdAt),
   ],
 );
+
+/**
+ * Payment tag rules — what a payment MEANS, declared per offer instead of coded.
+ *
+ * One raw payment feed (a processor snapshot or the tracking sheet's payments
+ * tab) carries test charges, internal transfers, fee pass-throughs and several
+ * products at once. A rule matches one field of a payment against one value and
+ * applies a tag plus meaning-flags; the pure classifier in
+ * `lib/tracking/tag-rules.ts` decides the verdict. The payment rows themselves
+ * are never touched — rules sit BESIDE the feed, and deleting a rule restores
+ * the numbers exactly.
+ *
+ * With no rules, every figure is byte-identical to the untagged feed. The DB
+ * checks mirror the classifier's vocabulary so a malformed row cannot exist,
+ * and an amount op can only ever pair with the amount field.
+ */
+export const paymentTagRules = appSchema.table(
+  "payment_tag_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    /** Short lowercase tag, e.g. "test-charge" or "front-end". */
+    tag: text("tag").notNull(),
+    /** label · email · provider · kind · amount_cents */
+    matchField: text("match_field").notNull(),
+    /** equals · contains · starts_with · ends_with · amount_eq · amount_gte · amount_lte */
+    matchOp: text("match_op").notNull(),
+    /** Compared case-insensitively; integer cents for the amount ops. */
+    matchValue: text("match_value").notNull(),
+    countsAsRevenue: boolean("counts_as_revenue").notNull().default(true),
+    countsAsOptin: boolean("counts_as_optin").notNull().default(false),
+    exclude: boolean("exclude").notNull().default(false),
+    excludeFromAov: boolean("exclude_from_aov").notNull().default(false),
+    hideFromDashboard: boolean("hide_from_dashboard").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(100),
+    active: boolean("active").notNull().default(true),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("payment_tag_rules_client_idx").on(table.clientId, table.sortOrder),
+    check(
+      "payment_tag_rules_field_check",
+      sql`${table.matchField} in ('label', 'email', 'provider', 'kind', 'amount_cents')`,
+    ),
+    check(
+      "payment_tag_rules_op_check",
+      sql`${table.matchOp} in ('equals', 'contains', 'starts_with', 'ends_with', 'amount_eq', 'amount_gte', 'amount_lte')`,
+    ),
+    check(
+      "payment_tag_rules_op_fits_field_check",
+      sql`(${table.matchField} = 'amount_cents') = (${table.matchOp} in ('amount_eq', 'amount_gte', 'amount_lte'))`,
+    ),
+    check(
+      "payment_tag_rules_tag_check",
+      sql`length(trim(${table.tag})) between 1 and 40`,
+    ),
+  ],
+);
+
+export type PaymentTagRuleRow = typeof paymentTagRules.$inferSelect;
