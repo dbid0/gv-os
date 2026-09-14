@@ -11,7 +11,21 @@ import { listPaymentEvents } from "@/lib/payments/capture";
 import { ClaimCell } from "@/components/accounting/claim-cell";
 import { claimsByPayment, repsByClient } from "@/lib/payments/claims-store";
 import { deriveCommissions, totalsByRep } from "@/lib/payments/commissions";
+import {
+  clawbacksAsCommissionRows,
+  deriveClawbacks,
+  refundedByCharge,
+  suggestCharges,
+  summarizeClawbacks,
+  type ClawbackRow,
+} from "@/lib/payments/clawbacks";
+import {
+  chargesForClients,
+  listClawbackWaivers,
+  listRefundLinks,
+} from "@/lib/payments/clawbacks-store";
 import { listClaimRows, listRates } from "@/lib/payments/rates-store";
+import { RefundCell, type RefundCharge } from "@/components/accounting/refund-cell";
 
 export const metadata = { title: "Payments - GV OS" };
 export const dynamic = "force-dynamic";
@@ -27,13 +41,16 @@ const fmtWhen = (d: Date | null) =>
     : "—";
 
 export default async function PaymentsPage() {
-  const [events, claims, repsFor, claimRows, rateRows] = await Promise.all([
-    listPaymentEvents(),
-    claimsByPayment(),
-    repsByClient(),
-    listClaimRows(),
-    listRates(),
-  ]);
+  const [events, claims, repsFor, claimRows, rateRows, links, waivers] =
+    await Promise.all([
+      listPaymentEvents(),
+      claimsByPayment(),
+      repsByClient(),
+      listClaimRows(),
+      listRates(),
+      listRefundLinks(),
+      listClawbackWaivers(),
+    ]);
 
   // Commissions derive on read — payment cents × claim × rate, never stored.
   // Rules are matched within the payment's client, so one offer's rates can
@@ -52,7 +69,47 @@ export default async function PaymentsPage() {
       })),
     );
   });
-  const repTotals = totalsByRep(commissionRows);
+
+  // Clawbacks derive the same way, from refunds deliberately linked to the
+  // charge they reverse, rates resolved per offer exactly like commissions.
+  const refunds = events.filter((e) => e.kind === "refund" && e.clientId);
+  const charges = await chargesForClients([
+    ...new Set(refunds.map((r) => r.clientId as string)),
+  ]);
+  const chargeById = new Map(charges.map((c) => [c.id, c]));
+  const chargeFor = new Map(links.map((l) => [l.refundEventId, l.chargeEventId]));
+  const refunded = refundedByCharge(
+    links,
+    new Map(events.map((e) => [e.id, e.amountCents])),
+  );
+  const clawbackRows: ClawbackRow[] = refunds.flatMap((r) =>
+    deriveClawbacks({
+      refunds: [r],
+      links,
+      claims: claimRows,
+      rules: rateRows
+        .filter((x) => x.clientId === r.clientId)
+        .map((x) => ({
+          salesRole: x.salesRole,
+          rateBps: x.rateBps,
+          priority: x.priority,
+        })),
+      waivers,
+    }),
+  );
+  const clawSummary = summarizeClawbacks(clawbackRows);
+  const unlinkedRefunds = refunds.filter((r) => !chargeFor.has(r.id)).length;
+  const asRefundCharge = (c: (typeof charges)[number]): RefundCharge => ({
+    id: c.id,
+    label: c.label,
+    email: c.email,
+    amountCents: c.amountCents,
+    occurredAt: c.occurredAt ? c.occurredAt.toISOString() : null,
+  });
+
+  const repTotals = totalsByRep(
+    commissionRows.concat(clawbacksAsCommissionRows(clawbackRows)),
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -130,14 +187,44 @@ export default async function PaymentsPage() {
                       </StatusPill>
                     </td>
                     <td className="py-2 pr-3">
-                      {/* Claims credit seats on CHARGES with an offer scope.
-                          Refunds get clawbacks later; agency rows have no
-                          reps to credit. */}
+                      {/* Claims credit seats on CHARGES with an offer scope;
+                          a REFUND links to its charge and claws back. Agency
+                          rows have no reps to credit. */}
                       {e.kind !== "refund" && e.clientId ? (
                         <ClaimCell
                           paymentEventId={e.id}
                           claims={claims.get(e.id) ?? []}
                           reps={repsFor.get(e.clientId) ?? []}
+                        />
+                      ) : e.kind === "refund" && e.clientId ? (
+                        <RefundCell
+                          refundEventId={e.id}
+                          linked={(() => {
+                            const id = chargeFor.get(e.id);
+                            const c = id ? chargeById.get(id) : undefined;
+                            return c ? asRefundCharge(c) : null;
+                          })()}
+                          suggestions={suggestCharges(
+                            {
+                              id: e.id,
+                              kind: e.kind,
+                              clientId: e.clientId,
+                              amountCents: e.amountCents,
+                              occurredAt: e.occurredAt,
+                              email: e.email,
+                            },
+                            charges,
+                            refunded,
+                          ).map((c) => asRefundCharge(chargeById.get(c.id)!))}
+                          clawbacks={clawbackRows
+                            .filter((c) => c.refundEventId === e.id)
+                            .map((c) => ({
+                              role: c.role,
+                              repName: repNameById.get(c.repId) ?? "Unknown rep",
+                              clawbackCents: c.clawbackCents,
+                              waived: c.waived,
+                              waiverReason: c.waiverReason,
+                            }))}
                         />
                       ) : (
                         <span className="text-faint text-xs">—</span>
@@ -185,6 +272,23 @@ export default async function PaymentsPage() {
               </li>
             ))}
           </ul>
+          {(clawbackRows.length > 0 || unlinkedRefunds > 0) && (
+            <p className="text-faint mt-3 text-xs">
+              Totals include {clawSummary.counted} clawback
+              {clawSummary.counted === 1 ? "" : "s"} (
+              <Money amount={cents(clawSummary.countedCents)} />)
+              {clawSummary.waived > 0 && (
+                <>
+                  ; {clawSummary.waived} waived (
+                  <Money amount={cents(clawSummary.waivedCents)} />) left out
+                </>
+              )}
+              {clawSummary.unknownRate > 0 &&
+                `; ${clawSummary.unknownRate} with no rate set`}
+              {unlinkedRefunds > 0 &&
+                `. ${unlinkedRefunds} refund${unlinkedRefunds === 1 ? " isn't" : "s aren't"} linked to a charge yet, so no clawback derives for ${unlinkedRefunds === 1 ? "it" : "them"}.`}
+            </p>
+          )}
         </Panel>
       )}
 
