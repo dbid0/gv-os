@@ -125,6 +125,62 @@ describe("windowed cash = collected-from-snapshot", () => {
   });
 });
 
+describe("money-figure invariant — unchanged by the data-freshness fix", () => {
+  // The data-freshness work (fresher scheduling, view-refresh, staleness badges,
+  // DISTINCT-ON snapshot selection) makes the SAME figure arrive sooner and
+  // flags it when stale — it must never change what the figure IS. This locks
+  // the collected-cash computation with a fixed, synthetic feed: any drift in
+  // buildWindowMoney / cashMix / classifyPayment breaks this exact-integer
+  // assertion. (Synthetic amounts only — never a real client figure.)
+  const from = T("2026-09-01T00:00:00Z");
+  const to = T("2026-09-30T23:59:59Z");
+  const feed = {
+    payments: [
+      {
+        email: "one@x.com",
+        cashCents: 1_200_000,
+        status: "succeeded",
+        occurredAt: T("2026-09-03T10:00:00Z"),
+      },
+      {
+        email: "two@x.com",
+        cashCents: 800_000,
+        status: "succeeded",
+        occurredAt: T("2026-09-14T10:00:00Z"),
+      },
+      {
+        email: "three@x.com",
+        cashCents: 552_900,
+        status: "succeeded",
+        occurredAt: T("2026-09-27T10:00:00Z"),
+      },
+      // A failed charge in the same window — must NEVER enter gross.
+      {
+        email: "four@x.com",
+        cashCents: 999_900,
+        status: "failed",
+        occurredAt: T("2026-09-20T10:00:00Z"),
+      },
+    ] as MixPayment[],
+    deals: [] as FeedDeal[],
+  };
+  const EXPECTED_COLLECTED = 1_200_000 + 800_000 + 552_900; // integer cents
+
+  it("collected cash is exactly the sum of the succeeded charges, to the cent", () => {
+    const wm = windowMoneyFromFeed(feed, from, to);
+    expect(wm.cashCents).toBe(EXPECTED_COLLECTED);
+    // The headline equals the mix beneath it — same set, one source.
+    expect(wm.cashCents).toBe(mixTotalCents(wm.mix));
+    expect(wm.cashCents).toBe(collectedInWindow(feed.payments, from, to));
+  });
+
+  it("the failed charge is excluded from gross — never in the number", () => {
+    const wm = windowMoneyFromFeed(feed, from, to);
+    expect(wm.cashCents).not.toBe(EXPECTED_COLLECTED + 999_900);
+    expect(wm.series.reduce((s, p) => s + p.cents, 0)).toBe(EXPECTED_COLLECTED);
+  });
+});
+
 describe("buildWorkspaceVariants", () => {
   const todayKey = "2026-10-31";
 

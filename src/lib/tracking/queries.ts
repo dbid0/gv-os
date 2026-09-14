@@ -1,7 +1,7 @@
 import { dedupePaymentRows } from "@/lib/tracking/payment-dedupe";
 import "server-only";
 
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
@@ -80,34 +80,41 @@ export async function currentSnapshot(
   };
 }
 
-/** The latest snapshot per source that has EVER written for this client. */
+/**
+ * The latest snapshot per source that has EVER written for this client.
+ *
+ * DISTINCT ON (source), newest first — the money headline wins from the Stripe
+ * snapshot here, so this must find it whatever the row volume. The old query
+ * read the 50 most-recent rows and then deduped by source in JS: if pruning
+ * ever failed and one source (a hand-logged sheet) synced heavily, the
+ * once-a-day Stripe snapshot could fall outside that 50-row window and vanish,
+ * silently dropping the money feed back to the sheet/empty. Pushing the
+ * latest-per-source to the database — one row per source via the
+ * (client_id, source, created_at) index — is correct regardless of how many
+ * rows any single source has written.
+ */
 export async function latestSnapshotsBySource(
   clientId: string,
 ): Promise<{ source: FactSource; snapshot: TrackingSnapshot }[]> {
   const db = getDb();
   const rows = await db
-    .select()
+    .selectDistinctOn([clientTrackingSyncs.source])
     .from(clientTrackingSyncs)
     .where(eq(clientTrackingSyncs.clientId, clientId))
-    .orderBy(desc(clientTrackingSyncs.createdAt))
-    .limit(50);
-  const seen = new Set<string>();
-  const out: { source: FactSource; snapshot: TrackingSnapshot }[] = [];
-  for (const row of rows) {
-    if (seen.has(row.source)) continue;
-    seen.add(row.source);
-    out.push({
-      source: row.source as FactSource,
-      snapshot: {
-        syncId: row.id,
-        spreadsheetId: row.spreadsheetId,
-        syncedAt: row.createdAt,
-        rowCount: row.rowCount,
-        tabs: (row.tabs ?? []) as unknown as TabScan[],
-      },
-    });
-  }
-  return out;
+    // DISTINCT ON keeps the first row of each `source` group; ordering that
+    // group by createdAt DESC makes "first" mean "newest". The leading order
+    // key MUST be the distinct-on column, so source comes before createdAt.
+    .orderBy(clientTrackingSyncs.source, desc(clientTrackingSyncs.createdAt));
+  return rows.map((row) => ({
+    source: row.source as FactSource,
+    snapshot: {
+      syncId: row.id,
+      spreadsheetId: row.spreadsheetId,
+      syncedAt: row.createdAt,
+      rowCount: row.rowCount,
+      tabs: (row.tabs ?? []) as unknown as TabScan[],
+    },
+  }));
 }
 
 export interface TabRow {

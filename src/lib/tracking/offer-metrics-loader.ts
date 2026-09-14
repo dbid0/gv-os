@@ -205,6 +205,14 @@ export type OfferHomeData = {
   repName: Map<string, string>;
   /** Which feed the cash mix came from, for the card's source label. */
   mixSource: "stripe" | "sheet" | null;
+  /**
+   * When the money feed's snapshot was written (the paySource snapshot), or
+   * null for a feed-less ledger-native offer. The card renders its age so a
+   * stale mirror is visible instead of passing for fresh.
+   */
+  moneySyncedAt: Date | null;
+  /** When the funnel's (sheet) snapshot was written, or null when never. */
+  funnelSyncedAt: Date | null;
   /** The window's client-layer rows — the page derives its series from these. */
   rangeRows: BacklogRow[];
   /** The offer's recent client-layer money, newest first. */
@@ -420,6 +428,8 @@ export async function loadOfferHome(
     report,
     repName: new Map(repRows.map((r) => [r.id, r.name])),
     mixSource: paySource ? (paySource.source === "stripe" ? "stripe" : "sheet") : null,
+    moneySyncedAt: paySource?.snapshot.syncedAt ?? null,
+    funnelSyncedAt: snapshot?.syncedAt ?? null,
     rangeRows,
     recentRows,
     moneyFeed,
