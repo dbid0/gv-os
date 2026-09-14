@@ -9,6 +9,7 @@ import { ExportCsv } from "@/components/ui/export-csv";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
+import { shortUrl } from "@/lib/marketing/short-link";
 import { listUtmLinks } from "@/lib/marketing/utm-links";
 import { listTeams } from "@/lib/sales/queries";
 
@@ -27,6 +28,8 @@ export const dynamic = "force-dynamic";
  * surfaces use (see app/w/[slug]/tracking/page.tsx).
  */
 export default async function UtmLinksPage() {
+  // Short links are served by this deployment, under its configured origin.
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "";
   if (!(await viewerIsAdmin())) notFound();
 
   const [teams, rows] = await Promise.all([listTeams(), listUtmLinks()]);
@@ -70,6 +73,9 @@ export default async function UtmLinksPage() {
                 "Content",
                 "Destination",
                 "Assembled URL",
+                "Short link",
+                "Clicks",
+                "Last clicked",
                 "Created by",
                 "Created at",
               ]}
@@ -81,6 +87,9 @@ export default async function UtmLinksPage() {
                 r.utmContent,
                 r.destinationUrl,
                 r.assembledUrl,
+                r.shortCode ? shortUrl(origin, r.shortCode) : "",
+                String(r.clickCount),
+                r.lastClickedAt ? r.lastClickedAt.toISOString() : "",
                 r.createdBy ?? "",
                 r.createdAt.toISOString(),
               ])}
@@ -96,7 +105,9 @@ export default async function UtmLinksPage() {
                   <th className="px-4 py-2.5 font-medium">Medium</th>
                   <th className="px-4 py-2.5 font-medium">Campaign</th>
                   <th className="px-4 py-2.5 font-medium">Content</th>
-                  <th className="px-4 py-2.5 font-medium">Link</th>
+                  <th className="px-4 py-2.5 font-medium">Short link</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Clicks</th>
+                  <th className="px-4 py-2.5 font-medium">Full link</th>
                   <th className="px-4 py-2.5 font-medium">Created</th>
                   <th className="px-4 py-2.5" />
                 </tr>
@@ -121,6 +132,29 @@ export default async function UtmLinksPage() {
                     </td>
                     <td className="text-muted-foreground px-4 py-2.5 whitespace-nowrap">
                       {r.utmContent}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {r.shortCode ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <code className="text-brand text-xs">/l/{r.shortCode}</code>
+                          <CopyLinkButton url={shortUrl(origin, r.shortCode)} />
+                        </span>
+                      ) : (
+                        <span className="text-faint text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <span className="numeric tabular-nums">
+                        {r.clickCount.toLocaleString("en-US")}
+                      </span>
+                      <span className="text-faint block text-[10px]">
+                        {r.lastClickedAt
+                          ? `last ${r.lastClickedAt.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}`
+                          : "no clicks yet"}
+                      </span>
                     </td>
                     <td className="max-w-xs truncate px-4 py-2.5 font-mono text-xs">
                       {r.assembledUrl}

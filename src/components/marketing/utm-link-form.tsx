@@ -91,10 +91,15 @@ export function UtmLinkForm({ clients }: { clients: { id: string; name: string }
         return;
       }
       try {
-        await navigator.clipboard.writeText(res.row.assembledUrl);
+        // The short link is what goes out: it redirects to the full UTM link
+        // and counts every click.
+        await navigator.clipboard.writeText(res.shortUrl ?? res.row.assembledUrl);
         toast({
           tone: "success",
-          title: "Link generated — copied and added to the registry",
+          title: res.shortUrl
+            ? "Short link copied and added to the registry"
+            : "Link generated — copied and added to the registry",
+          detail: res.shortUrl ?? undefined,
         });
       } catch {
         toast({
