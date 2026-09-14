@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { CheckCircle2, Clock, Phone, PhoneCall } from "lucide-react";
 
+import { CallWeekGrid } from "@/components/calls/call-week-grid";
 import { CloserSegmentsTable } from "@/components/calls/closer-segments-table";
 import { EocFormSheet } from "@/components/calls/eoc-form-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +19,7 @@ import {
   type CallState,
 } from "@/lib/calls/call-log";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
+import { callWeek, weekKeyFor } from "@/lib/calls/call-week";
 import { segmentByCloser } from "@/lib/calls/closer-segments";
 import { outcomeLabelForWords } from "@/lib/calls/eoc-form";
 import { isPortalView } from "@/lib/clients/portal-visibility";
@@ -116,6 +118,26 @@ export default async function WorkspaceCallsPage({
   const filter: CallState | "all" = CALL_STATES.some((s) => s.key === wanted)
     ? (wanted as CallState)
     : "all";
+  const view: "list" | "week" = sp.view === "week" ? "week" : "list";
+  const wantedWeek = typeof sp.week === "string" ? sp.week : undefined;
+  /** This page's URL with some of its filters changed. */
+  const hrefWith = (next: {
+    state?: CallState | "all";
+    view?: "list" | "week";
+    week?: string;
+  }) => {
+    const q = new URLSearchParams();
+    const state = next.state ?? filter;
+    const v = next.view ?? view;
+    if (state !== "all") q.set("state", state);
+    if (v === "week") {
+      q.set("view", "week");
+      const week = next.week ?? wantedWeek;
+      if (week) q.set("week", week);
+    }
+    const qs = q.toString();
+    return qs ? `/w/${slug}/calls?${qs}` : `/w/${slug}/calls`;
+  };
 
   const db = getDb();
   const [row] = await db
@@ -206,26 +228,49 @@ export default async function WorkspaceCallsPage({
 
       <CloserSegmentsTable segments={segmentByCloser(log)} />
 
-      <nav className="flex flex-wrap gap-1.5" aria-label="Filter calls">
-        {tabs.map((t) => (
-          <Link
-            key={t.key}
-            href={
-              t.key === "all" ? `/w/${slug}/calls` : `/w/${slug}/calls?state=${t.key}`
-            }
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              filter === t.key
-                ? "border-brand/50 bg-brand-soft/30 text-foreground"
-                : "text-muted-foreground hover:bg-secondary/60",
-            )}
-          >
-            {t.label} <span className="text-faint tabular-nums">{t.count}</span>
-          </Link>
-        ))}
-      </nav>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <nav className="flex flex-wrap gap-1.5" aria-label="Filter calls">
+          {tabs.map((t) => (
+            <Link
+              key={t.key}
+              href={hrefWith({ state: t.key })}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs transition-colors",
+                filter === t.key
+                  ? "border-brand/50 bg-brand-soft/30 text-foreground"
+                  : "text-muted-foreground hover:bg-secondary/60",
+              )}
+            >
+              {t.label} <span className="text-faint tabular-nums">{t.count}</span>
+            </Link>
+          ))}
+        </nav>
+        <nav className="flex rounded-md border p-0.5" aria-label="Calls view">
+          {(["list", "week"] as const).map((v) => (
+            <Link
+              key={v}
+              href={hrefWith({ view: v })}
+              aria-current={view === v ? "page" : undefined}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs transition-colors",
+                view === v
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {v === "list" ? "List" : "Week"}
+            </Link>
+          ))}
+        </nav>
+      </div>
 
-      {days.length === 0 ? (
+      {view === "week" ? (
+        <CallWeekGrid
+          week={callWeek(visible, weekKeyFor(wantedWeek, todayKey), todayKey)}
+          slug={slug}
+          hrefFor={(week) => hrefWith({ week })}
+        />
+      ) : days.length === 0 ? (
         <p className="text-faint py-8 text-center text-sm">No calls in this view.</p>
       ) : (
         <div className="space-y-5">
