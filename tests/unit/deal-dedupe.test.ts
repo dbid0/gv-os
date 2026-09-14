@@ -103,7 +103,7 @@ describe("findRecentDuplicateDeal", () => {
 
   const logged = (over: Partial<LoggedDeal> = {}): LoggedDeal => ({
     clientId: "client-grid",
-    customerName: "Julian Schiederer",
+    customerName: "Julian Parker",
     dealType: "One Call Close",
     contractValueCents: 750_000,
     cashCents: 250_000,
@@ -113,7 +113,7 @@ describe("findRecentDuplicateDeal", () => {
 
   const identity: LoggedDealIdentity = {
     clientId: "client-grid",
-    customerName: "Julian Schiederer",
+    customerName: "Julian Parker",
     dealType: "One Call Close",
     contractValueCents: 750_000,
     cashCents: 250_000,

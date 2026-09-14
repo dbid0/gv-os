@@ -11,8 +11,8 @@ import type { TrackingTab } from "@/lib/tracking/tabs";
  * can answer "what happened with this lead" without reading five of them.
  *
  * The join key is the EMAIL, because it is the only identifier every one of
- * those tabs carries. Names are typed by hand and appear as "lorenzo
- * saponara", "Lorenzo Saponara" and "lorenzo saponrara" in the same column;
+ * those tabs carries. Names are typed by hand and appear as "jordan
+ * rivers", "Jordan Rivers" and "jordan rivrers" in the same column;
  * joining on those would merge two people or split one.
  *
  * Rep-level tabs (BOD, the EODs) are deliberately excluded. They describe a
@@ -155,7 +155,7 @@ export function buildLeadSummaries(rows: LeadEventInput[]): LeadSummary[] {
       }
     }
 
-    // The longest name wins: "Julian" and "Julian Schiederer" are the same
+    // The longest name wins: "Julian" and "Julian Parker" are the same
     // person typed twice, and the fuller one is the useful label.
     const name =
       events

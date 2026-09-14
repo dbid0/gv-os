@@ -16,7 +16,7 @@ export function possessive(name: string): string {
 /**
  * A person's name as typed on a sheet, made presentable.
  *
- * Sheets carry "lorenzo saponara" and "Lorenzo Saponara" for the same person;
+ * Sheets carry "jordan rivers" and "Jordan Rivers" for the same person;
  * titles and tables should not echo the typo. Conservative on purpose: ONLY a
  * word that is entirely lowercase gets its first letter raised. Interior caps
  * (McArthur), initials (JD), and anything already cased are left exactly as

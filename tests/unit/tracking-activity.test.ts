@@ -19,7 +19,7 @@ const SETTER = {
   Notes: "Terrible day",
   "DQ Leads": "0",
   Reschedules: "1",
-  "Setter Name": "Yel",
+  "Setter Name": "Sam",
   "Calls Showed": "0",
   "Deals Closed": "0",
   "Contacts Made": "0",
@@ -30,7 +30,7 @@ const SETTER = {
 const CLOSER = {
   Date: "2026-09-04",
   Deposits: "0",
-  "Closer Name": "lorenzo saponara",
+  "Closer Name": "jordan rivers",
   "Offers Made": "3",
   "Calls Showed": "4",
   "Deals Closed": "0",
@@ -106,8 +106,8 @@ describe("readEodMetrics", () => {
 describe("aggregateActivity", () => {
   it("sums a rep's days", () => {
     const [rep] = aggregateActivity([
-      { rep: "Yel", payload: SETTER },
-      { rep: "Yel", payload: { ...SETTER, Dials: "10", "New Appts Set": "3" } },
+      { rep: "Sam", payload: SETTER },
+      { rep: "Sam", payload: { ...SETTER, Dials: "10", "New Appts Set": "3" } },
     ]);
     expect(rep.days).toBe(2);
     expect(rep.totals.dials).toBe(14);
@@ -115,12 +115,12 @@ describe("aggregateActivity", () => {
   });
 
   it("collapses a rep whose name drifts", () => {
-    // Live data: "Yel", "Yel Akot", "yel akot" on the same tab. Left apart,
+    // Live data: "Sam", "Sam Carter", "sam carter" on the same tab. Left apart,
     // one person's dials split across three rows.
     const reps = aggregateActivity([
-      { rep: "Yel", payload: SETTER },
-      { rep: "yel akot", payload: SETTER },
-      { rep: "Yel Akot", payload: SETTER },
+      { rep: "Sam", payload: SETTER },
+      { rep: "sam carter", payload: SETTER },
+      { rep: "Sam Carter", payload: SETTER },
     ]);
     expect(reps).toHaveLength(1);
     expect(reps[0].days).toBe(3);
@@ -131,12 +131,12 @@ describe("aggregateActivity", () => {
     // A floor with two Ethans: a bare "Ethan" could be either, so it stays on
     // its own rather than crediting one rep with another's dials.
     const reps = aggregateActivity([
-      { rep: "Ethan Barron", payload: { Dials: "10" } },
+      { rep: "Ethan Morgan", payload: { Dials: "10" } },
       { rep: "Ethan Cole", payload: { Dials: "20" } },
       { rep: "Ethan", payload: { Dials: "5" } },
     ]);
     expect(reps).toHaveLength(3);
-    expect(reps.find((r) => r.rep === "Ethan Barron")!.totals.dials).toBe(10);
+    expect(reps.find((r) => r.rep === "Ethan Morgan")!.totals.dials).toBe(10);
     expect(reps.find((r) => r.rep === "Ethan")!.totals.dials).toBe(5);
   });
 
@@ -213,18 +213,18 @@ describe("rate / activityRates", () => {
 
 describe("canonicalRepNames", () => {
   it("folds a first name into the one full name it can mean", () => {
-    const map = canonicalRepNames(["Yel", "Yel Akot"]);
-    expect(map.get("yel")).toBe("Yel Akot");
+    const map = canonicalRepNames(["Sam", "Sam Carter"]);
+    expect(map.get("sam")).toBe("Sam Carter");
   });
 
   it("leaves an ambiguous first name alone", () => {
-    const map = canonicalRepNames(["Ethan", "Ethan Barron", "Ethan Cole"]);
+    const map = canonicalRepNames(["Ethan", "Ethan Morgan", "Ethan Cole"]);
     expect(map.get("ethan")).toBe("Ethan");
   });
 
   it("never folds a longer name into a shorter one", () => {
-    const map = canonicalRepNames(["Yel", "Yel Akot"]);
-    expect(map.get("yel akot")).toBe("Yel Akot");
+    const map = canonicalRepNames(["Sam", "Sam Carter"]);
+    expect(map.get("sam carter")).toBe("Sam Carter");
   });
 
   it("ignores blanks", () => {
@@ -234,30 +234,30 @@ describe("canonicalRepNames", () => {
 
 describe("nearDuplicateRepNames", () => {
   it("spots the one-letter typo on the live sheet", () => {
-    // "Ethan baron" and "Ethan Barron" are both on The Grid's EOD tabs.
-    const pairs = nearDuplicateRepNames(["Ethan baron", "Ethan Barron", "Yel Akot"]);
+    // "Ethan morgen" and "Ethan Morgan" are both on The Grid's EOD tabs.
+    const pairs = nearDuplicateRepNames(["Ethan morgen", "Ethan Morgan", "Sam Carter"]);
     expect(pairs).toHaveLength(1);
-    expect(pairs[0]).toContain("Ethan baron");
+    expect(pairs[0]).toContain("Ethan morgen");
   });
 
   it("does NOT report names that only differ in case — those already merge", () => {
-    expect(nearDuplicateRepNames(["Yel Akot", "yel akot"])).toEqual([]);
+    expect(nearDuplicateRepNames(["Sam Carter", "sam carter"])).toEqual([]);
   });
 
   it("reports one typo ONCE, not once per case variant", () => {
-    // Live data holds "Ethan Barron", "ethan barron" and "Ethan baron". The
+    // Live data holds "Ethan Morgan", "ethan morgan" and "Ethan morgen". The
     // first two are already one rep; only the typo is worth reporting.
     const pairs = nearDuplicateRepNames([
-      "Ethan Barron",
-      "ethan barron",
-      "Ethan baron",
+      "Ethan Morgan",
+      "ethan morgan",
+      "Ethan morgen",
     ]);
     expect(pairs).toHaveLength(1);
   });
 
   it("does not report two genuinely different reps", () => {
-    expect(nearDuplicateRepNames(["Ethan Barron", "Ethan Cole"])).toEqual([]);
-    expect(nearDuplicateRepNames(["Yel Akot", "Lorenzo Saponara"])).toEqual([]);
+    expect(nearDuplicateRepNames(["Ethan Morgan", "Ethan Cole"])).toEqual([]);
+    expect(nearDuplicateRepNames(["Sam Carter", "Jordan Rivers"])).toEqual([]);
   });
 
   it("is empty for a clean roster", () => {
@@ -269,13 +269,13 @@ describe("nearDuplicateRepNames", () => {
 describe("editDistanceWithin", () => {
   it("counts a substitution, an insertion and a deletion as one edit", () => {
     expect(editDistanceWithin("barron", "baron", 1)).toBe(true);
-    expect(editDistanceWithin("yel", "yell", 1)).toBe(true);
+    expect(editDistanceWithin("sam", "samm", 1)).toBe(true);
     expect(editDistanceWithin("kate", "kats", 1)).toBe(true);
   });
 
   it("rejects anything further apart", () => {
     expect(editDistanceWithin("barron", "brn", 1)).toBe(false);
-    expect(editDistanceWithin("lorenzo", "ethan", 1)).toBe(false);
+    expect(editDistanceWithin("jordan", "ethan", 1)).toBe(false);
   });
 
   it("treats identical strings as within any budget", () => {

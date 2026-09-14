@@ -182,7 +182,7 @@ describe("callReviewRule", () => {
   const call = (over: Partial<Parameters<typeof callReviewRule>[0][number]> = {}) => ({
     recordingId: "rec-1",
     clientId: "client-1",
-    rep: "Lorenzo Saponara",
+    rep: "Jordan Rivers",
     reason: "Still open — 2 steps missed on the call",
     priority: 11,
     ...over,
@@ -191,7 +191,7 @@ describe("callReviewRule", () => {
   it("names the rep and carries the reason, not a count of analyses", () => {
     // "6 calls were analysed" is not something a manager can act on.
     const [c] = callReviewRule([call()]);
-    expect(c.title).toBe("Lorenzo Saponara: call needs a review");
+    expect(c.title).toBe("Jordan Rivers: call needs a review");
     expect(c.body).toContain("Still open");
   });
 
