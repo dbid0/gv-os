@@ -169,6 +169,20 @@ export default defineConfig({
         },
         // Payment normalizers shape real money amounts from processor
         // payloads — a wrong sign or scale here misstates cash. Fully covered.
+        // Payment tag rules decide which payments an offer's dashboard cash
+        // counts, and the payment-field readers feed them. Fully covered.
+        "src/lib/tracking/tag-rules.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/tracking/payment-fields.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/payments/normalize.ts": {
           statements: 100,
           branches: 100,

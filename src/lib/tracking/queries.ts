@@ -7,6 +7,11 @@ import { getDb } from "@/db/client";
 import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
 import type { TabScan } from "@/lib/tracking/scan";
 import { buildLeadSummaries, LEAD_TABS, type LeadSummary } from "@/lib/tracking/leads";
+import {
+  paymentKind,
+  paymentLabel,
+  paymentProvider,
+} from "@/lib/tracking/payment-fields";
 import type { FactSource } from "@/lib/tracking/sources";
 import type { TrackingTab } from "@/lib/tracking/tabs";
 
@@ -278,6 +283,8 @@ export async function cashRowsForClient(syncId: string) {
       status: clientTrackingRows.status,
       occurredAt: clientTrackingRows.occurredAt,
       payload: clientTrackingRows.payload,
+      source: clientTrackingRows.source,
+      notes: clientTrackingRows.notes,
     })
     .from(clientTrackingRows)
     .where(
@@ -314,6 +321,15 @@ export async function cashRowsForClient(syncId: string) {
       // The processor's own word for what happened — succeeded, refunded,
       // failed. Without it a refunded charge counts as cash collected.
       status: r.status ?? r.payload?.["Status"] ?? null,
+      // What tag rules read — the same three words across sheet and processor
+      // rows. Extra fields only: nothing above them changes.
+      label: paymentLabel(r.payload, r.notes),
+      provider: paymentProvider(r.payload, r.source),
+      kind: paymentKind(
+        r.payload,
+        r.cashCents,
+        r.status ?? r.payload?.["Status"] ?? null,
+      ),
     })),
   };
 }
