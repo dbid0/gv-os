@@ -17,6 +17,7 @@ import { rosterClientBySlug } from "@/lib/roster-server";
 import { searchLeads } from "@/lib/tracking/leads";
 import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
+import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,11 @@ export default async function WorkspaceLeadsPage({
     );
   }
 
-  const all = await leadsForClient(snapshot.syncId, await appEocLeadRows(row.id));
+  const [appRows, aliases] = await Promise.all([
+    appEocLeadRows(row.id),
+    aliasMapForClient(row.id),
+  ]);
+  const all = await leadsForClient(snapshot.syncId, appRows, aliases);
   const leads = searchLeads(all, q);
   const withCalls = all.filter((l) => l.eocReports > 0).length;
   const withRecordings = all.filter((l) => l.recordings > 0).length;

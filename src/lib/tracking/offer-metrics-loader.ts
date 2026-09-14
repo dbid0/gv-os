@@ -374,6 +374,7 @@ export async function loadOfferHome(
         leads: await leadsForClient(
           snapshot.syncId,
           row ? await appEocLeadRows(row.id) : [],
+          row ? await aliasMapForClient(row.id) : undefined,
         ),
         stageKeys: stagesForModel(offerModelOf(row?.offerModel ?? null)),
       }

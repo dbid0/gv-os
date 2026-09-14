@@ -13,6 +13,7 @@ import { rosterClientBySlug } from "@/lib/roster-server";
 import { groupByPipelineStage } from "@/lib/tracking/pipeline-stage";
 import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
+import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,11 @@ export default async function WorkspacePipelinePage({
     );
   }
 
-  const leads = await leadsForClient(snapshot.syncId, await appEocLeadRows(row.id));
+  const [appRows, aliases] = await Promise.all([
+    appEocLeadRows(row.id),
+    aliasMapForClient(row.id),
+  ]);
+  const leads = await leadsForClient(snapshot.syncId, appRows, aliases);
   const columns = groupByPipelineStage(leads);
   const openCount = columns
     .filter((c) => c.stage !== "closed" && c.stage !== "lost")
