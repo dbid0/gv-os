@@ -36,6 +36,8 @@ export type EocReport = {
   status: string | null;
   outcome: string | null;
   occurredAt: Date | null;
+  /** Who ran the call, when the report names them. */
+  rep?: string | null;
 };
 
 /** A booking with the invitee identity needed to find its report. */

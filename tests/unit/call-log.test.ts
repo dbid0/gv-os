@@ -64,8 +64,8 @@ describe("buildCallLog", () => {
       { bookingId: "app", confirmedAt: null },
     ],
     filed: [
-      filed("app@x.com", "closed won", -29, "app"),
-      filed("unbound@x.com", "no show", -39, null),
+      { ...filed("app@x.com", "closed won", -29, "app"), rep: " Jordan Rivers " },
+      { ...filed("unbound@x.com", "no show", -39, null), rep: "   " },
       // A report bound to one booking never lands on another with the same email.
       filed("sheet@x.com", "closed won", -23, "some-other-booking"),
     ],
@@ -90,6 +90,13 @@ describe("buildCallLog", () => {
       noemail: "needs_outcome",
       undated: "upcoming",
     });
+  });
+
+  it("carries the closer the report names, trimmed, or null", () => {
+    expect(byId.get("app")!.closer).toBe("Jordan Rivers");
+    expect(byId.get("unbound")!.closer).toBeNull();
+    expect(byId.get("sheet")!.closer).toBeNull();
+    expect(byId.get("stuck")!.closer).toBeNull();
   });
 
   it("reads confirmation as in time, after the start, or none", () => {
