@@ -40,8 +40,17 @@ export interface CallLogRow {
  * Capped defensively so the page stays inside the connection-pool burst budget
  * however many logs accumulate; the summary KPIs and the filters run over the
  * returned set in the client view.
+ *
+ * Pass `clientId` to scope to one offer's logs in SQL (uses
+ * `activity_logs_client_idx`) rather than loading every client's rows and
+ * filtering in JS. The cap then applies per-client, so a scoped caller sees at
+ * least the rows it would have — omit it for the unfiltered, all-client list
+ * every other caller gets today.
  */
-export async function listCallLogs(limit = 500): Promise<CallLogRow[]> {
+export async function listCallLogs(
+  limit = 500,
+  clientId?: string,
+): Promise<CallLogRow[]> {
   const db = getDb();
   return db
     .select({
@@ -65,6 +74,7 @@ export async function listCallLogs(limit = 500): Promise<CallLogRow[]> {
     .from(activityLogs)
     .leftJoin(clients, eq(activityLogs.clientId, clients.id))
     .leftJoin(reps, eq(activityLogs.repId, reps.id))
+    .where(clientId ? eq(activityLogs.clientId, clientId) : undefined)
     .orderBy(desc(activityLogs.occurredAt))
     .limit(limit);
 }
