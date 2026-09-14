@@ -5,11 +5,13 @@ import { useState } from "react";
 import { CollectedSparkline } from "@/components/shell/collected-sparkline";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { CashMixBar } from "@/components/tracking/cash-mix-bar";
+import { FeedFreshness } from "@/components/tracking/feed-freshness";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Money } from "@/components/ui/metric";
 import { PeriodDelta } from "@/components/ui/period-delta";
 import { RangeChips } from "@/components/ui/range-chips";
 import { cents } from "@/lib/money";
+import type { SnapshotFreshness } from "@/lib/tracking/freshness";
 import { DEFAULT_HOME_RANGE, type HomeRange } from "@/lib/transactions/homepage";
 import type { WorkspaceMoneyVariant } from "@/lib/tracking/window-money";
 
@@ -34,6 +36,7 @@ export function WorkspaceHero({
   initialRange,
   todayKey,
   mixSource,
+  moneyFreshness = null,
   allTimeCashCents,
 }: {
   slug: string;
@@ -42,6 +45,8 @@ export function WorkspaceHero({
   initialRange: HomeRange | "custom";
   todayKey: string;
   mixSource: "stripe" | "sheet" | null;
+  /** Age of the snapshot behind the headline; null on the ledger-native path. */
+  moneyFreshness?: SnapshotFreshness | null;
   allTimeCashCents: number;
 }) {
   const [range, setRange] = useState<HomeRange | "custom">(initialRange);
@@ -115,13 +120,16 @@ export function WorkspaceHero({
                 />
               </div>
             )}
-            <DateRangePicker
-              basePath={`/w/${slug}`}
-              activeRange={range}
-              from={active.from}
-              to={active.to}
-              todayKey={todayKey}
-            />
+            <div className="flex flex-col items-end gap-1.5">
+              <DateRangePicker
+                basePath={`/w/${slug}`}
+                activeRange={range}
+                from={active.from}
+                to={active.to}
+                todayKey={todayKey}
+              />
+              {moneyFreshness && <FeedFreshness freshness={moneyFreshness} />}
+            </div>
           </div>
           <RangeChips
             basePath={`/w/${slug}`}

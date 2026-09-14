@@ -13,18 +13,28 @@ name: integration-sync
 # own webhooks (Stripe, new-deals) — this poll is the backstop for everything
 # else (Close, Calendly, Typeform, Kit, Fathom), where 30 minutes is plenty.
 #
+# The tracking mirrors (sheet + processor money snapshots) refresh on EVERY run
+# too — the offer money headline wins from the Stripe tracking snapshot, so a
+# once-a-day snapshot left an intraday payment invisible on the headline for up
+# to ~24h. At */30 the money mirror is at most ~30 min stale. The slow part —
+# pulling the Fathom transcripts behind EOC reports — still runs only on the
+# daily 11:00 UTC leg (and manual runs), where once a day is plenty.
+#
 # Setup (one time): add a repo secret `SYNC_SECRET` matching the app's
 # SYNC_SECRET env. Until it's set, this workflow skips cleanly instead of erroring.
 #
 # continue-on-error: a scheduler is not a monitor — a flaky run must never email
-# the repo owner. Sync health is surfaced in-app (the connection cards + the
-# morning brief), not here.
+# the repo owner. But a failed pull must not read as a healthy one either: each
+# step captures the HTTP status and FAILS (a red step) on a non-2xx, so a
+# transient failure is visible in the run instead of silently green. The job's
+# continue-on-error keeps that red step from failing the workflow (no email);
+# in-app staleness badges + the morning brief remain the real monitor.
 
 on:
   schedule:
     - cron: "*/30 * * * *"
-    # The 11:00 UTC firing also refreshes the tracking mirrors (sheet +
-    # processor snapshots) — once a day, before the workday, deliberate.
+    # The 11:00 UTC firing ALSO pulls the (slow) EOC transcripts — once a day,
+    # before the workday, deliberate. The money snapshots refresh every run.
     - cron: "0 11 * * *"
   workflow_dispatch: {}
 
@@ -42,20 +52,47 @@ jobs:
             echo "SYNC_SECRET repo secret not set — skipping (add it to enable auto-sync)."
             exit 0
           fi
+          # -w prints ONLY the HTTP status (body goes to the file); a total
+          # failure leaves curl non-zero, so `|| code=000` gives a clean code.
           code=$(curl -s -o /tmp/pull.json -m 300 --retry 2 --retry-delay 10 --retry-all-errors \
             -H "Authorization: Bearer $SYNC_SECRET" \
-            -w "%{http_code}" "https://os.globalventures.app/api/sync/all-pulls" || echo "ERR")
-          echo "all-pulls -> $code"
+            -w "%{http_code}" "https://os.globalventures.app/api/sync/all-pulls") || code="000"
+          echo "all-pulls -> ${code}"
           head -c 1000 /tmp/pull.json 2>/dev/null || true
+          case "$code" in
+            2*) : ;;
+            *)
+              echo "::error::all-pulls sync did not return 2xx (got '${code}') — integration data may be stale"
+              exit 1
+              ;;
+          esac
 
-      - name: Daily tracking snapshot (sheet + processor mirrors)
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.event.schedule, '0 11')
+      - name: Tracking snapshot (sheet + processor money mirrors)
+        # Runs on EVERY invocation so the money mirror is never more than one
+        # */30 cycle stale. !cancelled() so a failed all-pulls step above never
+        # stops the money snapshot from refreshing — the two pulls are
+        # independent.
+        if: ${{ !cancelled() }}
         env:
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+          # Transcripts are slow; pull them only on the daily leg / manual run.
+          WITH_TRANSCRIPTS: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.schedule, '0 11') }}
         run: |
-          if [ -z "$SYNC_SECRET" ]; then exit 0; fi
+          if [ -z "$SYNC_SECRET" ]; then
+            echo "SYNC_SECRET repo secret not set — skipping tracking snapshot."
+            exit 0
+          fi
+          q=""
+          if [ "$WITH_TRANSCRIPTS" = "true" ]; then q="?transcripts=1"; fi
           code=$(curl -s -o /tmp/track.json -m 300 --retry 2 --retry-delay 10 --retry-all-errors \
             -H "Authorization: Bearer $SYNC_SECRET" \
-            -w "%{http_code}" "https://os.globalventures.app/api/sync/tracking?transcripts=1" || echo "ERR")
-          echo "tracking -> $code"
+            -w "%{http_code}" "https://os.globalventures.app/api/sync/tracking${q}") || code="000"
+          echo "tracking${q} -> ${code}"
           head -c 1000 /tmp/track.json 2>/dev/null || true
+          case "$code" in
+            2*) : ;;
+            *)
+              echo "::error::tracking sync did not return 2xx (got '${code}') — the offer money mirror may be stale"
+              exit 1
+              ;;
+          esac

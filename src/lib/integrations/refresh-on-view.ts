@@ -1,11 +1,13 @@
 import "server-only";
 
-import { and, eq, gte, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import { after } from "next/server";
 
 import { getDb } from "@/db/client";
-import { integrations } from "@/db/schema/app";
+import { clientTrackingSyncs, integrations } from "@/db/schema/app";
 import { syncProviderNow } from "@/lib/integrations/sync-on-connect";
+import { syncClientStripe } from "@/lib/tracking/stripe-sync";
+import { syncClientTrackingSheet } from "@/lib/tracking/sync";
 
 /**
  * LIVE WHEN YOU'RE LOOKING.
@@ -43,6 +45,57 @@ export function refreshProviderOnView(provider: string): void {
     } catch {
       // A failed freshness pull must never surface — the scheduler is the
       // guaranteed path; this is only the "you're looking at it" bonus.
+    }
+  });
+}
+
+/** The tracking snapshots that own the offer money headline + funnel. */
+const MONEY_SNAPSHOT_SOURCES = ["stripe", "sheet"];
+
+/**
+ * SAME IDEA, FOR THE MONEY MIRROR.
+ *
+ * The offer money headline and the funnel read the Stripe / sheet tracking
+ * SNAPSHOTS (`client_tracking_syncs`), not the integrations feed — a different
+ * pipeline (`syncClientStripe` / `syncClientTrackingSheet`) that
+ * `refreshProviderOnView` above never touches. So opening a workspace closes
+ * the same last gap for those snapshots: an intraday payment or a fresh row is
+ * pulled AFTER the response is sent, and is current by the next glance.
+ *
+ * Throttled on the SAME window as the provider path — nothing fires if either
+ * money snapshot for this client is younger than the window — so a team
+ * clicking between offers cannot stampede Stripe or the Sheets API. The
+ * scheduled 30-minute pull stays the guaranteed path; this is only the bonus.
+ */
+export function refreshTrackingSnapshotsOnView(clientId: string): void {
+  after(async () => {
+    try {
+      const db = getDb();
+      const [recent] = await db
+        .select({ createdAt: clientTrackingSyncs.createdAt })
+        .from(clientTrackingSyncs)
+        .where(
+          and(
+            eq(clientTrackingSyncs.clientId, clientId),
+            inArray(clientTrackingSyncs.source, MONEY_SNAPSHOT_SOURCES),
+            gte(clientTrackingSyncs.createdAt, new Date(Date.now() - FRESH_WINDOW_MS)),
+          ),
+        )
+        .orderBy(desc(clientTrackingSyncs.createdAt))
+        .limit(1);
+      // A money snapshot landed inside the window already — leave it alone.
+      if (recent) return;
+      // Processor history is finite upstream; ninety days matches the
+      // scheduled pull (api/sync/tracking) so a re-link never re-reads the
+      // world. A missing connection / sheet is a quiet no-op inside each sync.
+      const stripeSince = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+      await Promise.allSettled([
+        syncClientTrackingSheet(clientId),
+        syncClientStripe(clientId, stripeSince),
+      ]);
+    } catch {
+      // Same contract as the provider path: a failed freshness pull is silent.
+      // The scheduler is the guaranteed path; this is only the bonus.
     }
   });
 }

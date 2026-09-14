@@ -17,7 +17,10 @@ import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { portalVisibility } from "@/lib/clients/portal-visibility";
 import { OfferFunnelPanel } from "@/components/tracking/offer-funnel";
+import { FeedFreshness } from "@/components/tracking/feed-freshness";
 import { WorkspaceHero } from "@/components/tracking/workspace-hero";
+import { refreshTrackingSnapshotsOnView } from "@/lib/integrations/refresh-on-view";
+import { snapshotFreshness } from "@/lib/tracking/freshness";
 import { loadOfferHome } from "@/lib/tracking/offer-metrics-loader";
 import { buildWorkspaceVariants } from "@/lib/tracking/window-money";
 import { cents } from "@/lib/money";
@@ -74,6 +77,8 @@ export default async function WorkspacePage({
       report,
       repName,
       mixSource,
+      moneySyncedAt,
+      funnelSyncedAt,
       recentRows,
       moneyFeed,
       clientRows,
@@ -88,6 +93,19 @@ export default async function WorkspacePage({
   ]);
   if (!report) notFound();
   const funnel = metrics.funnel;
+
+  // Live-when-you're-looking for the money mirror: opening the workspace kicks
+  // a Stripe/sheet snapshot pull AFTER the response (throttled), the same way
+  // the provider feeds refresh on view. The scheduled */30 pull is still the
+  // guaranteed path — this only closes the intraday gap.
+  if (report.clientId) refreshTrackingSnapshotsOnView(report.clientId);
+
+  // Snapshot age, computed once on the server so it renders identically after
+  // hydration. Money freshness only applies when a snapshot feed owns the
+  // headline — a ledger-native offer (no feed) has no snapshot to age.
+  const now = new Date();
+  const moneyFreshness = mixSource ? snapshotFreshness(moneySyncedAt, now) : null;
+  const funnelFreshness = snapshotFreshness(funnelSyncedAt, now);
 
   // Portal defaults (v2 §6): dashboard-only — apps + assets on, money off
   // until the admin toggles it.
@@ -158,6 +176,7 @@ export default async function WorkspacePage({
           initialRange={range}
           todayKey={todayKey}
           mixSource={mixSource}
+          moneyFreshness={moneyFreshness}
           allTimeCashCents={allTimeCashCents}
         />
       )}
@@ -228,7 +247,12 @@ export default async function WorkspacePage({
         >
           <Panel
             title="Funnel"
-            aside={<span className="text-faint text-xs">from the tracking sheet</span>}
+            aside={
+              <span className="flex items-center gap-2">
+                <span className="text-faint text-xs">from the tracking sheet</span>
+                <FeedFreshness freshness={funnelFreshness} />
+              </span>
+            }
           >
             <OfferFunnelPanel funnel={funnel} slug={slug} />
           </Panel>
