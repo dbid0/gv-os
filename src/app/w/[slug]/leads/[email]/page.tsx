@@ -14,6 +14,9 @@ import { transcriptByShareUrl } from "@/lib/calls/share-transcripts";
 import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
 import { APP_EOC_ROW_BASE } from "@/lib/calls/eoc-form";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
+import { IdentityPanel } from "@/components/tracking/identity-panel";
+import { inboxesFor, rankMergeCandidates } from "@/lib/tracking/identity";
+import { mergeCandidatesFor } from "@/lib/tracking/identity-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import { resolveEmail } from "@/lib/tracking/aliases";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
@@ -71,11 +74,8 @@ export default async function LeadDetailPage({
   // The alias layer: every inbox that is this same person merges into one
   // journey — the paying inbox and the booking inbox stop being two leads.
   const aliases = await aliasMapForClient(row.id);
-  const canonical = resolveEmail(email, aliases) ?? email.trim().toLowerCase();
-  const inboxes = [canonical];
-  for (const [alias, target] of aliases) {
-    if (target === canonical && !inboxes.includes(alias)) inboxes.push(alias);
-  }
+  const inboxes = inboxesFor(email, aliases);
+  const canonical = inboxes[0];
   const lead = snapshot
     ? await leadByEmail(
         snapshot.syncId,
@@ -119,6 +119,16 @@ export default async function LeadDetailPage({
       )
     ).filter(([, v]) => v !== null),
   );
+
+  // Same-person suggestions — GV's identity desk, never the client portal.
+  const suggestions =
+    !portalView && snapshot
+      ? rankMergeCandidates(
+          await mergeCandidatesFor(snapshot.syncId, inboxes),
+          inboxes,
+          aliases,
+        )
+      : [];
 
   return (
     <div className="space-y-6">
@@ -197,6 +207,19 @@ export default async function LeadDetailPage({
               );
             })}
           </ul>
+        </Panel>
+      )}
+
+      {!portalView && (
+        <Panel
+          title="Same person, other inboxes"
+          aside={
+            <span className="text-faint text-xs">
+              {inboxes.length} inbox{inboxes.length === 1 ? "" : "es"}
+            </span>
+          }
+        >
+          <IdentityPanel slug={slug} inboxes={inboxes} suggestions={suggestions} />
         </Panel>
       )}
 

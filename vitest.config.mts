@@ -238,6 +238,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Who counts as one person: merge rules, inbox lists, lead rows keyed
+        // under the person. Fully covered.
+        "src/lib/tracking/identity.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
