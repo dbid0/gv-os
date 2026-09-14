@@ -177,6 +177,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Show/close rates split by confirmation — the number that says whether
+        // confirming calls works. Pure, fully covered.
+        "src/lib/crm/confirmation-rates.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/payment-fields.ts": {
           statements: 100,
           branches: 100,
