@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
+  Bot,
   Boxes,
   Building2,
   MessagesSquare,
@@ -51,6 +52,12 @@ const SETUP_TILES = [
     icon: Plug,
     title: "Integrations",
     detail: "Payment processors, sheets, and CRMs — keys sealed on save.",
+  },
+  {
+    href: "/settings/mcp",
+    icon: Bot,
+    title: "Connect your Claude",
+    detail: "Read-only MCP keys so your own Claude can answer questions about GV OS.",
   },
   {
     href: "/profile",

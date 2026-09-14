@@ -55,6 +55,9 @@ const PUBLIC_PATHS = [
   "/api/sync/notifications",
   "/api/sync/new-deals",
   "/api/sync/tracking",
+  // The MCP server — carries its own owner-created, read-only API key bearer
+  // and refuses every request without one.
+  "/api/mcp",
   // Operator door for connecting integrations — its own SYNC_SECRET bearer.
   "/api/integrations/connect",
   // The real warmer — its own SYNC_SECRET bearer; read-only queries.
