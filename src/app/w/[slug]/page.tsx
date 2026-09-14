@@ -7,6 +7,7 @@ import { DriveAssetsPanel } from "@/components/clients/drive-assets-panel";
 import { CountUpMoney } from "@/components/shell/count-up-money";
 import { RecentTransactions } from "@/components/shell/recent-transactions";
 import { CashGoalStrip } from "@/components/tracking/cash-goal";
+import { ConfirmationSplitPanel } from "@/components/tracking/confirmation-split";
 import { RightNowPanel } from "@/components/tracking/right-now";
 import { LeaderboardBand } from "@/components/tracking/leaderboard-band";
 import { Panel } from "@/components/ui/panel";
@@ -280,24 +281,7 @@ export default async function WorkspacePage({
           {metrics.confirmation.ofBookings > 0 && (
             <div className="space-y-4">
               <RightNowPanel rightNow={metrics.rightNow} />
-              <section className="card-grad rounded-xl border p-4">
-                <p className="text-faint text-[11px] font-medium tracking-wider uppercase">
-                  Confirmed before the call
-                </p>
-                <p className="text-foreground mt-1 font-mono text-2xl font-semibold tabular-nums">
-                  {metrics.confirmation.everConfirmed}
-                  <span className="text-muted-foreground text-sm font-normal">
-                    {" "}
-                    of {metrics.confirmation.ofBookings} booked
-                  </span>
-                </p>
-                {metrics.confirmation.confirmedThenCancelled > 0 && (
-                  <p className="text-warning mt-1 text-xs">
-                    {metrics.confirmation.confirmedThenCancelled} confirmed, then
-                    cancelled anyway
-                  </p>
-                )}
-              </section>
+              <ConfirmationSplitPanel confirmation={metrics.confirmation} />
             </div>
           )}
         </div>

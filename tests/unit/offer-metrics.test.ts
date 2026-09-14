@@ -57,6 +57,8 @@ describe("assembleOfferMetrics", () => {
       ofBookings: 0,
       confirmedAwaiting: 0,
       confirmedThenCancelled: 0,
+      // No reports loaded, no bookings: the split rates are unknown, not 0%.
+      rates: null,
     });
     expect(m.stl.medianMinutes).toBeNull();
   });

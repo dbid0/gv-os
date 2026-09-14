@@ -43,6 +43,11 @@ import {
   type ConfirmableCall,
   type ConfirmationRecord,
 } from "@/lib/crm/confirmation";
+import {
+  confirmationRates,
+  type ConfirmationRates,
+  type EocReport,
+} from "@/lib/crm/confirmation-rates";
 import type { OfferStl } from "@/lib/crm/offer-stl";
 
 /** The honest zero-state for speed to lead — no source, no numbers. */
@@ -73,6 +78,12 @@ export type OfferMetricsInputs = {
   reportedEmails: Set<string>;
   /** Confirmation rows for this offer's bookings. */
   confirmations: ConfirmationRecord[];
+  /**
+   * End-of-call reports (email + what the closer wrote), for show/close rates
+   * split by confirmation. Absent = the surface didn't load them, and the
+   * split rates stay null rather than reading as zero.
+   */
+  eocReports?: EocReport[] | null;
   /** Speed-to-lead, already computed by its own engine. */
   stl: OfferStl;
   /** Lead-stitched funnel inputs; absent = the surface didn't load leads. */
@@ -126,6 +137,11 @@ export type ConfirmationMetrics = {
   confirmedAwaiting: number;
   /** Confirmed in time and then cancelled anyway — the flake signal. */
   confirmedThenCancelled: number;
+  /**
+   * Show and close rates, confirmed vs not, from the end-of-call reports.
+   * Null when reports weren't loaded or there are no bookings to split.
+   */
+  rates: ConfirmationRates | null;
 };
 
 export type OfferMetrics = {
@@ -201,6 +217,15 @@ export function assembleOfferMetrics(
       ofBookings: inputs.bookings.length,
       confirmedAwaiting: split.confirmedAwaiting,
       confirmedThenCancelled: split.confirmedThenCancelled,
+      rates:
+        inputs.eocReports && inputs.bookings.length > 0
+          ? confirmationRates(
+              inputs.bookings,
+              inputs.confirmations,
+              inputs.eocReports,
+              now,
+            )
+          : null,
     },
     stl: inputs.stl,
   };
