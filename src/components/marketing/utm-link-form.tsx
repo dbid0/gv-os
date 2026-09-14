@@ -14,16 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { buildUtmUrl, describeBuildFailure } from "@/lib/marketing/utm";
-
-const SOURCE_SUGGESTIONS = ["youtube", "instagram", "tiktok", "email", "discord"];
-const MEDIUM_SUGGESTIONS = [
-  "bio",
-  "description",
-  "profile",
-  "story",
-  "pinned-comment",
-  "dm",
-];
+import { utmSuggestions, type RememberedLink } from "@/lib/marketing/utm-values";
 
 const selectClass =
   "border-input bg-transparent h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -46,6 +37,16 @@ function Field({
   );
 }
 
+function Options({ id, values }: { id: string; values: string[] }) {
+  return (
+    <datalist id={id}>
+      {values.map((v) => (
+        <option key={v} value={v} />
+      ))}
+    </datalist>
+  );
+}
+
 /**
  * The builder. Every generated link is born standard-compliant (see
  * lib/marketing/utm.ts) and saved to the registry the instant "Generate &
@@ -55,8 +56,18 @@ function Field({
  * workflow (per the GV UTM SOP) is one funnel link + fixed source/medium/
  * campaign, batching a fresh `content` value per asset — so only content
  * clears after a successful generate.
+ *
+ * Suggestions come from the registry itself (lib/marketing/utm-values.ts): the
+ * values this client already uses first, so the same source is spelled the
+ * same way every time.
  */
-export function UtmLinkForm({ clients }: { clients: { id: string; name: string }[] }) {
+export function UtmLinkForm({
+  clients,
+  remembered,
+}: {
+  clients: { id: string; name: string }[];
+  remembered: RememberedLink[];
+}) {
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
@@ -65,6 +76,11 @@ export function UtmLinkForm({ clients }: { clients: { id: string; name: string }
   const [medium, setMedium] = useState("");
   const [campaign, setCampaign] = useState("");
   const [content, setContent] = useState("");
+
+  const suggestions = useMemo(
+    () => utmSuggestions(remembered, clientId),
+    [remembered, clientId],
+  );
 
   const preview = useMemo(
     () => buildUtmUrl({ destinationUrl, source, medium, campaign, content }),
@@ -134,8 +150,10 @@ export function UtmLinkForm({ clients }: { clients: { id: string; name: string }
             value={destinationUrl}
             onChange={(e) => setDestinationUrl(e.target.value)}
             placeholder="https://theirfunnel.com/apply"
+            list="utm-destination-options"
             required
           />
+          <Options id="utm-destination-options" values={suggestions.destination} />
         </Field>
         <Field label="Source" hint="The platform.">
           <Input
@@ -145,11 +163,7 @@ export function UtmLinkForm({ clients }: { clients: { id: string; name: string }
             list="utm-source-options"
             required
           />
-          <datalist id="utm-source-options">
-            {SOURCE_SUGGESTIONS.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
+          <Options id="utm-source-options" values={suggestions.source} />
         </Field>
         <Field label="Medium" hint="The placement on that platform.">
           <Input
@@ -159,19 +173,17 @@ export function UtmLinkForm({ clients }: { clients: { id: string; name: string }
             list="utm-medium-options"
             required
           />
-          <datalist id="utm-medium-options">
-            {MEDIUM_SUGGESTIONS.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          <Options id="utm-medium-options" values={suggestions.medium} />
         </Field>
         <Field label="Campaign" hint="The creator or account it lives on.">
           <Input
             value={campaign}
             onChange={(e) => setCampaign(e.target.value)}
-            placeholder="sharif"
+            placeholder="creator-handle"
+            list="utm-campaign-options"
             required
           />
+          <Options id="utm-campaign-options" values={suggestions.campaign} />
         </Field>
         <Field label="Content" hint="The specific asset, 1–3 words.">
           <Input

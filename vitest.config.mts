@@ -209,6 +209,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // UTM value memory: which source/medium/campaign/destination the
+        // builder suggests, in what order. Pure, fully covered.
+        "src/lib/marketing/utm-values.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Calls by closer: the call log re-cut per closer, reconciling to the
         // total. Pure, fully covered.
         "src/lib/calls/closer-segments.ts": {
