@@ -2178,3 +2178,72 @@ export const callEocReports = appSchema.table(
 );
 
 export type CallEocReportRow = typeof callEocReports.$inferSelect;
+
+/**
+ * Which charge a refund reverses — set deliberately by an admin, never guessed.
+ *
+ * Refunds arrive from processors as their own payment events, with no claims
+ * of their own. Linking one to the charge it gives back is what lets each rep's
+ * commission on that charge be clawed back. A refund links to at most one
+ * charge; the store refuses a link across offers, from a non-refund or to a
+ * non-charge, or one that would refund more than the charge ever took.
+ */
+export const paymentRefundLinks = appSchema.table(
+  "payment_refund_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    refundEventId: uuid("refund_event_id")
+      .notNull()
+      .references(() => paymentEvents.id, { onDelete: "cascade" }),
+    chargeEventId: uuid("charge_event_id")
+      .notNull()
+      .references(() => paymentEvents.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_refund_links_refund_key").on(table.refundEventId),
+    index("payment_refund_links_charge_idx").on(table.chargeEventId),
+    check(
+      "payment_refund_links_distinct_check",
+      sql`${table.refundEventId} <> ${table.chargeEventId}`,
+    ),
+  ],
+);
+
+/**
+ * A clawback someone decided not to take — per refund, per seat, with the
+ * reason written down. The clawback still derives and still shows; a waiver
+ * only takes it out of the rep's total. Deleting the waiver puts it back.
+ */
+export const paymentClawbackWaivers = appSchema.table(
+  "payment_clawback_waivers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    refundEventId: uuid("refund_event_id")
+      .notNull()
+      .references(() => paymentEvents.id, { onDelete: "cascade" }),
+    /** setter · closer · dm_setter */
+    role: text("role").notNull(),
+    reason: text("reason").notNull(),
+    waivedBy: text("waived_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_clawback_waivers_refund_role_key").on(
+      table.refundEventId,
+      table.role,
+    ),
+    check(
+      "payment_clawback_waivers_role_check",
+      sql`${table.role} in ('setter', 'closer', 'dm_setter')`,
+    ),
+    check(
+      "payment_clawback_waivers_reason_check",
+      sql`length(trim(${table.reason})) between 3 and 500`,
+    ),
+  ],
+);
