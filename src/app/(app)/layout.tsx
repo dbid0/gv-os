@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { ViewAsBanner } from "@/components/shell/view-as";
 import { DealClosedToasts } from "@/components/shell/deal-closed-toasts";
+import { IntegrityBanner } from "@/components/shell/integrity-banner";
 import { PageTransition } from "@/components/shell/page-transition";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TabKeepWarm } from "@/components/shell/tab-keep-warm";
@@ -13,6 +14,7 @@ import { currentMonthCash } from "@/lib/accounting/sheet-sync";
 import {
   recentNotifications,
   unreadNotificationCount,
+  unreviewedIntegrityBanner,
 } from "@/lib/notifications/count";
 import { getPrefs } from "@/lib/prefs";
 import { getViewerScope } from "@/lib/home/viewer-scope";
@@ -20,6 +22,7 @@ import { loadRoster } from "@/lib/roster-server";
 import { shellUser } from "@/lib/auth/user";
 import { effectiveRole, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
+import { viewerRole } from "@/lib/auth/viewer";
 
 /**
  * The authenticated application shell — STREAMING.
@@ -64,7 +67,7 @@ function SidebarFallback() {
 }
 
 async function ShellTopbar() {
-  const [user, monthCash, unreadCount, notifications, scope, roster] =
+  const [user, monthCash, unreadCount, notifications, scope, roster, integrity] =
     await Promise.all([
       shellUser(),
       currentMonthCash(),
@@ -72,19 +75,27 @@ async function ShellTopbar() {
       recentNotifications(),
       getViewerScope(),
       loadRoster(),
+      unreviewedIntegrityBanner(),
     ]);
+  // Money alarms are the owners' — decided by the viewer's role (preview
+  // narrowing included), not by client scope: a manager with every lane in
+  // scope still doesn't review the agency's books.
+  const ownerView = integrity !== null && (await viewerRole()) === "admin";
   const prefs = await getPrefs(user?.email ?? null, ["avatar", "display-name"]);
   const avatarUrl =
     typeof prefs["avatar"] === "string" ? (prefs["avatar"] as string) : null;
   return (
-    <Topbar
-      roster={roster.map((c) => ({ slug: c.slug, name: c.name }))}
-      user={user}
-      monthCash={scope.restricted ? null : monthCash}
-      unreadCount={unreadCount}
-      notifications={notifications}
-      avatarUrl={avatarUrl}
-    />
+    <>
+      <Topbar
+        roster={roster.map((c) => ({ slug: c.slug, name: c.name }))}
+        user={user}
+        monthCash={scope.restricted ? null : monthCash}
+        unreadCount={unreadCount}
+        notifications={notifications}
+        avatarUrl={avatarUrl}
+      />
+      {ownerView && integrity && <IntegrityBanner model={integrity} />}
+    </>
   );
 }
 

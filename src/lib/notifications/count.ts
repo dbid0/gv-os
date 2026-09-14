@@ -1,9 +1,14 @@
 import "server-only";
 
-import { count, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, notifications } from "@/db/schema/app";
+import {
+  INTEGRITY_KINDS,
+  integrityBanner,
+  type IntegrityBannerModel,
+} from "@/lib/notifications/integrity";
 
 /** Unread badge count — fail-soft: the shell renders even if this read fails. */
 export async function unreadNotificationCount(): Promise<number> {
@@ -58,5 +63,36 @@ export async function recentNotifications(limit = 6): Promise<BellNotification[]
     }));
   } catch {
     return [];
+  }
+}
+
+/**
+ * Unreviewed money-integrity alerts as a banner model, or null. Fail-soft: a
+ * read error shows no banner rather than breaking the shell — the alerts are
+ * still in the bell and on the reconciliation page.
+ */
+export async function unreviewedIntegrityBanner(): Promise<IntegrityBannerModel | null> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: notifications.id,
+        kind: notifications.kind,
+        severity: notifications.severity,
+        title: notifications.title,
+        createdAt: notifications.createdAt,
+      })
+      .from(notifications)
+      .where(
+        and(
+          isNull(notifications.readAt),
+          inArray(notifications.kind, [...INTEGRITY_KINDS]),
+        ),
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+    return integrityBanner(rows);
+  } catch {
+    return null;
   }
 }
