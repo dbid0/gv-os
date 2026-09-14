@@ -6,7 +6,12 @@ import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { clients, clientTrackingRows, clientTrackingSyncs } from "@/db/schema/app";
 import type { TabScan } from "@/lib/tracking/scan";
-import { buildLeadSummaries, LEAD_TABS, type LeadSummary } from "@/lib/tracking/leads";
+import {
+  buildLeadSummaries,
+  LEAD_TABS,
+  type LeadEventInput,
+  type LeadSummary,
+} from "@/lib/tracking/leads";
 import {
   paymentKind,
   paymentLabel,
@@ -171,7 +176,11 @@ export async function rowsForTab(
  * Reads only the tabs that carry a lead email; the BOD/EOD tabs describe a
  * rep's day and are excluded at the query so they can't be joined by accident.
  */
-export async function leadsForClient(syncId: string): Promise<LeadSummary[]> {
+export async function leadsForClient(
+  syncId: string,
+  /** Lead events from outside the sheet (reports filed in GV OS), merged in. */
+  extraRows: LeadEventInput[] = [],
+): Promise<LeadSummary[]> {
   const db = getDb();
   const rows = await db
     .select({
@@ -197,7 +206,7 @@ export async function leadsForClient(syncId: string): Promise<LeadSummary[]> {
         inArray(clientTrackingRows.tab, LEAD_TABS),
       ),
     );
-  return buildLeadSummaries(rows);
+  return buildLeadSummaries([...rows, ...extraRows]);
 }
 
 /**
@@ -213,6 +222,8 @@ export async function leadByEmail(
   /** Extra inboxes that are the SAME person (the alias layer) — their rows
    * merge into one journey instead of splitting across pages. */
   aliasEmails: string[] = [],
+  /** Lead events from outside the sheet (reports filed in GV OS), merged in. */
+  extraRows: LeadEventInput[] = [],
 ): Promise<LeadSummary | null> {
   const wanted = email.trim().toLowerCase();
   if (wanted === "") return null;
@@ -245,9 +256,17 @@ export async function leadByEmail(
         inArray(clientTrackingRows.tab, LEAD_TABS),
       ),
     );
-  // The same builder as the list, so one lead's page and their row in the
-  // table can never disagree.
-  return buildLeadSummaries(rows)[0] ?? null;
+  const extras = extraRows.filter((r) =>
+    inboxes.includes((r.email ?? "").trim().toLowerCase()),
+  );
+  // Every inbox fetched here IS this person, so every row is keyed under the
+  // canonical email before building. The builder groups by email: without
+  // this, each alias inbox became its own summary and only one of them
+  // survived the [0] below — the page showed one inbox, not the person.
+  return (
+    buildLeadSummaries([...rows, ...extras].map((r) => ({ ...r, email: wanted })))[0] ??
+    null
+  );
 }
 
 /** EOD rows from the current snapshot, for the floor's activity picture. */

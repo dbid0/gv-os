@@ -15,7 +15,7 @@ import {
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
 import type { EocReport } from "@/lib/crm/confirmation-rates";
-import { activeEocReports } from "@/lib/calls/eoc-store";
+import { activeEocReports, appEocLeadRows } from "@/lib/calls/eoc-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import {
   applyTagRulesToFeed,
@@ -371,7 +371,10 @@ export async function loadOfferHome(
   // Funnel: the offer's lead-stitched stages, shaped to its offer model.
   const funnelLeads = snapshot
     ? {
-        leads: await leadsForClient(snapshot.syncId),
+        leads: await leadsForClient(
+          snapshot.syncId,
+          row ? await appEocLeadRows(row.id) : [],
+        ),
         stageKeys: stagesForModel(offerModelOf(row?.offerModel ?? null)),
       }
     : null;
