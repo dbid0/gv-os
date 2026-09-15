@@ -10,7 +10,7 @@ import { getClientReport } from "@/lib/clients/report";
 import { getViewerScope } from "@/lib/home/viewer-scope";
 import { scopeRowsToViewer } from "@/lib/home/visibility";
 import { loadRoster } from "@/lib/roster-server";
-import { listReps, listTeams } from "@/lib/sales/queries";
+import { listTeams } from "@/lib/sales/queries";
 
 export const metadata = { title: "Teams - GV OS" };
 export const dynamic = "force-dynamic";
@@ -29,11 +29,7 @@ export default async function SalesPage() {
   const roster = await loadRoster();
   // Whose offers this viewer may read. A rep is granted /sales for their own
   // leaderboard and commissions, but must not see other clients' books.
-  const [scope, teamsAll, reps] = await Promise.all([
-    getViewerScope(),
-    listTeams(),
-    listReps(),
-  ]);
+  const [scope, teamsAll] = await Promise.all([getViewerScope(), listTeams()]);
   const teams = scopeRowsToViewer(teamsAll, (t) => t.id, scope.allowed);
 
   const cashByTeam = new Map<string, number>();
@@ -60,12 +56,6 @@ export default async function SalesPage() {
     }),
   );
 
-  const repsByTeam = new Map<string, typeof reps>();
-  for (const r of reps) {
-    const list = repsByTeam.get(r.clientId) ?? [];
-    list.push(r);
-    repsByTeam.set(r.clientId, list);
-  }
   const ownerOf = (slug: string) => roster.find((c) => c.slug === slug)?.owner ?? null;
   const accentOf = (slug: string) =>
     roster.find((c) => c.slug === slug)?.accent ?? "var(--brand)";
@@ -108,8 +98,6 @@ export default async function SalesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {teams.map((team) => {
-            const teamReps = repsByTeam.get(team.id) ?? [];
-            const active = teamReps.filter((r) => r.status === "active").length;
             const goal = team.monthlyTargetCents ?? 0;
             const accent = accentOf(team.slug);
             const owner = ownerOf(team.slug);

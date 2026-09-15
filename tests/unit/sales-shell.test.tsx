@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Cents } from "@/lib/money";
 import { SalesTabs } from "@/components/sales/sales-tabs";
 import { SectionScaffold } from "@/components/sales/section-scaffold";
 import { navigation } from "@/components/shell/nav-config";

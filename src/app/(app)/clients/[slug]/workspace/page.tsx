@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { WorkspaceApp } from "@/components/workspace/workspace-app";
-import { getOrCreateHomePage, getTeamspaceTree } from "@/lib/workspace/queries";
+import { getTeamspaceTree } from "@/lib/workspace/queries";
 import { rosterClientBySlug } from "@/lib/roster-server";
 
 export const dynamic = "force-dynamic";

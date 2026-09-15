@@ -3,7 +3,7 @@ import "server-only";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { activityReports, clients, deals, reps } from "@/db/schema/app";
+import { activityReports, deals } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { type RepGamification } from "@/lib/gamification/engine";
 import { getRepGamification } from "@/lib/gamification/queries";

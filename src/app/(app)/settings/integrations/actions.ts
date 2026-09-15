@@ -11,7 +11,6 @@ import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
 import { connectIntegrationCore } from "@/lib/integrations/connect";
 import { PROVIDER_VALUES } from "@/lib/integrations/providers";
-import { syncProviderNow } from "@/lib/integrations/sync-on-connect";
 import { serverEnv } from "@/env.server";
 import { seal } from "@/lib/crypto/secretbox";
 
@@ -20,16 +19,6 @@ async function requireUser() {
   if (devAuthBypass()) return;
   const user = await currentUser();
   if (!user?.email || !isAllowed(user.email)) throw new Error("Not authorized.");
-}
-
-function requireKey(): string {
-  const key = serverEnv().CREDENTIALS_KEY;
-  if (!key) {
-    throw new Error(
-      "CREDENTIALS_KEY is not set in this environment — cannot store credentials.",
-    );
-  }
-  return key;
 }
 
 const connectInput = z.object({

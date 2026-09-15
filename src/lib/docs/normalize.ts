@@ -4,9 +4,6 @@
 
 type Payload = Record<string, unknown>;
 
-const asRecord = (v: unknown): Payload =>
-  typeof v === "object" && v !== null ? (v as Payload) : {};
-
 const asArray = (v: unknown): Payload[] =>
   Array.isArray(v)
     ? (v.filter((x) => typeof x === "object" && x !== null) as Payload[])

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, gte, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lte } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { activityLogs, callRecordings, integrations } from "@/db/schema/app";

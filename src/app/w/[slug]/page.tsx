@@ -31,7 +31,6 @@ import {
   normalizeHomeRange,
   rangeBounds,
 } from "@/lib/transactions/homepage";
-import { eq } from "drizzle-orm";
 import { dayKeyIn } from "@/lib/time/zone";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
