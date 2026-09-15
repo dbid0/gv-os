@@ -13,6 +13,7 @@ import {
   usdOf,
 } from "@/components/tracking/number-tiles";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExportCsv } from "@/components/ui/export-csv";
 import { WindowChips } from "@/components/ui/window-chips";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
@@ -26,6 +27,11 @@ import { DialingSection } from "@/components/tracking/dialing-section";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { loadOfferNumbers } from "@/lib/tracking/numbers-loader";
+import {
+  NUMBERS_CSV_HEADERS,
+  numbersCsvFilename,
+  numbersCsvRows,
+} from "@/lib/tracking/numbers-csv";
 import { personParam } from "@/lib/calls/person-filter";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 import { dayKeyIn } from "@/lib/time/zone";
@@ -78,7 +84,8 @@ export default async function WorkspaceNumbersPage({
 
   const range = readReportRange(sp.range);
   const now = new Date();
-  const bounds = reportBounds(range, dayKeyIn(now, tz));
+  const todayKey = dayKeyIn(now, tz);
+  const bounds = reportBounds(range, todayKey);
   const who = typeof sp.who === "string" ? sp.who : undefined;
   const hrefWith = (next: { range?: ReportRange; who?: string | null }) => {
     const q = new URLSearchParams();
@@ -123,6 +130,14 @@ export default async function WorkspaceNumbersPage({
     );
   }
 
+  const numbers = await loadOfferNumbers(
+    row.id,
+    row.countedCallSources ?? null,
+    range,
+    tz,
+    now,
+    who,
+  );
   const {
     totalBookings,
     calls: s,
@@ -131,20 +146,20 @@ export default async function WorkspaceNumbersPage({
     dialing,
     person,
     personOptions,
-  } = await loadOfferNumbers(
-    row.id,
-    row.countedCallSources ?? null,
-    range,
-    tz,
-    now,
-    who,
-  );
+  } = numbers;
 
   const filteredHeader = headerWith(
-    <PersonFilterSelect
-      options={personOptions}
-      value={person ? personParam(person) : ""}
-    />,
+    <>
+      <PersonFilterSelect
+        options={personOptions}
+        value={person ? personParam(person) : ""}
+      />
+      <ExportCsv
+        filename={numbersCsvFilename(slug, range, todayKey)}
+        headers={NUMBERS_CSV_HEADERS}
+        rows={numbersCsvRows(numbers)}
+      />
+    </>,
   );
   const personBanner = person ? (
     <div className="border-brand/40 bg-brand-soft/20 -mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs">
