@@ -14,6 +14,7 @@ import {
 } from "@/db/schema/app";
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
+import type { EocReport } from "@/lib/crm/confirmation-rates";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import { offerSpeedToLead } from "@/lib/crm/offer-stl";
 import { listCallLogs } from "@/lib/sales/call-queries";
@@ -42,6 +43,23 @@ import {
   type RangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+
+/** The end-of-call report columns every loader reads — one shape, one place. */
+const EOC_REPORT_COLUMNS = {
+  email: clientTrackingRows.email,
+  status: clientTrackingRows.status,
+  outcome: clientTrackingRows.outcome,
+  occurredAt: clientTrackingRows.occurredAt,
+};
+
+/** Emails with an end-of-call report on file (lowercased) — clears stuck calls. */
+function reportedEmailsOf(rows: { email: string | null }[]): Set<string> {
+  return new Set(
+    rows
+      .map((r) => r.email?.trim().toLowerCase())
+      .filter((e): e is string => Boolean(e)),
+  );
+}
 
 export type OfferSalesData = {
   metrics: OfferMetrics;
@@ -142,13 +160,14 @@ export async function loadOfferSales(
     label: string | null;
   }[] = [];
   let reportedEmails = new Set<string>();
+  let eocReports: EocReport[] | null = null;
   if (report?.clientId) {
     const snap = await currentSnapshot(report.clientId);
     if (snap) {
       const [{ deals: snapDeals }, eocRows] = await Promise.all([
         cashRowsForClient(snap.syncId),
         db
-          .select({ email: clientTrackingRows.email })
+          .select(EOC_REPORT_COLUMNS)
           .from(clientTrackingRows)
           .where(
             and(
@@ -162,11 +181,8 @@ export async function loadOfferSales(
         revenueCents: d.revenueCents,
         label: d.closeType,
       }));
-      reportedEmails = new Set(
-        eocRows
-          .map((r) => r.email?.trim().toLowerCase())
-          .filter((e): e is string => Boolean(e)),
-      );
+      reportedEmails = reportedEmailsOf(eocRows);
+      eocReports = eocRows;
     }
   }
 
@@ -185,6 +201,7 @@ export async function loadOfferSales(
       ),
       reportedEmails,
       confirmations,
+      eocReports,
       stl,
     },
     now,
@@ -305,11 +322,13 @@ export async function loadOfferHome(
       : Promise.resolve([]),
   ]);
 
-  // The outcomes that clear stuck calls — the sheet's EOC emails.
+  // The outcomes that clear stuck calls AND feed the confirmed-vs-unconfirmed
+  // rates — the sheet's end-of-call reports.
   let reportedEmails = new Set<string>();
+  let eocReports: EocReport[] | null = null;
   if (snapshot) {
     const eocRows = await db
-      .select({ email: clientTrackingRows.email })
+      .select(EOC_REPORT_COLUMNS)
       .from(clientTrackingRows)
       .where(
         and(
@@ -317,11 +336,8 @@ export async function loadOfferHome(
           eq(clientTrackingRows.tab, "eoc"),
         ),
       );
-    reportedEmails = new Set(
-      eocRows
-        .map((r) => r.email?.trim().toLowerCase())
-        .filter((e): e is string => Boolean(e)),
-    );
+    reportedEmails = reportedEmailsOf(eocRows);
+    eocReports = eocRows;
   }
 
   // Funnel: the offer's lead-stitched stages, shaped to its offer model.
@@ -403,6 +419,7 @@ export async function loadOfferHome(
       bookings: filterCountedBookings(bookingRows, row?.countedCallSources ?? null),
       reportedEmails,
       confirmations,
+      eocReports,
       stl: DISCONNECTED_STL,
       funnelLeads,
       mixWindow,

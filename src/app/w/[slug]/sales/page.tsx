@@ -22,6 +22,7 @@ import { displayName } from "@/lib/text";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { dispositionLabel } from "@/lib/sales/call-activity";
 import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
+import { ConfirmationSplitPanel } from "@/components/tracking/confirmation-split";
 import { RightNowPanel } from "@/components/tracking/right-now";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 
@@ -202,6 +203,10 @@ export default async function WorkspaceSalesPage({
         metrics.rightNow.stuck > 0 ||
         metrics.confirmation.ofBookings > 0) && (
         <RightNowPanel rightNow={metrics.rightNow} />
+      )}
+
+      {metrics.confirmation.ofBookings > 0 && (
+        <ConfirmationSplitPanel confirmation={metrics.confirmation} />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
