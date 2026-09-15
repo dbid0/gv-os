@@ -8,6 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { stuckCalls } from "@/lib/bookings/stuck";
 import { filterCountedBookings } from "@/lib/bookings/counted";
+import { bookingNotExcluded } from "@/lib/bookings/exclusions-store";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDb } from "@/db/client";
 import {
@@ -168,7 +169,7 @@ export default async function WorkspaceCrmPage({
           status: bookings.status,
         })
         .from(bookings)
-        .where(eq(bookings.clientId, clientId))
+        .where(and(eq(bookings.clientId, clientId), bookingNotExcluded))
         .limit(500),
       snapshot
         ? db
