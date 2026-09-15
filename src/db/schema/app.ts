@@ -2310,3 +2310,70 @@ export const mcpApiKeys = appSchema.table(
     check("mcp_api_keys_hash_check", sql`${table.keyHash} ~ '^[0-9a-f]{64}$'`),
   ],
 );
+
+/**
+ * Tags on a lead — the team's own labels ("hot", "needs-follow-up",
+ * "partner-referral") that no sheet or CRM column carries.
+ *
+ * Keyed by the lead's email, the one identifier every tracking tab shares,
+ * stored lowercased so a tag can't split across two spellings of one inbox.
+ * Tags are slugs (lowercase letters, digits, dashes) so the filter chips and
+ * usage counts never show "Hot" and "hot" as two tags. A tag is an ops label:
+ * nothing about money or the counted metrics reads it.
+ */
+export const leadTags = appSchema.table(
+  "lead_tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    leadEmail: text("lead_email").notNull(),
+    tag: text("tag").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("lead_tags_client_email_tag_key").on(
+      table.clientId,
+      table.leadEmail,
+      table.tag,
+    ),
+    index("lead_tags_client_tag_idx").on(table.clientId, table.tag),
+    check(
+      "lead_tags_email_check",
+      sql`${table.leadEmail} = lower(trim(${table.leadEmail})) and position('@' in ${table.leadEmail}) > 1`,
+    ),
+    check("lead_tags_tag_check", sql`${table.tag} ~ '^[a-z0-9][a-z0-9-]{0,31}$'`),
+  ],
+);
+
+/**
+ * Saved views on the Leads list — a named filter set the whole offer's team
+ * can open in one click ("Applied, never booked", "Tagged hot").
+ *
+ * `query` is the Leads page query string the view reopens, normalized by
+ * lib/tracking/lead-views.ts, so a view can only ever hold filters the page
+ * understands. Names are unique per offer regardless of case.
+ */
+export const leadViews = appSchema.table(
+  "lead_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    name: text("name").notNull(),
+    query: text("query").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("lead_views_client_name_key").on(
+      table.clientId,
+      sql`lower(${table.name})`,
+    ),
+    check("lead_views_name_check", sql`length(trim(${table.name})) between 1 and 40`),
+    check("lead_views_query_check", sql`length(${table.query}) <= 500`),
+  ],
+);
