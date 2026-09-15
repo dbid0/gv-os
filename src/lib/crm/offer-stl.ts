@@ -2,7 +2,7 @@ import "server-only";
 
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import { and as andOp, eq as eqOp } from "drizzle-orm";
 
@@ -56,6 +56,9 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
     .select({ status: integrations.status })
     .from(integrations)
     .where(and(eq(integrations.provider, "close"), eq(integrations.clientId, clientId)))
+    // More than one Close row can exist (a revoked one beside the live one):
+    // the connected row wins.
+    .orderBy(sql`(${integrations.status} = 'connected') desc`)
     .limit(1);
   const connected = conn?.status === "connected";
   if (!connected) {
