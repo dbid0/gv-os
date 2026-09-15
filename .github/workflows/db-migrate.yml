@@ -1,0 +1,112 @@
+name: db-migrate
+
+# Applies pending drizzle migrations to STAGING or PRODUCTION from GitHub's
+# cloud, so a migration no longer depends on one laptop holding the database
+# URLs. Manual only: only someone with write access to the repo can start it,
+# and a fork's pull request can never reach these secrets.
+#
+# Three guards, because this is the one workflow that alters the live schema:
+#   1. `confirm` must repeat `target` exactly (no fat-fingered production run).
+#   2. `expect_latest` must equal the NEWEST migration tag in the checked-out
+#      ref (e.g. 0065_payment_tag_rules). drizzle applies EVERY pending
+#      migration in ./drizzle, so this pins exactly how far the schema moves.
+#   3. Code that reads a new table must never deploy ahead of it — run this at
+#      the BRANCH that adds the migration, before merging it, staging first.
+#
+# Usage (from any machine with gh logged in):
+#   gh workflow run db-migrate.yml -f target=staging -f confirm=staging \
+#     -f ref=nb/01-payment-tag-rules -f expect_latest=0065_payment_tag_rules
+#   gh run watch
+#
+# One-time setup — repo secrets (Settings → Secrets and variables → Actions),
+# SESSION POOLER strings (port 5432, not the 6543 transaction pooler, which is
+# unreliable for DDL):
+#   STAGING_MIGRATION_DATABASE_URL
+#   PROD_MIGRATION_DATABASE_URL
+# Nothing about the connection is ever printed: only migration tags and counts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which database"
+        required: true
+        type: choice
+        options: [staging, production]
+      confirm:
+        description: "Type the target again to confirm"
+        required: true
+        type: string
+      ref:
+        description: "Branch, tag or SHA whose ./drizzle folder to apply"
+        required: true
+        default: main
+        type: string
+      expect_latest:
+        description: "Newest migration tag you expect at that ref, e.g. 0065_payment_tag_rules"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: migrate ${{ inputs.target }} @ ${{ inputs.ref }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Guard — confirmation matches target
+        if: ${{ inputs.confirm != inputs.target }}
+        run: |
+          echo "::error::confirm ('${{ inputs.confirm }}') must equal target ('${{ inputs.target }}'). Nothing was applied."
+          exit 1
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Select connection
+        env:
+          STAGING_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+          PROD_URL: ${{ secrets.PROD_MIGRATION_DATABASE_URL }}
+        run: |
+          if [ "${{ inputs.target }}" = "production" ]; then URL="$PROD_URL"; NAME=PROD_MIGRATION_DATABASE_URL; else URL="$STAGING_URL"; NAME=STAGING_MIGRATION_DATABASE_URL; fi
+          if [ -z "$URL" ]; then
+            echo "::error::Repo secret $NAME is not set. Add the SESSION POOLER connection string (port 5432) under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "::add-mask::$URL"
+          echo "MIGRATION_DATABASE_URL=$URL" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Guard — newest migration at this ref is the expected one
+        run: |
+          LATEST=$(node -e 'const j=require("./drizzle/meta/_journal.json");console.log(j.entries[j.entries.length-1].tag)')
+          echo "newest migration at ${{ inputs.ref }}: $LATEST"
+          if [ "$LATEST" != "${{ inputs.expect_latest }}" ]; then
+            echo "::error::expect_latest is '${{ inputs.expect_latest }}' but the newest migration at this ref is '$LATEST'. Nothing was applied."
+            exit 1
+          fi
+
+      - name: Before — applied vs pending
+        run: node scripts/migration-status.mjs
+
+      - name: Apply
+        run: npm run db:migrate
+
+      - name: After — nothing pending at this ref
+        run: node scripts/migration-status.mjs --require-none-pending
