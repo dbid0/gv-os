@@ -249,6 +249,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Report windows: which days a re-cut table reads. Pure, fully covered.
+        "src/lib/tracking/report-window.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The source funnel: who belongs to which source, reconciling to the
         // total. Pure, fully covered.
         "src/lib/tracking/source-funnel.ts": {

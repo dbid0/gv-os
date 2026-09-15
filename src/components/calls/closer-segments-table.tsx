@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { CloserSegment, CloserSegments } from "@/lib/calls/closer-segments";
 import { cn } from "@/lib/utils";
 
@@ -30,56 +32,72 @@ function Row({ s, total = false }: { s: CloserSegment; total?: boolean }) {
  * rows add up to the total line — calls nobody has reported on, or whose
  * report names no closer, get their own rows instead of vanishing.
  */
-export function CloserSegmentsTable({ segments }: { segments: CloserSegments }) {
-  if (segments.total.held === 0) return null;
+export function CloserSegmentsTable({
+  segments,
+  windowChips,
+}: {
+  segments: CloserSegments;
+  /** The date-window control, rendered in the panel header. */
+  windowChips?: ReactNode;
+}) {
+  if (segments.total.held === 0 && !windowChips) return null;
   return (
     <section aria-labelledby="by-closer" className="bg-card rounded-xl border">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-3 pb-2">
-        <h2 id="by-closer" className="text-sm font-medium">
-          By closer
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="by-closer" className="text-sm font-medium">
+            By closer
+          </h2>
+          {windowChips}
+        </div>
         <p className="text-faint text-[11px]">
           Held calls only. Show rate = shows ÷ (shows + no-shows); close rate = closes ÷
           shows.
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[34rem] text-sm">
-          <thead className="text-faint border-y text-[11px] tracking-wider whitespace-nowrap uppercase">
-            <tr>
-              <th scope="col" className="px-4 py-2 text-left font-medium">
-                Closer
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                Held
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                Shows
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                No-shows
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                Closes
-              </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">
-                Show rate
-              </th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">
-                Close rate
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {segments.rows.map((s) => (
-              <Row key={s.closer} s={s} />
-            ))}
-          </tbody>
-          <tfoot className="border-t">
-            <Row s={segments.total} total />
-          </tfoot>
-        </table>
-      </div>
+      {segments.total.held === 0 ? (
+        <p className="text-faint border-t px-4 py-6 text-center text-sm">
+          No held calls in this window.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[34rem] text-sm">
+            <thead className="text-faint border-y text-[11px] tracking-wider whitespace-nowrap uppercase">
+              <tr>
+                <th scope="col" className="px-4 py-2 text-left font-medium">
+                  Closer
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Held
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Shows
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  No-shows
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Closes
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Show rate
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">
+                  Close rate
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {segments.rows.map((s) => (
+                <Row key={s.closer} s={s} />
+              ))}
+            </tbody>
+            <tfoot className="border-t">
+              <Row s={segments.total} total />
+            </tfoot>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

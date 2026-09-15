@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { applications, utmLinks } from "@/db/schema/app";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
+import type { RangeBounds } from "@/lib/transactions/homepage";
 import {
   sourceFunnel,
   type SourceDimension,
@@ -30,6 +31,7 @@ export async function loadSourceFunnel(
   countedCallSources: string[] | null,
   dimension: SourceDimension,
   now: Date,
+  window?: RangeBounds,
 ): Promise<SourceFunnelData> {
   const db = getDb();
   const [links, apps, aliases] = await Promise.all([
@@ -58,7 +60,14 @@ export async function loadSourceFunnel(
   ]);
   const { log } = await loadCallLog(clientId, countedCallSources, now);
   return {
-    funnel: sourceFunnel({ links, applications: apps, calls: log, dimension, aliases }),
+    funnel: sourceFunnel({
+      links,
+      applications: apps,
+      calls: log,
+      dimension,
+      aliases,
+      window,
+    }),
     applications: apps.length,
     taggedApplications: apps.filter((a) => a.utmSource || a.utmMedium || a.utmCampaign)
       .length,
