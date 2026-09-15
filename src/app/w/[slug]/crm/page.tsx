@@ -2,7 +2,7 @@ import Link from "next/link";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { AlertTriangle, Kanban, PhoneOff } from "lucide-react";
 import { notFound } from "next/navigation";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -92,6 +92,12 @@ export default async function WorkspaceCrmPage({
               eq(integrations.provider, "close"),
               eq(integrations.clientId, clientId),
             ),
+          )
+          // A client can hold more than one Close row (a revoked one beside the
+          // live one); the connected row must win, not whichever Postgres returns.
+          .orderBy(
+            sql`(${integrations.status} = 'connected') desc`,
+            desc(integrations.lastSyncAt),
           )
           .limit(1)
       : Promise.resolve([]),

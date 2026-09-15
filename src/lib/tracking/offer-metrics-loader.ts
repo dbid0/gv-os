@@ -143,7 +143,11 @@ export async function loadOfferSales(
               ),
             )
             .orderBy(desc(applications.createdAt))
-            .limit(100)
+            // The whole 30-day window: the page's per-day chart and its
+            // "N in window" count read this list, so a 100-row cap flattened
+            // any month past 100 applications to 100. The bound only guards
+            // against a runaway table.
+            .limit(5000)
         : Promise.resolve([]),
       // Client filter pushed into SQL (activity_logs_client_idx / deals_client_idx)
       // instead of loading every client's rows and filtering in JS. A null offer
