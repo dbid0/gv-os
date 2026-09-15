@@ -4,6 +4,7 @@ import { CalendarClock, CheckCircle2 } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
 import { getDb } from "@/db/client";
 import { bookings } from "@/db/schema/app";
+import { bookingNotExcluded } from "@/lib/bookings/exclusions-store";
 import { confirmedBeforeCall } from "@/lib/crm/confirmation";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
@@ -39,6 +40,7 @@ export async function UpcomingCalls({
           eq(bookings.clientId, clientId),
           eq(bookings.status, "booked"),
           gt(bookings.startsAt, now),
+          bookingNotExcluded,
         ),
       )
       .orderBy(asc(bookings.startsAt))

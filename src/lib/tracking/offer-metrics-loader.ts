@@ -1,6 +1,7 @@
 import "server-only";
 
 import { filterCountedBookings } from "@/lib/bookings/counted";
+import { bookingNotExcluded } from "@/lib/bookings/exclusions-store";
 
 import { and, desc, eq, gte } from "drizzle-orm";
 
@@ -167,7 +168,7 @@ export async function loadOfferSales(
               status: bookings.status,
             })
             .from(bookings)
-            .where(eq(bookings.clientId, clientId))
+            .where(and(eq(bookings.clientId, clientId), bookingNotExcluded))
             .limit(500)
         : Promise.resolve([]),
       clientId ? listConfirmations(clientId) : Promise.resolve([]),
@@ -332,7 +333,7 @@ export async function loadOfferHome(
             status: bookings.status,
           })
           .from(bookings)
-          .where(eq(bookings.clientId, row.id))
+          .where(and(eq(bookings.clientId, row.id), bookingNotExcluded))
           .limit(500)
       : Promise.resolve([]),
     row ? listConfirmations(row.id) : Promise.resolve([]),

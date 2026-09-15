@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { bookings, clientTrackingRows } from "@/db/schema/app";
 import { filterCountedBookings } from "@/lib/bookings/counted";
+import { excludedBookingIds } from "@/lib/bookings/exclusions-store";
 import {
   buildCallLog,
   countByState,
@@ -35,7 +36,7 @@ export async function loadCallLog(
 ): Promise<CallLogData> {
   const db = getDb();
   const snapshot = await currentSnapshot(clientId);
-  const [bookingRows, confirmations, filed, sheet] = await Promise.all([
+  const [bookingRows, confirmations, filed, sheet, excluded] = await Promise.all([
     db
       .select({
         id: bookings.id,
@@ -77,9 +78,14 @@ export async function loadCallLog(
             ),
           )
       : Promise.resolve([]),
+    excludedBookingIds(clientId),
   ]);
 
-  const counted = filterCountedBookings(bookingRows, countedCallSources);
+  // Bookings someone took out of the numbers leave the log (they sit in the
+  // restore bin), but still count as "this offer has a calendar".
+  const counted = filterCountedBookings(bookingRows, countedCallSources).filter(
+    (b) => !excluded.has(b.id),
+  );
   const log = buildCallLog({ bookings: counted, confirmations, filed, sheet, now });
   return { totalBookings: bookingRows.length, log, counts: countByState(log) };
 }
