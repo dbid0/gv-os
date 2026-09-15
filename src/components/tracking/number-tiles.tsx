@@ -20,7 +20,7 @@ export const usdOf = (cents: number | null): string =>
     : (cents / 100).toLocaleString("en-US", {
         style: "currency",
         currency: "USD",
-        maximumFractionDigits: Math.abs(cents) >= 100_000 ? 0 : 2,
+        maximumFractionDigits: Math.abs(cents) >= 10_000_000 ? 0 : 2,
       });
 
 export function NumberSection({

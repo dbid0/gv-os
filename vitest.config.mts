@@ -292,6 +292,14 @@ export default defineConfig({
         // Every call number an offer shows (verdicts, confirmation, close
         // types, money reported on calls) — pure, fully covered.
         // Dialing at three grains (dial, attempt, person) from Close's calls.
+        // Every cash number the payment feed answers; its collected cash must
+        // equal the dashboard headline (tested). Money-adjacent: fully covered.
+        "src/lib/tracking/cash-catalog.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/crm/dialing-detail.ts": {
           statements: 100,
           branches: 100,
