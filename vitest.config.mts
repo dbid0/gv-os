@@ -249,6 +249,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The source funnel: who belongs to which source, reconciling to the
+        // total. Pure, fully covered.
+        "src/lib/tracking/source-funnel.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The call calendar: which week, which day each call sits on.
         // Pure, fully covered.
         "src/lib/calls/call-week.ts": {

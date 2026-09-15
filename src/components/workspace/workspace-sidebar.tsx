@@ -20,6 +20,7 @@ import {
   BarChart3,
   Users,
   type LucideIcon,
+  Waypoints,
 } from "lucide-react";
 
 import { usePersistedRecord } from "@/lib/client-state";
@@ -67,6 +68,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       // Tracking below), so it is admin-only in both nav and page gate.
       { label: "Pipeline", icon: Columns3, path: "/pipeline", adminOnly: true },
       { label: "Calls", icon: PhoneCall, path: "/calls", adminOnly: true },
+      { label: "Sources", icon: Waypoints, path: "/sources", adminOnly: true },
       { label: "Sales", icon: BarChart3, path: "/sales" },
     ],
   },
