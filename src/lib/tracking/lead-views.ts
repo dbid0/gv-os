@@ -161,8 +161,11 @@ export function filterLeads(
     out = out.filter((l) => tags.get(l.email.toLowerCase())?.includes(tag) ?? false);
   }
   if (f.rep) {
-    const canonical = canonicalRepNames(leads.flatMap((l) => l.reps));
-    const wanted = f.rep.toLowerCase();
+    // The wanted name joins the merge, so a rep's full name ("Sam Carter",
+    // from their rep record) finds rows typed as just "Sam" when that's
+    // unambiguous.
+    const canonical = canonicalRepNames([...leads.flatMap((l) => l.reps), f.rep]);
+    const wanted = (canonical.get(f.rep.trim().toLowerCase()) as string).toLowerCase();
     out = out.filter((l) =>
       l.reps.some((r) => {
         // Lead reps are trimmed and non-blank, so every one is in the map.
