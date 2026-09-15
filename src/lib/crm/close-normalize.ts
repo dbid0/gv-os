@@ -115,3 +115,45 @@ export function phoneFromCloseLead(payload: Record<string, unknown>): string | n
   }
   return null;
 }
+
+export type DispositionCensus = {
+  /** Call activities seen. */
+  calls: number;
+  /** Of those, how many carried a disposition at all. */
+  withDisposition: number;
+  /** How often each disposition value appeared. */
+  values: Record<string, number>;
+};
+
+const DISPOSITION_SHAPE = /^[a-z0-9_-]{1,32}$/;
+const MAX_DISPOSITION_VALUES = 20;
+
+/**
+ * Which dispositions Close's call payloads actually carry. The dialing numbers
+ * read `disposition` ("answered", "no-answer", "vm-left"…); this tallies what
+ * arrives, so the vocabulary is checked against real data rather than
+ * assumed. Safe to log: only short word-like values are counted by name, and
+ * anything else (free text, oversized, beyond the first 20 distinct) is
+ * counted as "(other)". Call payloads carry no personal data in this field.
+ */
+export function dispositionCensus(rows: Payload[]): DispositionCensus {
+  const census: DispositionCensus = {
+    calls: rows.length,
+    withDisposition: 0,
+    values: {},
+  };
+  for (const row of rows) {
+    const raw = str(row.disposition);
+    if (!raw) continue;
+    census.withDisposition += 1;
+    const value = raw.toLowerCase();
+    const named =
+      DISPOSITION_SHAPE.test(value) &&
+      (value in census.values ||
+        Object.keys(census.values).filter((k) => k !== "(other)").length <
+          MAX_DISPOSITION_VALUES);
+    const key = named ? value : "(other)";
+    census.values[key] = (census.values[key] ?? 0) + 1;
+  }
+  return census;
+}
