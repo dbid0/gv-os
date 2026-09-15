@@ -202,7 +202,7 @@ export type TagRuleInput = {
   tag: string;
   matchField: string;
   matchOp: string;
-  /** For amount ops this is DOLLARS as typed ("997", "1,500.00"). */
+  /** For amount ops this is DOLLARS as typed ("250", "1,500.00"). */
   matchValue: string;
   countsAsRevenue: boolean;
   countsAsOptin: boolean;
@@ -267,7 +267,7 @@ export function validateTagRule(input: TagRuleInput): TagRuleValidation {
   if (isAmountField) {
     const cents = dollarsToCents(matchValue);
     if (cents === null) {
-      errors.push("Write the amount as dollars, like 997 or 1,500.00.");
+      errors.push("Write the amount as dollars, like 250 or 1,500.00.");
     } else {
       matchValue = String(cents);
     }
