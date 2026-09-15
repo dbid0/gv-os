@@ -25,7 +25,7 @@ export function validateProgram(input: ProgramInput): ProgramValidation {
       minPaymentCents = value;
     } catch {
       errors.push(
-        "Write the student minimum as a dollar amount above zero, like 997, or leave it blank so any payment counts.",
+        "Write the student minimum as a dollar amount above zero, like 1,500, or leave it blank so any payment counts.",
       );
     }
   }
