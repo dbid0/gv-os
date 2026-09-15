@@ -127,6 +127,7 @@ export default async function WorkspaceCrmPage({
               gte(applications.createdAt, since),
             ),
           )
+          .orderBy(desc(applications.createdAt))
           .limit(500)
       : Promise.resolve([]),
   ]);
@@ -172,6 +173,7 @@ export default async function WorkspaceCrmPage({
         })
         .from(bookings)
         .where(and(eq(bookings.clientId, clientId), bookingNotExcluded))
+        .orderBy(desc(bookings.startsAt))
         .limit(500),
       snapshot
         ? db

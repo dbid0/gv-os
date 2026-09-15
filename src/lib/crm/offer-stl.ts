@@ -2,7 +2,7 @@ import "server-only";
 
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 
-import { and, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 
 import { and as andOp, eq as eqOp } from "drizzle-orm";
 
@@ -82,6 +82,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
       .where(
         and(eq(applications.clientId, clientId), gte(applications.createdAt, since)),
       )
+      .orderBy(desc(applications.createdAt))
       .limit(500),
     db
       .select({
@@ -96,6 +97,8 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
         // applicant was EVER dialled, and the capture horizon is the real limit.
         and(eq(crmActivity.clientId, clientId), eq(crmActivity.kind, "call")),
       )
+      // Newest first: the applicants measured are recent, so are their dials.
+      .orderBy(desc(crmActivity.occurredAt))
       .limit(1000),
   ]);
 
@@ -120,6 +123,7 @@ export async function offerSpeedToLead(clientId: string): Promise<OfferStl> {
             eqOp(clientTrackingRows.tab, "applications"),
           ),
         )
+        .orderBy(desc(clientTrackingRows.occurredAt))
         .limit(2000);
       apps = mirrored
         .filter((m) => (m.email !== null || m.phone !== null) && m.occurredAt !== null)

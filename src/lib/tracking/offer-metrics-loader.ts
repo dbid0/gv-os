@@ -170,6 +170,8 @@ export async function loadOfferSales(
             })
             .from(bookings)
             .where(and(eq(bookings.clientId, clientId), bookingNotExcluded))
+            // Newest first: past the cap, the recent calls are the ones that count.
+            .orderBy(desc(bookings.startsAt))
             .limit(500)
         : Promise.resolve([]),
       clientId ? listConfirmations(clientId) : Promise.resolve([]),
@@ -337,6 +339,7 @@ export async function loadOfferHome(
           })
           .from(bookings)
           .where(and(eq(bookings.clientId, row.id), bookingNotExcluded))
+          .orderBy(desc(bookings.startsAt))
           .limit(500)
       : Promise.resolve([]),
     row ? listConfirmations(row.id) : Promise.resolve([]),
