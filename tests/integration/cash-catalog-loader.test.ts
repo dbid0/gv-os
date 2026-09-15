@@ -73,7 +73,12 @@ describe.skipIf(!databaseUrl)("loadCashCatalog", () => {
     await feed(clientId, "stripe", [
       { email: "a@example.test", cents: 100_000, at: "2026-09-10T15:30:00Z" },
       { email: "b@example.test", cents: 50_000, at: "2026-09-11T15:30:00Z" },
-      { email: "ops@example.test", cents: 100, at: "2026-09-12T15:30:00Z", notes: "TEST" },
+      {
+        email: "ops@example.test",
+        cents: 100,
+        at: "2026-09-12T15:30:00Z",
+        notes: "TEST",
+      },
     ]);
     await sql`
       insert into app.payment_tag_rules (client_id, tag, match_field, match_op, match_value, exclude)
