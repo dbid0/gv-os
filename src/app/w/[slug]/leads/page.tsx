@@ -16,6 +16,7 @@ import { clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { viewerRole } from "@/lib/auth/viewer";
+import { viewerRepFor } from "@/lib/auth/viewer-rep";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { listLeadTags, listLeadViews } from "@/lib/tracking/lead-tags-store";
 import {
@@ -101,11 +102,12 @@ export default async function WorkspaceLeadsPage({
     );
   }
 
-  const [appRows, aliases, tagRows, views] = await Promise.all([
+  const [appRows, aliases, tagRows, views, myRep] = await Promise.all([
     appEocLeadRows(row.id),
     aliasMapForClient(row.id),
     opsView ? listLeadTags(row.id) : Promise.resolve([]),
     opsView ? listLeadViews(row.id) : Promise.resolve([]),
+    opsView ? viewerRepFor(row.id) : Promise.resolve(null),
   ]);
   const all = await leadsForClient(snapshot.syncId, appRows, aliases);
   const tags = tagsByLead(tagRows, aliases);
@@ -226,6 +228,19 @@ export default async function WorkspaceLeadsPage({
               >
                 Filter
               </button>
+              {myRep && (
+                <Link
+                  href={`/w/${slug}/leads?${leadFiltersQuery({ ...NO_FILTERS, rep: myRep.name })}`}
+                  aria-current={
+                    filters.rep?.toLowerCase() === myRep.name.toLowerCase()
+                      ? "true"
+                      : undefined
+                  }
+                  className="text-brand text-xs hover:underline"
+                >
+                  My leads
+                </Link>
+              )}
               {filtered && (
                 <Link
                   href={`/w/${slug}/leads`}
