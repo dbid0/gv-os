@@ -52,17 +52,19 @@ export async function loadOfferNumbers(
 ): Promise<OfferNumbers> {
   const todayKey = dayKeyIn(now, timeZone);
   const bounds = reportBounds(range, todayKey);
-  const [{ log, totalBookings }, cash] = await Promise.all([
-    loadCallLog(clientId, countedCallSources, now),
-    loadCashCatalog(clientId, bounds, todayKey, timeZone),
-  ]);
+  // Three small bursts, never one big one. The db pool's law: when in-flight
+  // queries outrun the pool, postgres-js pipelines the overflow and the
+  // transaction pooler never answers, so the page hangs instead of slowing.
+  // Peak per burst: call log 5 · cash catalog 5 + dialing 2 = 7 · applications 4.
+  const { log, totalBookings } = await loadCallLog(clientId, countedCallSources, now);
   const options = personOptions(log);
   const person = readPersonFilter(who, options);
-  const [applications, dialing] = await Promise.all([
-    // Applications aren't anyone's, so they always read the whole offer.
-    loadApplicationNumbers(clientId, log, bounds, timeZone),
+  const [cash, dialing] = await Promise.all([
+    loadCashCatalog(clientId, bounds, todayKey, timeZone),
     loadDialing(clientId, bounds, timeZone, person?.name ?? null),
   ]);
+  // Applications aren't anyone's, so they always read the whole offer.
+  const applications = await loadApplicationNumbers(clientId, log, bounds, timeZone);
   const calls = person ? filterLogByPerson(log, person) : log;
   return {
     bounds,
