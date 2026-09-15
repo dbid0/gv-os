@@ -18,8 +18,6 @@ export function OfferFunnelPanel({
   funnel: OfferFunnel;
   slug: string;
 }) {
-  const widest = Math.max(...funnel.stages.map((s) => s.leads), 1);
-
   return (
     <div className="space-y-4">
       <FunnelGraph funnel={funnel} />

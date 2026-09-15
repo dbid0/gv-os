@@ -1,14 +1,9 @@
 import "server-only";
 
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import {
-  clientColumnMap,
-  clients,
-  clientTrackingRows,
-  clientTrackingSyncs,
-} from "@/db/schema/app";
+import { clientColumnMap, clients } from "@/db/schema/app";
 import { readSheetTitles, readSheetValues } from "@/lib/google/sheets";
 import type { LearnedAlias } from "@/lib/tracking/fields";
 import { writeSourceSnapshot } from "@/lib/tracking/ingest";
