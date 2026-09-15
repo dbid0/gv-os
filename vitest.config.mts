@@ -291,6 +291,13 @@ export default defineConfig({
         // total. Pure, fully covered.
         // Every call number an offer shows (verdicts, confirmation, close
         // types, money reported on calls) — pure, fully covered.
+        // Dialing at three grains (dial, attempt, person) from Close's calls.
+        "src/lib/crm/dialing-detail.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/calls/call-scoreboard.ts": {
           statements: 100,
           branches: 100,
