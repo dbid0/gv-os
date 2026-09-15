@@ -1,6 +1,7 @@
 import "server-only";
 
 import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db/client";
 import { bookings, callEocReports, reps } from "@/db/schema/app";
@@ -98,6 +99,7 @@ export async function activeEocReports(clientId: string): Promise<EocReport[]> {
 /** Active reports with the booking each was filed against (null when unbooked). */
 export async function activeFiledReports(clientId: string): Promise<FiledReport[]> {
   const db = getDb();
+  const setters = alias(reps, "setter_reps");
   const rows = await db
     .select({
       leadEmail: callEocReports.leadEmail,
@@ -105,13 +107,22 @@ export async function activeFiledReports(clientId: string): Promise<FiledReport[
       callAt: callEocReports.callAt,
       bookingId: callEocReports.bookingId,
       closerName: reps.name,
+      setterName: setters.name,
+      closeType: callEocReports.closeType,
+      cashCollectedCents: callEocReports.cashCollectedCents,
+      contractValueCents: callEocReports.contractValueCents,
     })
     .from(callEocReports)
     .leftJoin(reps, eq(reps.id, callEocReports.closerRepId))
+    .leftJoin(setters, eq(setters.id, callEocReports.setterRepId))
     .where(and(eq(callEocReports.clientId, clientId), isNull(callEocReports.voidedAt)));
   return rows.map((r) => ({
     ...eocAsReport(r),
     rep: r.closerName,
+    setter: r.setterName,
+    closeType: r.closeType,
+    cashCents: r.cashCollectedCents,
+    revenueCents: r.contractValueCents,
     bookingId: r.bookingId,
   }));
 }

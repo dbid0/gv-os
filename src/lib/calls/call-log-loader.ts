@@ -14,6 +14,12 @@ import {
 } from "@/lib/calls/call-log";
 import { activeFiledReports } from "@/lib/calls/eoc-store";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
+import type { EocReport } from "@/lib/crm/confirmation-rates";
+import {
+  CLOSE_TYPE_HEADERS,
+  payloadField,
+  SETTER_HEADERS,
+} from "@/lib/tracking/payload-fields";
 import { currentSnapshot } from "@/lib/tracking/queries";
 
 export type CallLogData = {
@@ -69,6 +75,9 @@ export async function loadCallLog(
             outcome: clientTrackingRows.outcome,
             occurredAt: clientTrackingRows.occurredAt,
             rep: clientTrackingRows.rep,
+            cashCents: clientTrackingRows.cashCents,
+            revenueCents: clientTrackingRows.revenueCents,
+            payload: clientTrackingRows.payload,
           })
           .from(clientTrackingRows)
           .where(
@@ -86,6 +95,18 @@ export async function loadCallLog(
   const counted = filterCountedBookings(bookingRows, countedCallSources).filter(
     (b) => !excluded.has(b.id),
   );
-  const log = buildCallLog({ bookings: counted, confirmations, filed, sheet, now });
+  // The setter and close type live in the sheet row's payload by header name.
+  const sheetReports: EocReport[] = sheet.map(({ payload, ...r }) => ({
+    ...r,
+    setter: payloadField(payload, SETTER_HEADERS),
+    closeType: payloadField(payload, CLOSE_TYPE_HEADERS),
+  }));
+  const log = buildCallLog({
+    bookings: counted,
+    confirmations,
+    filed,
+    sheet: sheetReports,
+    now,
+  });
   return { totalBookings: bookingRows.length, log, counts: countByState(log) };
 }
