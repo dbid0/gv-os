@@ -19,6 +19,7 @@ function row(extra: Partial<CallLogRow>): CallLogRow {
     rescheduled: false,
     state: "reported",
     confirmation: "none",
+    confirmedRole: null,
     outcome: "showed",
     outcomeWords: "follow up",
     reportSource: "sheet",
@@ -180,6 +181,71 @@ describe("callScoreboard", () => {
     expect(s.newCalls).toBe(2); // 12, 13
     expect(s.newUpcoming).toBe(1);
     expect(s.newStuck).toBe(1);
+  });
+
+  it("breaks confirmed calls down by the seat that confirmed them", () => {
+    expect(s.confirmedThenCancelled).toBe(1); // #9
+    expect(s.byConfirmer).toEqual([
+      {
+        key: "unstated",
+        calls: 6,
+        cancelled: 1,
+        held: 4, // 1 closed · 4 no-close · 6 no-show · 14 awaiting a report
+        shows: 2,
+        noShows: 1,
+        closes: 1,
+        showRate: (2 / 3) * 100,
+        closeRate: 50,
+      },
+      {
+        key: "none",
+        calls: 8,
+        cancelled: 1,
+        held: 5, // 2, 3 closed · 5 DQ · 7 no-show · 13 stuck
+        shows: 3,
+        noShows: 1,
+        closes: 2,
+        showRate: 75,
+        closeRate: (2 / 3) * 100,
+      },
+    ]);
+    // The seats re-cut the same held calls.
+    expect(s.byConfirmer.reduce((n, r) => n + r.held, 0)).toBe(s.held);
+  });
+
+  it("names the seat when the confirmation records one", () => {
+    const seats = callScoreboard(
+      [
+        row({ confirmation: "in_time", confirmedRole: "dialer", outcome: "closed" }),
+        row({ confirmation: "in_time", confirmedRole: "dialer", outcome: "no_show" }),
+        row({ confirmation: "in_time", confirmedRole: "setter", outcome: "showed" }),
+        row({
+          confirmation: "in_time",
+          confirmedRole: "dm_setter",
+          state: "upcoming",
+          outcome: null,
+          outcomeWords: null,
+        }),
+        // Confirmed only after it started: not a confirmation, so no seat.
+        row({
+          confirmation: "after_start",
+          confirmedRole: "setter",
+          outcome: "closed",
+        }),
+      ],
+      ALL,
+      TZ,
+    );
+    expect(seats.byConfirmer.map((r) => [r.key, r.calls, r.held, r.closes])).toEqual([
+      ["setter", 1, 1, 0],
+      ["dialer", 2, 2, 1],
+      ["dm_setter", 1, 0, 0],
+      ["none", 1, 1, 1],
+    ]);
+    const dialer = seats.byConfirmer.find((r) => r.key === "dialer")!;
+    expect(dialer.showRate).toBe(50);
+    expect(dialer.closeRate).toBe(100);
+    expect(seats.byConfirmer.find((r) => r.key === "dm_setter")!.showRate).toBeNull();
   });
 
   it("splits verdicts so shows = closes + no-closes + disqualified", () => {

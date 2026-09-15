@@ -14,6 +14,7 @@ function row(id: string, startsAt: Date | null): CallLogRow {
     rescheduled: false,
     state: "upcoming",
     confirmation: "none",
+    confirmedRole: null,
     outcome: null,
     outcomeWords: null,
     reportSource: null,

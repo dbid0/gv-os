@@ -59,8 +59,8 @@ describe("buildCallLog", () => {
       booking("undated", null),
     ],
     confirmations: [
-      { bookingId: "up1", confirmedAt: hours(-1) },
-      { bookingId: "stuck", confirmedAt: hours(-1) }, // after the call started
+      { bookingId: "up1", confirmedAt: hours(-1), confirmedRole: " dialer " },
+      { bookingId: "stuck", confirmedAt: hours(-1), confirmedRole: "  " }, // after the call started
       { bookingId: "app", confirmedAt: null },
     ],
     filed: [
@@ -104,6 +104,12 @@ describe("buildCallLog", () => {
     expect(byId.get("stuck")!.confirmation).toBe("after_start");
     expect(byId.get("up2")!.confirmation).toBe("none");
     expect(byId.get("app")!.confirmation).toBe("none");
+  });
+
+  it("carries the confirming seat, trimmed, or null", () => {
+    expect(byId.get("up1")!.confirmedRole).toBe("dialer");
+    expect(byId.get("stuck")!.confirmedRole).toBeNull();
+    expect(byId.get("up2")!.confirmedRole).toBeNull();
   });
 
   it("prefers the report filed against the booking, then unbound in-app, then the sheet", () => {

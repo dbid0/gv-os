@@ -20,6 +20,12 @@
  * - confirmedAwaiting confirmed in time, no verdict yet, not cancelled
  * - newCalls          not cancelled, never confirmed, no verdict yet
  * - newUpcoming / newStuck   new calls still ahead / whose time has passed
+ * - confirmedThenCancelled   confirmed in time, then the calendar cancelled it
+ * - byConfirmer        calls confirmed in time, per seat that confirmed them
+ *                      (setter · dialer · DM setter · unstated), beside the
+ *                      calls nobody confirmed: confirmed, cancelled, held,
+ *                      shows, no-shows, closes, show and close rate — so
+ *                      "does a dialer's confirmation hold?" is a number
  *
  * VERDICTS (a held call's report)
  * - closes            the report says they bought
@@ -59,6 +65,29 @@ export type Verdict = "closed" | "no_close" | "disqualified" | "no_show" | "not_
 
 export type CloseKind = "pif" | "split" | "deposit" | "installments" | "untyped";
 
+export type ConfirmerKey = "setter" | "dialer" | "dm_setter" | "unstated" | "none";
+
+export type ConfirmerRow = {
+  key: ConfirmerKey;
+  /** Calls in this group (for "none": calls never confirmed in time). */
+  calls: number;
+  cancelled: number;
+  held: number;
+  shows: number;
+  noShows: number;
+  closes: number;
+  showRate: number | null;
+  closeRate: number | null;
+};
+
+export const CONFIRMER_KEYS: readonly ConfirmerKey[] = [
+  "setter",
+  "dialer",
+  "dm_setter",
+  "unstated",
+  "none",
+];
+
 export type CallScoreboard = {
   booked: number;
   bookedPeople: number;
@@ -72,6 +101,9 @@ export type CallScoreboard = {
   newCalls: number;
   newUpcoming: number;
   newStuck: number;
+  confirmedThenCancelled: number;
+  /** Seats with at least one call, in CONFIRMER_KEYS order; "none" last. */
+  byConfirmer: ConfirmerRow[];
 
   held: number;
   shows: number;
@@ -181,19 +213,59 @@ export function callScoreboard(
   };
   let cash: number | null = null;
   let revenue: number | null = null;
+  let confirmedThenCancelled = 0;
+  const confirmers = new Map<ConfirmerKey, ConfirmerRow>();
+  const confirmerOf = (r: CallLogRow): ConfirmerRow => {
+    const key: ConfirmerKey =
+      r.confirmation !== "in_time"
+        ? "none"
+        : r.confirmedRole === "setter" ||
+            r.confirmedRole === "dialer" ||
+            r.confirmedRole === "dm_setter"
+          ? r.confirmedRole
+          : "unstated";
+    let row = confirmers.get(key);
+    if (!row) {
+      row = {
+        key,
+        calls: 0,
+        cancelled: 0,
+        held: 0,
+        shows: 0,
+        noShows: 0,
+        closes: 0,
+        showRate: null,
+        closeRate: null,
+      };
+      confirmers.set(key, row);
+    }
+    return row;
+  };
 
   for (const r of rows) {
     people.add(r.inviteeEmail?.trim().toLowerCase() || `booking:${r.bookingId}`);
     const confirmed = r.confirmation === "in_time";
     if (confirmed) board.everConfirmed += 1;
+    const seat = confirmerOf(r);
+    seat.calls += 1;
 
     if (r.state === "cancelled") {
       board.cancelled += 1;
+      seat.cancelled += 1;
+      if (confirmed) confirmedThenCancelled += 1;
       if (r.rescheduled) board.rescheduled += 1;
       continue;
     }
 
     const verdict = verdictOf(r);
+    if (verdict === null ? r.state === "needs_outcome" : verdict !== "not_held") {
+      seat.held += 1;
+    }
+    if (verdict === "no_show") seat.noShows += 1;
+    if (verdict === "closed" || verdict === "no_close" || verdict === "disqualified") {
+      seat.shows += 1;
+    }
+    if (verdict === "closed") seat.closes += 1;
     if (verdict === null) {
       if (r.state === "upcoming") board.upcoming += 1;
       else board.needsOutcome += 1;
@@ -249,6 +321,19 @@ export function callScoreboard(
     booked,
     bookedPeople: people.size,
     ...board,
+    confirmedThenCancelled,
+    byConfirmer: CONFIRMER_KEYS.flatMap((key) => {
+      const row = confirmers.get(key);
+      return row
+        ? [
+            {
+              ...row,
+              showRate: rate(row.shows, row.shows + row.noShows),
+              closeRate: rate(row.closes, row.shows),
+            },
+          ]
+        : [];
+    }),
     held: shows + board.noShows + board.needsOutcome,
     shows,
     closeKinds,
