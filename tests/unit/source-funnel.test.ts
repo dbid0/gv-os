@@ -36,6 +36,7 @@ function call(email: string | null, extra: Partial<CallLogRow> = {}): CallLogRow
     rescheduled: false,
     state: "reported",
     confirmation: "none",
+    confirmedRole: null,
     outcome: "showed",
     outcomeWords: null,
     reportSource: "sheet",

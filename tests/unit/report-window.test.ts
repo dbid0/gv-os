@@ -92,6 +92,7 @@ function call(
     rescheduled: false,
     state: "reported",
     confirmation: "none",
+    confirmedRole: null,
     outcome,
     outcomeWords: null,
     reportSource: "sheet",

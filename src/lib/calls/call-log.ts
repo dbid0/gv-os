@@ -55,6 +55,8 @@ export type CallLogRow = {
   rescheduled: boolean;
   state: CallState;
   confirmation: ConfirmationState;
+  /** Which seat confirmed (setter · dialer · dm_setter), when a confirmation says. */
+  confirmedRole: string | null;
   /** What the report says happened, or null with no usable report. */
   outcome: EocOutcome | null;
   /** The report's own words, for display. */
@@ -109,7 +111,11 @@ const byEmail = (reports: EocReport[]): Map<string, EocReport[]> => {
 
 export function buildCallLog(input: {
   bookings: CallLogBooking[];
-  confirmations: { bookingId: string; confirmedAt: Date | null }[];
+  confirmations: {
+    bookingId: string;
+    confirmedAt: Date | null;
+    confirmedRole?: string | null;
+  }[];
   /** Reports filed in GV OS, with the booking each was filed against. */
   filed: FiledReport[];
   /** Reports from the tracking sheet. */
@@ -117,7 +123,11 @@ export function buildCallLog(input: {
   now: Date;
 }): CallLogRow[] {
   const confirmedAt = new Map<string, Date | null>();
-  for (const c of input.confirmations) confirmedAt.set(c.bookingId, c.confirmedAt);
+  const confirmedRole = new Map<string, string | null>();
+  for (const c of input.confirmations) {
+    confirmedAt.set(c.bookingId, c.confirmedAt);
+    confirmedRole.set(c.bookingId, c.confirmedRole?.trim() || null);
+  }
   const filedByBooking = new Map<string, FiledReport>();
   for (const r of input.filed) if (r.bookingId) filedByBooking.set(r.bookingId, r);
   const unboundFiled = byEmail(input.filed.filter((r) => !r.bookingId));
@@ -135,6 +145,7 @@ export function buildCallLog(input: {
       provider: b.provider,
       rescheduled: b.rescheduled === true,
       confirmation: confirmationStateOf(confirmedAt.get(b.id) ?? null, b.startsAt),
+      confirmedRole: confirmedRole.get(b.id) ?? null,
       cancelReason: b.status === "canceled" ? cleanCancelReason(b.cancelReason) : null,
       movedTo: trail.get(b.id)?.movedTo?.startsAt ?? null,
       movedFrom: trail.get(b.id)?.movedFrom?.startsAt ?? null,

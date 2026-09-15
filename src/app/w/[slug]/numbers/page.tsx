@@ -17,6 +17,7 @@ import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { viewerRole } from "@/lib/auth/viewer";
 import { CashSection } from "@/components/tracking/cash-section";
+import { ConfirmerTable } from "@/components/tracking/confirmer-table";
 import { DialingSection } from "@/components/tracking/dialing-section";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { loadDialing } from "@/lib/crm/dialing-loader";
@@ -208,7 +209,15 @@ export default async function WorkspaceNumbersPage({
           sub={`${pctOf(s.rates.newStuck)} ${of(s.booked, "booked")}`}
           tone={s.newStuck > 0 ? "warning" : "default"}
         />
+        <NumberTile
+          label="Confirmed, then cancelled"
+          value={countOf(s.confirmedThenCancelled)}
+          sub={`of ${countOf(s.everConfirmed)} confirmed`}
+          tone={s.confirmedThenCancelled > 0 ? "warning" : "default"}
+        />
       </NumberSection>
+
+      <ConfirmerTable rows={s.byConfirmer} />
 
       <NumberSection
         title="Verdicts"
