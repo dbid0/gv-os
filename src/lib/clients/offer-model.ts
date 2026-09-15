@@ -4,7 +4,7 @@ import type { TrackingTab } from "@/lib/tracking/tabs";
 /**
  * WHAT KIND OF OFFER THIS IS, AND THEREFORE WHAT IT TRACKS.
  *
- * GV does not run one shape of offer. The Grid is high-ticket: someone
+ * GV does not run one shape of offer. A high-ticket offer: someone
  * applies, a call gets booked, a closer runs it and files an end-of-call
  * report, and a deal is logged. Base 44 is not that at all — a free course
  * into a low-ticket subscription, sold without a call ever happening. Tracking

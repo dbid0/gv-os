@@ -6,7 +6,7 @@ import type { TrackingTab } from "@/lib/tracking/tabs";
  * What one tab looked like on a pull — the deep-scan signal.
  *
  * A sync that only reported "imported 354 rows" would hide the thing worth
- * knowing. The Grid's Calls Log holds 109 rows of which 7 carry any date, so
+ * knowing. One live offer's Calls Log held 109 rows of which 7 carry any date, so
  * every per-day call metric built on that tab is reading 6% of the tab. That
  * is a fact about the CLIENT'S SHEET, not a bug to paper over, and it belongs
  * on screen.

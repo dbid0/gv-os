@@ -2,7 +2,7 @@
  * Give every active client the onboarding section they should already have.
  *
  * The seeder used to skip any client that had ANY page, so the two clients
- * whose real Notion was imported first (The Grid, The Vault) never received
+ * whose real Notion was imported first (the first two offers) never received
  * one — their teamspace opens straight onto sales SOPs with no onboarding, and
  * the ones that were seeded got a page literally titled "Client Template".
  *

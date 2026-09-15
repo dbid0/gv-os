@@ -12,7 +12,7 @@ export interface RevShareRuleInput {
   rateBps: number;
   /** yyyy-mm-dd, applies from this day forward. */
   effectiveFrom: string;
-  /** Rate applies to cash-after-fees MINUS that month's ad spend (Racks). */
+  /** Rate applies to cash-after-fees MINUS that month's ad spend. */
   deductAdSpend?: boolean;
 }
 
@@ -59,7 +59,7 @@ export interface RevShareLine {
  * Rounding happens per row, half-up — deterministic and replayable.
  *
  * `adSpendByMonth` (keyed `clientId:yyyy-mm`) is deducted from the month's
- * basis for offers whose rule sets `deductAdSpend` (Racks = 10% after ad
+ * basis for offers whose rule sets `deductAdSpend` (e.g. 10% after ad
  * spend). Ad spend is inherently monthly, so for those offers the share is
  * rated on the month's (after-fees − ad-spend) at the month's effective rate,
  * rather than accumulated per row. `cashAfterFeesCents` is left untouched so

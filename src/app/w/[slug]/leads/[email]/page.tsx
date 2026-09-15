@@ -43,7 +43,7 @@ const STAGE_LABEL: Record<string, string> = {
  * One lead's whole journey through the offer.
  *
  * Assembled from every tab that names this email, oldest first. Rows with no
- * date still appear, ordered by funnel stage — The Grid's Calls Log is 94%
+ * date still appear, ordered by funnel stage — one live offer's Calls Log was 94%
  * undated, and dropping those rows would hide most of its booked calls.
  *
  * The end-of-call report is the centre of gravity: it carries the closer's own

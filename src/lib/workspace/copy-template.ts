@@ -54,7 +54,7 @@ export async function copyTemplateIntoClient(
 
   // Skip only when the ONBOARDING SECTION is already there — not when the
   // teamspace merely has pages. The old check was "has any page at all", so a
-  // client whose real Notion was imported first (The Grid, The Vault) counted
+  // client whose real Notion was imported first (the first two offers) counted
   // as seeded and never received one. Existing pages are still never touched:
   // this only ever ADDS a section alongside them.
   const roots = await db

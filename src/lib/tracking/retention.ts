@@ -1,7 +1,7 @@
 /**
  * How many snapshots of a client's tracking sheet to keep.
  *
- * Each sync writes a FRESH snapshot — 823 rows for The Grid — so the mirror
+ * Each sync writes a FRESH snapshot — 823 rows for one offer — so the mirror
  * grows by a full sheet every time it runs. Nothing pruned it, and every read
  * that scans "all snapshots" gets slower with each sync: after four runs the
  * review queue was already scanning 118 EOC rows to use 25.

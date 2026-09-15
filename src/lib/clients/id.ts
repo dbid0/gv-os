@@ -12,7 +12,7 @@ import { clients } from "@/db/schema/app";
  * ids, so every surface that needs to attribute rows to a client resolves the
  * id here. Returns null when the slug has no record — callers must then show
  * nothing rather than fall back to matching on the display name, which is what
- * pulled a second "The Grid" record's deals into the real one.
+ * pulled a second same-named record's deals into the real one.
  */
 export async function clientIdBySlug(slug: string): Promise<string | null> {
   const db = getDb();

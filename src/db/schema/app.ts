@@ -38,7 +38,7 @@ export const profiles = appSchema.table("profiles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** A client brand: The Grid, The Vault, Racks Closes. */
+/** A client brand: one offer GV runs for a creator. */
 export const clients = appSchema.table(
   "clients",
   {
@@ -1224,7 +1224,7 @@ export const revShareRules = appSchema.table(
     /** yyyy-mm-dd — applies from this business day forward. */
     effectiveFrom: text("effective_from").notNull(),
     /** When true, the rate applies to cash-after-fees MINUS that month's ad
-     * spend, not to cash-after-fees itself (Racks = 10% after ad spend). */
+     * spend, not to cash-after-fees itself (e.g. 10% after ad spend). */
     deductAdSpend: boolean("deduct_ad_spend").notNull().default(false),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1306,7 +1306,7 @@ export type AgencyExpense = typeof agencyExpenses.$inferSelect;
 
 /**
  * Per-offer ad spend — the cost an offer's own ads carry, deducted from its
- * cash-after-fees BEFORE a "X% after ad spend" rev-share is rated (Racks =
+ * cash-after-fees BEFORE a "X% after ad spend" rev-share is rated (e.g.
  * 10% after ad spend). Append-only: a correction is a new (possibly negative)
  * row, never an edit, so the rev-share basis is always replayable.
  */
@@ -1869,7 +1869,7 @@ export type NewCallRecording = typeof callRecordings.$inferInsert;
  *
  * `tabs` records what each tab looked like on this pull — how many rows, how
  * many carried a date or an email, and which columns this app did not
- * recognise. That is the deep-scan signal: The Grid's Calls Log holds 109 rows
+ * recognise. That is the deep-scan signal: one live offer's Calls Log held 109 rows
  * of which only 7 have any date, and a sync that silently imported them would
  * hide it.
  */
