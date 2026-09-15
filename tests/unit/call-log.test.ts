@@ -256,3 +256,39 @@ describe("outcomeLabelForWords", () => {
     expect(outcomeLabelForWords("signed up - pif")).toBe("signed up - pif");
   });
 });
+
+describe("buildCallLog reschedule trail", () => {
+  it("links a moved call to its new time and keeps the calendar's cancel reason", () => {
+    const log = buildCallLog({
+      bookings: [
+        booking("old", -20, {
+          status: "canceled",
+          rescheduled: true,
+          bookedAt: hours(-100),
+          cancelReason: "  Had a\nconflict ",
+          inviteeEmail: "mover@x.com",
+        }),
+        booking("new", 30, { bookedAt: hours(-40), inviteeEmail: "mover@x.com" }),
+        booking("gone", -5, { status: "canceled", cancelReason: "Not interested" }),
+        booking("kept", 10, { cancelReason: "stale reason on a live booking" }),
+      ],
+      confirmations: [],
+      filed: [],
+      sheet: [],
+      now: NOW,
+    });
+    const byId = new Map(log.map((r) => [r.bookingId, r]));
+    expect(byId.get("old")).toMatchObject({
+      state: "cancelled",
+      movedTo: hours(30),
+      movedFrom: null,
+      cancelReason: "Had a conflict",
+    });
+    expect(byId.get("new")).toMatchObject({ movedFrom: hours(-20), movedTo: null });
+    expect(byId.get("gone")).toMatchObject({
+      movedTo: null,
+      cancelReason: "Not interested",
+    });
+    expect(byId.get("kept")!.cancelReason).toBeNull();
+  });
+});

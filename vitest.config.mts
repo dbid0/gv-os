@@ -241,6 +241,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The reschedule trail: which booking a moved call became.
+        // Pure, fully covered.
+        "src/lib/calls/reschedules.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The call calendar: which week, which day each call sits on.
         // Pure, fully covered.
         "src/lib/calls/call-week.ts": {

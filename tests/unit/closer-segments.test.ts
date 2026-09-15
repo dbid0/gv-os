@@ -18,6 +18,9 @@ function row(extra: Partial<CallLogRow>): CallLogRow {
     outcomeWords: "follow up",
     reportSource: "sheet",
     closer: "Jordan Rivers",
+    cancelReason: null,
+    movedTo: null,
+    movedFrom: null,
     ...extra,
   };
 }
