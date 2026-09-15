@@ -508,6 +508,16 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           description:
             'IANA time zone whose calendar days bound the window, e.g. "America/New_York". Default America/Chicago.',
         },
+        closer: {
+          type: "string",
+          description:
+            "Cut calls and dialing to one closer (a name from calls_by_closer). Cash and applications stay whole-offer.",
+        },
+        setter: {
+          type: "string",
+          description:
+            "Cut calls and dialing to one setter (a name from calls_by_setter). Use closer or setter, not both.",
+        },
       },
       required: ["slug"],
       additionalProperties: false,
@@ -528,12 +538,32 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           `"${timeZone}" is not an IANA time zone. Use a name like America/New_York.`,
         );
       }
+      if (args.closer !== undefined && args.setter !== undefined) {
+        throw new ToolInputError("Pass closer or setter, not both.");
+      }
+      const who =
+        args.closer !== undefined
+          ? `closer:${String(args.closer)}`
+          : args.setter !== undefined
+            ? `setter:${String(args.setter)}`
+            : undefined;
       const numbers = await loadOfferNumbers(
         offer.id,
         offer.countedCallSources ?? null,
         range,
         timeZone,
+        new Date(),
+        who,
       );
+      if (who && !numbers.person) {
+        const list =
+          args.closer !== undefined
+            ? numbers.personOptions.closers
+            : numbers.personOptions.setters;
+        throw new ToolInputError(
+          `No ${args.closer !== undefined ? "closer" : "setter"} on this offer's reports is called "${String(args.closer ?? args.setter)}". Names on file: ${list.length ? list.join(", ") : "none"}.`,
+        );
+      }
       return { offer: offer.slug, timeZone, ...numbersForMcp(numbers) };
     },
   },

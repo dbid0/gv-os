@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { eq } from "drizzle-orm";
 import { Hash } from "lucide-react";
 
@@ -18,11 +20,13 @@ import { clients } from "@/db/schema/app";
 import { viewerRole } from "@/lib/auth/viewer";
 import { ApplicationsSection } from "@/components/tracking/applications-section";
 import { CashSection } from "@/components/tracking/cash-section";
+import { PersonFilterSelect } from "@/components/tracking/person-filter-select";
 import { ConfirmerTable } from "@/components/tracking/confirmer-table";
 import { DialingSection } from "@/components/tracking/dialing-section";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { loadOfferNumbers } from "@/lib/tracking/numbers-loader";
+import { personParam } from "@/lib/calls/person-filter";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 import { dayKeyIn } from "@/lib/time/zone";
 import {
@@ -75,17 +79,31 @@ export default async function WorkspaceNumbersPage({
   const range = readReportRange(sp.range);
   const now = new Date();
   const bounds = reportBounds(range, dayKeyIn(now, tz));
-  const hrefFor = (r: ReportRange) =>
-    r === "life" ? `/w/${slug}/numbers` : `/w/${slug}/numbers?range=${r}`;
+  const who = typeof sp.who === "string" ? sp.who : undefined;
+  const hrefWith = (next: { range?: ReportRange; who?: string | null }) => {
+    const q = new URLSearchParams();
+    const r = next.range ?? range;
+    const w = next.who === undefined ? who : next.who;
+    if (r !== "life") q.set("range", r);
+    if (w) q.set("who", w);
+    const qs = q.toString();
+    return qs ? `/w/${slug}/numbers?${qs}` : `/w/${slug}/numbers`;
+  };
 
-  const header = (
+  const headerWith = (filter?: ReactNode) => (
     <WsPageHeader
       icon={Hash}
       title="Numbers"
       lede="Every number this offer has, each over the count it was measured against: cash, applications and speed to lead, booked calls, confirmations, verdicts, how closes paid, the money closers reported, and what the dialler recorded."
-      aside={<WindowChips active={range} hrefFor={hrefFor} />}
+      aside={
+        <div className="flex flex-wrap items-center gap-2">
+          {filter}
+          <WindowChips active={range} hrefFor={(r) => hrefWith({ range: r })} />
+        </div>
+      }
     />
   );
+  const header = headerWith();
 
   const [row] = await getDb()
     .select({ id: clients.id, countedCallSources: clients.countedCallSources })
@@ -111,12 +129,42 @@ export default async function WorkspaceNumbersPage({
     cash,
     applications: apps,
     dialing,
-  } = await loadOfferNumbers(row.id, row.countedCallSources ?? null, range, tz, now);
+    person,
+    personOptions,
+  } = await loadOfferNumbers(
+    row.id,
+    row.countedCallSources ?? null,
+    range,
+    tz,
+    now,
+    who,
+  );
+
+  const filteredHeader = headerWith(
+    <PersonFilterSelect
+      options={personOptions}
+      value={person ? personParam(person) : ""}
+    />,
+  );
+  const personBanner = person ? (
+    <div className="border-brand/40 bg-brand-soft/20 -mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs">
+      <span>
+        Cut to <span className="font-medium">{person.name}</span> as {person.by}: the
+        call numbers are calls whose end-of-call report names them as {person.by}, and
+        dialing is their dials. Calls with no report yet name nobody, so they
+        aren&apos;t in here. Cash and applications stay the whole offer.
+      </span>
+      <Link href={hrefWith({ who: null })} className="text-brand hover:underline">
+        Show everyone
+      </Link>
+    </div>
+  ) : null;
 
   if (totalBookings === 0) {
     return (
       <div className="space-y-8">
-        {header}
+        {filteredHeader}
+        {personBanner}
         <CashSection data={cash} />
         <ApplicationsSection data={apps} />
         <EmptyState
@@ -133,7 +181,8 @@ export default async function WorkspaceNumbersPage({
 
   return (
     <div className="space-y-8">
-      {header}
+      {filteredHeader}
+      {personBanner}
 
       {isBounded(bounds) && (
         <p className="text-faint -mt-4 text-xs">
