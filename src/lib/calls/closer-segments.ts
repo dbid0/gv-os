@@ -1,5 +1,6 @@
 /**
- * CALLS BY CLOSER — the call log re-cut per closer, reconciling to the total.
+ * CALLS BY CLOSER (OR SETTER) — the call log re-cut per person, reconciling to
+ * the total.
  *
  * The reference product's rule for any per-rep table: every column is the same
  * numbers re-cut, so the rows always add up to the total above them. This
@@ -15,6 +16,8 @@
  *   report", never folded into someone's row.
  * - Closer names merge the way the floor view merges them (case, whole-word
  *   first-name folding when it is unambiguous).
+ * - The setter cut is the same table keyed on the setter the report names:
+ *   "No setter on the report" holds reported calls that don't say.
  * - Show rate = shows ÷ (shows + no-shows); close rate = closes ÷ shows; zero
  *   denominators are null, never 0%.
  *
@@ -26,6 +29,7 @@ import { canonicalRepNames } from "@/lib/tracking/activity";
 
 export const NO_REPORT = "No report yet";
 export const NO_CLOSER = "No closer on the report";
+export const NO_SETTER = "No setter on the report";
 
 export type CloserSegment = {
   closer: string;
@@ -61,29 +65,43 @@ const finish = (s: CloserSegment): CloserSegment => ({
   closeRate: rate(s.closes, s.shows),
 });
 
+/** Held calls per closer. */
 export function segmentByCloser(log: CallLogRow[]): CloserSegments {
+  return segmentHeld(log, (r) => r.closer, NO_CLOSER);
+}
+
+/** Held calls per setter — the same rows, keyed on who set the call. */
+export function segmentBySetter(log: CallLogRow[]): CloserSegments {
+  return segmentHeld(log, (r) => r.setter, NO_SETTER);
+}
+
+function segmentHeld(
+  log: CallLogRow[],
+  personOf: (r: CallLogRow) => string | null,
+  noPerson: string,
+): CloserSegments {
   const held = log.filter(
     (r) =>
       r.state === "needs_outcome" ||
       (r.state === "reported" && r.outcome !== null && r.outcome !== "not_held"),
   );
-  const canonical = canonicalRepNames(held.map((r) => r.closer ?? ""));
+  const canonical = canonicalRepNames(held.map((r) => personOf(r) ?? ""));
   const bySegment = new Map<string, CloserSegment>();
   const total = blank("All held calls", true);
 
   for (const r of held) {
-    const closer = r.closer?.trim();
+    const person = personOf(r)?.trim();
     let name: string;
     let unattributed = false;
     if (r.state === "needs_outcome") {
       name = NO_REPORT;
       unattributed = true;
-    } else if (!closer) {
-      name = NO_CLOSER;
+    } else if (!person) {
+      name = noPerson;
       unattributed = true;
     } else {
       // canonicalRepNames keys every non-blank name it was given.
-      name = canonical.get(closer.toLowerCase()) as string;
+      name = canonical.get(person.toLowerCase()) as string;
     }
     const seg = bySegment.get(name) ?? blank(name, unattributed);
     for (const target of [seg, total]) {

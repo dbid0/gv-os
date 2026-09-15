@@ -33,7 +33,7 @@ import {
 } from "@/lib/calls/call-log";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { callWeek, weekKeyFor } from "@/lib/calls/call-week";
-import { segmentByCloser } from "@/lib/calls/closer-segments";
+import { segmentByCloser, segmentBySetter } from "@/lib/calls/closer-segments";
 import { outcomeLabelForWords } from "@/lib/calls/eoc-form";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
@@ -151,6 +151,7 @@ export default async function WorkspaceCallsPage({
     : "all";
   const view: "list" | "week" = sp.view === "week" ? "week" : "list";
   const closersRange = readReportRange(sp.closers);
+  const cut: "closer" | "setter" = sp.cut === "setter" ? "setter" : "closer";
   const wantedWeek = typeof sp.week === "string" ? sp.week : undefined;
   /** This page's URL with some of its filters changed. */
   const hrefWith = (next: {
@@ -158,6 +159,7 @@ export default async function WorkspaceCallsPage({
     view?: "list" | "week";
     week?: string;
     closers?: ReportRange;
+    cut?: "closer" | "setter";
   }) => {
     const q = new URLSearchParams();
     const closers = next.closers ?? closersRange;
@@ -170,6 +172,7 @@ export default async function WorkspaceCallsPage({
       if (week) q.set("week", week);
     }
     if (closers !== "life") q.set("closers", closers);
+    if ((next.cut ?? cut) === "setter") q.set("cut", "setter");
     const qs = q.toString();
     return qs ? `/w/${slug}/calls?${qs}` : `/w/${slug}/calls`;
   };
@@ -266,11 +269,31 @@ export default async function WorkspaceCallsPage({
       </div>
 
       <CloserSegmentsTable
-        segments={segmentByCloser(
+        dimension={cut}
+        segments={(cut === "setter" ? segmentBySetter : segmentByCloser)(
           log.filter((r) =>
             inWindow(r.startsAt, reportBounds(closersRange, dayKeyIn(now, tz)), tz),
           ),
         )}
+        cutNav={
+          <nav className="flex rounded-md border p-0.5" aria-label="Cut calls by">
+            {(["closer", "setter"] as const).map((c) => (
+              <Link
+                key={c}
+                href={hrefWith({ cut: c })}
+                aria-current={cut === c ? "page" : undefined}
+                className={cn(
+                  "rounded px-2.5 py-0.5 text-xs transition-colors",
+                  cut === c
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {c === "closer" ? "Closer" : "Setter"}
+              </Link>
+            ))}
+          </nav>
+        }
         windowChips={
           <WindowChips
             label="By closer window"
