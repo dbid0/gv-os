@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -35,5 +35,7 @@ export async function saveWorkspaceLogo(slug: string, dataUrl: unknown) {
   if (updated.length === 0) throw new Error("No client row for this slug.");
   revalidatePath(`/w/${slug}`);
   revalidatePath("/dashboard");
+  // The roster says whether a logo exists; refresh it so avatars ask for it now.
+  updateTag("roster");
   return { ok: true };
 }

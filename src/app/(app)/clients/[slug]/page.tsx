@@ -139,7 +139,13 @@ export default async function ClientPage({
         title={client.name}
         description={team?.summary ?? client.summary}
         avatar={
-          <ClientLogo slug={slug} name={client.name} accent={client.accent} size={44} />
+          <ClientLogo
+            hasLogo={client.hasLogo}
+            slug={slug}
+            name={client.name}
+            accent={client.accent}
+            size={44}
+          />
         }
         status={
           <span className="flex flex-wrap items-center gap-2">

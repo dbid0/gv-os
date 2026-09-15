@@ -24,6 +24,9 @@ export type RosterClient = {
    * card reads. The DB `clients.summary` column overrides this when set (edited
    * inline on the card), so this is only the fallback, never blank. */
   summary: string;
+  /** Whether a logo image is on file. Absent = unknown (older callers), and the
+   * avatar asks the logo route as before; false = draw the initial, no request. */
+  hasLogo?: boolean;
 };
 
 export const roster: RosterClient[] = [];
