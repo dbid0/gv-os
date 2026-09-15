@@ -5,7 +5,6 @@ import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { activityReports, clients, deals, reps } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
-import { dayKeyCT } from "@/lib/charts";
 import { type RepGamification } from "@/lib/gamification/engine";
 import { getRepGamification } from "@/lib/gamification/queries";
 import { callTypeLabel, dispositionLabel } from "@/lib/sales/call-activity";
@@ -33,6 +32,8 @@ import {
   type WingmanQuota,
   buildWingmanModel,
 } from "@/lib/home/wingman-model";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * The role home server layer.
@@ -74,12 +75,13 @@ interface ScopedMonthSales {
 /**
  * One month's SALES cash and closed deals for a set of offers — collected cash
  * from the ledger's payment events and closed-deal counts from the deals table,
- * both bucketed to the CT business month. Sales cash, not accounting: the Coach
+ * both bucketed to the viewer's month. Sales cash, not accounting: the Coach
  * home never shows a payout or a partner split.
  */
 async function scopedMonthSales(
   clientIds: string[],
   period: string,
+  tz: string,
 ): Promise<ScopedMonthSales> {
   if (clientIds.length === 0) {
     return { cashCents: 0, dealsClosed: 0, revenueCents: 0 };
@@ -94,7 +96,7 @@ async function scopedMonthSales(
         eq(moneyEvents.eventType, "payment_received"),
         inArray(moneyEvents.clientId, clientIds),
         eq(
-          sql<string>`to_char(${moneyEvents.occurredAt} AT TIME ZONE 'America/Chicago', 'YYYY-MM')`,
+          sql<string>`to_char(${moneyEvents.occurredAt} AT TIME ZONE ${tz}, 'YYYY-MM')`,
           period,
         ),
       ),
@@ -111,7 +113,7 @@ async function scopedMonthSales(
         inArray(deals.clientId, clientIds),
         isNotNull(deals.closedAt),
         eq(
-          sql<string>`to_char(${deals.closedAt} AT TIME ZONE 'America/Chicago', 'YYYY-MM')`,
+          sql<string>`to_char(${deals.closedAt} AT TIME ZONE ${tz}, 'YYYY-MM')`,
           period,
         ),
       ),
@@ -128,6 +130,7 @@ async function scopedMonthSales(
 async function scopedEodDays(
   clientIds: string[],
   isAllOffers: boolean,
+  tz: string,
 ): Promise<CoachEodDay[]> {
   const db = getDb();
   const where = isAllOffers
@@ -150,7 +153,7 @@ async function scopedEodDays(
 
   return rows.map((r) => ({
     repId: r.repId,
-    dayKey: dayKeyCT(r.reportDate),
+    dayKey: dayKeyIn(r.reportDate, tz),
     shows: metricNum(r.metrics, "shows"),
     noShows: metricNum(r.metrics, "no_shows"),
   }));
@@ -164,20 +167,21 @@ export async function getCoachData(params: {
   nowMs: number;
 }): Promise<CoachModel> {
   const { scopeClientIds, isAllOffers, scopeLabel, nowMs } = params;
-  const todayKey = dayKeyCT(new Date(nowMs));
+  const tz = await viewerTimeZone();
+  const todayKey = dayKeyIn(new Date(nowMs), tz);
   const period = todayKey.slice(0, 7);
   const prevPeriod = prevMonth(period);
   const scopeSet = new Set(scopeClientIds);
 
   const [cur, prev, allQuotas, leaderboard, allReps, teams, eodDays] =
     await Promise.all([
-      scopedMonthSales(scopeClientIds, period),
-      scopedMonthSales(scopeClientIds, prevPeriod),
+      scopedMonthSales(scopeClientIds, period, tz),
+      scopedMonthSales(scopeClientIds, prevPeriod, tz),
       listQuotasWithPacing(nowMs),
       getLeaderboard(),
       listReps(),
       listTeams(),
-      scopedEodDays(scopeClientIds, isAllOffers),
+      scopedEodDays(scopeClientIds, isAllOffers, tz),
     ]);
 
   const nameById = new Map(teams.map((t) => [t.id, t.name]));
@@ -285,6 +289,7 @@ async function repRecentActivity(
 /** The rep's most recent EOD submissions, newest first. */
 async function repRecentEods(repId: string, limit: number): Promise<WingmanEod[]> {
   const db = getDb();
+  const tz = await viewerTimeZone();
   const rows = await db
     .select({
       id: activityReports.id,
@@ -299,7 +304,7 @@ async function repRecentEods(repId: string, limit: number): Promise<WingmanEod[]
   return rows.map((r) => ({
     id: r.id,
     reportDate: r.reportDate,
-    dayKey: dayKeyCT(r.reportDate),
+    dayKey: dayKeyIn(r.reportDate, tz),
     shows: metricNum(r.metrics, "shows"),
     dials: metricNum(r.metrics, "dials"),
     setsBooked: metricNum(r.metrics, "sets_booked"),

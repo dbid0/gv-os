@@ -11,12 +11,13 @@ import { useToast } from "@/components/ui/toast";
 import type { ClientDriveAssets } from "@/lib/clients/drive-assets";
 import { driveKindLabel, isDriveFolder } from "@/lib/google/drive-kind";
 import { cn } from "@/lib/utils";
+import { useViewerTimeZone } from "@/components/shell/time-zone";
 
-const fmtModified = (iso: string) =>
+const fmtModified = (iso: string, timeZone: string) =>
   new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    timeZone: "America/Chicago",
+    timeZone,
   });
 
 function FolderForm({
@@ -77,6 +78,7 @@ export function DriveAssetsPanel({
    */
   canEdit?: boolean;
 }) {
+  const timeZone = useViewerTimeZone();
   const [editing, setEditing] = useState(false);
   const showForm = canEdit && (!drive.folderId || editing);
 
@@ -144,7 +146,7 @@ export function DriveAssetsPanel({
               <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
               {a.modifiedTime && (
                 <span className="text-faint shrink-0 text-[11px]">
-                  {fmtModified(a.modifiedTime)}
+                  {fmtModified(a.modifiedTime, timeZone)}
                 </span>
               )}
               <ExternalLink className="text-faint size-3 shrink-0" />

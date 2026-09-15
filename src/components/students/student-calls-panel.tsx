@@ -9,13 +9,14 @@ import {
   setStudentCallVoidedAction,
 } from "@/app/w/[slug]/students/student-call-actions";
 import { displayName } from "@/lib/text";
+import { useViewerTimeZone } from "@/components/shell/time-zone";
 
 const fieldClass =
   "bg-secondary/60 text-foreground mt-0.5 block w-full rounded-md border px-2 py-1.5 text-sm";
 
-const dayKey = (d: Date) =>
+const dayKey = (d: Date, timeZone: string) =>
   new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -47,7 +48,8 @@ export function StudentCallsPanel({
 }) {
   const router = useRouter();
   const [student, setStudent] = useState("");
-  const [heldOn, setHeldOn] = useState(() => dayKey(new Date()));
+  const viewerZone = useViewerTimeZone();
+  const [heldOn, setHeldOn] = useState(() => dayKey(new Date(), viewerZone));
   const [coach, setCoach] = useState("");
   const [notes, setNotes] = useState("");
   const [submissionKey, setSubmissionKey] = useState(() => crypto.randomUUID());
@@ -97,6 +99,8 @@ export function StudentCallsPanel({
             {new Date(c.heldAt).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
+              // A logged call is a calendar DAY, stored at noon Central on it
+              // (heldAtFor); read back on that same zone so it never shifts.
               timeZone: "America/Chicago",
             })}
             {c.coach && ` · with ${c.coach}`}

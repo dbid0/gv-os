@@ -240,7 +240,10 @@ describe("groupByDay", () => {
       now: new Date("2026-09-01T00:00:00Z"),
     });
     expect(
-      groupByDay(rows).map((d) => [d.key, d.rows.map((r) => r.bookingId)]),
+      groupByDay(rows, "America/Chicago").map((d) => [
+        d.key,
+        d.rows.map((r) => r.bookingId),
+      ]),
     ).toEqual([
       ["2026-09-14", ["early", "late"]],
       ["2026-09-15", ["next"]],

@@ -40,6 +40,7 @@ import {
 } from "@/lib/tracking/queries";
 import { collectedInWindow } from "@/lib/tracking/cash-mix";
 import {
+  boundsToDates,
   dealsRevenueInWindow,
   type WindowMoneyFeed,
 } from "@/lib/tracking/window-money";
@@ -294,6 +295,8 @@ export async function loadOfferHome(
   clientName: string,
   bounds: RangeBounds,
   todayKey: string,
+  /** The viewer's zone — where the window's days start and end. */
+  timeZone = "UTC",
 ): Promise<OfferHomeData> {
   const db = getDb();
   const now = new Date();
@@ -406,15 +409,13 @@ export async function loadOfferHome(
     const payments = tagged.kept;
     tagSummary = tagged.summary;
     moneyFeed = { payments, deals, aliases };
-    const winFrom = bounds.from ? new Date(`${bounds.from}T00:00:00Z`) : new Date(0);
-    const winTo = bounds.to
-      ? new Date(`${bounds.to}T23:59:59Z`)
-      : new Date(`${todayKey}T23:59:59Z`);
+    const { from: winFrom, to: winTo } = boundsToDates(bounds, todayKey, timeZone);
     // The previous window, same length — the honest "vs last period" base for
     // the delta (computed from the SAME feed, not the ledger).
     const prevB = previousBounds(bounds);
-    const prevFrom = prevB?.from != null ? new Date(`${prevB.from}T00:00:00Z`) : null;
-    const prevTo = prevB?.to != null ? new Date(`${prevB.to}T23:59:59Z`) : null;
+    const prevDates = prevB ? boundsToDates(prevB, todayKey, timeZone) : null;
+    const prevFrom = prevDates?.from ?? null;
+    const prevTo = prevDates?.to ?? null;
     mixWindow = {
       payments,
       from: winFrom,

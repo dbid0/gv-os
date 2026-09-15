@@ -11,6 +11,7 @@ import { ExportCsv } from "@/components/ui/export-csv";
 import { type Cents, ZERO, cents, formatUSD, sum } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
 import { useEntranceOnce } from "@/lib/client-state";
+import { useViewerTimeZone } from "@/components/shell/time-zone";
 
 export interface DealRow {
   id: string;
@@ -29,16 +30,17 @@ const dash = <span className="text-faint">—</span>;
 const selectClass =
   "border-input bg-transparent h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-const fmtDate = (iso: string | null) =>
+const fmtDate = (iso: string | null, timeZone: string) =>
   iso
     ? new Date(iso).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        timeZone: "America/Chicago",
+        timeZone,
       })
     : "—";
 
 export function DealsTable({ rows }: { rows: DealRow[] }) {
+  const timeZone = useViewerTimeZone();
   const reduceMotion = useReducedMotion();
   const entrance = useEntranceOnce();
   const [source, setSource] = useState("all");
@@ -70,7 +72,7 @@ export function DealsTable({ rows }: { rows: DealRow[] }) {
       key: "date",
       header: "Date",
       sortBy: (r) => r.closedAtISO ?? "",
-      render: (r) => fmtDate(r.closedAtISO),
+      render: (r) => fmtDate(r.closedAtISO, timeZone),
     },
     { key: "customer", header: "Customer", render: (r) => r.customerName ?? dash },
     { key: "rep", header: "Rep", render: (r) => r.repName ?? dash },
@@ -177,7 +179,7 @@ export function DealsTable({ rows }: { rows: DealRow[] }) {
                 "Status",
               ]}
               rows={filtered.map((r) => [
-                fmtDate(r.closedAtISO),
+                fmtDate(r.closedAtISO, timeZone),
                 r.customerName ?? "",
                 r.repName ?? "",
                 r.teamName ?? "",

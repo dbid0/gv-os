@@ -5,7 +5,7 @@ import { Waypoints } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { WindowChips } from "@/components/ui/window-chips";
-import { dayKeyCT } from "@/lib/charts";
+import { dayKeyIn } from "@/lib/time/zone";
 import {
   isBounded,
   readReportRange,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/tracking/source-funnel";
 import { loadSourceFunnel } from "@/lib/tracking/source-funnel-loader";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,7 @@ export default async function WorkspaceSourcesPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const tz = await viewerTimeZone();
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
@@ -94,7 +96,7 @@ export default async function WorkspaceSourcesPage({
     ? (sp.by as SourceDimension)
     : "source";
   const range = readReportRange(sp.range);
-  const bounds = reportBounds(range, dayKeyCT(new Date()));
+  const bounds = reportBounds(range, dayKeyIn(new Date(), tz));
   const hrefWith = (next: { by?: SourceDimension; range?: ReportRange }) => {
     const q = new URLSearchParams();
     const by = next.by ?? dimension;
@@ -137,6 +139,7 @@ export default async function WorkspaceSourcesPage({
     dimension,
     new Date(),
     bounds,
+    tz,
   );
   const { rows, total } = data.funnel;
 

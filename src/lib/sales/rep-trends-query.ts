@@ -6,13 +6,14 @@ import { getDb } from "@/db/client";
 import { activityReports, clients, deals, reps } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { shiftDay } from "@/lib/activity-heatmap";
-import { dayKeyCT } from "@/lib/charts";
 import {
   computeRepTrends,
   type DayActivity,
   type DayDeal,
   type RepTrends,
 } from "@/lib/sales/rep-trends";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * Gather the last 60 days of activity + deals and build both trend tables.
@@ -21,6 +22,7 @@ import {
  */
 export async function getRepTrends(todayKey: string): Promise<RepTrends> {
   const db = getDb();
+  const tz = await viewerTimeZone();
   const since = new Date(`${shiftDay(todayKey, -60)}T00:00:00Z`);
 
   const [repRows, activityRows, dealRows] = await Promise.all([
@@ -58,7 +60,7 @@ export async function getRepTrends(todayKey: string): Promise<RepTrends> {
 
   const activity: DayActivity[] = activityRows.map((a) => ({
     repId: a.repId,
-    day: dayKeyCT(a.reportDate),
+    day: dayKeyIn(a.reportDate, tz),
     dials: a.metrics?.dials ?? 0,
     shows: a.metrics?.shows ?? 0,
   }));
@@ -68,7 +70,7 @@ export async function getRepTrends(todayKey: string): Promise<RepTrends> {
     )
     .map((d) => ({
       repId: d.repId,
-      day: dayKeyCT(d.closedAt),
+      day: dayKeyIn(d.closedAt, tz),
       cashCents: cashByDeal.get(d.id) ?? 0,
     }));
 

@@ -12,12 +12,13 @@ import {
   reps,
 } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
-import { dayKeyCT } from "@/lib/charts";
 import {
   type RepGamification,
   type RepGamificationInput,
   computeRepGamification,
 } from "@/lib/gamification/engine";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * The gamification read layer.
@@ -55,7 +56,7 @@ interface RepRows {
 }
 
 /** Group real rows into the shape the pure engine consumes. */
-function assembleInputs(rows: RepRows, now: Date): RepGamificationInput {
+function assembleInputs(rows: RepRows, now: Date, tz: string): RepGamificationInput {
   const active = new Set<string>();
   const dayMetrics = new Map<string, Record<string, number>>();
   const activity = new Map<string, number>();
@@ -74,7 +75,7 @@ function assembleInputs(rows: RepRows, now: Date): RepGamificationInput {
 
   // Submitted EODs: an active day, their metrics, and their activity volume.
   for (const r of rows.reports) {
-    const key = dayKeyCT(r.reportDate);
+    const key = dayKeyIn(r.reportDate, tz);
     active.add(key);
     const m = metricsFor(key);
     let volume = 0;
@@ -88,7 +89,7 @@ function assembleInputs(rows: RepRows, now: Date): RepGamificationInput {
 
   // Logged calls / bookings: one unit of activity each.
   for (const at of rows.logOccurredAt) {
-    const key = dayKeyCT(at);
+    const key = dayKeyIn(at, tz);
     active.add(key);
     addActivity(key, 1);
   }
@@ -96,7 +97,7 @@ function assembleInputs(rows: RepRows, now: Date): RepGamificationInput {
   // Closed deals: an active day, a close on the record book, a unit of activity.
   for (const closedAt of rows.dealClosedAt) {
     if (!closedAt) continue;
-    const key = dayKeyCT(closedAt);
+    const key = dayKeyIn(closedAt, tz);
     active.add(key);
     const m = metricsFor(key);
     m.deals_closed = (m.deals_closed ?? 0) + 1;
@@ -105,13 +106,13 @@ function assembleInputs(rows: RepRows, now: Date): RepGamificationInput {
 
   // Collected cash: feeds the "best cash day" record only.
   for (const ev of rows.cashEvents) {
-    const key = dayKeyCT(ev.occurredAt);
+    const key = dayKeyIn(ev.occurredAt, tz);
     const m = metricsFor(key);
     m.cash = (m.cash ?? 0) + ev.amountCents;
   }
 
   return {
-    todayKey: dayKeyCT(now),
+    todayKey: dayKeyIn(now, tz),
     activeDayKeys: [...active],
     dayMetrics: [...dayMetrics.entries()].map(([dayKey, metrics]) => ({
       dayKey,
@@ -186,6 +187,7 @@ export async function getRepGamification(
     : [];
 
   const now = new Date();
+  const tz = await viewerTimeZone();
   const gamification = computeRepGamification(
     assembleInputs(
       {
@@ -195,6 +197,7 @@ export async function getRepGamification(
         cashEvents,
       },
       now,
+      tz,
     ),
   );
 
@@ -301,6 +304,7 @@ export async function listRepMomentum(): Promise<RepMomentum[]> {
   }
 
   const now = new Date();
+  const tz = await viewerTimeZone();
   const empty: RepRows = {
     reports: [],
     logOccurredAt: [],
@@ -308,7 +312,9 @@ export async function listRepMomentum(): Promise<RepMomentum[]> {
     cashEvents: [],
   };
   const momentum: RepMomentum[] = repRows.map((rep) => {
-    const g = computeRepGamification(assembleInputs(byRep.get(rep.id) ?? empty, now));
+    const g = computeRepGamification(
+      assembleInputs(byRep.get(rep.id) ?? empty, now, tz),
+    );
     return {
       repId: rep.id,
       name: rep.name,

@@ -13,7 +13,7 @@ import { CloserSegmentsTable } from "@/components/calls/closer-segments-table";
 import { EocFormSheet } from "@/components/calls/eoc-form-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WindowChips } from "@/components/ui/window-chips";
-import { dayKeyCT } from "@/lib/charts";
+import { dayKeyIn } from "@/lib/time/zone";
 import {
   inWindow,
   readReportRange,
@@ -39,6 +39,7 @@ import { isPortalView } from "@/lib/clients/portal-visibility";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -52,23 +53,21 @@ export async function generateMetadata({
   return { title: client ? `${client.name} Calls - GV OS` : "Calls - GV OS" };
 }
 
-const timeFmt = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "America/Chicago",
-});
+const timeFmtIn = (timeZone: string) =>
+  new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone });
 
-const whenFmt = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "America/Chicago",
-});
+const whenFmtIn = (timeZone: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  });
 
 /** The reschedule trail and cancel reason, in words, for a row's second line. */
-function trailWords(r: CallLogRow): string[] {
+function trailWords(r: CallLogRow, whenFmt: Intl.DateTimeFormat): string[] {
   const words: string[] = [];
   if (r.movedFrom) words.push(`moved from ${whenFmt.format(r.movedFrom)}`);
   if (r.movedTo) words.push(`moved to ${whenFmt.format(r.movedTo)}`);
@@ -138,6 +137,7 @@ export default async function WorkspaceCallsPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const tz = await viewerTimeZone();
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
@@ -213,10 +213,12 @@ export default async function WorkspaceCallsPage({
     listExcludedBookings(row.id),
   ]);
   const visible = filter === "all" ? log : log.filter((r) => r.state === filter);
-  const days = groupByDay(visible);
+  const days = groupByDay(visible, tz);
+  const timeFmt = timeFmtIn(tz);
+  const whenFmt = whenFmtIn(tz);
 
   const dayKeyFmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
+    timeZone: tz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -266,7 +268,7 @@ export default async function WorkspaceCallsPage({
       <CloserSegmentsTable
         segments={segmentByCloser(
           log.filter((r) =>
-            inWindow(r.startsAt, reportBounds(closersRange, dayKeyCT(now))),
+            inWindow(r.startsAt, reportBounds(closersRange, dayKeyIn(now, tz)), tz),
           ),
         )}
         windowChips={
@@ -316,7 +318,7 @@ export default async function WorkspaceCallsPage({
 
       {view === "week" ? (
         <CallWeekGrid
-          week={callWeek(visible, weekKeyFor(wantedWeek, todayKey), todayKey)}
+          week={callWeek(visible, weekKeyFor(wantedWeek, todayKey), todayKey, tz)}
           slug={slug}
           hrefFor={(week) => hrefWith({ week })}
         />
@@ -353,7 +355,7 @@ export default async function WorkspaceCallsPage({
                         </span>
                       )}
                       <span className="text-faint block truncate text-[11px]">
-                        {[r.eventType, r.provider, ...trailWords(r)]
+                        {[r.eventType, r.provider, ...trailWords(r, whenFmt)]
                           .filter(Boolean)
                           .join(" · ")}
                       </span>

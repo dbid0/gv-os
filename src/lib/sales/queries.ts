@@ -2,7 +2,6 @@ import "server-only";
 
 import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 
-import { dayKeyCT } from "@/lib/charts";
 import { getDb } from "@/db/client";
 import {
   type EodCalcField,
@@ -20,6 +19,8 @@ import { type Bps } from "@/lib/splits";
 import { type CommissionBasis } from "@/lib/sales/commission";
 import { type CommissionRollup } from "@/lib/sales/commission-rollup";
 import { type CashByDeal, rollupFromRows } from "@/lib/sales/rollup-adapter";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * The Sales module's read layer.
@@ -312,9 +313,10 @@ export async function getEodCompliance(
 ): Promise<EodCompliance> {
   const db = getDb();
 
-  // A 48h window bucketed by CT day key — immune to the UTC-midnight trap
-  // and to DST, because dayKeyCT owns the timezone math in one place.
-  const todayKey = dayKeyCT(now);
+  // A 48h window bucketed by the viewer's day key — immune to the
+  // UTC-midnight trap and to DST (dayKeyIn owns the timezone math).
+  const tz = await viewerTimeZone();
+  const todayKey = dayKeyIn(now, tz);
   const since = new Date(now.getTime() - 48 * 3600 * 1000);
 
   // The active-rep roster and the recent reports are fully independent reads,
@@ -340,7 +342,7 @@ export async function getEodCompliance(
   const total = activeReps.length;
 
   const submittedSet = new Set(
-    recent.filter((r) => dayKeyCT(r.reportDate) === todayKey).map((r) => r.repId),
+    recent.filter((r) => dayKeyIn(r.reportDate, tz) === todayKey).map((r) => r.repId),
   );
   const missing = activeReps.filter((r) => !submittedSet.has(r.id)).map((r) => r.name);
   return { asOf: now, submitted: total - missing.length, total, missing };

@@ -1,6 +1,5 @@
 import "server-only";
 
-import { dayKeyCT } from "@/lib/charts";
 import {
   clientHealth,
   type ClientHealth,
@@ -17,6 +16,8 @@ import {
   type RangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export interface ClientHealthRow {
   slug: string;
@@ -39,7 +40,7 @@ export async function getClientHealthData(): Promise<ClientHealthRow[]> {
   const roster = await loadRoster();
   try {
     const now = new Date();
-    const todayKey = dayKeyCT(now);
+    const todayKey = dayKeyIn(now, await viewerTimeZone());
     const [y, m] = todayKey.split("-").map(Number);
     const thisMonth = rangeBounds("month", todayKey);
     const lastY = m === 1 ? y - 1 : y;

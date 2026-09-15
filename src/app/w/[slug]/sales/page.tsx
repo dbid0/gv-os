@@ -25,6 +25,7 @@ import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
 import { ConfirmationSplitPanel } from "@/components/tracking/confirmation-split";
 import { RightNowPanel } from "@/components/tracking/right-now";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function WorkspaceSalesPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const tz = await viewerTimeZone();
   // Live when you're looking: kick a close pull after the response.
   refreshProviderOnView("close");
   const { slug } = await params;
@@ -74,6 +76,7 @@ export default async function WorkspaceSalesPage({
     apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
     now,
+    tz,
   );
   const [portalView, visibility] = await Promise.all([
     isPortalView(),

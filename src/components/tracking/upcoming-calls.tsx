@@ -8,6 +8,7 @@ import { bookingNotExcluded } from "@/lib/bookings/exclusions-store";
 import { confirmedBeforeCall } from "@/lib/crm/confirmation";
 import { confirmBooking } from "@/lib/crm/confirmation-actions";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * Upcoming calls with the confirm action — the floor's pre-call queue.
@@ -56,7 +57,7 @@ export async function UpcomingCalls({
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/Chicago",
+    timeZone: await viewerTimeZone(),
   });
 
   return (
