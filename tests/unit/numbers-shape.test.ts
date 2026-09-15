@@ -40,6 +40,8 @@ function numbers(overrides: Partial<OfferNumbers> = {}): OfferNumbers {
   const log = [row({}), row({ outcome: "no_show", outcomeWords: "no show" })];
   return {
     bounds: ALL,
+    person: null,
+    personOptions: { closers: [], setters: [] },
     totalBookings: 2,
     calls: callScoreboard(log, ALL, TZ),
     cash: {
@@ -113,6 +115,7 @@ describe("numbersForMcp", () => {
   it("shapes money as dollar strings and rates as whole percents", () => {
     const out = numbersForMcp(numbers());
     expect(out.window).toEqual({ label: "All time", from: null, to: null });
+    expect(out.cutTo).toBeNull();
     expect(out.cash).toMatchObject({
       source: "stripe",
       collected: "1500.50",
@@ -148,6 +151,50 @@ describe("numbersForMcp", () => {
       talkMinutes: 7,
       byRep: [expect.objectContaining({ rep: "Sam Carter", isAPerson: true })],
     });
+  });
+
+  it("names the person a cut is for, and shapes cash by tag", () => {
+    const out = numbersForMcp(
+      numbers({
+        person: { by: "closer", name: "Sam Carter" },
+        cash: {
+          source: "sheet",
+          syncedAt: null,
+          catalog: cashCatalog({
+            payments: [
+              {
+                email: "a@example.test",
+                cashCents: 4_900,
+                status: "succeeded",
+                occurredAt: new Date("2026-09-10T15:30:00Z"),
+                label: "starter",
+              },
+            ],
+            rules: [
+              {
+                id: "r1",
+                tag: "frontend",
+                matchField: "label",
+                matchOp: "contains",
+                matchValue: "starter",
+                countsAsRevenue: true,
+                countsAsOptin: false,
+                exclude: false,
+                excludeFromAov: false,
+                hideFromDashboard: false,
+                sortOrder: 0,
+                active: true,
+              },
+            ],
+            from: new Date(0),
+            to: new Date("2026-12-31T00:00:00Z"),
+            timeZone: TZ,
+          }),
+        },
+      }),
+    );
+    expect(out.cutTo).toMatchObject({ by: "closer", name: "Sam Carter" });
+    expect(out.cash?.byTag).toEqual([{ tag: "frontend", payments: 1, cash: "49.00" }]);
   });
 
   it("returns null sections instead of zeros when a source is missing", () => {

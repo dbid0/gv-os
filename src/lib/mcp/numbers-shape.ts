@@ -46,6 +46,12 @@ export function numbersForMcp(n: OfferNumbers) {
   const d = n.dialing;
   return {
     window: { label: n.bounds.label, from: n.bounds.from, to: n.bounds.to },
+    cutTo: n.person
+      ? {
+          ...n.person,
+          note: "Calls and dialing are cut to this person; cash and applications are the whole offer. Calls with no report yet name nobody, so they are not in a person's calls.",
+        }
+      : null,
     cash: cash
       ? {
           source: n.cash.source,
