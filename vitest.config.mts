@@ -177,6 +177,13 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Which money alarms reach the owner banner, and in what order.
+        "src/lib/notifications/integrity.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/payments/normalize.ts": {
           statements: 100,
           branches: 100,
