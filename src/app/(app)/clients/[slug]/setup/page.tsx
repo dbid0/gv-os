@@ -439,7 +439,7 @@ export default async function ClientSetupPage({
                 <SettingsSection
                   icon={GraduationCap}
                   title="Students program"
-                  description="Who counts as a student and how long the program runs. With a minimum, only payers who made a single payment of at least that much appear on the Students board, and their week counts from that payment. With a length, students past the last week move to Program complete. Blank keeps both open."
+                  description="Who counts as a student, how long the program runs, and how many 1-on-1 calls each student gets. With a minimum, only payers who made a single payment of at least that much appear on the Students board, and their week counts from that payment. With a length, students past the last week move to Program complete. Blank keeps each open; the 1-on-1 limit shows as “2 of 4” on every student card."
                 >
                   <StudentProgramPanel
                     slug={slug}
@@ -451,6 +451,11 @@ export default async function ClientSetupPage({
                     lengthWeeks={
                       offerRow?.programLengthWeeks
                         ? String(offerRow.programLengthWeeks)
+                        : ""
+                    }
+                    callLimit={
+                      offerRow?.oneOnOneCallLimit
+                        ? String(offerRow.oneOnOneCallLimit)
                         : ""
                     }
                   />
