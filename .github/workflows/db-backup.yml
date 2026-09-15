@@ -150,8 +150,12 @@ jobs:
             --passphrase "$PASSPHRASE" --output "$FILE.gpg" "$FILE"
           shred -u "$FILE"
           # The encrypted file must decrypt back to a valid dump before it is kept.
-          gpg --batch --pinentry-mode loopback --passphrase "$PASSPHRASE" --decrypt "$FILE.gpg" \
-            | pg_restore --list > /dev/null
+          # To a file, not a pipe: pg_restore --list stops reading after the table
+          # of contents, and gpg then fails on the closed pipe.
+          gpg --batch --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --output check.dump --decrypt "$FILE.gpg"
+          pg_restore --list check.dump > /dev/null
+          shred -u check.dump
           ls -lh "$FILE.gpg"
           echo "encrypted and verified decryptable"
 
