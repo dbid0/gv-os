@@ -18,6 +18,7 @@ import {
   type EocOutcome,
   type EocReport,
 } from "@/lib/crm/confirmation-rates";
+import { cleanCancelReason, rescheduleTrail } from "@/lib/calls/reschedules";
 
 export type CallLogBooking = {
   id: string;
@@ -29,6 +30,10 @@ export type CallLogBooking = {
   provider: string;
   /** The booking moved to another time (a cancelled row that moved, or a moved booking). */
   rescheduled?: boolean;
+  /** When the booking was made — pairs a reschedule with the booking it became. */
+  bookedAt?: Date | null;
+  /** The calendar's own cancellation reason, as recorded. */
+  cancelReason?: string | null;
 };
 
 /** An in-app report tied to the booking it was filed against. */
@@ -57,6 +62,12 @@ export type CallLogRow = {
   reportSource: "app" | "sheet" | null;
   /** The closer the report names, or null. */
   closer: string | null;
+  /** Why the calendar says it was called off, when it says. */
+  cancelReason: string | null;
+  /** A rescheduled call: the new time it moved to, when that booking is known. */
+  movedTo: Date | null;
+  /** A call that replaced a rescheduled one: the time it moved from. */
+  movedFrom: Date | null;
 };
 
 export const CALL_STATES: readonly { key: CallState; label: string }[] = [
@@ -103,6 +114,7 @@ export function buildCallLog(input: {
   const unboundFiled = byEmail(input.filed.filter((r) => !r.bookingId));
   const sheetByEmail = byEmail(input.sheet);
   const nowMs = input.now.getTime();
+  const trail = rescheduleTrail(input.bookings);
 
   const rows: CallLogRow[] = input.bookings.map((b) => {
     const base = {
@@ -114,6 +126,9 @@ export function buildCallLog(input: {
       provider: b.provider,
       rescheduled: b.rescheduled === true,
       confirmation: confirmationStateOf(confirmedAt.get(b.id) ?? null, b.startsAt),
+      cancelReason: b.status === "canceled" ? cleanCancelReason(b.cancelReason) : null,
+      movedTo: trail.get(b.id)?.movedTo?.startsAt ?? null,
+      movedFrom: trail.get(b.id)?.movedFrom?.startsAt ?? null,
     };
 
     // A report filed against this booking, else one filed without a booking,

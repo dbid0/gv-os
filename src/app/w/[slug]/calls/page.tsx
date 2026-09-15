@@ -45,6 +45,24 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago",
 });
 
+const whenFmt = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Chicago",
+});
+
+/** The reschedule trail and cancel reason, in words, for a row's second line. */
+function trailWords(r: CallLogRow): string[] {
+  const words: string[] = [];
+  if (r.movedFrom) words.push(`moved from ${whenFmt.format(r.movedFrom)}`);
+  if (r.movedTo) words.push(`moved to ${whenFmt.format(r.movedTo)}`);
+  if (r.cancelReason) words.push(`“${r.cancelReason}”`);
+  return words;
+}
+
 function dayLabel(
   key: string,
   todayKey: string,
@@ -303,7 +321,9 @@ export default async function WorkspaceCallsPage({
                         </span>
                       )}
                       <span className="text-faint block truncate text-[11px]">
-                        {[r.eventType, r.provider].filter(Boolean).join(" · ")}
+                        {[r.eventType, r.provider, ...trailWords(r)]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
                     <ConfirmationChip row={r} />

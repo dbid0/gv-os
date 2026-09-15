@@ -46,6 +46,11 @@ export async function loadCallLog(
         eventType: bookings.eventType,
         provider: bookings.provider,
         rescheduled: bookings.rescheduled,
+        bookedAt: bookings.bookedAt,
+        // Calendly keeps it on the event's cancellation; iClosed as cancelReason.
+        cancelReason: sql<
+          string | null
+        >`coalesce(${bookings.raw} -> 'cancellation' ->> 'reason', ${bookings.raw} ->> 'cancelReason')`,
       })
       .from(bookings)
       .where(eq(bookings.clientId, clientId))
