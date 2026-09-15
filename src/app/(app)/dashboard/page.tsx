@@ -19,7 +19,6 @@ import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
 import { TeamsOverviewCard } from "@/components/shell/teams-overview-card";
 import { buildTeamsOverview } from "@/lib/teams-overview";
 import { shellUser } from "@/lib/auth/user";
-import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { getPref } from "@/lib/prefs";
 import { loadRoster } from "@/lib/roster-server";
@@ -48,6 +47,8 @@ import {
   rangeBounds,
 } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { dayKeyIn } from "@/lib/time/zone";
 
 export const metadata = {
   title: "Dashboard - GV OS",
@@ -70,10 +71,11 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const tz = await viewerTimeZone();
   const roster = await loadRoster();
   const params = await searchParams;
   const user = await shellUser();
-  const todayKey = dayKeyCT(new Date());
+  const todayKey = dayKeyIn(new Date(), tz);
   // The fast path: only what the headline + KPI wall + teams overview + revenue
   // chart need. Rep trends, the scalar rollup, the org settings and the card
   // layout pref moved into the streamed sections below — they no longer gate
@@ -177,7 +179,7 @@ export default async function DashboardPage({
   const monthName = new Date().toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
-    timeZone: "America/Chicago",
+    timeZone: tz,
   });
   const variants: Record<string, HomeVariant> = {};
   for (const r of HOME_RANGES) {

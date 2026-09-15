@@ -19,6 +19,7 @@ import {
 } from "@/lib/transactions/ar";
 import { listTransactions } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "AR & Money Calendar - GV OS" };
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export const dynamic = "force-dynamic";
  * sources.
  */
 export default async function ArPage() {
+  const tz = await viewerTimeZone();
   const db = getDb();
   const [{ rows: backlog }, rules, clientRows, pendingPayouts, receivedPaid] =
     await Promise.all([
@@ -171,7 +173,7 @@ export default async function ArPage() {
               .sort((a, b) => b.arCents - a.arCents)
               .map((item, i) => {
                 const days = item.aroseOn
-                  ? daysSinceClose(item.aroseOn, new Date())
+                  ? daysSinceClose(item.aroseOn, new Date(), tz)
                   : null;
                 const tone = agingTone(days);
                 return (

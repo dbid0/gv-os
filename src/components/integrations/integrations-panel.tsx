@@ -34,6 +34,7 @@ import {
 } from "@/lib/integrations/providers";
 import { isFailureNote, isStaleSync } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
+import { useViewerTimeZone } from "@/components/shell/time-zone";
 
 interface TeamOption {
   id: string;
@@ -93,6 +94,7 @@ function lettermark(label: string): string {
 
 /** A single stored connection, rendered compactly inside its provider card. */
 function ConnectionRowItem({ row }: { row: ConnectionRow }) {
+  const viewerZone = useViewerTimeZone();
   const router = useRouter();
   const [pending, start] = useTransition();
   const { toast } = useToast();
@@ -166,7 +168,7 @@ function ConnectionRowItem({ row }: { row: ConnectionRow }) {
                 day: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
-                timeZone: "America/Chicago",
+                timeZone: viewerZone,
               })}`
             : SYNC_PENDING_COPY[syncStatus]}
         </span>

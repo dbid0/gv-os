@@ -3,10 +3,11 @@ import Link from "next/link";
 import { SummaryStrip, type OfferBreakdown } from "@/components/sales/summary-strip";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { dayKeyCT } from "@/lib/charts";
 import { listActivityReports, listEodReps } from "@/lib/sales/queries";
 import { ROLE_LABEL } from "@/lib/sales/eod-fields";
 import { cn } from "@/lib/utils";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "EOD Reports - GV OS" };
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function EodReportsPage({
 }: {
   searchParams: Promise<{ kind?: string }>;
 }) {
+  const tz = await viewerTimeZone();
   const { kind = "eod" } = await searchParams;
   const active = CADENCE_TABS.some((t) => t.key === kind) ? kind : "eod";
   const cadenceLabel = active === "bod" ? "BOD" : "EOD";
@@ -57,10 +59,10 @@ export default async function EodReportsPage({
   // Today's submission compliance, per offer — Daniel's ask: "how many reps out
   // of how many have submitted their EOD/BOD so far." The roster is every active
   // rep; a report of any kind today (day-off included) counts as submitted.
-  const todayKey = dayKeyCT(new Date());
+  const todayKey = dayKeyIn(new Date(), tz);
   const submittedByTeam = new Map<string, Set<string>>();
   for (const r of rows) {
-    if (dayKeyCT(new Date(r.reportDate)) !== todayKey) continue;
+    if (dayKeyIn(new Date(r.reportDate), tz) !== todayKey) continue;
     const team = r.teamName ?? "Unassigned";
     const set = submittedByTeam.get(team) ?? new Set<string>();
     if (r.repName) set.add(r.repName);

@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { chartColorForClient, type DayBucket } from "@/lib/charts";
 import type { KitOverviewRow } from "@/lib/email/queries";
 import { cn } from "@/lib/utils";
+import { useViewerTimeZone } from "@/components/shell/time-zone";
 
 export function KitSyncButton() {
   const router = useRouter();
@@ -51,13 +52,13 @@ export function KitSyncButton() {
   );
 }
 
-const fmtWhen = (d: Date) =>
+const fmtWhen = (d: Date, timeZone: string) =>
   new Date(d).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/Chicago",
+    timeZone,
   });
 
 export function EmailOverview({
@@ -68,6 +69,7 @@ export function EmailOverview({
   /** Subscriber count per CT day, keyed by connection — absent until capture began. */
   growth?: Record<string, DayBucket[]>;
 }) {
+  const timeZone = useViewerTimeZone();
   // Cross-offer rollup — the clean overview that leads the section before the
   // per-offer cards below (Daniel: "clean overview, then click per offer").
   const totalSubs = accounts.reduce((s, a) => s + (a.subscriberCount ?? 0), 0);
@@ -191,7 +193,7 @@ export function EmailOverview({
                 </div>
 
                 <p className="text-faint border-t pt-2 text-[11px]">
-                  Last synced {fmtWhen(a.takenAt)}
+                  Last synced {fmtWhen(a.takenAt, timeZone)}
                 </p>
               </div>
             </Panel>

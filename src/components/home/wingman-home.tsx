@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { roleLabel } from "@/lib/team-roles";
 import { type WingmanData } from "@/lib/home/data";
 import { type WingmanQuotaLine } from "@/lib/home/wingman-model";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * The rep's home ("Wingman"): their own day at a glance — quota pace, streak and
@@ -79,15 +80,12 @@ function QuotaLine({ line }: { line: WingmanQuotaLine }) {
   );
 }
 
-function shortDate(d: Date): string {
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "America/Chicago",
-  });
+function shortDate(d: Date, timeZone: string): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone });
 }
 
-export function WingmanHome({ data }: { data: WingmanData }) {
+export async function WingmanHome({ data }: { data: WingmanData }) {
+  const tz = await viewerTimeZone();
   const { rep, gamification, model, recentActivity, lastEods } = data;
 
   if (!rep) {
@@ -261,7 +259,7 @@ export function WingmanHome({ data }: { data: WingmanData }) {
                     {a.sub && <p className="text-faint truncate text-xs">{a.sub}</p>}
                   </div>
                   <span className="text-faint ml-auto text-xs">
-                    {shortDate(a.occurredAt)}
+                    {shortDate(a.occurredAt, tz)}
                   </span>
                 </Row>
               ))}

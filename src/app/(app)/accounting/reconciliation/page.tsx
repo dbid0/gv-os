@@ -19,6 +19,7 @@ import {
 } from "@/lib/accounting/sheet-sync";
 import { cents } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Reconciliation - GV OS" };
 export const dynamic = "force-dynamic";
@@ -31,19 +32,20 @@ const FIGURES = [
   { key: "arCents", label: "AR" },
 ] as const;
 
-const fmtWhen = (d: Date) =>
+const fmtWhen = (d: Date, timeZone: string) =>
   d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/Chicago",
+    timeZone,
   });
 
 const driftLabel = (cents: number) =>
   `${cents > 0 ? "+" : "−"}${(Math.abs(cents) / 100).toFixed(2)}`;
 
 export default async function ReconciliationPage() {
+  const tz = await viewerTimeZone();
   // Five independent reads — none depends on another's result — run
   // concurrently instead of one after another. `latestReconciliation`,
   // `mirrorMonthly`, and `mirrorOutstanding` all also share one cached
@@ -106,7 +108,7 @@ export default async function ReconciliationPage() {
               value={`$${(run.totalAbsDriftCents / 100).toFixed(2)}`}
               tone={run.totalAbsDriftCents === 0 ? "success" : "danger"}
             />
-            <Kpi label="Last sync" value={fmtWhen(run.createdAt)} />
+            <Kpi label="Last sync" value={fmtWhen(run.createdAt, tz)} />
           </div>
 
           {monthly.length > 0 && (
@@ -122,7 +124,7 @@ export default async function ReconciliationPage() {
                 const oldest = Math.max(
                   0,
                   ...outstanding.rows.map(
-                    (r) => daysSinceClose(r.dateClosed, new Date()) ?? 0,
+                    (r) => daysSinceClose(r.dateClosed, new Date(), tz) ?? 0,
                   ),
                 );
                 return oldest > 0 ? (
@@ -132,7 +134,7 @@ export default async function ReconciliationPage() {
             >
               <div className="space-y-2">
                 {outstanding.rows.map((r) => {
-                  const days = daysSinceClose(r.dateClosed, new Date());
+                  const days = daysSinceClose(r.dateClosed, new Date(), tz);
                   const tone = agingTone(days);
                   return (
                     <div

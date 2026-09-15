@@ -33,6 +33,7 @@ import { listAdSpendForClient } from "@/lib/revshare/ad-spend-query";
 import { rosterClientBySlug } from "@/lib/roster-server";
 import { getTeamBySlug } from "@/lib/sales/queries";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,7 @@ export default async function ClientPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const tz = await viewerTimeZone();
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
@@ -119,6 +121,7 @@ export default async function ClientPage({
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
     new Date(),
+    tz,
   );
 
   const modules = modulesFor(slug);

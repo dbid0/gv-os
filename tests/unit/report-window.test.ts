@@ -30,31 +30,49 @@ describe("inWindow", () => {
   it("takes everything, undated included, for all time", () => {
     const life = reportBounds("life", TODAY);
     expect(isBounded(life)).toBe(false);
-    expect(inWindow(null, life)).toBe(true);
-    expect(inWindow(new Date("2020-01-01T00:00:00Z"), life)).toBe(true);
+    expect(inWindow(null, life, "America/Chicago")).toBe(true);
+    expect(inWindow(new Date("2020-01-01T00:00:00Z"), life, "America/Chicago")).toBe(
+      true,
+    );
   });
 
   it("uses Central-time days, inclusive, and leaves undated rows out", () => {
     expect(isBounded(month)).toBe(true);
-    expect(inWindow(null, month)).toBe(false);
+    expect(inWindow(null, month, "America/Chicago")).toBe(false);
     // 03:00 UTC Sep 1 is still Aug 31 in Chicago.
-    expect(inWindow(new Date("2026-09-01T03:00:00Z"), month)).toBe(false);
-    expect(inWindow(new Date("2026-09-01T06:00:00Z"), month)).toBe(true);
-    expect(inWindow(new Date("2026-09-15T04:00:00Z"), month)).toBe(true); // Sep 14 CT
-    expect(inWindow(new Date("2026-09-15T06:00:00Z"), month)).toBe(false);
+    expect(inWindow(new Date("2026-09-01T03:00:00Z"), month, "America/Chicago")).toBe(
+      false,
+    );
+    expect(inWindow(new Date("2026-09-01T06:00:00Z"), month, "America/Chicago")).toBe(
+      true,
+    );
+    expect(inWindow(new Date("2026-09-15T04:00:00Z"), month, "America/Chicago")).toBe(
+      true,
+    ); // Sep 14 CT
+    expect(inWindow(new Date("2026-09-15T06:00:00Z"), month, "America/Chicago")).toBe(
+      false,
+    );
     expect(
-      inWindow(new Date("2026-08-20T12:00:00Z"), {
-        from: null,
-        to: "2026-08-31",
-        label: "",
-      }),
+      inWindow(
+        new Date("2026-08-20T12:00:00Z"),
+        {
+          from: null,
+          to: "2026-08-31",
+          label: "",
+        },
+        "America/Chicago",
+      ),
     ).toBe(true);
     expect(
-      inWindow(new Date("2026-09-20T12:00:00Z"), {
-        from: "2026-09-01",
-        to: null,
-        label: "",
-      }),
+      inWindow(
+        new Date("2026-09-20T12:00:00Z"),
+        {
+          from: "2026-09-01",
+          to: null,
+          label: "",
+        },
+        "America/Chicago",
+      ),
     ).toBe(true);
   });
 });
@@ -123,6 +141,7 @@ describe("sourceFunnel with a window", () => {
       dimension: "source",
       aliases: new Map(),
       window: reportBounds("month", TODAY),
+      timeZone: "America/Chicago",
     });
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({

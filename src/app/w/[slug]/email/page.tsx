@@ -19,6 +19,7 @@ import { rosterClientBySlug } from "@/lib/roster-server";
 import { clientIdBySlug } from "@/lib/clients/id";
 import { cn } from "@/lib/utils";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function WorkspaceEmailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const tz = await viewerTimeZone();
   // Live when you're looking: kick a kit pull after the response.
   refreshProviderOnView("kit");
   const { slug } = await params;
@@ -45,7 +47,7 @@ export default async function WorkspaceEmailPage({
     accounts.find((a) => clientId !== null && a.clientId === clientId) ?? null;
   const emails = clientId ? await broadcastsForClient(clientId) : [];
   const growth = account
-    ? latestPerDay(growthSamples.get(account.integrationId) ?? [])
+    ? latestPerDay(growthSamples.get(account.integrationId) ?? [], tz)
     : [];
 
   if (!account) {
@@ -134,7 +136,7 @@ export default async function WorkspaceEmailPage({
                             day: "numeric",
                             hour: "numeric",
                             minute: "2-digit",
-                            timeZone: "America/Chicago",
+                            timeZone: tz,
                           })
                         : "—"}
                     </td>

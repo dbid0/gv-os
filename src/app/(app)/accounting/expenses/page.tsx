@@ -7,8 +7,9 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { agencyExpenses } from "@/db/schema/app";
-import { dayKeyCT } from "@/lib/charts";
 import { cents } from "@/lib/money";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Expenses - GV OS" };
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
  * with zero extra wiring — this page is just the comfortable way in.
  */
 export default async function ExpensesPage() {
+  const tz = await viewerTimeZone();
   const db = getDb();
   const rows = await db
     .select()
@@ -26,7 +28,7 @@ export default async function ExpensesPage() {
     .orderBy(desc(agencyExpenses.occurredOn))
     .limit(300);
 
-  const thisMonth = dayKeyCT(new Date()).slice(0, 7);
+  const thisMonth = dayKeyIn(new Date(), tz).slice(0, 7);
   const monthTotal = rows
     .filter((r) => r.occurredOn.startsWith(thisMonth))
     .reduce((s, r) => s + r.amountCents, 0);
@@ -55,7 +57,7 @@ export default async function ExpensesPage() {
       </div>
 
       <Panel title="Record an expense">
-        <ExpenseForm today={dayKeyCT(new Date())} />
+        <ExpenseForm today={dayKeyIn(new Date(), tz)} />
       </Panel>
 
       {rows.length === 0 ? (

@@ -1,4 +1,4 @@
-import { dayKeyCT } from "@/lib/charts";
+import { BUSINESS_TIME_ZONE, dayKeyIn } from "@/lib/time/zone";
 
 /**
  * AR aging — pure. The mirror stores close dates as literal `yyyy-mm-dd`
@@ -17,11 +17,16 @@ function utcNoon(key: string): number | null {
 }
 
 /** Whole days from a yyyy-mm-dd close date to `now`'s CT day. Null on junk. */
-export function daysSinceClose(dateClosed: string, now: Date): number | null {
+export function daysSinceClose(
+  dateClosed: string,
+  now: Date,
+  /** Whose "today" the days are counted to — the viewer's zone. */
+  timeZone: string = BUSINESS_TIME_ZONE,
+): number | null {
   const closed = utcNoon(dateClosed);
   if (closed === null) return null;
-  // dayKeyCT always yields a valid yyyy-mm-dd, so this side can't be null.
-  const today = utcNoon(dayKeyCT(now)) as number;
+  // dayKeyIn always yields a valid yyyy-mm-dd, so this side can't be null.
+  const today = utcNoon(dayKeyIn(now, timeZone)) as number;
   return Math.round((today - closed) / DAY_MS);
 }
 

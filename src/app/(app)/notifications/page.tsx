@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients, notifications } from "@/db/schema/app";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Notifications - GV OS" };
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 /** The notifications tab (v2 §5): what needs attention, rule-evaluated on
  * every sync cycle, deduped forever. */
 export default async function NotificationsPage() {
+  const tz = await viewerTimeZone();
   const db = getDb();
   const rows = await db
     .select({
@@ -49,7 +51,7 @@ export default async function NotificationsPage() {
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
-      timeZone: "America/Chicago",
+      timeZone: tz,
     }),
     read: r.readAt !== null,
   }));

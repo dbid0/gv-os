@@ -23,6 +23,8 @@ import { shellUser } from "@/lib/auth/user";
 import { effectiveRole, type Role } from "@/lib/auth/roles";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
 import { viewerRole } from "@/lib/auth/viewer";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { ViewerTimeZoneProvider } from "@/components/shell/time-zone";
 
 /**
  * The authenticated application shell — STREAMING.
@@ -109,26 +111,29 @@ async function ShellPalette() {
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
   const previewRole = cookieStore.get("gv-dev-role")?.value ?? null;
+  const timeZone = await viewerTimeZone();
 
   return (
-    <div className="flex h-dvh overflow-hidden">
-      <Suspense fallback={<SidebarFallback />}>
-        <ShellSidebar previewRole={previewRole} />
-      </Suspense>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Suspense fallback={<div className="glass h-14 shrink-0 border-b" />}>
-          <ShellTopbar />
+    <ViewerTimeZoneProvider timeZone={timeZone}>
+      <div className="flex h-dvh overflow-hidden">
+        <Suspense fallback={<SidebarFallback />}>
+          <ShellSidebar previewRole={previewRole} />
         </Suspense>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <PageTransition>{children}</PageTransition>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Suspense fallback={<div className="glass h-14 shrink-0 border-b" />}>
+            <ShellTopbar />
+          </Suspense>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
+        <Suspense>
+          <ShellPalette />
+        </Suspense>
+        {previewRole && <ViewAsBanner role={previewRole} />}
+        <DealClosedToasts />
+        <TabKeepWarm />
       </div>
-      <Suspense>
-        <ShellPalette />
-      </Suspense>
-      {previewRole && <ViewAsBanner role={previewRole} />}
-      <DealClosedToasts />
-      <TabKeepWarm />
-    </div>
+    </ViewerTimeZoneProvider>
   );
 }
