@@ -313,6 +313,19 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Cutting the numbers to one closer or setter, names merged. Fully covered.
+        "src/lib/calls/person-filter.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/mcp/numbers-shape.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/calls/call-scoreboard.ts": {
           statements: 100,
           branches: 100,

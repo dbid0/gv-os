@@ -2,6 +2,13 @@ import "server-only";
 
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { callScoreboard, type CallScoreboard } from "@/lib/calls/call-scoreboard";
+import {
+  filterLogByPerson,
+  personOptions,
+  readPersonFilter,
+  type PersonFilter,
+  type PersonOptions,
+} from "@/lib/calls/person-filter";
 import { loadDialing, type DialingData } from "@/lib/crm/dialing-loader";
 import {
   loadApplicationNumbers,
@@ -17,6 +24,10 @@ import type { RangeBounds } from "@/lib/transactions/homepage";
 
 export type OfferNumbers = {
   bounds: RangeBounds;
+  /** The person the call + dialing numbers are cut to; null = the whole offer. */
+  person: PersonFilter | null;
+  /** Every closer and setter the offer's reports name, for the filter row. */
+  personOptions: PersonOptions;
   /** Every booking the offer has, counted or not ("has a calendar at all"). */
   totalBookings: number;
   calls: CallScoreboard;
@@ -36,19 +47,29 @@ export async function loadOfferNumbers(
   range: ReportRange,
   timeZone: string,
   now: Date = new Date(),
+  /** `?who=closer:Name` / `setter:Name`, validated against the offer's names. */
+  who?: unknown,
 ): Promise<OfferNumbers> {
   const todayKey = dayKeyIn(now, timeZone);
   const bounds = reportBounds(range, todayKey);
-  const [{ log, totalBookings }, dialing, cash] = await Promise.all([
+  const [{ log, totalBookings }, cash] = await Promise.all([
     loadCallLog(clientId, countedCallSources, now),
-    loadDialing(clientId, bounds, timeZone),
     loadCashCatalog(clientId, bounds, todayKey, timeZone),
   ]);
-  const applications = await loadApplicationNumbers(clientId, log, bounds, timeZone);
+  const options = personOptions(log);
+  const person = readPersonFilter(who, options);
+  const [applications, dialing] = await Promise.all([
+    // Applications aren't anyone's, so they always read the whole offer.
+    loadApplicationNumbers(clientId, log, bounds, timeZone),
+    loadDialing(clientId, bounds, timeZone, person?.name ?? null),
+  ]);
+  const calls = person ? filterLogByPerson(log, person) : log;
   return {
     bounds,
+    person,
+    personOptions: options,
     totalBookings,
-    calls: callScoreboard(log, bounds, timeZone),
+    calls: callScoreboard(calls, bounds, timeZone),
     cash,
     applications,
     dialing,

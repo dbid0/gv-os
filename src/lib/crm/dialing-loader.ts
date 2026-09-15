@@ -4,6 +4,7 @@ import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { crmActivity, integrations } from "@/db/schema/app";
+import { filterDialsByPerson } from "@/lib/calls/person-filter";
 import { dialingDetail, type DialingDetail } from "@/lib/crm/dialing-detail";
 import { inWindow } from "@/lib/tracking/report-window";
 import type { RangeBounds } from "@/lib/transactions/homepage";
@@ -31,6 +32,8 @@ export async function loadDialing(
   clientId: string,
   bounds: RangeBounds,
   timeZone: string,
+  /** Cut to one person's dials (their dialler user name, merged). */
+  personName?: string | null,
 ): Promise<DialingData> {
   const db = getDb();
   const conditions = [eq(crmActivity.clientId, clientId), eq(crmActivity.kind, "call")];
@@ -81,7 +84,8 @@ export async function loadDialing(
       .limit(DIAL_ROW_CAP),
   ]);
 
-  const windowed = rows.filter((r) => inWindow(r.occurredAt, bounds, timeZone));
+  const inRange = rows.filter((r) => inWindow(r.occurredAt, bounds, timeZone));
+  const windowed = personName ? filterDialsByPerson(inRange, personName) : inRange;
   return {
     connected: connection.length > 0,
     detail: dialingDetail(windowed, timeZone),
