@@ -16,11 +16,13 @@ import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { viewerRole } from "@/lib/auth/viewer";
+import { ApplicationsSection } from "@/components/tracking/applications-section";
 import { CashSection } from "@/components/tracking/cash-section";
 import { ConfirmerTable } from "@/components/tracking/confirmer-table";
 import { DialingSection } from "@/components/tracking/dialing-section";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { loadDialing } from "@/lib/crm/dialing-loader";
+import { loadApplicationNumbers } from "@/lib/tracking/application-numbers-loader";
 import { loadCashCatalog } from "@/lib/tracking/cash-catalog-loader";
 import { callScoreboard } from "@/lib/calls/call-scoreboard";
 import { isPortalView } from "@/lib/clients/portal-visibility";
@@ -85,7 +87,7 @@ export default async function WorkspaceNumbersPage({
     <WsPageHeader
       icon={Hash}
       title="Numbers"
-      lede="Every number this offer has, each over the count it was measured against: cash, booked calls, confirmations, verdicts, how closes paid, the money closers reported, and what the dialler recorded."
+      lede="Every number this offer has, each over the count it was measured against: cash, applications and speed to lead, booked calls, confirmations, verdicts, how closes paid, the money closers reported, and what the dialler recorded."
       aside={<WindowChips active={range} hrefFor={hrefFor} />}
     />
   );
@@ -114,12 +116,14 @@ export default async function WorkspaceNumbersPage({
     loadCashCatalog(row.id, bounds, todayKey, tz),
   ]);
   const s = callScoreboard(log, bounds, tz);
+  const apps = await loadApplicationNumbers(row.id, log, bounds, tz);
 
   if (totalBookings === 0) {
     return (
       <div className="space-y-8">
         {header}
         <CashSection data={cash} />
+        <ApplicationsSection data={apps} />
         <EmptyState
           icon={Hash}
           title="No calls on the calendar yet"
@@ -144,6 +148,8 @@ export default async function WorkspaceNumbersPage({
       )}
 
       <CashSection data={cash} />
+
+      <ApplicationsSection data={apps} />
 
       <NumberSection
         title="Calls booked"
