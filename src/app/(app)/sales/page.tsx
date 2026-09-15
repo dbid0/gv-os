@@ -59,6 +59,8 @@ export default async function SalesPage() {
   const ownerOf = (slug: string) => roster.find((c) => c.slug === slug)?.owner ?? null;
   const accentOf = (slug: string) =>
     roster.find((c) => c.slug === slug)?.accent ?? "var(--brand)";
+  // Unknown (undefined) for a team that isn't a roster client: the avatar asks.
+  const hasLogoOf = (slug: string) => roster.find((c) => c.slug === slug)?.hasLogo;
 
   return (
     <div className="space-y-6">
@@ -111,6 +113,7 @@ export default async function SalesPage() {
                     slug={team.slug}
                     name={team.name}
                     accent={accent}
+                    hasLogo={hasLogoOf(team.slug)}
                     size={40}
                   />
                   <div className="min-w-0 flex-1">
