@@ -2330,6 +2330,15 @@ export const leadTags = appSchema.table(
       .references(() => clients.id),
     leadEmail: text("lead_email").notNull(),
     tag: text("tag").notNull(),
+    /**
+     * The in-app end-of-call report whose outcome rule added this tag, or null
+     * for a tag a person added. Voiding that report takes exactly these tags
+     * back off; a tag someone also added by hand was never this row.
+     */
+    sourceEocReportId: uuid("source_eoc_report_id").references(
+      () => callEocReports.id,
+      { onDelete: "set null" },
+    ),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -2375,5 +2384,52 @@ export const leadViews = appSchema.table(
     ),
     check("lead_views_name_check", sql`length(trim(${table.name})) between 1 and 40`),
     check("lead_views_query_check", sql`length(${table.query}) <= 500`),
+  ],
+);
+
+/**
+ * What filing a call's outcome in GV OS sets off — NenBase's status-form
+ * rules. "When a call is filed as No-show, tag the lead no-show and tell the
+ * team." A rule tags the lead (so a saved view like "Tagged no-show" becomes
+ * the rebook queue) and/or drops an in-app notification.
+ *
+ * Rules only fire for reports filed in GV OS; a sheet row is someone else's
+ * form. Voiding the report takes its tags back off (lead_tags carries the
+ * report id); restoring puts them back. Nothing here touches money or the
+ * counted metrics.
+ */
+export const callOutcomeRules = appSchema.table(
+  "call_outcome_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    /** An EOC form outcome key (lib/calls/eoc-form.ts EOC_OUTCOMES). */
+    outcome: text("outcome").notNull(),
+    /** The lead tag to add, or null for notify-only. */
+    tag: text("tag"),
+    notify: boolean("notify").notNull().default(false),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("call_outcome_rules_client_outcome_tag_key").on(
+      table.clientId,
+      table.outcome,
+      sql`coalesce(${table.tag}, '')`,
+    ),
+    check(
+      "call_outcome_rules_outcome_check",
+      sql`${table.outcome} in ('closed', 'follow_up', 'not_a_fit', 'no_show', 'rescheduled', 'cancelled')`,
+    ),
+    check(
+      "call_outcome_rules_tag_check",
+      sql`${table.tag} is null or ${table.tag} ~ '^[a-z0-9][a-z0-9-]{0,31}$'`,
+    ),
+    check(
+      "call_outcome_rules_does_something_check",
+      sql`${table.tag} is not null or ${table.notify}`,
+    ),
   ],
 );

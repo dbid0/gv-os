@@ -22,6 +22,8 @@ export function notificationHref(kind: string, clientSlug: string | null): strin
       return "/sales/eod";
     case "payment_failed":
       return "/accounting/recovery";
+    case "call_outcome":
+      return clientSlug ? `/w/${clientSlug}/calls` : "/notifications";
     case "speed_to_lead_breach":
       return clientSlug ? `/w/${clientSlug}/crm` : "/sales/cockpit";
     default:

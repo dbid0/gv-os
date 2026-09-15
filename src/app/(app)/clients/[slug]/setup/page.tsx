@@ -18,6 +18,7 @@ import {
   Tags,
   GraduationCap,
   Users,
+  PhoneForwarded,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { eq } from "drizzle-orm";
@@ -33,7 +34,10 @@ import {
   OfferSettingsPanel,
   type OfferSettingsRow,
 } from "@/components/settings/offer-settings-panel";
+import { CallOutcomeRulesPanel } from "@/components/settings/call-outcome-rules-panel";
 import { PaymentTagRulesPanel } from "@/components/settings/payment-tag-rules-panel";
+import type { OutcomeRule } from "@/lib/calls/outcome-rules";
+import { listOutcomeRules } from "@/lib/calls/outcome-rules-store";
 import { StudentProgramPanel } from "@/components/settings/student-program-panel";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { PageHeader } from "@/components/shell/page-header";
@@ -110,11 +114,17 @@ export default async function ClientSetupPage({
   let monthlyGoalCents: number | null = null;
   let rateRows: Awaited<ReturnType<typeof listRates>> = [];
   let tagRules: TagRulesPanelData | null = null;
+  let outcomeRules: OutcomeRule[] | null = null;
   if (team) {
     try {
       tagRules = await loadTagRulesPanel(team.id);
     } catch {
       // A rules read error leaves the section in its "couldn't load" state.
+    }
+    try {
+      outcomeRules = await listOutcomeRules(team.id);
+    } catch {
+      // Same: the section says it couldn't load, nothing else breaks.
     }
     try {
       const [rev, offRows, cliRows, rates] = await Promise.all([
@@ -457,6 +467,21 @@ export default async function ClientSetupPage({
                     <p className="text-warning text-sm">
                       Couldn&apos;t load the tag rules just now. Nothing about them has
                       changed; reload to try again.
+                    </p>
+                  )}
+                </SettingsSection>
+
+                <SettingsSection
+                  icon={PhoneForwarded}
+                  title="Call outcome rules"
+                  description="What filing a call's outcome in GV OS sets off: tag the lead (so a saved Leads view becomes a work queue) and/or notify the team. Sheet rows don't trigger rules. Voiding a report takes its tags back off."
+                >
+                  {outcomeRules ? (
+                    <CallOutcomeRulesPanel slug={slug} rules={outcomeRules} />
+                  ) : (
+                    <p className="text-warning text-sm">
+                      Couldn&apos;t load the outcome rules just now. Reload to try
+                      again.
                     </p>
                   )}
                 </SettingsSection>
