@@ -2483,3 +2483,36 @@ export const studentCalls = appSchema.table(
     ),
   ],
 );
+
+/**
+ * Bookings taken out of the numbers — a test call someone booked on the live
+ * calendar, a duplicate, an internal meeting on the sales link.
+ *
+ * The booking itself is never touched (syncs keep updating it); one row here
+ * keeps it out of every counted-booking figure — the call log, stuck calls,
+ * confirmation and show/close rates — and deleting the row puts it back. A
+ * reason is required so the restore bin says why each one is out.
+ */
+export const bookingExclusions = appSchema.table(
+  "booking_exclusions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    excludedBy: text("excluded_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("booking_exclusions_booking_key").on(table.bookingId),
+    index("booking_exclusions_client_idx").on(table.clientId),
+    check(
+      "booking_exclusions_reason_check",
+      sql`length(trim(${table.reason})) between 3 and 200`,
+    ),
+  ],
+);

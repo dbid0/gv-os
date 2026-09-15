@@ -526,6 +526,13 @@
       "when": 1789431475055,
       "tag": "0074_student_calls",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1789434225163,
+      "tag": "0075_booking_exclusions",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,12 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { CheckCircle2, Clock, Phone, PhoneCall } from "lucide-react";
 
+import {
+  ExcludeBookingButton,
+  RestoreBookingButton,
+} from "@/components/calls/booking-exclusion";
 import { CallWeekGrid } from "@/components/calls/call-week-grid";
+import { listExcludedBookings } from "@/lib/bookings/exclusions-store";
 import { CloserSegmentsTable } from "@/components/calls/closer-segments-table";
 import { EocFormSheet } from "@/components/calls/eoc-form-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -198,12 +203,14 @@ export default async function WorkspaceCallsPage({
   }
 
   const now = new Date();
-  const [{ totalBookings, log, counts }, teamReps] = await Promise.all([
+  const isAdmin = role === "admin";
+  const [{ totalBookings, log, counts }, teamReps, excludedRows] = await Promise.all([
     loadCallLog(row.id, row.countedCallSources ?? null, now),
     db
       .select({ id: reps.id, name: reps.name, role: reps.role })
       .from(reps)
       .where(and(eq(reps.clientId, row.id), eq(reps.status, "active"))),
+    listExcludedBookings(row.id),
   ]);
   const visible = filter === "all" ? log : log.filter((r) => r.state === filter);
   const days = groupByDay(visible);
@@ -414,12 +421,47 @@ export default async function WorkspaceCallsPage({
                         </span>
                       ) : null}
                     </span>
+                    {isAdmin && (
+                      <ExcludeBookingButton slug={slug} bookingId={r.bookingId} />
+                    )}
                   </li>
                 ))}
               </ul>
             </section>
           ))}
         </div>
+      )}
+
+      {excludedRows.length > 0 && (
+        <details className="bg-card rounded-xl border px-4 py-3">
+          <summary className="cursor-pointer text-sm">
+            Out of the numbers{" "}
+            <span className="text-faint tabular-nums">({excludedRows.length})</span>
+          </summary>
+          <p className="text-faint mt-1 text-xs">
+            Calls taken out of the log, stuck calls and show/close rates. Putting one
+            back counts it again everywhere.
+          </p>
+          <ul className="mt-2 divide-y">
+            {excludedRows.map((x) => (
+              <li
+                key={x.bookingId}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <span className="min-w-0 text-sm">
+                  {x.inviteeName ?? x.inviteeEmail ?? "Unknown invitee"}
+                  <span className="text-faint ml-2 text-xs">
+                    {x.startsAt ? whenFmt.format(x.startsAt) : "no time"} · {x.reason}
+                    {x.excludedBy && ` · ${x.excludedBy}`}
+                  </span>
+                </span>
+                {isAdmin && (
+                  <RestoreBookingButton slug={slug} bookingId={x.bookingId} />
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <p className="text-faint text-xs">
