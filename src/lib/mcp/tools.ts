@@ -31,7 +31,10 @@ import {
 } from "@/lib/tracking/lead-views";
 import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
 import { currentSnapshot, leadByEmail, leadsForClient } from "@/lib/tracking/queries";
+import { numbersForMcp } from "@/lib/mcp/numbers-shape";
 import { ToolInputError, type ToolDefinition } from "@/lib/mcp/protocol";
+import { loadOfferNumbers } from "@/lib/tracking/numbers-loader";
+import { REPORT_RANGES, type ReportRange } from "@/lib/tracking/report-window";
 
 /** Integer cents as "1234.50", or null for unknown — never a guessed zero. */
 export const dollars = (cents: number | null | undefined): string | null =>
@@ -485,6 +488,53 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           ),
         })),
       };
+    },
+  },
+  {
+    name: "offer_numbers",
+    description:
+      "Every number the offer's Numbers page shows, for one window: cash (collected, payers, average order, refunds, failed charges, what tag rules hid, cash by tag / hour / day, paid with no call first), applications and speed to lead, booked calls, confirmation (including by seat and confirmed-then-cancelled), verdicts and their rates, how closes paid, money reported on calls, and dialing at dial / attempt / lead-day grain by rep. Rates are whole percents named with their denominator; null means unknown, never zero.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: slugArg,
+        range: {
+          type: "string",
+          description: "The window. Default life (all time).",
+          enum: REPORT_RANGES.map((r) => r.key),
+        },
+        timezone: {
+          type: "string",
+          description:
+            'IANA time zone whose calendar days bound the window, e.g. "America/New_York". Default America/Chicago.',
+        },
+      },
+      required: ["slug"],
+      additionalProperties: false,
+    },
+    run: async (args) => {
+      const offer = await offerBySlug(args.slug);
+      const range = (args.range ?? "life") as ReportRange;
+      if (!REPORT_RANGES.some((r) => r.key === range)) {
+        throw new ToolInputError(
+          `range must be one of ${REPORT_RANGES.map((r) => r.key).join(", ")}.`,
+        );
+      }
+      const timeZone = String(args.timezone ?? "America/Chicago");
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone });
+      } catch {
+        throw new ToolInputError(
+          `"${timeZone}" is not an IANA time zone. Use a name like America/New_York.`,
+        );
+      }
+      const numbers = await loadOfferNumbers(
+        offer.id,
+        offer.countedCallSources ?? null,
+        range,
+        timeZone,
+      );
+      return { offer: offer.slug, timeZone, ...numbersForMcp(numbers) };
     },
   },
   {

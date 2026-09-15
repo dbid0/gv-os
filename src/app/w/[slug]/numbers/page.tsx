@@ -20,13 +20,9 @@ import { ApplicationsSection } from "@/components/tracking/applications-section"
 import { CashSection } from "@/components/tracking/cash-section";
 import { ConfirmerTable } from "@/components/tracking/confirmer-table";
 import { DialingSection } from "@/components/tracking/dialing-section";
-import { loadCallLog } from "@/lib/calls/call-log-loader";
-import { loadDialing } from "@/lib/crm/dialing-loader";
-import { loadApplicationNumbers } from "@/lib/tracking/application-numbers-loader";
-import { loadCashCatalog } from "@/lib/tracking/cash-catalog-loader";
-import { callScoreboard } from "@/lib/calls/call-scoreboard";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { rosterClientBySlug } from "@/lib/roster-server";
+import { loadOfferNumbers } from "@/lib/tracking/numbers-loader";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 import { dayKeyIn } from "@/lib/time/zone";
 import {
@@ -78,8 +74,7 @@ export default async function WorkspaceNumbersPage({
 
   const range = readReportRange(sp.range);
   const now = new Date();
-  const todayKey = dayKeyIn(now, tz);
-  const bounds = reportBounds(range, todayKey);
+  const bounds = reportBounds(range, dayKeyIn(now, tz));
   const hrefFor = (r: ReportRange) =>
     r === "life" ? `/w/${slug}/numbers` : `/w/${slug}/numbers?range=${r}`;
 
@@ -110,13 +105,13 @@ export default async function WorkspaceNumbersPage({
     );
   }
 
-  const [{ log, totalBookings }, dialing, cash] = await Promise.all([
-    loadCallLog(row.id, row.countedCallSources ?? null, now),
-    loadDialing(row.id, bounds, tz),
-    loadCashCatalog(row.id, bounds, todayKey, tz),
-  ]);
-  const s = callScoreboard(log, bounds, tz);
-  const apps = await loadApplicationNumbers(row.id, log, bounds, tz);
+  const {
+    totalBookings,
+    calls: s,
+    cash,
+    applications: apps,
+    dialing,
+  } = await loadOfferNumbers(row.id, row.countedCallSources ?? null, range, tz, now);
 
   if (totalBookings === 0) {
     return (
