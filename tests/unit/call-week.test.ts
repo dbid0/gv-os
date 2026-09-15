@@ -18,6 +18,9 @@ function row(id: string, startsAt: Date | null): CallLogRow {
     outcomeWords: null,
     reportSource: null,
     closer: null,
+    cancelReason: null,
+    movedTo: null,
+    movedFrom: null,
   };
 }
 

@@ -11,6 +11,12 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago",
 });
 
+const shortDay = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "America/Chicago",
+});
+
 const dayName = (key: string, opts: Intl.DateTimeFormatOptions) => {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("en-US", {
@@ -24,7 +30,11 @@ function tone(r: CallLogRow): { className: string; word: string } {
   if (r.state === "cancelled") {
     return {
       className: "border-muted-foreground/30 text-muted-foreground",
-      word: r.rescheduled ? "Rescheduled" : "Cancelled",
+      word: r.movedTo
+        ? `Moved to ${shortDay.format(r.movedTo)}`
+        : r.rescheduled
+          ? "Rescheduled"
+          : "Cancelled",
     };
   }
   if (r.state === "needs_outcome") {
@@ -129,7 +139,17 @@ export function CallWeekGrid({
                     </>
                   );
                   return (
-                    <li key={r.bookingId}>
+                    <li
+                      key={r.bookingId}
+                      title={
+                        [
+                          r.movedFrom && `Moved from ${shortDay.format(r.movedFrom)}`,
+                          r.cancelReason,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || undefined
+                      }
+                    >
                       {r.inviteeEmail ? (
                         <Link
                           href={`/w/${slug}/leads/${encodeURIComponent(r.inviteeEmail)}`}
