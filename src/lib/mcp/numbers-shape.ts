@@ -57,6 +57,13 @@ export function numbersForMcp(n: OfferNumbers) {
           source: n.cash.source,
           note: "The offer's payment feed through its tag rules; equals the dashboard headline for the same window.",
           collected: dollars(cash.cashCollectedCents),
+          revenueGenerated: dollars(cash.revenueGeneratedCents),
+          leftToCollect: dollars(cash.leftToCollectCents),
+          dealsInWindow: cash.dealCount,
+          revenueByDay: cash.revenueByDay.map((x) => ({
+            day: x.day,
+            revenue: dollars(x.cents),
+          })),
           payments: cash.collectedCount,
           peopleWhoPaid: cash.payers,
           averageOrder: dollars(cash.aovCents),

@@ -119,6 +119,10 @@ describe("numbersForMcp", () => {
     expect(out.cash).toMatchObject({
       source: "stripe",
       collected: "1500.50",
+      revenueGenerated: "1500.50",
+      leftToCollect: null,
+      dealsInWindow: 0,
+      revenueByDay: [],
       peopleWhoPaid: 1,
       averageOrder: "1500.50",
       afterFeesEstimate: null,
