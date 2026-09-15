@@ -294,6 +294,13 @@ export default defineConfig({
         // Dialing at three grains (dial, attempt, person) from Close's calls.
         // Every cash number the payment feed answers; its collected cash must
         // equal the dashboard headline (tested). Money-adjacent: fully covered.
+        // Applications, applied→booked and windowed speed to lead. Fully covered.
+        "src/lib/tracking/application-numbers.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/tracking/cash-catalog.ts": {
           statements: 100,
           branches: 100,
