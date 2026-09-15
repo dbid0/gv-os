@@ -20,6 +20,7 @@ function row(extra: Partial<CallLogRow>): CallLogRow {
     rescheduled: false,
     state: "reported",
     confirmation: "none",
+    confirmedRole: null,
     outcome: "showed",
     outcomeWords: "follow up",
     reportSource: "sheet",
