@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { type HomeRange } from "@/lib/transactions/homepage";
+import { DEFAULT_HOME_RANGE, type HomeRange } from "@/lib/transactions/homepage";
 import { cn } from "@/lib/utils";
 
 /**
@@ -118,7 +118,10 @@ export function DateRangePicker({
     router.push(`${basePath}${query}`);
   };
 
-  const applyPreset = (key: HomeRange) => apply(key === "month" ? "" : `?range=${key}`);
+  // The bare URL is the DEFAULT range (a rolling 30 days since #270), so only
+  // that preset may drop the param — "This month" must say so explicitly.
+  const applyPreset = (key: HomeRange) =>
+    apply(key === DEFAULT_HOME_RANGE ? "" : `?range=${key}`);
 
   const applyCustom = (lo: string, hi: string) => {
     const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];

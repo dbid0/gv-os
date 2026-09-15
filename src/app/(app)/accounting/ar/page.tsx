@@ -169,14 +169,17 @@ export default async function ArPage() {
           <div className="space-y-2">
             {arItems
               .sort((a, b) => b.arCents - a.arCents)
-              .map((item) => {
+              .map((item, i) => {
                 const days = item.aroseOn
                   ? daysSinceClose(item.aroseOn, new Date())
                   : null;
                 const tone = agingTone(days);
                 return (
                   <div
-                    key={`${item.kind}-${item.label}-${item.month}-${item.arCents}`}
+                    // Two partial deals for one client in one month can share
+                    // a label, month and amount; a duplicate key lets React
+                    // drop one of them from the list. The position keeps each.
+                    key={`${item.kind}-${item.label}-${item.aroseOn ?? item.month}-${item.arCents}-${i}`}
                     className="bg-card flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border p-3"
                   >
                     <StatusPill tone={item.kind === "revshare" ? "live" : "progress"}>
