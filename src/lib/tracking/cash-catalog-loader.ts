@@ -39,7 +39,7 @@ export async function loadCashCatalog(
     null;
   if (!paySource) return { source: null, syncedAt: null, catalog: null };
 
-  const [{ payments }, aliases, rules, [fee], firstCalls] = await Promise.all([
+  const [{ payments, deals }, aliases, rules, [fee], firstCalls] = await Promise.all([
     cashRowsForClient(paySource.snapshot.syncId),
     aliasMapForClient(clientId),
     // Same fail-soft as the dashboard: a rules read that throws is no rules.
@@ -93,6 +93,7 @@ export async function loadCashCatalog(
       aliases,
       firstCallAt,
       fee: fee ?? null,
+      deals,
     }),
   };
 }

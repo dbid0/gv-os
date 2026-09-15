@@ -166,12 +166,20 @@ export default async function WorkspacePage({
           </div>
         </div>
         {!portalView && (
-          <Link
-            href={`/clients/${slug}`}
-            className="border-brand/40 text-brand hover:bg-brand-soft/50 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-          >
-            Manage &amp; data feeds <ArrowRight className="size-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/w/${slug}/numbers`}
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary/60 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+            >
+              Every number <ArrowRight className="size-3.5" />
+            </Link>
+            <Link
+              href={`/clients/${slug}`}
+              className="border-brand/40 text-brand hover:bg-brand-soft/50 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+            >
+              Manage &amp; data feeds <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
         )}
       </div>
 

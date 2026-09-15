@@ -100,13 +100,28 @@ export function CashSection({ data }: { data: CashCatalogData }) {
       <NumberSection
         title="Cash"
         lede={`${lede} Every payment here was ${sourceWords}.`}
-        footnote={`Average order = cash over the distinct people who paid (merged inboxes are one person; payments a rule keeps out of order size, and payers with no email or phone, are left out). Paid with no call first = cash from people with no booked call that started before they paid.${c.afterFeesEstimateCents === null ? " Cash after fees appears once the offer has a processor fee rate in Setup." : " Cash after fees is an estimate at the offer's fee rate, not the processor's statement."}`}
+        footnote={`Revenue generated and cash left to collect are the Dashboard's own figures for this window. Average order = cash over the distinct people who paid (merged inboxes are one person; payments a rule keeps out of order size, and payers with no email or phone, are left out). Paid with no call first = cash from people with no booked call that started before they paid.${c.afterFeesEstimateCents === null ? " Cash after fees appears once the offer has a processor fee rate in Setup." : " Cash after fees is an estimate at the offer's fee rate, not the processor's statement."}`}
       >
         <NumberTile
           label="Cash collected"
           value={usdOf(c.cashCollectedCents)}
           sub={`${countOf(c.collectedCount)} payments`}
           tone="success"
+        />
+        <NumberTile
+          label="Revenue generated"
+          value={usdOf(c.revenueGeneratedCents)}
+          sub={
+            c.dealCount > 0
+              ? `${countOf(c.dealCount)} deals, never below cash`
+              : "no deals feed: equals cash"
+          }
+          tone="brand"
+        />
+        <NumberTile
+          label="Cash left to collect"
+          value={usdOf(c.leftToCollectCents)}
+          sub="revenue − cash collected"
         />
         <NumberTile
           label="People who paid"
