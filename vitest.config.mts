@@ -289,6 +289,21 @@ export default defineConfig({
         },
         // Calls by closer: the call log re-cut per closer, reconciling to the
         // total. Pure, fully covered.
+        // Every call number an offer shows (verdicts, confirmation, close
+        // types, money reported on calls) — pure, fully covered.
+        "src/lib/calls/call-scoreboard.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // Setter + close type read out of a sheet row's payload by header.
+        "src/lib/tracking/payload-fields.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/calls/closer-segments.ts": {
           statements: 100,
           branches: 100,

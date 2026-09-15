@@ -38,6 +38,14 @@ export type EocReport = {
   occurredAt: Date | null;
   /** Who ran the call, when the report names them. */
   rep?: string | null;
+  /** Who set the call, when the report names them. */
+  setter?: string | null;
+  /** How the close paid, in the report's own words (pif, split, deposit…). */
+  closeType?: string | null;
+  /** Cash the closer reported collecting on the call — a report, never money. */
+  cashCents?: number | null;
+  /** Contract value the closer reported — a report, never money. */
+  revenueCents?: number | null;
 };
 
 /** A booking with the invitee identity needed to find its report. */
