@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   bearerKey,
@@ -186,6 +186,7 @@ describe("handleMessage", () => {
       content: [{ type: "text", text: "Call list_offers first." }],
       isError: true,
     });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const boom = (await call("tools/call", { name: "boom" })) as {
       result: { content: { text: string }[] };
     };
@@ -193,6 +194,9 @@ describe("handleMessage", () => {
       "GV OS couldn't read that just now. Try again in a moment.",
     );
     expect(JSON.stringify(boom)).not.toContain("secret");
+    // The real reason goes to the server log, never to the caller.
+    expect(logged).toHaveBeenCalledWith("[mcp] boom failed", expect.any(Error));
+    logged.mockRestore();
   });
 
   it("refuses unknown tools, unknown methods, batches and malformed messages", async () => {
