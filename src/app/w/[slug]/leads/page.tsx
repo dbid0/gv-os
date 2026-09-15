@@ -8,13 +8,28 @@ import { Kpi } from "@/components/ui/metric";
 import { displayName } from "@/lib/text";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
+import { LeadViewsBar } from "@/components/tracking/lead-views-bar";
 import { StatusChip } from "@/components/tracking/status-chip";
 import { StatusPill } from "@/components/ui/status";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { cents, formatUSD } from "@/lib/money";
 import { rosterClientBySlug } from "@/lib/roster-server";
-import { searchLeads } from "@/lib/tracking/leads";
+import { viewerRole } from "@/lib/auth/viewer";
+import { isPortalView } from "@/lib/clients/portal-visibility";
+import { listLeadTags, listLeadViews } from "@/lib/tracking/lead-tags-store";
+import {
+  LEAD_HAS,
+  NO_FILTERS,
+  describeFilters,
+  filterLeads,
+  isFiltered,
+  leadFiltersQuery,
+  readLeadFilters,
+  repOptions,
+  tagUsage,
+  tagsByLead,
+} from "@/lib/tracking/lead-views";
 import { currentSnapshot, leadsForClient } from "@/lib/tracking/queries";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
@@ -35,10 +50,19 @@ export default async function WorkspaceLeadsPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const { q = "" } = await searchParams;
+  const [sp, cookiePortal, role] = await Promise.all([
+    searchParams,
+    isPortalView(),
+    viewerRole(),
+  ]);
+  // Tags and saved views are GV's own ops labels — never on the client's view.
+  const opsView = !cookiePortal && role !== "client";
+  const requested = readLeadFilters(sp);
+  const filters = opsView ? requested : { ...NO_FILTERS, q: requested.q };
+  const { q } = filters;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
 
@@ -77,12 +101,23 @@ export default async function WorkspaceLeadsPage({
     );
   }
 
-  const [appRows, aliases] = await Promise.all([
+  const [appRows, aliases, tagRows, views] = await Promise.all([
     appEocLeadRows(row.id),
     aliasMapForClient(row.id),
+    opsView ? listLeadTags(row.id) : Promise.resolve([]),
+    opsView ? listLeadViews(row.id) : Promise.resolve([]),
   ]);
   const all = await leadsForClient(snapshot.syncId, appRows, aliases);
-  const leads = searchLeads(all, q);
+  const tags = tagsByLead(tagRows, aliases);
+  const usage = tagUsage(tags);
+  const reps = repOptions(all);
+  const leads = filterLeads(all, filters, tags);
+  const currentQuery = leadFiltersQuery(filters);
+  const filtered = isFiltered(filters);
+  const chipHref = (tag: string | null) => {
+    const qs = leadFiltersQuery({ ...filters, tag });
+    return qs ? `/w/${slug}/leads?${qs}` : `/w/${slug}/leads`;
+  };
   const withCalls = all.filter((l) => l.eocReports > 0).length;
   const withRecordings = all.filter((l) => l.recordings > 0).length;
 
@@ -123,24 +158,114 @@ export default async function WorkspaceLeadsPage({
       </div>
 
       <Panel
-        title={q ? `Leads matching “${q}”` : "Leads"}
+        title={
+          filtered
+            ? `${describeFilters(filters)} · ${leads.length.toLocaleString("en-US")}`
+            : "Leads"
+        }
         aside={
-          <form className="flex items-center gap-2">
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="email, name or rep"
-              className="bg-card h-8 w-56 rounded-md border px-2.5 text-xs"
-            />
-          </form>
+          !opsView ? (
+            <form className="flex items-center gap-2">
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                placeholder="email, name or rep"
+                className="bg-card h-8 w-56 rounded-md border px-2.5 text-xs"
+              />
+            </form>
+          ) : undefined
         }
       >
+        {opsView && (
+          <div className="mb-4 space-y-3">
+            <form
+              className="flex flex-wrap items-center gap-2"
+              aria-label="Filter leads"
+            >
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                placeholder="email, name or rep"
+                aria-label="Search leads"
+                className="bg-card h-8 w-52 rounded-md border px-2.5 text-xs"
+              />
+              <select
+                name="has"
+                defaultValue={filters.has ?? ""}
+                aria-label="Where the lead got to"
+                className="bg-card h-8 rounded-md border px-2 text-xs"
+              >
+                <option value="">Any stage</option>
+                {LEAD_HAS.map((h) => (
+                  <option key={h.key} value={h.key}>
+                    {h.label}
+                  </option>
+                ))}
+              </select>
+              {reps.length > 0 && (
+                <select
+                  name="rep"
+                  defaultValue={filters.rep ?? ""}
+                  aria-label="Rep"
+                  className="bg-card h-8 rounded-md border px-2 text-xs"
+                >
+                  <option value="">Any rep</option>
+                  {reps.map((r) => (
+                    <option key={r} value={r}>
+                      {displayName(r)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {filters.tag && <input type="hidden" name="tag" value={filters.tag} />}
+              <button
+                type="submit"
+                className="hover:bg-secondary/70 h-8 rounded-md border px-3 text-xs font-medium"
+              >
+                Filter
+              </button>
+              {filtered && (
+                <Link
+                  href={`/w/${slug}/leads`}
+                  className="text-faint hover:text-foreground text-xs"
+                >
+                  Clear
+                </Link>
+              )}
+            </form>
+            {usage.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-faint mr-1 text-[11px] font-medium tracking-wider uppercase">
+                  Tags
+                </span>
+                {usage.map((u) => (
+                  <Link
+                    key={u.tag}
+                    href={chipHref(filters.tag === u.tag ? null : u.tag)}
+                    aria-current={filters.tag === u.tag ? "true" : undefined}
+                    className={
+                      filters.tag === u.tag
+                        ? "border-brand/50 bg-brand-soft/30 rounded-full border px-2.5 py-0.5 text-xs"
+                        : "text-muted-foreground hover:bg-secondary/60 rounded-full border px-2.5 py-0.5 text-xs"
+                    }
+                  >
+                    {u.tag} <span className="text-faint tabular-nums">{u.leads}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <LeadViewsBar slug={slug} views={views} currentQuery={currentQuery} />
+          </div>
+        )}
         {leads.length === 0 ? (
           <p className="text-faint py-8 text-center text-sm">
             {all.length === 0
               ? "No lead rows on this sheet yet."
-              : "No lead matches that search."}
+              : filtered
+                ? "No lead matches these filters."
+                : "No lead matches that search."}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -173,6 +298,18 @@ export default async function WorkspaceLeadsPage({
                           <span className="text-faint block text-xs">{l.email}</span>
                         )}
                       </Link>
+                      {(tags.get(l.email.toLowerCase()) ?? []).length > 0 && (
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          {tags.get(l.email.toLowerCase())!.map((t) => (
+                            <span
+                              key={t}
+                              className="text-muted-foreground rounded-full border px-1.5 text-[10px]"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </td>
                     <td className="text-muted-foreground py-2 pr-4">
                       {l.reps[0] ? displayName(l.reps[0]) : "—"}
@@ -211,7 +348,8 @@ export default async function WorkspaceLeadsPage({
             </table>
             {leads.length > 200 && (
               <p className="text-faint mt-3 text-xs">
-                Showing the 200 most recent of {leads.length}. Search to narrow.
+                Showing the 200 most recent of {leads.length}. Search or filter to
+                narrow.
               </p>
             )}
           </div>

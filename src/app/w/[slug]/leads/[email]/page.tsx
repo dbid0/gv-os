@@ -15,6 +15,10 @@ import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
 import { APP_EOC_ROW_BASE } from "@/lib/calls/eoc-form";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
 import { IdentityPanel } from "@/components/tracking/identity-panel";
+import { LeadTagsEditor } from "@/components/tracking/lead-tags-editor";
+import { viewerRole } from "@/lib/auth/viewer";
+import { listLeadTags } from "@/lib/tracking/lead-tags-store";
+import { tagUsage, tagsByLead } from "@/lib/tracking/lead-views";
 import { inboxesFor, rankMergeCandidates } from "@/lib/tracking/identity";
 import { mergeCandidatesFor } from "@/lib/tracking/identity-store";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
@@ -120,6 +124,12 @@ export default async function LeadDetailPage({
     ).filter(([, v]) => v !== null),
   );
 
+  // Team tags — GV's ops labels, never shown to a client login.
+  const opsView = !portalView && (await viewerRole()) !== "client";
+  const offerTags = opsView ? tagsByLead(await listLeadTags(row.id), aliases) : null;
+  const personTags = offerTags?.get(canonical) ?? [];
+  const knownTags = offerTags ? tagUsage(offerTags).map((u) => u.tag) : [];
+
   // Same-person suggestions — GV's identity desk, never the client portal.
   const suggestions =
     !portalView && snapshot
@@ -159,6 +169,17 @@ export default async function LeadDetailPage({
           value={lead.paymentsCents > 0 ? formatUSD(cents(lead.paymentsCents)) : "—"}
         />
       </div>
+
+      {opsView && (
+        <Panel title="Tags">
+          <LeadTagsEditor
+            slug={slug}
+            email={canonical}
+            tags={personTags}
+            knownTags={knownTags}
+          />
+        </Panel>
+      )}
 
       {personBookings.length > 0 && (
         <Panel title="Calls on the calendar">
