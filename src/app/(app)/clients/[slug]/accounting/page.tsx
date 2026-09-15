@@ -113,7 +113,13 @@ export default async function ClientAccountingPage({
         title={client.name}
         highlight="accounting."
         avatar={
-          <ClientLogo slug={slug} name={client.name} accent={client.accent} size={44} />
+          <ClientLogo
+            hasLogo={client.hasLogo}
+            slug={slug}
+            name={client.name}
+            accent={client.accent}
+            size={44}
+          />
         }
         status={
           <span className="flex flex-wrap items-center gap-2">

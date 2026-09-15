@@ -48,7 +48,13 @@ export function Sidebar({
 }: {
   /** DB-backed roster from the layout — a signed client appears here without
    * anyone editing a file. */
-  roster: { slug: string; name: string; owner: string; accent: string }[];
+  roster: {
+    slug: string;
+    name: string;
+    owner: string;
+    accent: string;
+    hasLogo?: boolean;
+  }[];
   user: ShellUser | null;
   previewRole?: Role | null;
 }) {
@@ -164,6 +170,7 @@ export function Sidebar({
             >
               {activeClient ? (
                 <ClientLogo
+                  hasLogo={activeClient.hasLogo}
                   slug={activeClient.slug}
                   name={activeClient.name}
                   accent={activeClient.accent}
@@ -215,6 +222,7 @@ export function Sidebar({
                   className="gap-2"
                 >
                   <ClientLogo
+                    hasLogo={client.hasLogo}
                     slug={client.slug}
                     name={client.name}
                     accent={client.accent}

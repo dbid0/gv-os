@@ -25,6 +25,7 @@ export function ClientLogo({
   size,
   radius = "lg",
   className,
+  hasLogo,
 }: {
   slug: string;
   name: string;
@@ -34,6 +35,9 @@ export function ClientLogo({
   /** Corner radius — "md" for the sidebar chips, "lg" everywhere else. */
   radius?: "md" | "lg";
   className?: string;
+  /** false = no logo on file: draw the initial without requesting the route.
+   * Omitted = unknown: request it and fall back on a 404, as before. */
+  hasLogo?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   // A reused instance pointed at a new client must retry, not stay latched on
@@ -49,7 +53,7 @@ export function ClientLogo({
   const rounded = radius === "md" ? "rounded-md" : "rounded-lg";
   const box = { width: size, height: size };
 
-  if (failed) {
+  if (failed || hasLogo === false) {
     return (
       <span
         aria-hidden

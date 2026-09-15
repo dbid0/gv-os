@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
@@ -39,10 +39,13 @@ export function accentFromSlug(slug: string): string {
  * ENTIRE first paint hostage to this query. Now the shell streams
  * immediately on all but the first request each minute.
  */
+export const ROSTER_CACHE_TAG = "roster";
+
 const loadRosterCached = unstable_cache(
   async (): Promise<RosterClient[]> => loadRosterFromDb(),
   ["roster"],
-  { revalidate: 60 },
+  // Tagged so a logo upload can refresh `hasLogo` at once, not a minute later.
+  { revalidate: 60, tags: [ROSTER_CACHE_TAG] },
 );
 
 async function loadRosterFromDb(): Promise<RosterClient[]> {
@@ -59,6 +62,8 @@ async function loadRosterFromDb(): Promise<RosterClient[]> {
         since: clients.since,
         revShare: clients.revShare,
         summary: clients.summary,
+        // Presence only — never the image bytes, which can be ~135KB each.
+        hasLogo: sql<boolean>`(${clients.logo} is not null and ${clients.logo} like 'data:image/%')`,
       })
       .from(clients)
       .where(eq(clients.status, "active"))
@@ -74,6 +79,7 @@ async function loadRosterFromDb(): Promise<RosterClient[]> {
       since: r.since ?? "",
       revShare: r.revShare ?? "",
       summary: r.summary ?? "",
+      hasLogo: r.hasLogo === true,
     }));
   } catch {
     // A DB failure must never surface hardcoded client data — clients are

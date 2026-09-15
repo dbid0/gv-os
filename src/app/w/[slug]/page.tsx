@@ -159,7 +159,13 @@ export default async function WorkspacePage({
           config; owners viewing their own portal never see it. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <ClientLogo slug={slug} name={client.name} accent={client.accent} size={40} />
+          <ClientLogo
+            hasLogo={client.hasLogo}
+            slug={slug}
+            name={client.name}
+            accent={client.accent}
+            size={40}
+          />
           <div>
             <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
             <p className="text-muted-foreground text-xs">{client.offer}</p>
