@@ -19,12 +19,18 @@
  * - Held / shows / no-shows / closes use the call log's outcomes exactly as the
  *   By-closer table does, so the two tables' totals agree.
  * - Every row adds up to the total line; a rate with nothing to divide is null.
+ * - With a date window: applicants are people whose FIRST application falls
+ *   in it (their source still comes from their whole history), calls are
+ *   calls that start in it, and clicks go blank — the registry only counts
+ *   clicks all-time, so a windowed click figure would be invented.
  *
  * Pure: no database.
  */
 
 import type { CallLogRow } from "@/lib/calls/call-log";
 import type { AliasMap } from "@/lib/tracking/aliases";
+import { inWindow, isBounded } from "@/lib/tracking/report-window";
+import type { RangeBounds } from "@/lib/transactions/homepage";
 
 export const SOURCE_DIMENSIONS = [
   { key: "source", label: "Source" },
@@ -111,8 +117,11 @@ export function sourceFunnel(input: {
   calls: CallLogRow[];
   dimension: SourceDimension;
   aliases: AliasMap;
+  /** Central-time day window; omitted = all time. */
+  window?: RangeBounds;
 }): SourceFunnel {
   const { dimension, aliases } = input;
+  const window = input.window ?? { from: null, to: null, label: "All time" };
   const person = (email: string | null) => {
     const e = norm(email);
     return e ? (aliases.get(e) ?? e) : null;
@@ -125,7 +134,7 @@ export function sourceFunnel(input: {
   };
 
   // Each person's first tagged arrival.
-  const firstTouch = new Map<string, { value: string | null }>();
+  const firstTouch = new Map<string, { value: string | null; firstAt: Date | null }>();
   // Undated applications sort last (MAX_SAFE_INTEGER, not Infinity: two
   // undated rows must compare equal, and Infinity - Infinity is NaN).
   const submitted = (a: FunnelApplication) =>
@@ -136,7 +145,7 @@ export function sourceFunnel(input: {
     if (!who) continue;
     const value = norm(pickApp[dimension](app)) || null;
     const seen = firstTouch.get(who);
-    if (!seen) firstTouch.set(who, { value });
+    if (!seen) firstTouch.set(who, { value, firstAt: app.submittedAt });
     else if (seen.value === null && value !== null) seen.value = value;
   }
   const bucketOf = (who: string | null) => {
@@ -148,13 +157,15 @@ export function sourceFunnel(input: {
       : { value: NO_TAG, unattributed: true };
   };
 
-  for (const who of firstTouch.keys()) {
+  for (const [who, touch] of firstTouch) {
+    if (!inWindow(touch.firstAt, window)) continue;
     const b = bucketOf(who);
     rowFor(b.value, b.unattributed).applicants += 1;
   }
 
   const booked = new Map<string, Set<string>>();
   for (const call of input.calls) {
+    if (!inWindow(call.startsAt, window)) continue;
     const who = person(call.inviteeEmail);
     const b = bucketOf(who);
     const row = rowFor(b.value, b.unattributed);
@@ -176,7 +187,7 @@ export function sourceFunnel(input: {
   }
   for (const [value, set] of booked) rows.get(value)!.bookedPeople = set.size;
 
-  for (const link of input.links) {
+  for (const link of isBounded(window) ? [] : input.links) {
     const value = norm(pickLink[dimension](link));
     if (!value) continue;
     const row = rowFor(value, false);
