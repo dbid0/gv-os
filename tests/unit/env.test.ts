@@ -68,4 +68,29 @@ describe("parseEnv", () => {
       }),
     ).toThrow(/NEXT_PUBLIC_APP_ENV[\s\S]*NEXT_PUBLIC_APP_URL/);
   });
+
+  it("rejects a missing Supabase URL as required", () => {
+    expect(() =>
+      parseEnv({
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: REQUIRED.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      }),
+    ).toThrow(/NEXT_PUBLIC_SUPABASE_URL: required/);
+  });
+
+  it("rejects a missing anon key", () => {
+    expect(() =>
+      parseEnv({ NEXT_PUBLIC_SUPABASE_URL: REQUIRED.NEXT_PUBLIC_SUPABASE_URL }),
+    ).toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY: anon key looks truncated/);
+  });
+
+  it("rejects an anon key shorter than 20 characters as truncated", () => {
+    expect(() =>
+      parseEnv({ ...REQUIRED, NEXT_PUBLIC_SUPABASE_ANON_KEY: "a".repeat(19) }),
+    ).toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY: anon key looks truncated/);
+    // Exactly 20 is the boundary that passes.
+    expect(
+      parseEnv({ ...REQUIRED, NEXT_PUBLIC_SUPABASE_ANON_KEY: "a".repeat(20) })
+        .NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ).toBe("a".repeat(20));
+  });
 });

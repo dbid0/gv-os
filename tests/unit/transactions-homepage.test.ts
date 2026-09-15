@@ -214,4 +214,34 @@ describe("homeRangeSeries", () => {
     expect(month).toEqual([{ day: "2026-08-10", cents: 140 }]);
     expect(homeRangeSeries(ROWS, "all", rangeBounds("today", TODAY))).toEqual([]);
   });
+
+  it("sorts days ascending whatever order the rows arrive in", () => {
+    const day = (occurredOn: string, cashCents: number) =>
+      row({ occurredOn, cashCents });
+    const expected = [
+      { day: "2026-08-01", cents: 100 },
+      { day: "2026-08-02", cents: 250 },
+      { day: "2026-08-03", cents: 300 },
+    ];
+    const bounds = rangeBounds("life", TODAY);
+    expect(
+      homeRangeSeries(
+        [
+          day("2026-08-01", 100),
+          day("2026-08-02", 200),
+          day("2026-08-03", 300),
+          day("2026-08-02", 50),
+        ],
+        "all",
+        bounds,
+      ),
+    ).toEqual(expected);
+    expect(
+      homeRangeSeries(
+        [day("2026-08-03", 300), day("2026-08-02", 250), day("2026-08-01", 100)],
+        "all",
+        bounds,
+      ),
+    ).toEqual(expected);
+  });
 });

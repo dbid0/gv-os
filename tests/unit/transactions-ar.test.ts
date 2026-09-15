@@ -42,6 +42,19 @@ describe("partialDealAr", () => {
     const items = partialDealAr([row({ clientName: "The Grid" })]);
     expect(items[0].label).toBe("The Grid");
   });
+
+  it("labels a deal with neither client name nor description as unlabeled", () => {
+    const items = partialDealAr([row({ description: null, clientName: null })]);
+    expect(items).toEqual([
+      {
+        kind: "partial",
+        label: "Unlabeled deal",
+        month: "2026-07",
+        aroseOn: "2026-07-31",
+        arCents: 900_000,
+      },
+    ]);
+  });
 });
 
 describe("revShareOwed", () => {
@@ -63,6 +76,48 @@ describe("revShareOwed", () => {
       label: "The Vault — rev-share 2026-08",
       arCents: 30_000,
     });
+  });
+
+  it("retires the oldest month first even when lines arrive newest first", () => {
+    const lines = [
+      {
+        clientId: "n",
+        clientName: "Client North",
+        month: "2026-09",
+        revShareCents: 40_000,
+      },
+      {
+        clientId: "n",
+        clientName: "Client North",
+        month: "2026-07",
+        revShareCents: 25_000,
+      },
+      {
+        clientId: "n",
+        clientName: "Client North",
+        month: "2026-08",
+        revShareCents: 30_000,
+      },
+    ];
+    // $350 received: July's $250 retired in full, August keeps $200, September
+    // is untouched.
+    const items = revShareOwed(lines, [{ clientId: "n", cashCents: 35_000 }]);
+    expect(items).toEqual([
+      {
+        kind: "revshare",
+        label: "Client North — rev-share 2026-09",
+        month: "2026-09",
+        aroseOn: null,
+        arCents: 40_000,
+      },
+      {
+        kind: "revshare",
+        label: "Client North — rev-share 2026-08",
+        month: "2026-08",
+        aroseOn: null,
+        arCents: 20_000,
+      },
+    ]);
   });
 
   it("owes everything with no receipts, nothing when overpaid", () => {
@@ -93,6 +148,34 @@ describe("moneyCalendar", () => {
       { month: "2026-07", owedInCents: 50, plannedOutCents: 0 },
       { month: "2026-08", owedInCents: 125, plannedOutCents: 40 },
     ]);
+  });
+
+  it("sorts months oldest first whatever order they first appear in", () => {
+    const item = (month: string, arCents: number) => ({
+      kind: "partial" as const,
+      label: "x",
+      month,
+      aroseOn: null,
+      arCents,
+    });
+    const expected = [
+      { month: "2026-06", owedInCents: 10, plannedOutCents: 0 },
+      { month: "2026-07", owedInCents: 20, plannedOutCents: 0 },
+      { month: "2026-08", owedInCents: 30, plannedOutCents: 5 },
+    ];
+    const payouts = [{ month: "2026-08", totalCents: 5, kind: "partner" }];
+    expect(
+      moneyCalendar(
+        [item("2026-06", 10), item("2026-07", 20), item("2026-08", 30)],
+        payouts,
+      ),
+    ).toEqual(expected);
+    expect(
+      moneyCalendar(
+        [item("2026-08", 30), item("2026-06", 10), item("2026-07", 20)],
+        payouts,
+      ),
+    ).toEqual(expected);
   });
 
   it("is empty on empty inputs", () => {

@@ -232,6 +232,12 @@ describe("parseRawRow", () => {
     expect(parseRawRow(["", "", "", ""], 51)).toBeNull();
     expect(parseRawRow(["", "", "Client D"], 52)?.cashCents).toBe(0);
   });
+
+  it("reads blank-string revenue and cash cells as zero cents", () => {
+    const input = parseRawRow(["", "8/4/2026", "Client E", "Setup", "x", "", ""], 53);
+    expect(input?.revenueCents).toBe(0);
+    expect(input?.cashCents).toBe(0);
+  });
 });
 
 describe("reconcileSheet — the drift report", () => {
@@ -334,6 +340,16 @@ describe("reconcileSheet — the drift report", () => {
     expect(report.deals[1].driftCents.netCents).toBe(194_171);
   });
 
+  it("skips padding raw rows but keeps positional matching for the rest", () => {
+    // A blank raw row between two deals is dropped from the report, and the
+    // deal after it still diffs against ITS computed twin (index 2, not 1).
+    const report = reconcileSheet([raw[0], [], raw[1]], [computed[0], [], computed[1]]);
+    expect(report.rowCount).toBe(2);
+    expect(report.deals.map((d) => d.input.rowIndex)).toEqual([2, 4]);
+    expect(report.deals[1].driftCents.gusCents).toBe(-1);
+    expect(report.totalAbsDriftCents).toBe(1);
+  });
+
   it("keeps parseSheetComputedRow blank-safe", () => {
     const out = parseSheetComputedRow([
       "",
@@ -352,5 +368,29 @@ describe("reconcileSheet — the drift report", () => {
       "",
     ]);
     expect(out.netCents).toBe(0);
+  });
+
+  it("treats cells missing from a short computed row as zero", () => {
+    // The Sheets API trims trailing empty cells, so N (gus) can be absent.
+    const out = parseSheetComputedRow([
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      55,
+      "",
+      58.29,
+      1941.71,
+    ]);
+    expect(out).toEqual({
+      arCents: 5_500,
+      feeCents: 5_829,
+      netCents: 194_171,
+      danielCents: 0,
+      gusCents: 0,
+    });
   });
 });
