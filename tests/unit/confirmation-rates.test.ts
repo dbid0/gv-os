@@ -92,6 +92,17 @@ describe("reportForBooking", () => {
     );
   });
 
+  it("keeps the earliest report whichever order the reports arrive in, first wins a tie", () => {
+    const first = report("sam@example.test", "no show", "2026-09-05T15:00:00Z");
+    const later = report("sam@example.test", "signed up", "2026-09-08T15:00:00Z");
+    const sameTime = report("sam@example.test", "showed", "2026-09-05T15:00:00Z");
+    const call = booking("1", "sam@example.test", "2026-09-05T14:00:00Z");
+    // Chronological order: the later report must not displace the earlier one.
+    expect(reportForBooking(call, byEmail([first, later]))).toBe(first);
+    // An exact tie keeps the report seen first rather than the last one read.
+    expect(reportForBooking(call, byEmail([first, sameTime]))).toBe(first);
+  });
+
   it("accepts a report filed shortly before the call, ignores an old one", () => {
     const early = report("a@x.com", "showed", "2026-09-05T08:00:00Z");
     expect(

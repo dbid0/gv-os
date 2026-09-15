@@ -466,6 +466,31 @@ describe("admin answers", () => {
     expect(rows.some((r) => r.client === "Old")).toBe(false);
   });
 
+  it("client trend: equal-size swings rank the bigger this-month figure first", () => {
+    const deals = [
+      // Both swing by exactly $300, one up and one down.
+      { client: "Client North", monthKey: "2026-08", netCents: 100_00 },
+      { client: "Client North", monthKey: "2026-07", netCents: 400_00 },
+      { client: "Client South", monthKey: "2026-08", netCents: 500_00 },
+      { client: "Client South", monthKey: "2026-07", netCents: 200_00 },
+    ];
+    const rows = bucketClientTrend(deals, "2026-08", "2026-07");
+    expect(rows).toEqual([
+      {
+        client: "Client South",
+        thisCents: 500_00,
+        lastCents: 200_00,
+        deltaCents: 300_00,
+      },
+      {
+        client: "Client North",
+        thisCents: 100_00,
+        lastCents: 400_00,
+        deltaCents: -300_00,
+      },
+    ]);
+  });
+
   it("client trend answer: empty state", () => {
     const empty = answerClientTrend({
       rows: [],

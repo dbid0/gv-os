@@ -38,8 +38,12 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      - name: Unit tests
-        run: npm run test
+      # With coverage, so the per-file thresholds in vitest.config.mts (100% on
+      # money, ledger and tracking engines) are enforced on every PR. Plain
+      # `npm run test` never checked them, and 10 files drifted below their gate
+      # unnoticed until 2026-09-15.
+      - name: Unit tests + coverage gates
+        run: npm run test:coverage
 
       - name: Build
         # Placeholders only. The real values live in Vercel; the build just

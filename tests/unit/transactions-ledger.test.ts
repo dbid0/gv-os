@@ -36,6 +36,23 @@ describe("agencyLedger", () => {
     expect(chain.netCents).toBe(600_471);
   });
 
+  it("counts an out-row with no deal type as other spend, not team", () => {
+    const { chain } = agencyLedger([
+      row({ cashCents: 100_000 }),
+      row({ direction: "out", dealType: null, cashCents: 12_345 }),
+      row({ direction: "out", dealType: "Team Payout", cashCents: 20_000 }),
+    ]);
+    expect(chain).toEqual({
+      totalCashCents: 100_000,
+      processorFeeCents: 0,
+      afterFeesCents: 100_000,
+      teamCents: 20_000,
+      afterTeamCents: 80_000,
+      otherOutCents: 12_345,
+      netCents: 67_655,
+    });
+  });
+
   it("ignores client-layer rows entirely", () => {
     const { chain, byDealType } = agencyLedger([
       row({ cashCents: 100_000 }),
@@ -134,6 +151,56 @@ describe("clientLedger", () => {
       name: "Unattributed",
       cashCents: 50_000,
     });
+  });
+
+  it("accumulates every row for the same client onto one line", () => {
+    const roster = [{ slug: "client-north", name: "Client North" }];
+    const matches = (slug: string, sheetClient: string) =>
+      slug === "client-north" && sheetClient.startsWith("North");
+    const lines = clientLedger(
+      [
+        crow({ clientName: "Client North", cashCents: 100_000, revenueCents: 150_000 }),
+        crow({
+          description: "North — installment",
+          cashCents: 50_000,
+          revenueCents: 0,
+          processorFeeCents: 1_479,
+        }),
+        crow({ clientName: "Client North", cashCents: 25_000, revenueCents: 25_000 }),
+      ],
+      roster,
+      matches,
+    );
+    expect(lines).toEqual([
+      {
+        slug: "client-north",
+        name: "Client North",
+        count: 3,
+        revenueCents: 175_000,
+        cashCents: 175_000,
+        processorFeeCents: 1_479,
+        afterFeesCents: 173_521,
+      },
+    ]);
+  });
+
+  it("puts a row with neither a joined client nor a description in Unattributed", () => {
+    const lines = clientLedger(
+      [crow({ cashCents: 4_200, revenueCents: 4_200, processorFeeCents: 150 })],
+      ROSTER,
+      matchesSheetClient,
+    );
+    expect(lines).toEqual([
+      {
+        slug: null,
+        name: "Unattributed",
+        count: 1,
+        revenueCents: 4_200,
+        cashCents: 4_200,
+        processorFeeCents: 150,
+        afterFeesCents: 4_050,
+      },
+    ]);
   });
 
   it("keeps a joined name not on the roster as its own line", () => {

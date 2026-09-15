@@ -107,6 +107,44 @@ describe("newDealToTransaction", () => {
     });
   });
 
+  it("nulls blank names, description, and processor on an anonymous row", () => {
+    const out = newDealToTransaction(
+      {
+        ...base,
+        clientName: "  ",
+        programSold: "",
+        closerName: "",
+        setterName: " ",
+        processor: "",
+      },
+      opts,
+    );
+    if (!out.ok) throw new Error("unreachable");
+    expect(out.row.description).toBeNull();
+    expect(out.row.paymentMethod).toBeNull();
+    // Money is untouched by the missing labels.
+    expect(out.row.cashCents).toBe(500_000);
+    expect(out.row.processorFeeCents).toBe(14_500);
+    expect(out.row.meta).toMatchObject({
+      customerName: null,
+      closerName: null,
+      setterName: null,
+    });
+  });
+
+  it("keeps the deal when balance or commission % are unreadable, zeroing only those", () => {
+    const out = newDealToTransaction(
+      { ...base, balanceDue: "TBD", closerPct: "twenty", setterPct: "10%%x" },
+      opts,
+    );
+    expect(out.ok).toBe(true);
+    if (!out.ok) throw new Error("unreachable");
+    expect(out.row.revenueCents).toBe(1_000_000);
+    expect(out.row.cashCents).toBe(500_000);
+    expect(out.row.processorFeeCents).toBe(14_500);
+    expect(out.row.meta).toMatchObject({ closerBps: 0, setterBps: 0, balanceCents: 0 });
+  });
+
   it("refuses unreadable cash / revenue / fee", () => {
     expect(newDealToTransaction({ ...base, cashCollected: "lots" }, opts).ok).toBe(
       false,
@@ -196,6 +234,22 @@ describe("parseNewDealsSheet", () => {
     expect(rows[0].cashCollected).toBe("$1,000");
     expect(rows[0].dealDate).toBe("2026-08-21");
     expect(rows[0].clientName).toBe("");
+  });
+
+  it("reads cells missing from a short row as blank", () => {
+    // The Sheets API trims trailing empty cells, so a row can be shorter
+    // than the header.
+    const rows = parseNewDealsSheet([
+      header,
+      ["2026-08-22T11:00:00Z", "2026-08-22", "Sam Carter"],
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      timestamp: "2026-08-22T11:00:00Z",
+      clientName: "Sam Carter",
+      cashCollected: "",
+      processorFeePct: "",
+    });
   });
 
   it("returns [] for an empty or header-only sheet", () => {

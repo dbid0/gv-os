@@ -22,6 +22,12 @@ function keyFromBase64(keyB64: string): Buffer {
   try {
     key = Buffer.from(keyB64, "base64");
   } catch {
+    // Unreachable for a string: Buffer.from(str, "base64") never throws, it skips
+    // invalid characters, so a bad key fails the byte-length check below
+    // instead (tested). Kept as a guard for a non-string reaching this at
+    // runtime. Excluded from coverage, not deleted: this module seals every
+    // stored credential, so its behaviour stays exactly as it is.
+    /* v8 ignore next */
     throw new Error("CREDENTIALS_KEY is not valid base64.");
   }
   if (key.length !== KEY_BYTES) {
