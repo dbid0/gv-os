@@ -28,26 +28,34 @@ function Row({ s, total = false }: { s: CloserSegment; total?: boolean }) {
 }
 
 /**
- * The call log re-cut per closer. Every row is the same held calls, so the
+ * The call log re-cut per closer or setter. Every row is the same held calls, so the
  * rows add up to the total line — calls nobody has reported on, or whose
  * report names no closer, get their own rows instead of vanishing.
  */
 export function CloserSegmentsTable({
   segments,
   windowChips,
+  dimension = "closer",
+  cutNav,
 }: {
   segments: CloserSegments;
   /** The date-window control, rendered in the panel header. */
   windowChips?: ReactNode;
+  /** Whose name keys the rows. */
+  dimension?: "closer" | "setter";
+  /** The closer/setter toggle, rendered in the panel header. */
+  cutNav?: ReactNode;
 }) {
+  const person = dimension === "setter" ? "Setter" : "Closer";
   if (segments.total.held === 0 && !windowChips) return null;
   return (
     <section aria-labelledby="by-closer" className="bg-card rounded-xl border">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-3 pb-2">
         <div className="flex flex-wrap items-center gap-3">
           <h2 id="by-closer" className="text-sm font-medium">
-            By closer
+            By {person.toLowerCase()}
           </h2>
+          {cutNav}
           {windowChips}
         </div>
         <p className="text-faint text-[11px]">
@@ -65,7 +73,7 @@ export function CloserSegmentsTable({
             <thead className="text-faint border-y text-[11px] tracking-wider whitespace-nowrap uppercase">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Closer
+                  {person}
                 </th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">
                   Held
