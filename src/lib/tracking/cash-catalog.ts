@@ -24,6 +24,11 @@
  *                      started on or before the payment (a direct buyer)
  * - afterFeesEstimate  cash minus the offer's own fee rate (bps + flat per
  *                      collected payment); null when no rate is set
+ * - revenueGenerated   the dashboard hero's revenue exactly: the window's deal
+ *                      revenue (the feed's deals tab) floored at cash collected
+ * - leftToCollect      revenue generated − cash collected, only when above zero
+ *                      (null otherwise, the hero's dash)
+ * - revenueByDay       deal revenue per viewer day; deals + dealCount in the window
  *
  * Pure: no clock, no database.
  */
@@ -45,6 +50,7 @@ import {
   type TagRule,
 } from "@/lib/tracking/tag-rules";
 import { dayKeyIn } from "@/lib/time/zone";
+import { dealsRevenueInWindow, type FeedDeal } from "@/lib/tracking/window-money";
 
 export type CatalogPayment = MixPayment & RuleablePayment;
 
@@ -68,6 +74,10 @@ export type CashCatalog = {
   failedCount: number;
   noCallCents: number;
   afterFeesEstimateCents: number | null;
+  revenueGeneratedCents: number;
+  leftToCollectCents: number | null;
+  dealCount: number;
+  revenueByDay: { day: string; cents: number }[];
 };
 
 export type FeeRate = { bps: number | null; flatCents: number | null };
@@ -108,6 +118,8 @@ export function cashCatalog(input: {
   /** Earliest booked call start per invitee email (lowercased). */
   firstCallAt?: Map<string, Date>;
   fee?: FeeRate | null;
+  /** The feed's deals (contracted value), for revenue generated. */
+  deals?: FeedDeal[];
 }): CashCatalog {
   const aliases = input.aliases ?? EMPTY_ALIASES;
   const fromMs = input.from.getTime();
@@ -208,6 +220,25 @@ export function cashCatalog(input: {
     if (!firstCall || firstCall.getTime() > at.getTime()) noCallCents += cents;
   }
 
+  const deals = (input.deals ?? []).filter(
+    (d) =>
+      d.occurredAt !== null &&
+      d.occurredAt.getTime() >= fromMs &&
+      d.occurredAt.getTime() <= toMs,
+  );
+  const revenueByDay = new Map<string, number>();
+  for (const d of deals) {
+    const day = dayKeyIn(d.occurredAt as Date, input.timeZone);
+    revenueByDay.set(
+      day,
+      (revenueByDay.get(day) ?? 0) + (d.revenueCents ?? d.cashCents ?? 0),
+    );
+  }
+  const revenueGeneratedCents = Math.max(
+    dealsRevenueInWindow(input.deals ?? [], input.from, input.to),
+    cashCollectedCents,
+  );
+
   const fee = input.fee;
   const hasRate = fee && (fee.bps !== null || fee.flatCents !== null);
   const feeCents = hasRate
@@ -235,5 +266,14 @@ export function cashCatalog(input: {
     failedCount,
     noCallCents,
     afterFeesEstimateCents: hasRate ? cashCollectedCents - feeCents : null,
+    revenueGeneratedCents,
+    leftToCollectCents:
+      revenueGeneratedCents > cashCollectedCents
+        ? revenueGeneratedCents - cashCollectedCents
+        : null,
+    dealCount: deals.length,
+    revenueByDay: [...revenueByDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, cents]) => ({ day, cents })),
   };
 }

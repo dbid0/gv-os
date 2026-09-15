@@ -4,10 +4,12 @@ import { buildAliasMap } from "@/lib/tracking/aliases";
 import { cashCatalog, type CatalogPayment } from "@/lib/tracking/cash-catalog";
 import { cashMix, mixTotalCents } from "@/lib/tracking/cash-mix";
 import { applyTagRulesToFeed, type TagRule } from "@/lib/tracking/tag-rules";
+import { windowMoneyFromFeed } from "@/lib/tracking/window-money";
 
 const TZ = "America/Chicago";
 const FROM = new Date("2026-09-01T05:00:00Z"); // Sep 1, 00:00 Central
 const TO = new Date("2026-10-01T04:59:59.999Z"); // Sep 30, 23:59 Central
+const at10 = () => new Date("2026-09-10T16:00:00Z");
 
 function pay(extra: Partial<CatalogPayment>): CatalogPayment {
   return {
@@ -253,6 +255,51 @@ describe("cashCatalog", () => {
     expect(odd.refundedCents).toBe(0);
     expect(odd.byTag.map((t) => t.tag)).toEqual(["alpha", "beta"]);
     expect(odd.afterFeesEstimateCents).toBe(10_000 - 300);
+  });
+
+  it("reads revenue generated and left to collect exactly as the dashboard hero does", () => {
+    const deals = [
+      // Sep 10: a $6,000 contract, $1,500 collected so far
+      { revenueCents: 600_000, cashCents: 150_000, occurredAt: at10() },
+      // no revenue stated: the deal's cash stands in
+      { revenueCents: null, cashCents: 20_000, occurredAt: at10() },
+      {
+        revenueCents: 99_900,
+        cashCents: null,
+        occurredAt: new Date("2026-08-01T12:00:00Z"),
+      },
+      { revenueCents: 50_000, cashCents: null, occurredAt: null },
+    ];
+    const withDeals = cashCatalog({
+      payments,
+      rules,
+      from: FROM,
+      to: TO,
+      timeZone: TZ,
+      aliases,
+      deals,
+    });
+    const kept = applyTagRulesToFeed(payments, rules).kept;
+    const hero = windowMoneyFromFeed({ payments: kept, deals, aliases }, FROM, TO, TZ);
+    expect(withDeals.revenueGeneratedCents).toBe(hero.revenueCents);
+    expect(withDeals.revenueGeneratedCents).toBe(620_000);
+    expect(withDeals.leftToCollectCents).toBe(620_000 - 189_900);
+    expect(withDeals.dealCount).toBe(2);
+    expect(withDeals.revenueByDay).toEqual([{ day: "2026-09-10", cents: 620_000 }]);
+
+    // No deals: revenue is the cash itself and nothing is left to collect.
+    expect(c.revenueGeneratedCents).toBe(c.cashCollectedCents);
+    expect(c.leftToCollectCents).toBeNull();
+    expect(c.dealCount).toBe(0);
+    const noneStated = cashCatalog({
+      payments: [],
+      rules: [],
+      from: FROM,
+      to: TO,
+      timeZone: TZ,
+      deals: [{ revenueCents: null, cashCents: null, occurredAt: at10() }],
+    });
+    expect(noneStated.revenueByDay).toEqual([{ day: "2026-09-10", cents: 0 }]);
   });
 
   it("tells hidden-from-dashboard and not-revenue apart", () => {
