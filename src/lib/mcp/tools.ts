@@ -7,7 +7,11 @@ import { clients } from "@/db/schema/app";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { CALL_STATES, type CallState } from "@/lib/calls/call-log";
-import { segmentByCloser, type CloserSegment } from "@/lib/calls/closer-segments";
+import {
+  segmentByCloser,
+  segmentBySetter,
+  type CloserSegment,
+} from "@/lib/calls/closer-segments";
 import { getClientReport } from "@/lib/clients/report";
 import { unreviewedIntegrityBanner } from "@/lib/notifications/count";
 import { COHORTS } from "@/lib/students/board";
@@ -359,6 +363,31 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
       );
       const { rows, total } = segmentByCloser(log);
       return { closers: rows.map(segment), total: segment(total) };
+    },
+  },
+  {
+    name: "calls_by_setter",
+    description:
+      "The offer's held calls re-cut per setter (the setter named on each end-of-call report): held, shows, no-shows, closes, show and close rate. Calls with no report yet and reports naming no setter get their own rows, and the rows always add up to the total.",
+    inputSchema: {
+      type: "object",
+      properties: { slug: slugArg },
+      required: ["slug"],
+      additionalProperties: false,
+    },
+    run: async (args) => {
+      const offer = await offerBySlug(args.slug);
+      const { log } = await loadCallLog(
+        offer.id,
+        offer.countedCallSources ?? null,
+        new Date(),
+      );
+      const { rows, total } = segmentBySetter(log);
+      const bySetter = (x: CloserSegment) => {
+        const { closer, ...rest } = segment(x);
+        return { setter: closer, ...rest };
+      };
+      return { setters: rows.map(bySetter), total: bySetter(total) };
     },
   },
   {

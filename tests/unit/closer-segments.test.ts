@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { CallLogRow } from "@/lib/calls/call-log";
-import { NO_CLOSER, NO_REPORT, segmentByCloser } from "@/lib/calls/closer-segments";
+import {
+  NO_CLOSER,
+  NO_REPORT,
+  NO_SETTER,
+  segmentByCloser,
+  segmentBySetter,
+} from "@/lib/calls/closer-segments";
 
 function row(extra: Partial<CallLogRow>): CallLogRow {
   return {
@@ -94,5 +100,36 @@ describe("segmentByCloser", () => {
     const empty = segmentByCloser([row({ state: "upcoming", outcome: null })]);
     expect(empty.rows).toEqual([]);
     expect(empty.total).toMatchObject({ held: 0, showRate: null, closeRate: null });
+  });
+});
+
+describe("segmentBySetter", () => {
+  const log: CallLogRow[] = [
+    row({ closer: "Jordan Rivers", setter: "Riley Stone", outcome: "closed" }),
+    row({ closer: "Sam Carter", setter: "riley stone", outcome: "no_show" }),
+    row({ closer: "Sam Carter", setter: "Avery Lane", outcome: "showed" }),
+    row({ closer: "Sam Carter", setter: null, outcome: "closed" }),
+    row({ state: "needs_outcome", outcome: null, closer: null, setter: null }),
+    row({ setter: "Avery Lane", outcome: "not_held" }),
+  ];
+  const { rows, total } = segmentBySetter(log);
+
+  it("keys the same held calls on the setter the report names", () => {
+    expect(rows.map((r) => [r.closer, r.held, r.shows, r.noShows, r.closes])).toEqual([
+      ["Riley Stone", 2, 1, 1, 1],
+      ["Avery Lane", 1, 1, 0, 0],
+      [NO_SETTER, 1, 1, 0, 1],
+      [NO_REPORT, 1, 0, 0, 0],
+    ]);
+  });
+
+  it("reconciles to the same total as the closer cut of the same calls", () => {
+    expect(total).toMatchObject({ held: 5, shows: 3, noShows: 1, closes: 2 });
+    expect(segmentByCloser(log).total).toMatchObject({
+      held: total.held,
+      shows: total.shows,
+      noShows: total.noShows,
+      closes: total.closes,
+    });
   });
 });
