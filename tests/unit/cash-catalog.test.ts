@@ -300,6 +300,27 @@ describe("cashCatalog", () => {
       deals: [{ revenueCents: null, cashCents: null, occurredAt: at10() }],
     });
     expect(noneStated.revenueByDay).toEqual([{ day: "2026-09-10", cents: 0 }]);
+
+    // Days come back in calendar order whatever order the deals arrive in.
+    const twoDays = cashCatalog({
+      payments: [],
+      rules: [],
+      from: FROM,
+      to: TO,
+      timeZone: TZ,
+      deals: [
+        {
+          revenueCents: 30_000,
+          cashCents: null,
+          occurredAt: new Date("2026-09-20T16:00:00Z"),
+        },
+        { revenueCents: 10_000, cashCents: null, occurredAt: at10() },
+      ],
+    });
+    expect(twoDays.revenueByDay).toEqual([
+      { day: "2026-09-10", cents: 10_000 },
+      { day: "2026-09-20", cents: 30_000 },
+    ]);
   });
 
   it("tells hidden-from-dashboard and not-revenue apart", () => {

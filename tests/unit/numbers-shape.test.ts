@@ -193,10 +193,23 @@ describe("numbersForMcp", () => {
             from: new Date(0),
             to: new Date("2026-12-31T00:00:00Z"),
             timeZone: TZ,
+            deals: [
+              {
+                revenueCents: 20_000,
+                cashCents: 4_900,
+                occurredAt: new Date("2026-09-10T16:00:00Z"),
+              },
+            ],
           }),
         },
       }),
     );
+    expect(out.cash).toMatchObject({
+      revenueGenerated: "200.00",
+      leftToCollect: "151.00",
+      dealsInWindow: 1,
+      revenueByDay: [{ day: "2026-09-10", revenue: "200.00" }],
+    });
     expect(out.cutTo).toMatchObject({ by: "closer", name: "Sam Carter" });
     expect(out.cash?.byTag).toEqual([{ tag: "frontend", payments: 1, cash: "49.00" }]);
   });
