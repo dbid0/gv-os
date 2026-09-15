@@ -20,6 +20,7 @@ import {
   BarChart3,
   Users,
   type LucideIcon,
+  Hash,
   Waypoints,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     items: [
       { label: "Dashboard", icon: LayoutGrid, path: "" },
       { label: "Tracking", icon: Activity, path: "/tracking", adminOnly: true },
+      { label: "Numbers", icon: Hash, path: "/numbers", adminOnly: true },
       {
         label: "Accounting",
         icon: Receipt,

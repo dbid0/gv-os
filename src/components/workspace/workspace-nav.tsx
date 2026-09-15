@@ -27,6 +27,7 @@ const SECTIONS = [
   { label: "Calls", path: "/calls", adminOnly: true },
   { label: "Sources", path: "/sources", adminOnly: true },
   { label: "Tracking", path: "/tracking", adminOnly: true },
+  { label: "Numbers", path: "/numbers", adminOnly: true },
   { label: "Students", path: "/students" },
   { label: "Onboarding", path: "/onboarding" },
 ] as const;

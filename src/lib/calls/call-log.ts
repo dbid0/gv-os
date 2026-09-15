@@ -63,6 +63,14 @@ export type CallLogRow = {
   reportSource: "app" | "sheet" | null;
   /** The closer the report names, or null. */
   closer: string | null;
+  /** The setter the report names, or null. */
+  setter: string | null;
+  /** How the close paid, in the report's words; null off a close or unstated. */
+  closeType: string | null;
+  /** Cash the report says was collected on the call (a report, not money). */
+  reportedCashCents: number | null;
+  /** Contract value the report states (a report, not money). */
+  reportedRevenueCents: number | null;
   /** Why the calendar says it was called off, when it says. */
   cancelReason: string | null;
   /** A rescheduled call: the new time it moved to, when that booking is known. */
@@ -148,6 +156,10 @@ export function buildCallLog(input: {
           ? ("sheet" as const)
           : null,
       closer: report?.rep?.trim() || null,
+      setter: report?.setter?.trim() || null,
+      closeType: report?.closeType?.trim() || null,
+      reportedCashCents: report?.cashCents ?? null,
+      reportedRevenueCents: report?.revenueCents ?? null,
     };
 
     if (b.status === "canceled") {
