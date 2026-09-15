@@ -3,8 +3,15 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { Waypoints } from "lucide-react";
 
+import { AttributionDonut } from "@/components/tracking/attribution-donut";
+import { MetricSelect } from "@/components/tracking/metric-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WindowChips } from "@/components/ui/window-chips";
+import {
+  attribution,
+  DEFAULT_METRIC,
+  readMetric,
+} from "@/lib/tracking/attribution-slices";
 import { dayKeyIn } from "@/lib/time/zone";
 import {
   isBounded,
@@ -95,6 +102,7 @@ export default async function WorkspaceSourcesPage({
   const dimension: SourceDimension = SOURCE_DIMENSIONS.some((d) => d.key === sp.by)
     ? (sp.by as SourceDimension)
     : "source";
+  const metric = readMetric(sp.metric);
   const range = readReportRange(sp.range);
   const bounds = reportBounds(range, dayKeyIn(new Date(), tz));
   const hrefWith = (next: { by?: SourceDimension; range?: ReportRange }) => {
@@ -103,6 +111,7 @@ export default async function WorkspaceSourcesPage({
     const r = next.range ?? range;
     if (by !== "source") q.set("by", by);
     if (r !== "life") q.set("range", r);
+    if (metric !== DEFAULT_METRIC) q.set("metric", metric);
     const qs = q.toString();
     return qs ? `/w/${slug}/sources?${qs}` : `/w/${slug}/sources`;
   };
@@ -142,31 +151,54 @@ export default async function WorkspaceSourcesPage({
     tz,
   );
   const { rows, total } = data.funnel;
+  const dimensionLabel = SOURCE_DIMENSIONS.find((d) => d.key === dimension)!.label;
+  // The ring is drawn only when its arcs sum to the table's total row. A
+  // picture that disagrees with the table under it is worse than no picture.
+  const computed = attribution(rows, total, metric);
+  const donut = computed.reconciles ? computed : null;
 
   return (
     <div className="space-y-6">
       {header}
 
+      {/* The filter row: which cut, which metric, which window — always here,
+          never behind a menu, so the reader can see what they are looking at. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav className="flex rounded-md border p-0.5 sm:w-fit" aria-label="Cut by">
-          {SOURCE_DIMENSIONS.map((d) => (
-            <Link
-              key={d.key}
-              href={hrefWith({ by: d.key })}
-              aria-current={dimension === d.key ? "page" : undefined}
-              className={cn(
-                "rounded px-3 py-1 text-xs transition-colors",
-                dimension === d.key
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              By {d.label.toLowerCase()}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex flex-wrap items-center gap-2">
+          <nav className="flex rounded-md border p-0.5 sm:w-fit" aria-label="Cut by">
+            {SOURCE_DIMENSIONS.map((d) => (
+              <Link
+                key={d.key}
+                href={hrefWith({ by: d.key })}
+                aria-current={dimension === d.key ? "page" : undefined}
+                className={cn(
+                  "rounded px-3 py-1 text-xs transition-colors",
+                  dimension === d.key
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                By {d.label.toLowerCase()}
+              </Link>
+            ))}
+          </nav>
+          {rows.length > 0 && <MetricSelect value={metric} />}
+        </div>
         <WindowChips active={range} hrefFor={(r) => hrefWith({ range: r })} />
       </div>
+
+      {donut && donut.slices.length > 0 && (
+        <section className="bg-card rounded-xl border p-5">
+          <h2 className="text-sm font-medium">
+            {donut.label} by {dimensionLabel.toLowerCase()}
+          </h2>
+          <p className="text-faint mb-4 text-xs">
+            Share of the {donut.total.toLocaleString("en-US")} {donut.noun} in this
+            window, the same rows as the table below.
+          </p>
+          <AttributionDonut data={donut} by={dimensionLabel.toLowerCase()} />
+        </section>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState
@@ -181,7 +213,7 @@ export default async function WorkspaceSourcesPage({
               <thead className="text-faint border-b text-[11px] tracking-wider whitespace-nowrap uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-2 text-left font-medium">
-                    {SOURCE_DIMENSIONS.find((d) => d.key === dimension)!.label}
+                    {dimensionLabel}
                   </th>
                   {[
                     "Clicks",

@@ -326,6 +326,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The attribution donut's arcs. A part-to-whole picture that stops
+        // summing to its own table is a lie told faster than the table can
+        // correct it, so the reconcile check ships fully covered.
+        "src/lib/tracking/attribution-slices.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The Numbers page as a spreadsheet. A figure exported without its
         // denominator, or an unknown written as 0, misleads off-platform where
         // nobody can check it against the page. Fully covered.
