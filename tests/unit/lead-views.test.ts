@@ -154,6 +154,13 @@ describe("repOptions / filterLeads", () => {
     expect(ids({ has: "reported" })).toEqual(["a"]);
     expect(ids({ has: "paid" })).toEqual(["a"]);
     expect(ids({ tag: "hot", has: "booked", q: "ann" })).toEqual(["a"]);
+    // A full name from a rep record finds rows typed with the first name only.
+    const firstNameOnly = [lead("e@x.com", { reps: ["Jo"] }), lead("f@x.com")];
+    expect(
+      filterLeads(firstNameOnly, { ...NO_FILTERS, rep: "Jo Park" }, new Map()).map(
+        (l) => l.email,
+      ),
+    ).toEqual(["e@x.com"]);
   });
 });
 
