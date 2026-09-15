@@ -11,6 +11,10 @@ import { resolveRealRole } from "@/lib/auth/resolve-role";
 import { currentUser } from "@/lib/auth/server";
 import { callTimeFor, validateEoc, type EocFormInput } from "@/lib/calls/eoc-form";
 import { fileEoc, restoreEoc, voidEoc } from "@/lib/calls/eoc-store";
+import {
+  applyOutcomeRules,
+  unapplyOutcomeRules,
+} from "@/lib/calls/outcome-rules-store";
 import { getTeamBySlug } from "@/lib/sales/queries";
 
 type Result = { ok: true; replayed?: boolean } | { ok: false; errors: string[] };
@@ -35,7 +39,21 @@ async function requireFiler(): Promise<string | null> {
   return user.email;
 }
 
+/**
+ * Run the offer's outcome rules after the report itself is safely saved. A
+ * rule failing (a tag write, a notification) must never make a filed report
+ * look unfiled — the report is the record; the rules are follow-through.
+ */
+async function followThrough(run: () => Promise<unknown>) {
+  try {
+    await run();
+  } catch (e) {
+    console.error("[eoc] outcome rules failed", e);
+  }
+}
+
 function revalidateCallSurfaces(slug: string) {
+  revalidatePath(`/w/${slug}/leads`);
   revalidatePath(`/w/${slug}/crm`);
   revalidatePath(`/w/${slug}/sales`);
   revalidatePath(`/w/${slug}/calls`);
@@ -99,6 +117,9 @@ export async function fileEocAction(
       ],
     };
   }
+  if (!result.replayed) {
+    await followThrough(() => applyOutcomeRules(team.id, result.id));
+  }
   revalidateCallSurfaces(slug);
   return { ok: true, replayed: result.replayed };
 }
@@ -111,6 +132,7 @@ export async function voidEocAction(slug: string, reportId: string): Promise<Res
   }
   const done = await voidEoc(team.id, reportId, email);
   if (!done) return { ok: false, errors: ["That report is already voided or gone."] };
+  await followThrough(() => unapplyOutcomeRules(team.id, reportId));
   revalidateCallSurfaces(slug);
   return { ok: true };
 }
@@ -135,6 +157,7 @@ export async function restoreEocAction(
       ],
     };
   }
+  await followThrough(() => applyOutcomeRules(team.id, reportId));
   revalidateCallSurfaces(slug);
   return { ok: true };
 }
