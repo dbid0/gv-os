@@ -4,6 +4,14 @@ import { eq } from "drizzle-orm";
 import { Waypoints } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { WindowChips } from "@/components/ui/window-chips";
+import { dayKeyCT } from "@/lib/charts";
+import {
+  isBounded,
+  readReportRange,
+  reportBounds,
+  type ReportRange,
+} from "@/lib/tracking/report-window";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
@@ -85,6 +93,17 @@ export default async function WorkspaceSourcesPage({
   const dimension: SourceDimension = SOURCE_DIMENSIONS.some((d) => d.key === sp.by)
     ? (sp.by as SourceDimension)
     : "source";
+  const range = readReportRange(sp.range);
+  const bounds = reportBounds(range, dayKeyCT(new Date()));
+  const hrefWith = (next: { by?: SourceDimension; range?: ReportRange }) => {
+    const q = new URLSearchParams();
+    const by = next.by ?? dimension;
+    const r = next.range ?? range;
+    if (by !== "source") q.set("by", by);
+    if (r !== "life") q.set("range", r);
+    const qs = q.toString();
+    return qs ? `/w/${slug}/sources?${qs}` : `/w/${slug}/sources`;
+  };
 
   const header = (
     <WsPageHeader
@@ -117,6 +136,7 @@ export default async function WorkspaceSourcesPage({
     row.countedCallSources ?? null,
     dimension,
     new Date(),
+    bounds,
   );
   const { rows, total } = data.funnel;
 
@@ -124,27 +144,26 @@ export default async function WorkspaceSourcesPage({
     <div className="space-y-6">
       {header}
 
-      <nav className="flex rounded-md border p-0.5 sm:w-fit" aria-label="Cut by">
-        {SOURCE_DIMENSIONS.map((d) => (
-          <Link
-            key={d.key}
-            href={
-              d.key === "source"
-                ? `/w/${slug}/sources`
-                : `/w/${slug}/sources?by=${d.key}`
-            }
-            aria-current={dimension === d.key ? "page" : undefined}
-            className={cn(
-              "rounded px-3 py-1 text-xs transition-colors",
-              dimension === d.key
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            By {d.label.toLowerCase()}
-          </Link>
-        ))}
-      </nav>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav className="flex rounded-md border p-0.5 sm:w-fit" aria-label="Cut by">
+          {SOURCE_DIMENSIONS.map((d) => (
+            <Link
+              key={d.key}
+              href={hrefWith({ by: d.key })}
+              aria-current={dimension === d.key ? "page" : undefined}
+              className={cn(
+                "rounded px-3 py-1 text-xs transition-colors",
+                dimension === d.key
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              By {d.label.toLowerCase()}
+            </Link>
+          ))}
+        </nav>
+        <WindowChips active={range} hrefFor={(r) => hrefWith({ range: r })} />
+      </div>
 
       {rows.length === 0 ? (
         <EmptyState
@@ -202,6 +221,14 @@ export default async function WorkspaceSourcesPage({
           None of the {data.applications.toLocaleString("en-US")} synced applications
           carries a UTM tag, so every applicant sits in {"“(no tag)”"}. The funnel links
           need to pass their UTMs into the application form&apos;s hidden fields.
+        </p>
+      )}
+
+      {isBounded(bounds) && (
+        <p className="text-faint text-xs">
+          {bounds.label}: applicants whose first application was in the window and calls
+          that started in it; each person keeps the source from their whole history.
+          Clicks show only for All time — the registry counts clicks all-time.
         </p>
       )}
 

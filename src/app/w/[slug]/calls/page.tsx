@@ -7,6 +7,14 @@ import { CallWeekGrid } from "@/components/calls/call-week-grid";
 import { CloserSegmentsTable } from "@/components/calls/closer-segments-table";
 import { EocFormSheet } from "@/components/calls/eoc-form-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WindowChips } from "@/components/ui/window-chips";
+import { dayKeyCT } from "@/lib/charts";
+import {
+  inWindow,
+  readReportRange,
+  reportBounds,
+  type ReportRange,
+} from "@/lib/tracking/report-window";
 import { Kpi } from "@/components/ui/metric";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
@@ -137,14 +145,17 @@ export default async function WorkspaceCallsPage({
     ? (wanted as CallState)
     : "all";
   const view: "list" | "week" = sp.view === "week" ? "week" : "list";
+  const closersRange = readReportRange(sp.closers);
   const wantedWeek = typeof sp.week === "string" ? sp.week : undefined;
   /** This page's URL with some of its filters changed. */
   const hrefWith = (next: {
     state?: CallState | "all";
     view?: "list" | "week";
     week?: string;
+    closers?: ReportRange;
   }) => {
     const q = new URLSearchParams();
+    const closers = next.closers ?? closersRange;
     const state = next.state ?? filter;
     const v = next.view ?? view;
     if (state !== "all") q.set("state", state);
@@ -153,6 +164,7 @@ export default async function WorkspaceCallsPage({
       const week = next.week ?? wantedWeek;
       if (week) q.set("week", week);
     }
+    if (closers !== "life") q.set("closers", closers);
     const qs = q.toString();
     return qs ? `/w/${slug}/calls?${qs}` : `/w/${slug}/calls`;
   };
@@ -244,7 +256,20 @@ export default async function WorkspaceCallsPage({
         <Kpi variant="tile" label="Cancelled" value={String(counts.cancelled)} />
       </div>
 
-      <CloserSegmentsTable segments={segmentByCloser(log)} />
+      <CloserSegmentsTable
+        segments={segmentByCloser(
+          log.filter((r) =>
+            inWindow(r.startsAt, reportBounds(closersRange, dayKeyCT(now))),
+          ),
+        )}
+        windowChips={
+          <WindowChips
+            label="By closer window"
+            active={closersRange}
+            hrefFor={(r) => hrefWith({ closers: r })}
+          />
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <nav className="flex flex-wrap gap-1.5" aria-label="Filter calls">
