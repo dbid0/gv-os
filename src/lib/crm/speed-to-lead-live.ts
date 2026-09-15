@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { applications, crmActivity, integrations } from "@/db/schema/app";
@@ -112,6 +112,7 @@ export async function liveSpeedToLead(clientId: string): Promise<LiveSpeedToLead
       .where(
         and(eq(applications.clientId, clientId), gte(applications.createdAt, since)),
       )
+      .orderBy(desc(applications.createdAt))
       .limit(500),
     db
       .select({
@@ -129,6 +130,7 @@ export async function liveSpeedToLead(clientId: string): Promise<LiveSpeedToLead
           gte(crmActivity.occurredAt, since),
         ),
       )
+      .orderBy(desc(crmActivity.occurredAt))
       .limit(2000),
     aliasMapForClient(clientId),
   ]);
