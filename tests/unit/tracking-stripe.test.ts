@@ -81,11 +81,11 @@ describe("normalizeStripeCharges", () => {
   it("takes the billing email, falling back to the receipt email, lowercased", () => {
     const withBilling = normalizeStripeCharges([
       charge({
-        billing_details: { email: "Kaden@Grid.com" },
+        billing_details: { email: "Parker@Grid.com" },
         receipt_email: "other@x.com",
       }),
     ]).rows[0];
-    expect(withBilling.email).toBe("kaden@grid.com");
+    expect(withBilling.email).toBe("parker@grid.com");
 
     const receiptOnly = normalizeStripeCharges([
       charge({ billing_details: null, receipt_email: "fallback@x.com" }),

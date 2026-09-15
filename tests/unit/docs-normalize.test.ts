@@ -10,14 +10,14 @@ describe("normalizePandaDoc", () => {
   it("extracts the completed-doc essentials", () => {
     const out = normalizePandaDoc({
       id: "doc_ABC",
-      name: "The Grid Agreement — Jane Buyer",
+      name: "Client North Agreement — Jane Buyer",
       status: "document.completed",
       date_completed: "2026-08-20T18:00:00Z",
       recipients: [{ email: "jane@buyer.com" }],
     });
     expect(out).toEqual({
       externalId: "doc_ABC",
-      name: "The Grid Agreement — Jane Buyer",
+      name: "Client North Agreement — Jane Buyer",
       docStatus: "document.completed",
       recipientEmail: "jane@buyer.com",
       completedAt: "2026-08-20T18:00:00Z",

@@ -11,7 +11,7 @@ function payment(extra: Partial<TaggablePayment> = {}): TaggablePayment {
   return {
     amountCents: 99700,
     email: "buyer@example.com",
-    label: "Operation Room",
+    label: "Core Program",
     provider: "stripe",
     kind: "charge",
     ...extra,
@@ -24,7 +24,7 @@ function rule(extra: Partial<TagRule> = {}): TagRule {
     tag: "core-offer",
     matchField: "label",
     matchOp: "contains",
-    matchValue: "operation",
+    matchValue: "core",
     countsAsRevenue: true,
     countsAsOptin: false,
     exclude: false,
@@ -38,21 +38,21 @@ function rule(extra: Partial<TagRule> = {}): TagRule {
 
 describe("ruleMatches", () => {
   it("matches strings case-insensitively with trimming", () => {
-    expect(ruleMatches(rule({ matchValue: "  OPERATION " }), payment())).toBe(true);
+    expect(ruleMatches(rule({ matchValue: "  CORE " }), payment())).toBe(true);
     expect(
-      ruleMatches(rule({ matchOp: "equals", matchValue: "operation room" }), payment()),
+      ruleMatches(rule({ matchOp: "equals", matchValue: "core program" }), payment()),
     ).toBe(true);
   });
 
   it("supports starts_with and ends_with", () => {
     expect(
-      ruleMatches(rule({ matchOp: "starts_with", matchValue: "oper" }), payment()),
+      ruleMatches(rule({ matchOp: "starts_with", matchValue: "cor" }), payment()),
     ).toBe(true);
     expect(
-      ruleMatches(rule({ matchOp: "ends_with", matchValue: "room" }), payment()),
+      ruleMatches(rule({ matchOp: "ends_with", matchValue: "program" }), payment()),
     ).toBe(true);
     expect(
-      ruleMatches(rule({ matchOp: "starts_with", matchValue: "room" }), payment()),
+      ruleMatches(rule({ matchOp: "starts_with", matchValue: "program" }), payment()),
     ).toBe(false);
   });
 

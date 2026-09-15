@@ -25,8 +25,8 @@ describe("trendDelta", () => {
 describe("computeRepTrends", () => {
   const today = "2026-08-24"; // reference "today"
   const reps: RepInfo[] = [
-    { repId: "r1", name: "Alpha", teamName: "The Grid" },
-    { repId: "r2", name: "Beta", teamName: "The Vault" },
+    { repId: "r1", name: "Alpha", teamName: "Client North" },
+    { repId: "r2", name: "Beta", teamName: "Client South" },
     { repId: "r3", name: "Idle", teamName: null },
   ];
   // r1: strong this week; r2: only last week.

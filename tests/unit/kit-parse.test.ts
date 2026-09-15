@@ -11,14 +11,14 @@ describe("parseKitSequences", () => {
   it("extracts id/name/hold and drops malformed entries", () => {
     const out = parseKitSequences({
       sequences: [
-        { id: 2835307, name: "The Grid — Welcome", hold: false },
+        { id: 2835307, name: "Client North — Welcome", hold: false },
         { id: "2835308", name: "Booked Call" },
         { id: "not-a-number", name: "broken" },
         "garbage",
       ],
     });
     expect(out).toEqual([
-      { id: 2835307, name: "The Grid — Welcome", hold: false },
+      { id: 2835307, name: "Client North — Welcome", hold: false },
       { id: 2835308, name: "Booked Call" },
     ]);
   });
@@ -44,8 +44,8 @@ describe("parseKitTagCount", () => {
 describe("parseKitAccount", () => {
   it("reads nested and flat account shapes", () => {
     expect(
-      parseKitAccount({ account: { name: "The Grid", plan_type: "creator" } }),
-    ).toEqual({ name: "The Grid", plan: "creator" });
+      parseKitAccount({ account: { name: "Client North", plan_type: "creator" } }),
+    ).toEqual({ name: "Client North", plan: "creator" });
     expect(parseKitAccount({ name: "Flat", plan: "free" })).toEqual({
       name: "Flat",
       plan: "free",

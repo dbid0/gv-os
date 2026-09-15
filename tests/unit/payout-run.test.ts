@@ -9,8 +9,8 @@ import {
 } from "@/lib/payouts/run";
 
 const owed: RevShareOwedInput[] = [
-  { clientId: "grid", clientName: "The Grid", revShareCents: 769_820 },
-  { clientId: "vault", clientName: "The Vault", revShareCents: 300_000 },
+  { clientId: "grid", clientName: "Client North", revShareCents: 769_820 },
+  { clientId: "vault", clientName: "Client South", revShareCents: 300_000 },
   { clientId: "zero", clientName: "Quiet Offer", revShareCents: 0 },
 ];
 
@@ -21,7 +21,7 @@ describe("assembleRevShareRun", () => {
     expect(drafts[0]).toEqual({
       month: "2026-08",
       kind: "revshare_received",
-      label: "The Grid — rev-share",
+      label: "Client North — rev-share",
       clientId: "grid",
       baseCents: 769_820,
     });

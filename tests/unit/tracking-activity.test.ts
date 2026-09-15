@@ -12,7 +12,7 @@ import {
   readEodMetrics,
 } from "@/lib/tracking/activity";
 
-// Payloads copied from live rows on The Grid's sheet.
+// Payloads copied from live rows on Client North's sheet.
 const SETTER = {
   Date: "2026-09-01",
   Dials: "4",
@@ -244,7 +244,7 @@ describe("canonicalRepNames", () => {
 
 describe("nearDuplicateRepNames", () => {
   it("spots the one-letter typo on the live sheet", () => {
-    // "Ethan morgen" and "Ethan Morgan" are both on The Grid's EOD tabs.
+    // "Ethan morgen" and "Ethan Morgan" are both on Client North's EOD tabs.
     const pairs = nearDuplicateRepNames(["Ethan morgen", "Ethan Morgan", "Sam Carter"]);
     expect(pairs).toHaveLength(1);
     expect(pairs[0]).toContain("Ethan morgen");

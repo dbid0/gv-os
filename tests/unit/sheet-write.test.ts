@@ -22,9 +22,9 @@ describe("financeRawRow round-trips through parseRawRow", () => {
   it("preserves every field, exactly", () => {
     const input: AgencyDealInput = {
       dateClosed: "2026-08-27",
-      client: "The Vault",
+      client: "Client South",
       dealType: "Client Handoff",
-      offer: "The Vault",
+      offer: "Client South",
       revenueCents: 500000,
       cashCents: 250000,
       method: "Fanbasis",
@@ -37,9 +37,9 @@ describe("financeRawRow round-trips through parseRawRow", () => {
     const p = roundTrip(input);
     expect(p.timestamp).toBe(TS);
     expect(p.dateClosed).toBe("2026-08-27");
-    expect(p.client).toBe("The Vault");
+    expect(p.client).toBe("Client South");
     expect(p.dealType).toBe("Client Handoff");
-    expect(p.offer).toBe("The Vault");
+    expect(p.offer).toBe("Client South");
     expect(p.revenueCents).toBe(500000);
     expect(p.cashCents).toBe(250000);
     expect(p.method).toBe("Fanbasis");
@@ -53,9 +53,9 @@ describe("financeRawRow round-trips through parseRawRow", () => {
   it("blank percent + fee override read back as null (formula applies)", () => {
     const p = roundTrip({
       dateClosed: "2026-01-05",
-      client: "The Grid",
+      client: "Client North",
       dealType: "Rev Share",
-      offer: "The Grid",
+      offer: "Client North",
       revenueCents: 199900,
       cashCents: 199900,
       method: "Stripe",
@@ -74,9 +74,9 @@ describe("financeRawRow round-trips through parseRawRow", () => {
   it("non-round-dollar cents survive the dollars<->cents conversion", () => {
     const p = roundTrip({
       dateClosed: "2026-03-15",
-      client: "Racks Closes",
+      client: "Harbor Sales",
       dealType: "Rev Share",
-      offer: "Racks",
+      offer: "Eastman",
       revenueCents: 512345, // $5,123.45
       cashCents: 99999, // $999.99
       method: "Whop",

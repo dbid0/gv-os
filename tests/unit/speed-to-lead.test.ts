@@ -133,7 +133,7 @@ describe("computeSpeedToLeadByClient", () => {
         ccall("g", "Grid", "a@x.com", 3), // within 5m
         ccall("g", "Grid", "b@x.com", 90), // over 60m
         ccall("v", "Vault", "c@x.com", 10),
-        // A Grid-emailed lead dialed under the Vault offer must NOT match Grid.
+        // A lead emailed under one offer but dialled under another must NOT match the first.
         ccall("v", "Vault", "a@x.com", 1),
       ],
     );
@@ -160,12 +160,12 @@ describe("computeSpeedToLeadByClient", () => {
 
   it("buckets by normalized name when no client id is present", () => {
     const out = computeSpeedToLeadByClient(
-      [capp(null, "The Grid", "a@x.com", 0)],
-      [ccall(null, "the grid", "a@x.com", 4)],
+      [capp(null, "Client North", "a@x.com", 0)],
+      [ccall(null, "client north", "a@x.com", 4)],
     );
     expect(out).toHaveLength(1);
     expect(out[0].clientId).toBeNull();
-    expect(out[0].clientName).toBe("The Grid");
+    expect(out[0].clientName).toBe("Client North");
     expect(out[0].matched).toBe(1);
     expect(out[0].within5).toBe(1);
   });

@@ -8,7 +8,7 @@ import {
   parseTranscriptPayload,
 } from "@/lib/calls/fathom-share";
 
-// The exact spellings that appear in The Grid's EOC column and on the live
+// The exact spellings that appear in Client North's EOC column and on the live
 // share page.
 const SHARE = "https://fathom.video/share/Fqe16qBxRD2au6iZqRzprXsB4VF9gJLx";
 const COPY =

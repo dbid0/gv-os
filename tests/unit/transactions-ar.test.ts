@@ -11,7 +11,7 @@ const row = (o: Partial<ArBacklogRow>): ArBacklogRow => ({
   direction: "in",
   layer: "agency",
   occurredOn: "2026-07-31",
-  description: "Sean Casey",
+  description: "Lee Summers",
   clientName: null,
   dealType: "Setup",
   revenueCents: 1_000_000,
@@ -23,14 +23,14 @@ describe("partialDealAr", () => {
   it("finds revenue booked above cash, largest first", () => {
     const items = partialDealAr([
       row({}),
-      row({ description: "David Brown", revenueCents: 750_000, cashCents: 200_000 }),
+      row({ description: "Chris Dale", revenueCents: 750_000, cashCents: 200_000 }),
       row({ description: "Paid in full", revenueCents: 100_000, cashCents: 100_000 }),
       row({ direction: "out", revenueCents: 999, cashCents: 0 }),
     ]);
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
       kind: "partial",
-      label: "Sean Casey",
+      label: "Lee Summers",
       month: "2026-07",
       aroseOn: "2026-07-31",
       arCents: 900_000,
@@ -39,8 +39,8 @@ describe("partialDealAr", () => {
   });
 
   it("prefers the joined client name for the label", () => {
-    const items = partialDealAr([row({ clientName: "The Grid" })]);
-    expect(items[0].label).toBe("The Grid");
+    const items = partialDealAr([row({ clientName: "Client North" })]);
+    expect(items[0].label).toBe("Client North");
   });
 
   it("labels a deal with neither client name nor description as unlabeled", () => {
@@ -59,9 +59,24 @@ describe("partialDealAr", () => {
 
 describe("revShareOwed", () => {
   const LINES = [
-    { clientId: "g", clientName: "The Grid", month: "2026-07", revShareCents: 50_000 },
-    { clientId: "g", clientName: "The Grid", month: "2026-08", revShareCents: 80_000 },
-    { clientId: "v", clientName: "The Vault", month: "2026-08", revShareCents: 30_000 },
+    {
+      clientId: "g",
+      clientName: "Client North",
+      month: "2026-07",
+      revShareCents: 50_000,
+    },
+    {
+      clientId: "g",
+      clientName: "Client North",
+      month: "2026-08",
+      revShareCents: 80_000,
+    },
+    {
+      clientId: "v",
+      clientName: "Client South",
+      month: "2026-08",
+      revShareCents: 30_000,
+    },
   ];
 
   it("retires the oldest month first with what was received", () => {
@@ -69,11 +84,11 @@ describe("revShareOwed", () => {
     // July's 50k fully retired, August keeps 70k.
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
-      label: "The Grid — rev-share 2026-08",
+      label: "Client North — rev-share 2026-08",
       arCents: 70_000,
     });
     expect(items[1]).toMatchObject({
-      label: "The Vault — rev-share 2026-08",
+      label: "Client South — rev-share 2026-08",
       arCents: 30_000,
     });
   });

@@ -24,13 +24,13 @@ describe("buildRepPayoutStatement", () => {
   it("copies every money figure straight from the rollup line", () => {
     const s = buildRepPayoutStatement(line, {
       repName: "Jordan",
-      teamName: "The Grid",
+      teamName: "Client North",
       paid: false,
     });
     expect(s).toEqual({
       repId: "r1",
       repName: "Jordan",
-      teamName: "The Grid",
+      teamName: "Client North",
       role: "closer",
       dealCount: 4,
       commissionCents: 120_000,
@@ -51,7 +51,7 @@ describe("buildRepPayoutStatement", () => {
     };
     const s = buildRepPayoutStatement(manager, {
       repName: "Sam",
-      teamName: "The Vault",
+      teamName: "Client South",
       paid: true,
     });
     expect(s.skimCents).toBe(30_000);

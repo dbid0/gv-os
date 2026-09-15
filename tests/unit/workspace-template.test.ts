@@ -107,45 +107,47 @@ describe("copiedParentId", () => {
 
 describe("onboardingSpaceTitle", () => {
   it("names the section after the client", () => {
-    expect(onboardingSpaceTitle("The Grid")).toBe("The Grid Onboarding");
+    expect(onboardingSpaceTitle("Client North")).toBe("Client North Onboarding");
   });
 
-  it("matches the convention The Visionary already uses", () => {
-    expect(onboardingSpaceTitle("The Visionary")).toBe("The Visionary Onboarding");
+  it("matches the convention Client West already uses", () => {
+    expect(onboardingSpaceTitle("Client West")).toBe("Client West Onboarding");
   });
 
   it("trims stray whitespace from the client name", () => {
-    expect(onboardingSpaceTitle("  Racks Closes ")).toBe("Racks Closes Onboarding");
+    expect(onboardingSpaceTitle("  Harbor Sales ")).toBe("Harbor Sales Onboarding");
   });
 });
 
 describe("hasOnboardingSpace", () => {
   it("is false for a teamspace holding only imported Notion pages", () => {
-    // The Grid's real import: 13 SOP pages, no onboarding section. This
+    // Client North's real import: 13 SOP pages, no onboarding section. This
     // returning TRUE (because pages existed at all) is why it never got one.
-    const grid = ["Start Here", "Closers SOPs", "Scripts Hub", "Kaden's Story"];
-    expect(hasOnboardingSpace(grid, "The Grid")).toBe(false);
+    const grid = ["Start Here", "Closers SOPs", "Scripts Hub", "Parker's Story"];
+    expect(hasOnboardingSpace(grid, "Client North")).toBe(false);
   });
 
   it("is true once the client-named section exists", () => {
-    expect(hasOnboardingSpace(["The Grid Onboarding"], "The Grid")).toBe(true);
+    expect(hasOnboardingSpace(["Client North Onboarding"], "Client North")).toBe(true);
   });
 
   it("still recognises a section seeded under the OLD factory title", () => {
-    // Racks Closes was seeded before the rename — it must not get a second copy.
-    expect(hasOnboardingSpace(["Client Template"], "Racks Closes")).toBe(true);
+    // Harbor Sales was seeded before the rename — it must not get a second copy.
+    expect(hasOnboardingSpace(["Client Template"], "Harbor Sales")).toBe(true);
   });
 
   it("ignores case and surrounding whitespace", () => {
-    expect(hasOnboardingSpace(["  the grid onboarding  "], "The Grid")).toBe(true);
+    expect(hasOnboardingSpace(["  client north onboarding  "], "Client North")).toBe(
+      true,
+    );
   });
 
   it("does not match another client's section", () => {
-    expect(hasOnboardingSpace(["The Vault Onboarding"], "The Grid")).toBe(false);
+    expect(hasOnboardingSpace(["Client South Onboarding"], "Client North")).toBe(false);
   });
 
   it("is false for an empty teamspace", () => {
-    expect(hasOnboardingSpace([], "The Grid")).toBe(false);
+    expect(hasOnboardingSpace([], "Client North")).toBe(false);
   });
 });
 

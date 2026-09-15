@@ -16,9 +16,9 @@ function input(overrides: Partial<MirrorDealInput> = {}): MirrorDealInput {
     rowIndex: 2,
     timestamp: "2026-08-06 10:00:00",
     dateClosed: "2026-08-06",
-    client: "Kaden (AI)",
+    client: "Parker (AI)",
     dealType: "Setup",
-    offer: "The Grid",
+    offer: "Client North",
     revenueCents: 500_000,
     cashCents: 500_000,
     method: "Fanbasis",
@@ -56,7 +56,7 @@ describe("sheetIdempotencyKey", () => {
   it("is content-keyed and case/whitespace-stable — never the row index", () => {
     const a = sheetIdempotencyKey(input(), 0);
     const b = sheetIdempotencyKey(input({ rowIndex: 99 }), 0);
-    const c = sheetIdempotencyKey(input({ client: "  KADEN (ai) " }), 0);
+    const c = sheetIdempotencyKey(input({ client: "  PARKER (ai) " }), 0);
     expect(a).toBe(b);
     expect(a).toBe(c);
     expect(sheetIdempotencyKey(input({ cashCents: 1 }), 0)).not.toBe(a);
@@ -72,7 +72,7 @@ describe("sheetDealToTransaction", () => {
       direction: "in",
       layer: "agency",
       dealType: "Setup",
-      description: "Kaden (AI)",
+      description: "Parker (AI)",
       paymentMethod: "Fanbasis",
       revenueCents: 500_000,
       cashCents: 500_000,

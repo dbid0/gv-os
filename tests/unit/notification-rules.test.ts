@@ -25,7 +25,7 @@ const NOW = new Date("2026-08-22T12:00:00Z");
 const conn = (o: Partial<IntegrationState>): IntegrationState => ({
   id: "c1",
   provider: "kit",
-  label: "Racks Closes Kit",
+  label: "Harbor Sales Kit",
   clientId: "rc",
   lastSyncAt: new Date("2026-08-22T11:00:00Z"),
   lastSyncNote: "7 sequences, 0 tags",
@@ -89,7 +89,7 @@ describe("bodRule title", () => {
   const offer = {
     clientId: "c1",
     slug: "grid",
-    name: "The Grid",
+    name: "Client North",
     bodAlertTime: "00:00",
     timezone: "America/Chicago",
     mtdCashCents: 0,
@@ -97,7 +97,7 @@ describe("bodRule title", () => {
 
   it("omits the figure when month-to-date is zero", () => {
     const [n] = bodRule([offer], new Date(), "2026-09-07");
-    expect(n.title).toBe("BOD — The Grid: start-of-day check-in");
+    expect(n.title).toBe("BOD — Client North: start-of-day check-in");
   });
 
   it("names the figure when there is one", () => {
@@ -106,7 +106,7 @@ describe("bodRule title", () => {
       new Date(),
       "2026-09-07",
     );
-    expect(n.title).toBe("BOD — The Grid: $4,800 month to date");
+    expect(n.title).toBe("BOD — Client North: $4,800 month to date");
   });
 });
 
@@ -167,8 +167,8 @@ describe("bodRule", () => {
   const offers = [
     {
       clientId: "c1",
-      slug: "the-grid",
-      name: "The Grid",
+      slug: "client-north",
+      name: "Client North",
       bodAlertTime: "12:00",
       timezone: "America/Chicago",
       mtdCashCents: 1_234_500,
@@ -182,8 +182,8 @@ describe("bodRule", () => {
   it("fires once the offer's local time passes the alert time", () => {
     const out = bodRule(offers, afterNoonCT, "2026-08-23");
     expect(out).toHaveLength(1);
-    expect(out[0].title).toBe("BOD — The Grid: $12,345 month to date");
-    expect(out[0].dedupeKey).toBe("bod:the-grid:2026-08-23");
+    expect(out[0].title).toBe("BOD — Client North: $12,345 month to date");
+    expect(out[0].dedupeKey).toBe("bod:client-north:2026-08-23");
     expect(out[0].severity).toBe("info");
   });
 
@@ -204,7 +204,7 @@ describe("repWellbeingRule", () => {
     repId: "r1",
     repName: "Jordan",
     clientId: "g",
-    teamName: "The Grid",
+    teamName: "Client North",
     score: 2,
     dateKey: "2026-08-25",
     ...o,
@@ -312,20 +312,20 @@ import { notificationHref } from "@/lib/notifications/links";
 describe("notificationHref", () => {
   it("routes each kind to the spot that resolves it", () => {
     expect(notificationHref("sync_failure", null)).toBe("/settings/integrations");
-    expect(notificationHref("integration_stale", "brady")).toBe(
+    expect(notificationHref("integration_stale", "morgan")).toBe(
       "/settings/integrations",
     );
     expect(notificationHref("sheet_drift", null)).toBe("/accounting");
-    expect(notificationHref("agreement_signed", "brady")).toBe("/w/brady");
+    expect(notificationHref("agreement_signed", "morgan")).toBe("/w/morgan");
     expect(notificationHref("agreement_signed", null)).toBe("/clients");
-    expect(notificationHref("bod_digest", "the-grid")).toBe("/w/the-grid");
+    expect(notificationHref("bod_digest", "client-north")).toBe("/w/client-north");
     expect(notificationHref("bod_digest", null)).toBe("/dashboard");
     expect(notificationHref("rep_wellbeing", null)).toBe("/sales/eod");
     expect(notificationHref("eod_missing", null)).toBe("/sales/eod");
     expect(notificationHref("bod_missing", null)).toBe("/sales/eod");
     expect(notificationHref("payment_failed", null)).toBe("/accounting/recovery");
-    expect(notificationHref("speed_to_lead_breach", "the-grid")).toBe(
-      "/w/the-grid/crm",
+    expect(notificationHref("speed_to_lead_breach", "client-north")).toBe(
+      "/w/client-north/crm",
     );
     expect(notificationHref("speed_to_lead_breach", null)).toBe("/sales/cockpit");
     expect(notificationHref("unknown_kind", null)).toBe("/notifications");
@@ -336,7 +336,7 @@ describe("paymentFailureRule", () => {
   const failure = (o: Partial<PaymentFailureState>): PaymentFailureState => ({
     id: "pe1",
     clientId: "grid",
-    clientName: "The Grid",
+    clientName: "Client North",
     amountCents: 4_999,
     provider: "stripe",
     failureMessage: "card_declined",
@@ -352,7 +352,7 @@ describe("paymentFailureRule", () => {
       clientId: "grid",
       dedupeKey: "payment-failed:pe1",
     });
-    expect(out[0].title).toBe("The Grid: failed charge — $49.99");
+    expect(out[0].title).toBe("Client North: failed charge — $49.99");
     expect(out[0].body).toBe("stripe: card_declined. Open the recovery inbox.");
   });
 
@@ -381,7 +381,7 @@ describe("speedToLeadBreachRule", () => {
   const breach = (o: Partial<SpeedToLeadBreachState>): SpeedToLeadBreachState => ({
     applicationKey: "grid:lead@example.com:1700000000000",
     clientId: "grid",
-    clientName: "The Grid",
+    clientName: "Client North",
     email: "lead@example.com",
     name: "Jamie Lead",
     waitingSec: 900,
@@ -397,7 +397,7 @@ describe("speedToLeadBreachRule", () => {
       clientId: "grid",
       dedupeKey: "speed-to-lead:grid:lead@example.com:1700000000000",
     });
-    expect(out[0].title).toBe("The Grid: Jamie Lead — past the 5-minute standard");
+    expect(out[0].title).toBe("Client North: Jamie Lead — past the 5-minute standard");
     expect(out[0].body).toBe(
       "No contact yet, 15 minutes and counting since the application landed.",
     );
@@ -406,7 +406,7 @@ describe("speedToLeadBreachRule", () => {
   it("falls back to the email when there is no name", () => {
     const out = speedToLeadBreachRule([breach({ name: null })]);
     expect(out[0].title).toBe(
-      "The Grid: lead@example.com — past the 5-minute standard",
+      "Client North: lead@example.com — past the 5-minute standard",
     );
   });
 
@@ -419,9 +419,19 @@ describe("speedToLeadBreachRule", () => {
 
 describe("spineDriftRule", () => {
   const rows: SpineDriftRow[] = [
-    { scope: "the-grid", name: "The Grid", month: "2026-08", cashDeltaCents: 50_000 },
+    {
+      scope: "client-north",
+      name: "Client North",
+      month: "2026-08",
+      cashDeltaCents: 50_000,
+    },
     { scope: "agency", name: "Agency book", month: "2026-08", cashDeltaCents: -12_500 },
-    { scope: "the-vault", name: "The Vault", month: "2026-08", cashDeltaCents: 0 },
+    {
+      scope: "client-south",
+      name: "Client South",
+      month: "2026-08",
+      cashDeltaCents: 0,
+    },
   ];
 
   it("raises one critical alert per drifting book, with the exact delta in the title", () => {
@@ -430,8 +440,8 @@ describe("spineDriftRule", () => {
     expect(out[0]).toMatchObject({
       kind: "spine_drift",
       severity: "critical",
-      title: "The Grid 2026-08: sources off by $500.00",
-      dedupeKey: "spine-drift:the-grid:2026-08",
+      title: "Client North 2026-08: sources off by $500.00",
+      dedupeKey: "spine-drift:client-north:2026-08",
     });
     expect(out[1].title).toContain("$125.00"); // abs value of the agency delta
   });
@@ -452,7 +462,7 @@ describe("spineDriftRule", () => {
   it("still changes the key across a different month or a different book", () => {
     const base = spineDriftRule([rows[0]])[0].dedupeKey;
     const nextMonth = spineDriftRule([{ ...rows[0], month: "2026-09" }])[0].dedupeKey;
-    const otherBook = spineDriftRule([{ ...rows[0], scope: "the-vault-live" }])[0]
+    const otherBook = spineDriftRule([{ ...rows[0], scope: "client-south-live" }])[0]
       .dedupeKey;
     expect(nextMonth).not.toBe(base);
     expect(otherBook).not.toBe(base);

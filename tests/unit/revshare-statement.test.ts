@@ -26,7 +26,7 @@ describe("buildRevShareStatement", () => {
     revShareCents: 194_000,
   };
   const rows: StatementRow[] = [
-    // The Grid, August, client-layer income — counted.
+    // Client North, August, client-layer income — counted.
     {
       clientId: "grid",
       layer: "client",
@@ -73,15 +73,15 @@ describe("buildRevShareStatement", () => {
   ];
 
   it("derives gross, fees, and deal count from this client-month only", () => {
-    const s = buildRevShareStatement(rows, line, "The Grid");
+    const s = buildRevShareStatement(rows, line, "Client North");
     expect(s.grossCashCents).toBe(1_000_000);
     expect(s.processorFeeCents).toBe(30_000);
     expect(s.dealCount).toBe(2);
-    expect(s.clientName).toBe("The Grid");
+    expect(s.clientName).toBe("Client North");
   });
 
   it("takes after-fees and share straight from the engine line, never recomputes", () => {
-    const s = buildRevShareStatement(rows, line, "The Grid");
+    const s = buildRevShareStatement(rows, line, "Client North");
     expect(s.cashAfterFeesCents).toBe(970_000);
     expect(s.rateBps).toBe(2000);
     expect(s.revShareCents).toBe(194_000);
