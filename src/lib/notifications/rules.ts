@@ -326,7 +326,7 @@ export interface CallReviewState {
  * recoverability: a still-open deal with steps missed is a warning because it
  * can still be saved today; a lost one is information.
  *
- * Deliberately not batched into a digest. A manager acts on "Lorenzo left a
+ * Deliberately not batched into a digest. A manager acts on "Jordan left a
  * live deal without a follow-up time", not on "6 calls were analysed".
  */
 export function callReviewRule(calls: CallReviewState[]): Candidate[] {

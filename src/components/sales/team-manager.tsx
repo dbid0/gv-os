@@ -172,7 +172,7 @@ export function TeamManager({ teams }: { teams: TeamOption[] }) {
             <Input
               value={rep.name}
               onChange={(e) => setRep({ ...rep, name: e.target.value })}
-              placeholder="Lorenzo"
+              placeholder="Jordan"
               required
             />
           </Field>

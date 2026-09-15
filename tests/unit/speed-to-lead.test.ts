@@ -245,7 +245,7 @@ describe("computeSpeedToLeadByRep", () => {
   it("merges case-variant rep names — one person, one row", () => {
     const rows = computeSpeedToLeadByRep(
       [app("a@x.com"), app("b@x.com")],
-      [call("a@x.com", 60_000, "lorenzo rep"), call("b@x.com", 60_000, "Lorenzo Rep")],
+      [call("a@x.com", 60_000, "jordan rep"), call("b@x.com", 60_000, "Jordan Rep")],
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].matched).toBe(2);

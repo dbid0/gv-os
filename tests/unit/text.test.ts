@@ -26,11 +26,11 @@ describe("possessive", () => {
 
 describe("displayName", () => {
   it("raises an all-lowercase sheet name", () => {
-    expect(displayName("lorenzo saponara")).toBe("Lorenzo Saponara");
+    expect(displayName("jordan rivers")).toBe("Jordan Rivers");
   });
 
   it("leaves an already-cased name exactly as typed", () => {
-    expect(displayName("Lorenzo Saponara")).toBe("Lorenzo Saponara");
+    expect(displayName("Jordan Rivers")).toBe("Jordan Rivers");
     expect(displayName("McArthur")).toBe("McArthur");
     expect(displayName("JD")).toBe("JD");
   });

@@ -53,7 +53,7 @@ describe("the real Close envelope", () => {
   const realShape = {
     id: "acti_abcdefghijklmnopqrstuvwxyz012345",
     user_id: "user_ABCDEFGHIJKLMNOPQRSTUVWXYZ01234",
-    user_name: "yel akot",
+    user_name: "sam carter",
     direction: "outbound",
     duration: 5,
     date_created: "2026-09-07T14:49:29.089000+00:00",
@@ -66,7 +66,7 @@ describe("the real Close envelope", () => {
       externalId: realShape.id,
       kind: "call",
       userId: realShape.user_id,
-      userName: "yel akot",
+      userName: "sam carter",
       direction: "outbound",
       durationSeconds: 5,
       occurredAt: realShape.date_created,

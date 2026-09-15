@@ -128,7 +128,7 @@ describe("mapFields", () => {
     const headers = ["Timestamp", "Call Date", "First Name", "Email"];
     const { rows } = parseTrackingTab("calls", [
       headers,
-      ["2026-07-30 13:19:22", "", "Lorenzo", "l@example.com"],
+      ["2026-07-30 13:19:22", "", "Jordan", "l@example.com"],
       ["2026-07-31 09:00:00", "2026-08-01", "Ana", "a@example.com"],
     ]);
     // Row 1 has only the timestamp; row 2 prefers its real call date.
@@ -212,7 +212,7 @@ describe("parseTrackingTab", () => {
       GRID_EOC,
       [
         "2026-08-03 20:27:09",
-        "lorenzo saponara",
+        "jordan rivers",
         "2026-08-03",
         "15:15",
         "Booked Call",
@@ -229,7 +229,7 @@ describe("parseTrackingTab", () => {
     expect(rows).toHaveLength(1);
     const r = rows[0];
     expect(r.email).toBe("julian@gmail.com");
-    expect(r.rep).toBe("lorenzo saponara");
+    expect(r.rep).toBe("jordan rivers");
     expect(r.occurredAt?.getDate()).toBe(3);
     expect(r.cashCents).toBe(0);
     expect(r.recordingUrl).toBe("https://fathom.video/share/abc");
