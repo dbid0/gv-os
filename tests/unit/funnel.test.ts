@@ -16,7 +16,7 @@ describe("computeFunnel", () => {
     {
       repId: "r1",
       name: "Alpha",
-      teamName: "The Grid",
+      teamName: "Client North",
       setsBooked: 40,
       shows: 25,
       deals: 10,
@@ -24,7 +24,7 @@ describe("computeFunnel", () => {
     {
       repId: "r2",
       name: "Beta",
-      teamName: "The Vault",
+      teamName: "Client South",
       setsBooked: 20,
       shows: 10,
       deals: 2,

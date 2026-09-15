@@ -112,7 +112,7 @@ const overview = (over: Partial<KitOverviewRow>): KitOverviewRow => ({
   integrationId: "int-1",
   label: "Kit",
   clientId: "id-vault",
-  clientName: "The Vault",
+  clientName: "Client South",
   accountName: "Vault Media",
   plan: "creator",
   sequenceCount: 4,

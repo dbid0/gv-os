@@ -149,11 +149,13 @@ describe("guardTarget — the route guard the middleware runs", () => {
   });
 
   it("pins a client to their one workspace, everything else to their front door", () => {
-    expect(guardTarget("client", "/dashboard", "the-vault")).toBe("/w/the-vault");
-    expect(guardTarget("client", "/w/the-vault", "the-vault")).toBeNull();
-    expect(guardTarget("client", "/w/the-vault/reels", "the-vault")).toBeNull();
-    expect(guardTarget("client", "/profile", "the-vault")).toBeNull();
-    expect(guardTarget("client", "/accounting", "the-vault")).toBe("/w/the-vault");
+    expect(guardTarget("client", "/dashboard", "client-south")).toBe("/w/client-south");
+    expect(guardTarget("client", "/w/client-south", "client-south")).toBeNull();
+    expect(guardTarget("client", "/w/client-south/reels", "client-south")).toBeNull();
+    expect(guardTarget("client", "/profile", "client-south")).toBeNull();
+    expect(guardTarget("client", "/accounting", "client-south")).toBe(
+      "/w/client-south",
+    );
   });
 });
 

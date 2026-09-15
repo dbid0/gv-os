@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { reconcileSpine, type OfferMonthInput } from "@/lib/accounting/reconcile-spine";
 
 const base: OfferMonthInput = {
-  slug: "the-grid",
-  name: "The Grid",
+  slug: "client-north",
+  name: "Client North",
   month: "2026-08",
   authority: "forms",
   hasProcessor: false,

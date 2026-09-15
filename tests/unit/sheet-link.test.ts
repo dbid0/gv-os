@@ -11,14 +11,24 @@ const GRID_ID = "1rC3yHTzkwWodrNpfxKP3H_YPyHRph4ebWrSlQ3cGthY";
 const RACKS_ID = "1xQ9GkyStP9P56QE3jcDdQflpAFtyhjmBkvfVSrDMrpM";
 
 const owners: SheetOwner[] = [
-  { clientId: "c-grid", slug: "the-grid", name: "The Grid", trackingSheetId: GRID_ID },
+  {
+    clientId: "c-grid",
+    slug: "client-north",
+    name: "Client North",
+    trackingSheetId: GRID_ID,
+  },
   {
     clientId: "c-racks",
-    slug: "racks-closes",
-    name: "Racks Closes",
+    slug: "harbor-sales",
+    name: "Harbor Sales",
     trackingSheetId: RACKS_ID,
   },
-  { clientId: "c-vault", slug: "the-vault", name: "The Vault", trackingSheetId: null },
+  {
+    clientId: "c-vault",
+    slug: "client-south",
+    name: "Client South",
+    trackingSheetId: null,
+  },
 ];
 
 describe("normalizeSheetId", () => {
@@ -40,10 +50,10 @@ describe("normalizeSheetId", () => {
 
 describe("conflictingOwner", () => {
   it("CATCHES pointing a second offer at a sheet another offer owns", () => {
-    // The worst thing this mirror can do: Racks' workspace showing The Grid's
+    // The worst thing this mirror can do: Eastman' workspace showing Client North's
     // prospects, deals and recordings, with nothing on screen looking wrong.
     const clash = conflictingOwner(GRID_ID, "c-vault", owners);
-    expect(clash?.name).toBe("The Grid");
+    expect(clash?.name).toBe("Client North");
   });
 
   it("catches it when the URL was pasted instead of the id", () => {
@@ -52,7 +62,7 @@ describe("conflictingOwner", () => {
       "c-vault",
       owners,
     );
-    expect(clash?.name).toBe("Racks Closes");
+    expect(clash?.name).toBe("Harbor Sales");
   });
 
   it("allows re-saving the same id on the SAME offer", () => {

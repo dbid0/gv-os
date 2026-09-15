@@ -28,7 +28,7 @@ describe("buildActivityHeatmap", () => {
     expect(dayOfWeek(m.columns[0][0]!.day)).toBe(0);
   });
 
-  it("nulls out days after today so the grid never implies the future", () => {
+  it("nulls out days after today so client north never implies the future", () => {
     const m = buildActivityHeatmap([], today, 4);
     const lastWeek = m.columns[3];
     // today is Monday (row 1): Sun+Mon present, Tue..Sat are future -> null.

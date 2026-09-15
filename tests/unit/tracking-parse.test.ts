@@ -93,7 +93,7 @@ describe("tabFromTitle", () => {
 });
 
 describe("mapFields", () => {
-  it("maps The Grid's application headers", () => {
+  it("maps Client North's application headers", () => {
     const m = mapFields(GRID_APPLICATIONS);
     expect(m.email).toEqual([3]);
     expect(m.name).toEqual([2]);
@@ -102,15 +102,15 @@ describe("mapFields", () => {
   });
 
   it("keeps BOTH date columns, preferred one first", () => {
-    // Live data: The Grid's Applications tab has "Submit Date" (blank on 472
+    // Live data: Client North's Applications tab has "Submit Date" (blank on 472
     // of 473 rows) and "Timestamp" (filled). Resolving to one column lost the
     // date almost everywhere; the reader needs the fallback.
     expect(mapFields(GRID_APPLICATIONS).occurredAt).toEqual([1, 0]);
   });
 
   it("maps RACKS' differently-worded headers to the same fields", () => {
-    // The defect this prevents: by position, Racks' "Qualifier 1" sits where
-    // The Grid keeps "Q1: Type", and its budget column is two places left.
+    // The defect this prevents: by position, Eastman' "Qualifier 1" sits where
+    // Client North keeps "Q1: Type", and its budget column is two places left.
     const m = mapFields(RACKS_APPLICATIONS);
     expect(m.email).toEqual([3]);
     expect(m.name).toEqual([2]);
@@ -124,7 +124,7 @@ describe("mapFields", () => {
   });
 
   it("falls back to the timestamp when the event date is blank", () => {
-    // The Grid's Calls Log: "Call Date" exists but is empty on all 109 rows.
+    // Client North's Calls Log: "Call Date" exists but is empty on all 109 rows.
     const headers = ["Timestamp", "Call Date", "First Name", "Email"];
     const { rows } = parseTrackingTab("calls", [
       headers,
@@ -219,7 +219,7 @@ describe("parseTrackingTab", () => {
         "julian@gmail.com",
         "Follow Up — Strong Interest",
         "Business / Offer Owner",
-        "The Grid — Operation Room",
+        "Client North — Core Program",
         "0",
         "0",
         "Problem: new e-com store",
@@ -235,7 +235,7 @@ describe("parseTrackingTab", () => {
     expect(r.recordingUrl).toBe("https://fathom.video/share/abc");
     expect(r.status).toBe("Follow Up — Strong Interest");
     // Unmapped columns survive verbatim rather than being dropped.
-    expect(r.payload["Offer Pitched"]).toBe("The Grid — Operation Room");
+    expect(r.payload["Offer Pitched"]).toBe("Client North — Core Program");
     expect(r.payload["Type of Lead"]).toBe("Business / Offer Owner");
     expect(unmapped).toContain("Offer Pitched");
   });

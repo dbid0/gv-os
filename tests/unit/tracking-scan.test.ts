@@ -43,7 +43,7 @@ describe("scanTab", () => {
 
 describe("scanWarnings", () => {
   it("flags the tab whose dates are mostly missing", () => {
-    // The real case: The Grid's Calls Log is 109 rows with 7 dated, so every
+    // The real case: Client North's Calls Log is 109 rows with 7 dated, so every
     // per-day call figure is reading 6% of the tab.
     const out = scanWarnings([scan({ tab: "calls", rows: 109, dated: 7 })]);
     expect(out).toHaveLength(1);

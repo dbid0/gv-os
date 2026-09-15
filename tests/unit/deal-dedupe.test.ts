@@ -12,7 +12,7 @@ import {
 
 const deal: DealIdentity = {
   dateClosed: "2026-09-04",
-  client: "Kaden (AI)",
+  client: "Parker (AI)",
   dealType: "Setup",
   revenueCents: 750_000,
   cashCents: 750_000,
@@ -23,9 +23,9 @@ const sheetRow = (over: Partial<Record<number, string>> = {}): string[] => {
   const row = [
     "9/4/2026 10:15:00", // A timestamp
     "2026-09-04", // B date closed
-    "Kaden (AI)", // C client
+    "Parker (AI)", // C client
     "Setup", // D deal type
-    "The Grid", // E offer
+    "Client North", // E offer
     "7500.00", // F revenue
     "7500.00", // G cash
     "Stripe", // H method
@@ -56,12 +56,14 @@ describe("isSameDeal", () => {
   });
 
   it("ignores case and stray spacing in the names", () => {
-    expect(isSameDeal(rawDealRow(sheetRow({ 2: "  kaden   (AI) " })), deal)).toBe(true);
+    expect(isSameDeal(rawDealRow(sheetRow({ 2: "  parker   (AI) " })), deal)).toBe(
+      true,
+    );
   });
 
   it("does NOT match a different amount, client, date or type", () => {
     expect(isSameDeal(rawDealRow(sheetRow({ 6: "5000.00" })), deal)).toBe(false);
-    expect(isSameDeal(rawDealRow(sheetRow({ 2: "Brady" })), deal)).toBe(false);
+    expect(isSameDeal(rawDealRow(sheetRow({ 2: "Morgan" })), deal)).toBe(false);
     expect(isSameDeal(rawDealRow(sheetRow({ 1: "2026-09-03" })), deal)).toBe(false);
     expect(isSameDeal(rawDealRow(sheetRow({ 3: "Rev-Share" })), deal)).toBe(false);
   });
@@ -76,18 +78,18 @@ describe("isSameDeal", () => {
 
 describe("findDuplicateDeal", () => {
   it("points at the exact sheet row so the warning can be checked", () => {
-    const rows = [sheetRow({ 2: "Brady" }), sheetRow({ 2: "Aiden" }), sheetRow()];
+    const rows = [sheetRow({ 2: "Morgan" }), sheetRow({ 2: "Quinn" }), sheetRow()];
     // Rows start at sheet row 2, so the third row is row 4.
     expect(findDuplicateDeal(rows, deal)).toBe(4);
   });
 
   it("returns the MOST RECENT match when a deal legitimately repeats", () => {
-    const rows = [sheetRow(), sheetRow({ 2: "Brady" }), sheetRow()];
+    const rows = [sheetRow(), sheetRow({ 2: "Morgan" }), sheetRow()];
     expect(findDuplicateDeal(rows, deal)).toBe(4);
   });
 
   it("is null when nothing matches, and for an empty sheet", () => {
-    expect(findDuplicateDeal([sheetRow({ 2: "Brady" })], deal)).toBeNull();
+    expect(findDuplicateDeal([sheetRow({ 2: "Morgan" })], deal)).toBeNull();
     expect(findDuplicateDeal([], deal)).toBeNull();
   });
 

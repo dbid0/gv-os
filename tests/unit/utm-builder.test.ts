@@ -152,7 +152,7 @@ describe("buildUtmUrl", () => {
       ...base,
       source: "  YOUTUBE  ",
       medium: "pinned_comment",
-      campaign: "The Grid",
+      campaign: "Client North",
       content: "beginners guide",
     });
     expect(result.ok).toBe(true);
@@ -160,7 +160,7 @@ describe("buildUtmUrl", () => {
     expect(result.params).toEqual({
       source: "youtube",
       medium: "pinned-comment",
-      campaign: "the-grid",
+      campaign: "client-north",
       content: "beginners-guide",
     });
   });

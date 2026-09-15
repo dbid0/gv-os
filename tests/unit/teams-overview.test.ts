@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import { buildTeamsOverview, type OverviewLine } from "@/lib/teams-overview";
 
 const lines: OverviewLine[] = [
-  { slug: "the-grid", name: "The Grid", cashCents: 2_349_400, revenueCents: 2_600_000 },
-  { slug: "the-vault", name: "The Vault", cashCents: 0, revenueCents: 0 },
   {
-    slug: "racks-closes",
-    name: "Racks Closes",
+    slug: "client-north",
+    name: "Client North",
+    cashCents: 2_349_400,
+    revenueCents: 2_600_000,
+  },
+  { slug: "client-south", name: "Client South", cashCents: 0, revenueCents: 0 },
+  {
+    slug: "harbor-sales",
+    name: "Harbor Sales",
     cashCents: 2_720_500,
     revenueCents: 2_720_500,
   },
@@ -26,9 +31,9 @@ describe("buildTeamsOverview", () => {
   it("chips only attributed teams, largest cash first", () => {
     const o = buildTeamsOverview(lines, 19, 26);
     expect(o.teams.map((t) => t.slug)).toEqual([
-      "racks-closes",
-      "the-grid",
-      "the-vault",
+      "harbor-sales",
+      "client-north",
+      "client-south",
     ]);
     expect(o.teams.every((t) => t.slug !== null)).toBe(true);
   });

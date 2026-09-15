@@ -143,7 +143,7 @@ describe("buildLeadSummaries", () => {
   });
 
   it("orders undated events by funnel stage instead of dropping them", () => {
-    // The Grid's Calls Log is 94% undated; those rows still belong on the
+    // Client North's Calls Log is 94% undated; those rows still belong on the
     // timeline, in the only order that makes sense without a date.
     const leads = buildLeadSummaries([
       ev({ tab: "payments", rowIndex: 9 }),

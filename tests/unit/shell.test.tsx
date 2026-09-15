@@ -9,7 +9,7 @@ import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
 
 const TEST_ROSTER = [
-  { slug: "the-grid", name: "The Grid", owner: "Kaden", accent: "#4aa3ff" },
+  { slug: "client-north", name: "Client North", owner: "Parker", accent: "#4aa3ff" },
 ];
 
 vi.mock("next/navigation", () => ({

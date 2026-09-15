@@ -9,7 +9,7 @@ import type { ShellUser } from "@/lib/auth/user";
 import { clearPersistedState } from "@/lib/client-state";
 
 const TEST_ROSTER = [
-  { slug: "the-grid", name: "The Grid", owner: "Kaden", accent: "#4aa3ff" },
+  { slug: "client-north", name: "Client North", owner: "Parker", accent: "#4aa3ff" },
 ];
 
 // A mutable pathname so each test can place itself somewhere in the app.

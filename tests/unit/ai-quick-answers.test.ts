@@ -447,21 +447,21 @@ describe("admin answers", () => {
       { client: "Grid", monthKey: "2026-07", netCents: 200_00 },
       { client: "Vault", monthKey: "2026-08", netCents: 100_00 },
       { client: "Vault", monthKey: "2026-07", netCents: 400_00 },
-      { client: "Racks", monthKey: "2026-08", netCents: 300_00 },
-      { client: "Racks", monthKey: "2026-07", netCents: 300_00 }, // flat
+      { client: "Eastman", monthKey: "2026-08", netCents: 300_00 },
+      { client: "Eastman", monthKey: "2026-07", netCents: 300_00 }, // flat
       // Outside the compared window — ignored entirely.
       { client: "Old", monthKey: "2026-05", netCents: 999_00 },
     ];
     const rows = bucketClientTrend(deals, "2026-08", "2026-07");
-    expect(rows.map((r) => r.client)).toEqual(["Grid", "Vault", "Racks"]);
+    expect(rows.map((r) => r.client)).toEqual(["Grid", "Vault", "Eastman"]);
     expect(rows[0]).toMatchObject({
       client: "Grid",
       thisCents: 700_00,
       lastCents: 200_00,
       deltaCents: 500_00,
     });
-    // Racks is flat, so its delta is exactly zero.
-    expect(rows.find((r) => r.client === "Racks")?.deltaCents).toBe(0);
+    // Eastman is flat, so its delta is exactly zero.
+    expect(rows.find((r) => r.client === "Eastman")?.deltaCents).toBe(0);
     // "Old" fell outside both months and never entered the roll-up.
     expect(rows.some((r) => r.client === "Old")).toBe(false);
   });
@@ -506,7 +506,7 @@ describe("admin answers", () => {
       rows: [
         { client: "Grid", thisCents: 900_00, lastCents: 100_00, deltaCents: 800_00 },
         { client: "Vault", thisCents: 100_00, lastCents: 700_00, deltaCents: -600_00 },
-        { client: "Racks", thisCents: 300_00, lastCents: 300_00, deltaCents: 0 },
+        { client: "Eastman", thisCents: 300_00, lastCents: 300_00, deltaCents: 0 },
       ],
       thisLabel: "August 2026",
       lastLabel: "July 2026",
@@ -514,7 +514,7 @@ describe("admin answers", () => {
     expect(ans.headline).toBe("1 client up, 1 down vs July 2026.");
     expect(ans.details[0]).toBe("Grid: $900.00 this month (up $800.00).");
     expect(ans.details[1]).toBe("Vault: $100.00 this month (down $600.00).");
-    expect(ans.details[2]).toBe("Racks: $300.00 this month (flat).");
+    expect(ans.details[2]).toBe("Eastman: $300.00 this month (flat).");
   });
 
   it("client trend answer: caps the list at six lines", () => {

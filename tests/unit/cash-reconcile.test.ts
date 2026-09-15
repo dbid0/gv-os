@@ -68,7 +68,7 @@ describe("reconcileCash", () => {
   });
 
   it("breaks the processors out so a retired one is visible", () => {
-    // Shopify is retired but still holds real money on The Grid's sheet.
+    // Shopify is retired but still holds real money on Client North's sheet.
     const r = reconcileCash(
       [],
       [pay("a@x.com", 100, "Stripe"), pay("b@x.com", 300, "Shopify")],

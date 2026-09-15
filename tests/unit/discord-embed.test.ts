@@ -70,7 +70,7 @@ describe("buildAlertBatchMessage", () => {
     severity: "warning",
     title: "Something needs a look",
     body: "The detail line.",
-    clientName: "The Grid",
+    clientName: "Client North",
     ...o,
   });
 
@@ -85,7 +85,7 @@ describe("buildAlertBatchMessage", () => {
       title: "🔴 Failed charge",
       description: "The detail line.",
       color: 0xe5484d,
-      footer: { text: "The Grid" },
+      footer: { text: "Client North" },
     });
     expect(msg.embeds![1]).toMatchObject({ title: "🟠 Late lead", color: 0xf5a623 });
   });

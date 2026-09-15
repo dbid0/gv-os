@@ -45,7 +45,7 @@ describe("clockLabelCT / minutesToLabel", () => {
 describe("summarizeBodTimes", () => {
   const sub = (name: string, iso: string) => ({
     repName: name,
-    teamName: "The Grid",
+    teamName: "Client North",
     submittedAt: at(iso),
   });
 

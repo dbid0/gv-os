@@ -88,9 +88,9 @@ describe("buildAnalysisPrompt", () => {
     const p = buildAnalysisPrompt("Rep: hello", {
       disposition: "not_interested",
       customerName: "Jane Doe",
-      offerName: "The Grid",
+      offerName: "Client North",
     });
-    expect(p).toContain("Offer: The Grid");
+    expect(p).toContain("Offer: Client North");
     expect(p).toContain("Prospect: Jane Doe");
     expect(p).toContain("Logged outcome: not_interested");
     expect(p).toContain("Rep: hello");

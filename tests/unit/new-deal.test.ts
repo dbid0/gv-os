@@ -12,10 +12,10 @@ const base: NewDealRow = {
   timestamp: "2026-08-20T14:03:11Z",
   dealDate: "2026-08-20",
   clientName: "Jane Doe",
-  closerName: "Aiden",
-  setterName: "Mia",
+  closerName: "Quinn",
+  setterName: "Ava",
   typeOfSale: "PIF",
-  programSold: "Operation Room",
+  programSold: "Core Program",
   status: "Closed",
   cashCollected: "$5,000.00",
   revenueGenerated: "$10,000",
@@ -27,7 +27,7 @@ const base: NewDealRow = {
   setterPct: "10",
 };
 
-const opts = { clientId: "client-1", sheetId: "sheetA", offer: "The Grid" };
+const opts = { clientId: "client-1", sheetId: "sheetA", offer: "Client North" };
 
 describe("parseMoneyCents", () => {
   it("parses dollars, commas, and symbols to integer cents", () => {
@@ -61,8 +61,8 @@ describe("newDealToTransaction", () => {
       layer: "client",
       clientId: "client-1",
       dealType: "PIF",
-      offer: "The Grid",
-      description: "Jane Doe — Operation Room",
+      offer: "Client North",
+      description: "Jane Doe — Core Program",
       paymentMethod: "Stripe",
       revenueCents: 1_000_000,
       cashCents: 500_000,
@@ -72,8 +72,8 @@ describe("newDealToTransaction", () => {
     });
     expect(out.row.meta).toEqual({
       customerName: "Jane Doe",
-      closerName: "Aiden",
-      setterName: "Mia",
+      closerName: "Quinn",
+      setterName: "Ava",
       closerBps: 2000,
       setterBps: 1000,
       balanceCents: 500_000,
@@ -201,10 +201,10 @@ describe("parseNewDealsSheet", () => {
         "2026-08-20T10:00:00Z",
         "2026-08-20",
         " Jane ",
-        "Aiden",
-        "Mia",
+        "Quinn",
+        "Ava",
         "PIF",
-        "Operation Room",
+        "Core Program",
         "Closed",
         "5000",
         "10000",
@@ -219,7 +219,7 @@ describe("parseNewDealsSheet", () => {
     expect(rows[0]).toMatchObject({
       timestamp: "2026-08-20T10:00:00Z",
       clientName: "Jane",
-      closerName: "Aiden",
+      closerName: "Quinn",
       cashCollected: "5000",
       processorFeePct: "2.9",
     });

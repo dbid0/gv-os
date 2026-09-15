@@ -40,12 +40,12 @@ describe("homeSections", () => {
   it("gives an OFF-ROSTER line its own name, never the bucket's", () => {
     const cards = homeSections([
       line({ name: "Unattributed", cashCents: 5_000 }),
-      line({ slug: "grid", name: "The Grid", cashCents: 4_000 }),
+      line({ slug: "grid", name: "Client North", cashCents: 4_000 }),
       line({ name: "Some Old Client", cashCents: 3_000 }),
     ]);
     expect(cards.map((c) => c.name)).toEqual([
       "Unattributed",
-      "The Grid",
+      "Client North",
       "Some Old Client",
     ]);
   });
@@ -78,7 +78,7 @@ describe("totalCard", () => {
     // GV's income, so it belongs in this total, never on the client's card.
     const card = totalCard(
       [
-        line({ slug: "visionary", name: "The Visionary", cashCents: 200_000 }),
+        line({ slug: "client-west", name: "Client West", cashCents: 200_000 }),
         line({ name: "Unattributed", cashCents: 50_000, revenueCents: 60_000 }),
       ],
       "Agency — GV income",

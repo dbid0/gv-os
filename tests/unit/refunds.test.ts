@@ -59,7 +59,7 @@ describe("totalPayments", () => {
     expect(t.netCents).toBe(350_000);
   });
 
-  it("handles the real shape of The Grid's refunds", () => {
+  it("handles the real shape of Client North's refunds", () => {
     // $1,500 back on Shopify and $997 on Stripe, however they get written.
     const t = totalPayments([
       row(5_737_600),

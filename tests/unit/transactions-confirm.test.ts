@@ -14,7 +14,7 @@ const CHARGE: CapturedPaymentEvent = {
   amountCents: 199_700,
   currency: "usd",
   email: "buyer@example.com",
-  label: "Operation Room",
+  label: "Core Program",
 };
 
 describe("processorIdempotencyKey", () => {
@@ -33,7 +33,7 @@ describe("paymentEventToTransaction", () => {
         direction: "in",
         layer: "client",
         clientId: "client-1",
-        description: "Operation Room",
+        description: "Core Program",
         paymentMethod: "stripe",
         revenueCents: 199_700,
         cashCents: 199_700,

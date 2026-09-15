@@ -23,7 +23,7 @@ const analysis = (
 });
 
 describe("readCallResult", () => {
-  it("reads the statuses closers actually type on The Grid", () => {
+  it("reads the statuses closers actually type on Client North", () => {
     // Verbatim from the live EOC tab.
     expect(readCallResult("signed up - pif")).toBe("won");
     expect(readCallResult("signed up - 2 pay")).toBe("won");
