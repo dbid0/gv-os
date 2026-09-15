@@ -217,6 +217,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Call outcome rules: what a filed outcome tags and who it notifies.
+        // Pure, fully covered.
+        "src/lib/calls/outcome-rules.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Lead filters, tags and saved views: what a view can hold and which
         // leads it shows. Pure, fully covered.
         "src/lib/tracking/lead-views.ts": {

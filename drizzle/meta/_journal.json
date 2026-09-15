@@ -512,6 +512,13 @@
       "when": 1789430168080,
       "tag": "0072_lead_tags_views",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1789430920641,
+      "tag": "0073_call_outcome_rules",
+      "breakpoints": true
     }
   ]
 }
