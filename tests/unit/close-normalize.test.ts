@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isOutboundDirection, normalizeCloseActivity } from "@/lib/crm/close-normalize";
+import {
+  dispositionCensus,
+  isOutboundDirection,
+  normalizeCloseActivity,
+} from "@/lib/crm/close-normalize";
 
 describe("normalizeCloseActivity", () => {
   it("normalizes a call with talk time", () => {
@@ -118,5 +122,38 @@ describe("isOutboundDirection", () => {
     expect(isOutboundDirection(null)).toBe(false);
     expect(isOutboundDirection("")).toBe(false);
     expect(isOutboundDirection("sideways")).toBe(false);
+  });
+});
+
+describe("dispositionCensus", () => {
+  it("counts which dispositions call payloads carry", () => {
+    expect(
+      dispositionCensus([
+        { disposition: "answered" },
+        { disposition: "Answered " },
+        { disposition: "no-answer" },
+        { disposition: "vm-left" },
+        { disposition: "" },
+        { duration: 12 },
+      ]),
+    ).toEqual({
+      calls: 6,
+      withDisposition: 4,
+      values: { answered: 2, "no-answer": 1, "vm-left": 1 },
+    });
+  });
+
+  it("never names free text, oversized values, or more than 20 distinct values", () => {
+    const rows = [
+      { disposition: "Left a message with his wife, call back Tuesday" },
+      { disposition: "x".repeat(40) },
+      ...Array.from({ length: 22 }, (_, i) => ({ disposition: `code_${i}` })),
+      { disposition: "code_0" },
+    ];
+    const census = dispositionCensus(rows);
+    expect(census.withDisposition).toBe(25);
+    expect(Object.keys(census.values).filter((k) => k !== "(other)")).toHaveLength(20);
+    expect(census.values.code_0).toBe(2);
+    expect(census.values["(other)"]).toBe(4); // free text, oversized, code_20, code_21
   });
 });

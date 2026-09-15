@@ -8,7 +8,9 @@ import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
 import {
   emailFromCloseLead,
+  dispositionCensus,
   normalizeCloseActivity,
+  type DispositionCensus,
   phoneFromCloseLead,
 } from "@/lib/crm/close-normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
@@ -29,7 +31,13 @@ const MAX_PAGES_PER_KIND = 10;
 const WINDOW_DAYS = 30;
 
 export async function pullCloseActivity(): Promise<
-  { integrationId: string; fetched?: number; captured?: number; error?: string }[]
+  {
+    integrationId: string;
+    fetched?: number;
+    captured?: number;
+    dispositions?: DispositionCensus;
+    error?: string;
+  }[]
 > {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
@@ -58,6 +66,7 @@ export async function pullCloseActivity(): Promise<
       const auth = `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`;
       let fetched = 0;
       let captured = 0;
+      const callRows: Record<string, unknown>[] = [];
 
       for (const kind of KINDS) {
         let skip = 0;
@@ -77,6 +86,7 @@ export async function pullCloseActivity(): Promise<
           };
           const rows = body.data ?? [];
           fetched += rows.length;
+          if (kind === "call") callRows.push(...rows);
           for (const row of rows) {
             const normalized = normalizeCloseActivity(kind, row);
             if (!normalized) continue;
@@ -122,7 +132,12 @@ export async function pullCloseActivity(): Promise<
           updatedAt: new Date(),
         })
         .where(eq(integrations.id, conn.id));
-      results.push({ integrationId: conn.id, fetched, captured });
+      results.push({
+        integrationId: conn.id,
+        fetched,
+        captured,
+        dispositions: dispositionCensus(callRows),
+      });
     } catch (err) {
       // One dead credential must not starve the other accounts or fail the
       // route. lastSyncAt stays untouched — it always means last SUCCESS.
