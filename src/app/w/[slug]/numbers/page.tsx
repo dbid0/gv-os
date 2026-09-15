@@ -16,7 +16,9 @@ import { WsPageHeader } from "@/components/workspace/ws-page-header";
 import { getDb } from "@/db/client";
 import { clients } from "@/db/schema/app";
 import { viewerRole } from "@/lib/auth/viewer";
+import { DialingSection } from "@/components/tracking/dialing-section";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
+import { loadDialing } from "@/lib/crm/dialing-loader";
 import { callScoreboard } from "@/lib/calls/call-scoreboard";
 import { isPortalView } from "@/lib/clients/portal-visibility";
 import { rosterClientBySlug } from "@/lib/roster-server";
@@ -79,7 +81,7 @@ export default async function WorkspaceNumbersPage({
     <WsPageHeader
       icon={Hash}
       title="Numbers"
-      lede="Every number this offer has, each over the count it was measured against: booked calls, confirmations, verdicts, how closes paid, and the money closers reported."
+      lede="Every number this offer has, each over the count it was measured against: booked calls, confirmations, verdicts, how closes paid, the money closers reported, and what the dialler recorded."
       aside={<WindowChips active={range} hrefFor={hrefFor} />}
     />
   );
@@ -102,22 +104,22 @@ export default async function WorkspaceNumbersPage({
     );
   }
 
-  const { log, totalBookings } = await loadCallLog(
-    row.id,
-    row.countedCallSources ?? null,
-    now,
-  );
+  const [{ log, totalBookings }, dialing] = await Promise.all([
+    loadCallLog(row.id, row.countedCallSources ?? null, now),
+    loadDialing(row.id, bounds, tz),
+  ]);
   const s = callScoreboard(log, bounds, tz);
 
   if (totalBookings === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         {header}
         <EmptyState
           icon={Hash}
           title="No calls on the calendar yet"
           explainer="The call numbers fill in once this offer's calendar (Calendly or iClosed) is connected and booking. End-of-call reports, from the tracking sheet or filed in GV OS, supply the verdicts."
         />
+        <DialingSection data={dialing} />
       </div>
     );
   }
@@ -347,6 +349,8 @@ export default async function WorkspaceNumbersPage({
           sub={`cash ÷ ${countOf(s.shows)} shows`}
         />
       </NumberSection>
+
+      <DialingSection data={dialing} />
     </div>
   );
 }
