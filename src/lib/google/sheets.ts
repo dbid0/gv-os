@@ -139,7 +139,7 @@ export async function readSheetValues(
  * The tab titles of any sheet the agency credential can open.
  *
  * Client tracking sheets carry emoji in their tab names ("📥 Applications")
- * and differ in WHICH tabs exist — Racks has no BOD tab — so the reader
+ * and differ in WHICH tabs exist — one offer has no BOD tab — so the reader
  * discovers them instead of assuming a fixed list.
  */
 export async function readSheetTitles(sheetId: string): Promise<string[]> {

@@ -14,7 +14,7 @@ import type { AdSpendEntry } from "@/lib/revshare/ad-spend-query";
 
 /**
  * Record an offer's ad spend — deducted from cash-after-fees before an
- * "X% after ad spend" rev-share is rated (Racks = 10% after ad spend). Entries
+ * "X% after ad spend" rev-share is rated (e.g. 10% after ad spend). Entries
  * are append-only; a correction is a new negative row.
  */
 export function AdSpendField({

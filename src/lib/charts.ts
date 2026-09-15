@@ -3,7 +3,7 @@
  * dumb SVG and the arithmetic stays testable.
  *
  * The chart categorical palette is validator-approved (dataviz six checks,
- * light AND dark surfaces) in the fixed client order Grid → Vault → Racks.
+ * light AND dark surfaces) in a fixed client order.
  * The roster accents FAILED CVD separation (two blues, ΔE 2.3 protan) and are
  * for row tags only — never for series color.
  */

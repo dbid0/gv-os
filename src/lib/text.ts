@@ -1,12 +1,12 @@
 /**
  * Small text helpers for copy that names a client.
  *
- * Client names are data, not constants — "Racks Closes" ends in an s and
- * "The Vault" does not, so any sentence that says "<client>'s account" needs
+ * Client names are data, not constants — "Summit Sales" ends in an s and
+ * "North Studio" does not, so any sentence that says "<client>'s account" needs
  * the possessive formed rather than concatenated.
  */
 
-/** "The Vault" -> "The Vault's" · "Racks Closes" -> "Racks Closes'" */
+/** "North Studio" -> "North Studio's" · "Summit Sales" -> "Summit Sales'" */
 export function possessive(name: string): string {
   const trimmed = name.trim();
   if (trimmed === "") return "";

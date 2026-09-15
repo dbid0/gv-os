@@ -5,10 +5,10 @@ import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
  *
  * The client workspace used to answer this by comparing DISPLAY NAMES —
  * `row.clientName === client.name`. Two client records may carry the same
- * name (staging holds two "The Grid" rows today, and nothing in the schema
+ * name (staging once held two rows with the same client name, and nothing in the schema
  * prevents it in production), so that comparison pulled another record's
  * deals into this client's totals: of the eight rows the workspace listed for
- * The Grid, five belonged to a different client entirely.
+ * one client, five belonged to a different client entirely.
  *
  * Money is attributed by client ID. A name is a label people edit; an id is
  * the row's actual owner, and renaming a client must never move its cash.

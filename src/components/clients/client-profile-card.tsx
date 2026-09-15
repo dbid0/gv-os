@@ -61,7 +61,7 @@ export interface ClientCard {
 /**
  * A client as a profile card (Daniel wants the Clients tab to read like the
  * Sales team profiles). The logo is click-to-upload right here — the same
- * place you manage the client, so a missing mark (e.g. The Visionary) is one
+ * place you manage the client, so a missing mark is one
  * click to fix without leaving the roster.
  */
 export function ClientProfileCard({ client }: { client: ClientCard }) {

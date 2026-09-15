@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic";
  * New Deals, AR, the BOD/EOD forms, and EOC (end-of-call) reports. This is the
  * deep scan of it — what came through, and what the sheet is missing.
  *
- * The scan matters as much as the data. The Grid's Calls Log holds 109 rows of
+ * The scan matters as much as the data. One live offer's Calls Log held 109 rows of
  * which 7 carry a date, so a "calls per day" chart drawn from that tab would be
  * reading 6% of it and looking confident. Those gaps are stated here rather
  * than smoothed over, and nothing is estimated: an unlinked sheet says so.

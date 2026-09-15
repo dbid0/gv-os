@@ -85,7 +85,7 @@ const ALIASES: Record<TrackingField, string[]> = {
  * such column.
  *
  * A LIST, not a single index, because preference and presence are different
- * questions. The Grid's Applications tab carries both "Submit Date" and
+ * questions. One live offer's Applications tab carried both "Submit Date" and
  * "Timestamp": Submit Date is the better meaning, and it is blank on 472 of
  * 473 rows. Resolving to one column lost the date on nearly every application.
  * The reader walks the list and takes the first cell that actually has a value.

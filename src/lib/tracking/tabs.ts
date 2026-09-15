@@ -5,13 +5,13 @@
  * Payment Log, New Deals, AR, the BOD/EOD forms, and EOC (end-of-call)
  * reports. The TABS are standard. The COLUMNS are not:
  *
- *   The Grid   Applications: "Social Handle | Q1: Type | Q2: Reach | Q5: Budget"
- *   Racks      Applications: "Handle / Social | Qualifier 1 | Budget / Capital"
- *   The Grid   Calls Log:    "… | iClosed Booking | Close Lead ID | …"
- *   Racks      Calls Log:    "… | Calendly Event  | Close Lead ID | …"
+ *   Offer A   Applications: "Social Handle | Q1: Type | Q2: Reach | Q5: Budget"
+ *   Offer B   Applications: "Handle / Social | Qualifier 1 | Budget / Capital"
+ *   Offer A   Calls Log:    "… | iClosed Booking | Close Lead ID | …"
+ *   Offer B   Calls Log:    "… | Calendly Event  | Close Lead ID | …"
  *
- * and Racks has no BOD or DM Setter EOD tab at all. Reading these by column
- * POSITION would file Racks' budget answers under The Grid's "reach" and never
+ * and Offer B has no BOD or DM Setter EOD tab at all. Reading these by column
+ * POSITION would file Offer B's budget answers under Offer A's "reach" and never
  * once look wrong on screen. So every field is resolved by HEADER NAME through
  * an alias list, a column that cannot be resolved is left null rather than
  * guessed, and an absent tab is simply absent.

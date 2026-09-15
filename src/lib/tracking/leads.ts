@@ -99,7 +99,7 @@ export interface LeadSummary {
  * Order a lead's events as a JOURNEY: funnel stage first, then time.
  *
  * Sorting purely by date is impossible here — undated rows are the norm, since
- * The Grid's Calls Log carries 7 dates across 109 rows. Sorting dated events
+ * One live offer's Calls Log carried 7 dates across 109 rows. Sorting dated events
  * ahead of undated ones produced nonsense on screen: a lead's payment appeared
  * ABOVE the call that was booked to win it, because the payment had a date and
  * the booking didn't.

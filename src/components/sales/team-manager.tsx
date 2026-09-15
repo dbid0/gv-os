@@ -96,7 +96,7 @@ export function TeamManager({ teams }: { teams: TeamOption[] }) {
             <Input
               value={team.name}
               onChange={(e) => setTeam({ ...team, name: e.target.value })}
-              placeholder="The Grid"
+              placeholder="Team or offer name"
               required
             />
           </Field>

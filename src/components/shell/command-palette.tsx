@@ -55,7 +55,7 @@ export function CommandPalette({
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // Client workspaces are destinations too — "grid" should land in The Grid.
+    // Client workspaces are destinations too — a word from its name should land on it.
     const items = [
       ...allNavItems.filter((item) => item.status === "ready"),
       ...roster.map((c) => ({

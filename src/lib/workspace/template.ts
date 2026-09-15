@@ -85,10 +85,10 @@ export function copiedParentId(
 /**
  * What a client's copy of the agency template is CALLED in their teamspace.
  *
- * The copy used to keep the template's own title, so Racks Closes opened on a
+ * The copy used to keep the template's own title, so an offer opened on a
  * page literally named "Client Template" — the client's workspace wearing the
  * factory label. It takes the client's name, matching the convention The
- * Visionary already uses ("The Visionary Onboarding").
+ * an offer already uses ("<Offer> Onboarding").
  */
 export function onboardingSpaceTitle(clientName: string): string {
   return `${clientName.trim()} Onboarding`;
@@ -102,7 +102,7 @@ export function onboardingSpaceTitle(clientName: string): string {
  *
  * This is the question the seeder should have been asking. It used to ask
  * "does this client have ANY page at all", which meant the two clients whose
- * real Notion was imported first (The Grid, The Vault) were treated as already
+ * real Notion was imported first (the first two offers) were treated as already
  * seeded and never got an onboarding section — the exact gap Daniel hit.
  */
 export function hasOnboardingSpace(rootTitles: string[], clientName: string): boolean {

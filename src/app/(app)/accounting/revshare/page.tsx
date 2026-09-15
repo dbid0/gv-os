@@ -97,7 +97,7 @@ export default async function RevSharePage() {
           </div>
         )}
         <p className="text-faint mt-3 text-[11px]">
-          Racks&apos; 10%-after-ad-spend needs the deductions mechanism and is
+          A percentage-after-ad-spend rule needs the deductions mechanism and is
           deliberately not a flat rule.
         </p>
       </Panel>
