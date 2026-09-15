@@ -19,7 +19,6 @@ import { Kpi, Money } from "@/components/ui/metric";
 import { getDb } from "@/db/client";
 import { clients, notifications } from "@/db/schema/app";
 import { monthPace } from "@/lib/brief/pace";
-import { dayKeyCT } from "@/lib/charts";
 import { cents } from "@/lib/money";
 import {
   computeSpeedToLead,
@@ -33,6 +32,8 @@ import { listQuotasWithPacing } from "@/lib/sales/quota-queries";
 import { getSettings } from "@/lib/settings";
 import { homeRangeHeadline, rangeBounds } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Daily brief - GV OS" };
 export const dynamic = "force-dynamic";
@@ -56,9 +57,10 @@ const SEV_TONE: Record<string, StatusTone> = {
 };
 
 export default async function BriefPage() {
+  const tz = await viewerTimeZone();
   const now = new Date();
-  const todayKey = dayKeyCT(now);
-  const yesterdayKey = dayKeyCT(new Date(now.getTime() - 86_400_000));
+  const todayKey = dayKeyIn(now, tz);
+  const yesterdayKey = dayKeyIn(new Date(now.getTime() - 86_400_000), tz);
   const [y, m, d] = todayKey.split("-").map(Number);
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const db = getDb();
@@ -122,14 +124,16 @@ export default async function BriefPage() {
     rangeBounds("today", todayKey),
   ).collectedCents;
   const yDeals = deals.filter(
-    (dl) => dl.closedAt && dayKeyCT(dl.closedAt) === yesterdayKey,
+    (dl) => dl.closedAt && dayKeyIn(dl.closedAt, tz) === yesterdayKey,
   );
   const yDealCash = yDeals.reduce((s, dl) => s + dl.cashCollectedCents, 0);
-  const yCalls = calls.filter((c) => dayKeyCT(c.occurredAt) === yesterdayKey).length;
+  const yCalls = calls.filter(
+    (c) => dayKeyIn(c.occurredAt, tz) === yesterdayKey,
+  ).length;
 
   // 3) Wellbeing — today's EOD check-ins below 3.
   const lowMood = eodReports
-    .filter((r) => dayKeyCT(new Date(r.reportDate)) === todayKey)
+    .filter((r) => dayKeyIn(new Date(r.reportDate), tz) === todayKey)
     .map((r) => ({
       repName: r.repName,
       teamName: r.teamName,
@@ -142,7 +146,7 @@ export default async function BriefPage() {
   // who is missing.
   const bodTimes = summarizeBodTimes(
     bodReports
-      .filter((r) => dayKeyCT(new Date(r.reportDate)) === todayKey)
+      .filter((r) => dayKeyIn(new Date(r.reportDate), tz) === todayKey)
       .map((r) => ({
         repName: r.repName,
         teamName: r.teamName,

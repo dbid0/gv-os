@@ -7,15 +7,17 @@ import { closeTypeLabel, outcomeLabel } from "@/lib/calls/eoc-form";
 import type { EocListRow } from "@/lib/calls/eoc-store";
 import { cents, formatUSD } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
-const when = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "America/Chicago",
-});
+const whenIn = (timeZone: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  });
 
 const OUTCOME_TONE: Record<string, string> = {
   closed: "border-success/40 text-success",
@@ -30,10 +32,12 @@ function ReportRow({
   slug,
   row,
   mode,
+  when,
 }: {
   slug: string;
   row: EocListRow;
   mode: "void" | "restore";
+  when: Intl.DateTimeFormat;
 }) {
   const close = closeTypeLabel(row.closeType);
   return (
@@ -93,7 +97,7 @@ function ReportRow({
  * here count in the stuck list and the confirmation rates exactly like the
  * sheet's reports. (The lead funnel is still built from the sheet's own tabs.)
  */
-export function EocPanel({
+export async function EocPanel({
   slug,
   stuck,
   reports,
@@ -106,6 +110,7 @@ export function EocPanel({
   voided: EocListRow[];
   reps: EocRepOption[];
 }) {
+  const when = whenIn(await viewerTimeZone());
   return (
     <section className="card-grad space-y-4 rounded-xl border p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -183,7 +188,9 @@ export function EocPanel({
             Nothing filed here yet. Reports typed on the tracking sheet still count.
           </p>
         ) : (
-          reports.map((r) => <ReportRow key={r.id} slug={slug} row={r} mode="void" />)
+          reports.map((r) => (
+            <ReportRow when={when} key={r.id} slug={slug} row={r} mode="void" />
+          ))
         )}
       </div>
 
@@ -194,7 +201,7 @@ export function EocPanel({
           </summary>
           <div className="mt-2 space-y-1.5">
             {voided.map((r) => (
-              <ReportRow key={r.id} slug={slug} row={r} mode="restore" />
+              <ReportRow when={when} key={r.id} slug={slug} row={r} mode="restore" />
             ))}
           </div>
         </details>

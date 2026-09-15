@@ -3,7 +3,7 @@
  *
  * The list view answers "what happened"; a closer planning their week needs
  * "what does Thursday look like". This lays the same call-log rows onto a
- * Sunday-first week in Central time — the same day keys the list groups by, so
+ * Sunday-first week on the viewer's calendar — the same day keys the list groups by, so
  * a call never sits on a different day in the two views.
  *
  * - The week is chosen by any date inside it (`?week=YYYY-MM-DD`); anything
@@ -59,6 +59,7 @@ export function callWeek(
   rows: CallLogRow[],
   weekKey: string,
   todayKey: string,
+  timeZone: string,
 ): CallWeek {
   const start = sundayOf(parseKey(weekKey) as Date);
   const days: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
@@ -73,7 +74,7 @@ export function callWeek(
       undated += 1;
       continue;
     }
-    byKey.get(callDayKey(r.startsAt))?.rows.push(r);
+    byKey.get(callDayKey(r.startsAt, timeZone))?.rows.push(r);
   }
   for (const d of days) {
     d.rows.sort(

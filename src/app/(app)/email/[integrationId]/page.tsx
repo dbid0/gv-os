@@ -11,17 +11,18 @@ import { buttonVariants } from "@/components/ui/button";
 import { chartColorForClient, latestPerDay } from "@/lib/charts";
 import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
 import { cn } from "@/lib/utils";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Email — offer - GV OS" };
 export const dynamic = "force-dynamic";
 
-const fmtWhen = (d: Date) =>
+const fmtWhen = (d: Date, timeZone: string) =>
   new Date(d).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/Chicago",
+    timeZone,
   });
 
 export default async function EmailOfferPage({
@@ -29,6 +30,7 @@ export default async function EmailOfferPage({
 }: {
   params: Promise<{ integrationId: string }>;
 }) {
+  const tz = await viewerTimeZone();
   const { integrationId } = await params;
   const [accounts, growthSamples] = await Promise.all([
     latestKitOverview(),
@@ -37,7 +39,7 @@ export default async function EmailOfferPage({
   const account = accounts.find((a) => a.integrationId === integrationId);
   if (!account) notFound();
 
-  const growth = latestPerDay(growthSamples.get(integrationId) ?? []);
+  const growth = latestPerDay(growthSamples.get(integrationId) ?? [], tz);
   const active = account.sequences.filter((s) => !s.hold).length;
   const paused = account.sequences.length - active;
 
@@ -48,7 +50,7 @@ export default async function EmailOfferPage({
         description={account.accountName ?? account.label}
         status={
           <StatusPill tone="live">
-            {account.plan ?? "Kit"} · synced {fmtWhen(account.takenAt)}
+            {account.plan ?? "Kit"} · synced {fmtWhen(account.takenAt, tz)}
           </StatusPill>
         }
         actions={

@@ -15,6 +15,8 @@ import { WorkspaceNav } from "@/components/workspace/workspace-nav";
 import { viewerIsAdmin } from "@/lib/auth/viewer";
 import { clientInitial } from "@/lib/roster";
 import { rosterClientBySlug } from "@/lib/roster-server";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { ViewerTimeZoneProvider } from "@/components/shell/time-zone";
 
 /**
  * v2 two-view architecture (spec §1): a client WORKSPACE — the reference
@@ -70,33 +72,38 @@ export default async function WorkspaceLayout({
     </div>
   );
 
+  const timeZone = await viewerTimeZone();
   return (
-    <div style={skin} className="flex h-dvh overflow-hidden">
-      <WorkspaceSidebar
-        slug={slug}
-        admin={admin}
-        clientPreview={clientPreview}
-        identity={identity}
-      />
+    <ViewerTimeZoneProvider timeZone={timeZone}>
+      <div style={skin} className="flex h-dvh overflow-hidden">
+        <WorkspaceSidebar
+          slug={slug}
+          admin={admin}
+          clientPreview={clientPreview}
+          identity={identity}
+        />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b px-4 md:px-6">
-          {/* Identity lives in the sidebar on desktop; on mobile it leads
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="glass sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b px-4 md:px-6">
+            {/* Identity lives in the sidebar on desktop; on mobile it leads
               the header so the page still says whose world this is. */}
-          <div className="flex min-w-0 items-center gap-2.5 md:hidden">{identity}</div>
-          <div className="ml-auto flex items-center gap-3">
-            <TopClock />
+            <div className="flex min-w-0 items-center gap-2.5 md:hidden">
+              {identity}
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <TopClock />
+            </div>
+          </header>
+          {/* Below md the sidebar has no room — the tab row carries the nav. */}
+          <div className="border-b px-4 py-2 md:hidden">
+            <WorkspaceNav slug={slug} admin={admin} />
           </div>
-        </header>
-        {/* Below md the sidebar has no room — the tab row carries the nav. */}
-        <div className="border-b px-4 py-2 md:hidden">
-          <WorkspaceNav slug={slug} admin={admin} />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
         </div>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-      </div>
 
-      <TabKeepWarm />
-      {previewRole && <ViewAsBanner role={previewRole} clientName={client.name} />}
-    </div>
+        <TabKeepWarm />
+        {previewRole && <ViewAsBanner role={previewRole} clientName={client.name} />}
+      </div>
+    </ViewerTimeZoneProvider>
   );
 }

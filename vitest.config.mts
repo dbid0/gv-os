@@ -256,6 +256,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Timezones: which calendar a moment is counted on, and day bounds.
+        // Pure, fully covered.
+        "src/lib/time/zone.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Report windows: which days a re-cut table reads. Pure, fully covered.
         "src/lib/tracking/report-window.ts": {
           statements: 100,

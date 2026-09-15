@@ -19,6 +19,7 @@ import {
   type EocReport,
 } from "@/lib/crm/confirmation-rates";
 import { cleanCancelReason, rescheduleTrail } from "@/lib/calls/reschedules";
+import { dayKeyIn } from "@/lib/time/zone";
 
 export type CallLogBooking = {
   id: string;
@@ -187,24 +188,17 @@ export function countByState(rows: CallLogRow[]): Record<CallState, number> {
   return counts;
 }
 
-const dayKey = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Chicago",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** The Central-time calendar day a call starts on, YYYY-MM-DD. */
-export const callDayKey = (d: Date): string => dayKey.format(d);
+/** The viewer's calendar day a call starts on, YYYY-MM-DD. */
+export const callDayKey = (d: Date, timeZone: string): string => dayKeyIn(d, timeZone);
 
 export type CallDay = { key: string; rows: CallLogRow[] };
 
-/** Group rows by Central-time calendar day, keeping row order; undated → "undated". */
-export function groupByDay(rows: CallLogRow[]): CallDay[] {
+/** Group rows by the viewer's calendar day, keeping row order; undated → "undated". */
+export function groupByDay(rows: CallLogRow[], timeZone: string): CallDay[] {
   const days: CallDay[] = [];
   const index = new Map<string, CallDay>();
   for (const r of rows) {
-    const key = r.startsAt ? dayKey.format(r.startsAt) : "undated";
+    const key = r.startsAt ? dayKeyIn(r.startsAt, timeZone) : "undated";
     let day = index.get(key);
     if (!day) {
       day = { key, rows: [] };

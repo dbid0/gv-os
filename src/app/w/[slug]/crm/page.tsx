@@ -36,6 +36,7 @@ import { possessive } from "@/lib/text";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 import { UpcomingCalls } from "@/components/tracking/upcoming-calls";
 import { isPortalView } from "@/lib/clients/portal-visibility";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function WorkspaceCrmPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const tz = await viewerTimeZone();
   // Live when you're looking: kick a close pull after the response.
   refreshProviderOnView("close");
   const { slug } = await params;
@@ -506,7 +508,7 @@ export default async function WorkspaceCrmPage({
                             day: "numeric",
                             hour: "numeric",
                             minute: "2-digit",
-                            timeZone: "America/Chicago",
+                            timeZone: tz,
                           })}
                         </span>
                       </div>
@@ -557,7 +559,7 @@ export default async function WorkspaceCrmPage({
                         day: "numeric",
                         hour: "numeric",
                         minute: "2-digit",
-                        timeZone: "America/Chicago",
+                        timeZone: tz,
                       })
                     : "—"}
                 </span>

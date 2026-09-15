@@ -7,12 +7,13 @@ import { Panel } from "@/components/ui/panel";
 import { Kpi, Money } from "@/components/ui/metric";
 import { getDb } from "@/db/client";
 import { payoutAdjustments, payouts } from "@/db/schema/app";
-import { dayKeyCT } from "@/lib/charts";
 import { cents } from "@/lib/money";
 import { partnerSplitCents, payoutTotalCents } from "@/lib/payouts/math";
 import { agencyLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
 import { getCommissionRollup } from "@/lib/sales/queries";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Payouts - GV OS" };
 export const dynamic = "force-dynamic";
@@ -27,9 +28,10 @@ export default async function PayoutsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const tz = await viewerTimeZone();
   const params = await searchParams;
   const raw = typeof params.month === "string" ? params.month : "";
-  const month = /^\d{4}-\d{2}$/.test(raw) ? raw : dayKeyCT(new Date()).slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(raw) ? raw : dayKeyIn(new Date(), tz).slice(0, 7);
 
   const db = getDb();
   const [payoutRows, { rows: backlog }, commissionRollup] = await Promise.all([

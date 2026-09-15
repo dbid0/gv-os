@@ -4,12 +4,13 @@ import { getDb } from "@/db/client";
 import { clientAdSpend, clients } from "@/db/schema/app";
 import { adRoas, type AdRoas } from "@/lib/ads/roas";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
-import { dayKeyCT } from "@/lib/charts";
 import { loadRoster } from "@/lib/roster-server";
 import { listApplications } from "@/lib/funnel/queries";
 import { listDeals } from "@/lib/sales/queries";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export interface AdsRow {
   slug: string;
@@ -49,7 +50,7 @@ export async function getAdsData(): Promise<AdsData> {
   };
   try {
     const db = getDb();
-    const monthKey = dayKeyCT(new Date()).slice(0, 7);
+    const monthKey = dayKeyIn(new Date(), await viewerTimeZone()).slice(0, 7);
 
     const [clientRows, spendRows, { rows: backlog }, deals, apps] = await Promise.all([
       db

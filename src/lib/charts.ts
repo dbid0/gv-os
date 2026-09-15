@@ -8,6 +8,8 @@
  * for row tags only — never for series color.
  */
 
+import { BUSINESS_TIME_ZONE, dayKeyIn } from "@/lib/time/zone";
+
 export const CHART_CATEGORICAL = ["#2f8ce8", "#bd7f16", "#bd68b8"] as const;
 
 export interface DayBucket {
@@ -17,11 +19,13 @@ export interface DayBucket {
   value: number;
 }
 
-const CT = "America/Chicago";
-
-/** A Date's business-day key (CT), deterministic on server and client. */
+/**
+ * A Date's BUSINESS-day key (Central) — for dates that get stored or
+ * reconciled (ledger entries, payout months, alerts). Counters a person reads
+ * use their own zone instead: `dayKeyIn(d, viewerTimeZone)`.
+ */
 export function dayKeyCT(d: Date): string {
-  return d.toLocaleDateString("en-CA", { timeZone: CT });
+  return dayKeyIn(d, BUSINESS_TIME_ZONE);
 }
 
 /**
@@ -58,23 +62,25 @@ export function bucketByDay(
   timestamps: (Date | null)[],
   days: number,
   now: Date,
+  /** The calendar the days are counted on — the viewer's zone. */
+  timeZone: string = BUSINESS_TIME_ZONE,
 ): DayBucket[] {
   const counts = new Map<string, number>();
   for (const t of timestamps) {
     if (!t) continue;
-    const key = dayKeyCT(t);
+    const key = dayKeyIn(t, timeZone);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   const buckets: DayBucket[] = [];
   for (let i = days - 1; i >= 0; i -= 1) {
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const key = dayKeyCT(d);
+    const key = dayKeyIn(d, timeZone);
     buckets.push({
       date: key,
       label: d.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        timeZone: CT,
+        timeZone,
       }),
       value: counts.get(key) ?? 0,
     });
@@ -108,10 +114,13 @@ function labelForDayKey(key: string): string {
  * LAST sample per CT day, oldest-first. Days without samples are absent,
  * not zero — a missing snapshot is not an empty list.
  */
-export function latestPerDay(samples: { at: Date; value: number }[]): DayBucket[] {
+export function latestPerDay(
+  samples: { at: Date; value: number }[],
+  timeZone: string = BUSINESS_TIME_ZONE,
+): DayBucket[] {
   const latest = new Map<string, { time: number; value: number }>();
   for (const s of samples) {
-    const key = dayKeyCT(s.at);
+    const key = dayKeyIn(s.at, timeZone);
     const cur = latest.get(key);
     if (!cur || s.at.getTime() >= cur.time) {
       latest.set(key, { time: s.at.getTime(), value: s.value });

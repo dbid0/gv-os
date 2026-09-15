@@ -7,11 +7,13 @@ import { StatusPill } from "@/components/ui/status";
 import { latestPerDay, type DayBucket } from "@/lib/charts";
 import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Email - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
+  const tz = await viewerTimeZone();
   // Live when you're looking: kick a kit pull after the response.
   refreshProviderOnView("kit");
   const [accounts, growthSamples] = await Promise.all([
@@ -20,7 +22,7 @@ export default async function EmailPage() {
   ]);
   const growth: Record<string, DayBucket[]> = {};
   for (const [integrationId, samples] of growthSamples) {
-    growth[integrationId] = latestPerDay(samples);
+    growth[integrationId] = latestPerDay(samples, tz);
   }
 
   return (

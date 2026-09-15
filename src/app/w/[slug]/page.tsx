@@ -13,7 +13,7 @@ import { LeaderboardBand } from "@/components/tracking/leaderboard-band";
 import { Panel } from "@/components/ui/panel";
 import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi, Money } from "@/components/ui/metric";
-import { bucketByDay, chartColorForClient, dayKeyCT } from "@/lib/charts";
+import { bucketByDay, chartColorForClient } from "@/lib/charts";
 import { ClientLogo } from "@/components/clients/client-logo";
 import { getClientDriveAssets } from "@/lib/clients/drive-assets";
 import { portalVisibility } from "@/lib/clients/portal-visibility";
@@ -32,6 +32,8 @@ import {
   rangeBounds,
 } from "@/lib/transactions/homepage";
 import { eq } from "drizzle-orm";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -57,11 +59,12 @@ export default async function WorkspacePage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const tz = await viewerTimeZone();
   const { slug } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
   const sp = await searchParams;
-  const todayKey = dayKeyCT(new Date());
+  const todayKey = dayKeyIn(new Date(), tz);
   const custom = sp.range === "custom" ? customBounds(sp.from, sp.to) : null;
   const range = custom
     ? ("custom" as const)
@@ -89,7 +92,7 @@ export default async function WorkspacePage({
     drive,
     visibility,
   ] = await Promise.all([
-    loadOfferHome(slug, client.name, bounds, todayKey),
+    loadOfferHome(slug, client.name, bounds, todayKey, tz),
     getClientDriveAssets(slug),
     portalVisibility(slug),
   ]);
@@ -128,6 +131,7 @@ export default async function WorkspacePage({
     clientRows,
     todayKey,
     custom,
+    tz,
   );
 
   // This offer's most recent money — the workspace's own transaction feed.
@@ -145,6 +149,7 @@ export default async function WorkspacePage({
     report.apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
     new Date(),
+    tz,
   );
 
   return (

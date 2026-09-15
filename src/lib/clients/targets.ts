@@ -1,4 +1,4 @@
-import { dayKeyCT } from "@/lib/charts";
+import { BUSINESS_TIME_ZONE, dayKeyIn } from "@/lib/time/zone";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 
 /**
@@ -11,8 +11,9 @@ export function monthToDateCashCents(
   rows: { client: string; dateClosed: string; cashCents: number }[],
   slug: string,
   now: Date,
+  timeZone: string = BUSINESS_TIME_ZONE,
 ): number {
-  const month = dayKeyCT(now).slice(0, 7);
+  const month = dayKeyIn(now, timeZone).slice(0, 7);
   return rows
     .filter((r) => matchesSheetClient(slug, r.client))
     .filter((r) => r.dateClosed.trim().slice(0, 7) === month)
@@ -23,8 +24,9 @@ export function monthToDateCashCents(
 export function monthCashAllCents(
   rows: { dateClosed: string; cashCents: number }[],
   now: Date,
+  timeZone: string = BUSINESS_TIME_ZONE,
 ): number {
-  const month = dayKeyCT(now).slice(0, 7);
+  const month = dayKeyIn(now, timeZone).slice(0, 7);
   return rows
     .filter((r) => r.dateClosed.trim().slice(0, 7) === month)
     .reduce((sum, r) => sum + r.cashCents, 0);

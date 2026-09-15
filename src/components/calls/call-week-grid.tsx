@@ -4,18 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CallLogRow } from "@/lib/calls/call-log";
 import type { CallWeek } from "@/lib/calls/call-week";
 import { cn } from "@/lib/utils";
-
-const timeFmt = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "America/Chicago",
-});
-
-const shortDay = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "America/Chicago",
-});
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 const dayName = (key: string, opts: Intl.DateTimeFormatOptions) => {
   const [y, m, d] = key.split("-").map(Number);
@@ -26,7 +15,10 @@ const dayName = (key: string, opts: Intl.DateTimeFormatOptions) => {
 };
 
 /** The chip's tone says where the call stands, the same words as the list. */
-function tone(r: CallLogRow): { className: string; word: string } {
+function tone(
+  r: CallLogRow,
+  shortDay: Intl.DateTimeFormat,
+): { className: string; word: string } {
   if (r.state === "cancelled") {
     return {
       className: "border-muted-foreground/30 text-muted-foreground",
@@ -57,10 +49,10 @@ function tone(r: CallLogRow): { className: string; word: string } {
 }
 
 /**
- * One week of calls, Sunday to Saturday in Central time. Seven columns on a
+ * One week of calls, Sunday to Saturday on the viewer's calendar. Seven columns on a
  * wide screen, a day-by-day list on a narrow one. Every chip opens the lead.
  */
-export function CallWeekGrid({
+export async function CallWeekGrid({
   week,
   slug,
   hrefFor,
@@ -70,6 +62,17 @@ export function CallWeekGrid({
   /** The page URL showing another week, keeping the other filters. */
   hrefFor: (weekKey: string) => string;
 }) {
+  const timeZone = await viewerTimeZone();
+  const timeFmt = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  });
+  const shortDay = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone,
+  });
   const first = week.days[0].dateKey;
   const last = week.days[6].dateKey;
   const total = week.days.reduce((n, d) => n + d.rows.length, 0);
@@ -128,7 +131,7 @@ export function CallWeekGrid({
             ) : (
               <ul className="space-y-1.5">
                 {day.rows.map((r) => {
-                  const t = tone(r);
+                  const t = tone(r, shortDay);
                   const name = r.inviteeName ?? r.inviteeEmail ?? "Unknown invitee";
                   const body = (
                     <>

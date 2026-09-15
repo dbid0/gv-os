@@ -8,6 +8,7 @@ import { integrations, sheetMirrorDeals, sheetSyncRuns } from "@/db/schema/app";
 import { reconcileSheet, type MirrorReport } from "@/lib/accounting/sheet-mirror";
 import { monthCashAllCents } from "@/lib/clients/targets";
 import { fetchFinanceSheet } from "@/lib/google/sheets";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * Accounting Phase A orchestration: pull the sheet, recompute, store the
@@ -269,7 +270,10 @@ export async function currentMonthCash(): Promise<MonthCash> {
       })
       .from(sheetMirrorDeals)
       .where(eq(sheetMirrorDeals.runId, run.id));
-    return { status: "ok", cents: monthCashAllCents(rows, new Date()) };
+    return {
+      status: "ok",
+      cents: monthCashAllCents(rows, new Date(), await viewerTimeZone()),
+    };
   } catch {
     return { status: "unavailable" };
   }

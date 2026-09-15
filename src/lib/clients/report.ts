@@ -13,11 +13,12 @@ import {
   paymentEvents,
   signedDocs,
 } from "@/db/schema/app";
-import { dayKeyCT } from "@/lib/charts";
 import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { loadRoster } from "@/lib/roster-server";
 import { clientLedger } from "@/lib/transactions/ledger";
 import { listTransactions } from "@/lib/transactions/queries";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
  * Everything one client's report page needs, in one pass. Capture tables join
@@ -148,8 +149,8 @@ export async function getClientReport(
     : empty.mirror;
 
   // Month-to-date cash for the offer's target: the same attribution, narrowed
-  // to the current CT month.
-  const month = dayKeyCT(new Date()).slice(0, 7);
+  // to the viewer's current month.
+  const month = dayKeyIn(new Date(), await viewerTimeZone()).slice(0, 7);
   const monthRows = clientRows.filter((r) => r.occurredOn.slice(0, 7) === month);
   const mtdCashCents =
     clientLedger(monthRows, rosterLite, matchesSheetClient).find((l) => l.slug === slug)

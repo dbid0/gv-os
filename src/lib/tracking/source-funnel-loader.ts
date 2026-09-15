@@ -32,6 +32,7 @@ export async function loadSourceFunnel(
   dimension: SourceDimension,
   now: Date,
   window?: RangeBounds,
+  timeZone?: string,
 ): Promise<SourceFunnelData> {
   const db = getDb();
   const [links, apps, aliases] = await Promise.all([
@@ -67,6 +68,7 @@ export async function loadSourceFunnel(
       dimension,
       aliases,
       window,
+      timeZone,
     }),
     applications: apps.length,
     taggedApplications: apps.filter((a) => a.utmSource || a.utmMedium || a.utmCampaign)

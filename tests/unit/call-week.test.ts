@@ -27,8 +27,20 @@ function row(id: string, startsAt: Date | null): CallLogRow {
 describe("callDayKey", () => {
   it("keys a call by its Central-time day", () => {
     // 03:00 UTC on the 16th is still the evening of the 15th in Chicago.
-    expect(callDayKey(new Date("2026-09-16T03:00:00Z"))).toBe("2026-09-15");
-    expect(callDayKey(new Date("2026-09-16T06:00:00Z"))).toBe("2026-09-16");
+    expect(callDayKey(new Date("2026-09-16T03:00:00Z"), "America/Chicago")).toBe(
+      "2026-09-15",
+    );
+    expect(callDayKey(new Date("2026-09-16T06:00:00Z"), "America/Chicago")).toBe(
+      "2026-09-16",
+    );
+  });
+});
+
+describe("callDayKey in the viewer's zone", () => {
+  it("puts the same moment on each viewer's own day", () => {
+    const at = new Date("2026-09-16T03:00:00Z");
+    expect(callDayKey(at, "America/Los_Angeles")).toBe("2026-09-15");
+    expect(callDayKey(at, "Europe/London")).toBe("2026-09-16");
   });
 });
 
@@ -57,7 +69,7 @@ describe("callWeek", () => {
     row("last-week", new Date("2026-09-12T16:00:00Z")),
     row("undated", null),
   ];
-  const week = callWeek(rows, "2026-09-16", "2026-09-15");
+  const week = callWeek(rows, "2026-09-16", "2026-09-15", "America/Chicago");
 
   it("lays out seven days from Sunday with neighbours to step to", () => {
     expect(week.weekKey).toBe("2026-09-13");

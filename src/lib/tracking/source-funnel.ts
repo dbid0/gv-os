@@ -117,11 +117,14 @@ export function sourceFunnel(input: {
   calls: CallLogRow[];
   dimension: SourceDimension;
   aliases: AliasMap;
-  /** Central-time day window; omitted = all time. */
+  /** Day window on the viewer's calendar; omitted = all time. */
   window?: RangeBounds;
+  /** The viewer's zone, for placing moments on days. */
+  timeZone?: string;
 }): SourceFunnel {
   const { dimension, aliases } = input;
   const window = input.window ?? { from: null, to: null, label: "All time" };
+  const timeZone = input.timeZone ?? "UTC";
   const person = (email: string | null) => {
     const e = norm(email);
     return e ? (aliases.get(e) ?? e) : null;
@@ -158,14 +161,14 @@ export function sourceFunnel(input: {
   };
 
   for (const [who, touch] of firstTouch) {
-    if (!inWindow(touch.firstAt, window)) continue;
+    if (!inWindow(touch.firstAt, window, timeZone)) continue;
     const b = bucketOf(who);
     rowFor(b.value, b.unattributed).applicants += 1;
   }
 
   const booked = new Map<string, Set<string>>();
   for (const call of input.calls) {
-    if (!inWindow(call.startsAt, window)) continue;
+    if (!inWindow(call.startsAt, window, timeZone)) continue;
     const who = person(call.inviteeEmail);
     const b = bucketOf(who);
     const row = rowFor(b.value, b.unattributed);

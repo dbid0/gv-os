@@ -8,22 +8,24 @@ import { bucketByDay } from "@/lib/charts";
 import { funnelSummary, listApplications, listSignedDocs } from "@/lib/funnel/queries";
 import { listCallLogs } from "@/lib/sales/call-queries";
 import { computeSpeedToLead } from "@/lib/funnel/speed-to-lead";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Applications - GV OS" };
 export const dynamic = "force-dynamic";
 
-const fmtWhen = (d: Date | null) =>
+const fmtWhen = (d: Date | null, timeZone: string) =>
   d
     ? d.toLocaleString("en-US", {
         month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
-        timeZone: "America/Chicago",
+        timeZone,
       })
     : "—";
 
 export default async function ApplicationsPage() {
+  const tz = await viewerTimeZone();
   const [summary, apps, docs, calls] = await Promise.all([
     funnelSummary(),
     listApplications(),
@@ -34,6 +36,7 @@ export default async function ApplicationsPage() {
     apps.map((a) => a.submittedAt ?? a.createdAt),
     30,
     new Date(),
+    tz,
   );
 
   // Speed to lead — real minutes from each application to its first logged dial,
@@ -163,7 +166,7 @@ export default async function ApplicationsPage() {
                 {apps.map((a) => (
                   <tr key={a.id} className="border-b last:border-0">
                     <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
-                      {fmtWhen(a.submittedAt ?? a.createdAt)}
+                      {fmtWhen(a.submittedAt ?? a.createdAt, tz)}
                     </td>
                     <td className="py-2 pr-3">{a.clientName ?? "Agency"}</td>
                     <td className="text-muted-foreground py-2 pr-3">
@@ -207,7 +210,7 @@ export default async function ApplicationsPage() {
                 </span>
                 <StatusPill tone="live">Signed</StatusPill>
                 <span className="text-faint text-xs whitespace-nowrap">
-                  {fmtWhen(d.completedAt)}
+                  {fmtWhen(d.completedAt, tz)}
                 </span>
               </div>
             ))}

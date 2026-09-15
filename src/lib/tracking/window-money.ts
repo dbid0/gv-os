@@ -38,6 +38,7 @@ import {
   type HomeRow,
   type RangeBounds,
 } from "@/lib/transactions/homepage";
+import { dayEndIn, dayKeyIn, dayStartIn } from "@/lib/time/zone";
 
 /** A deal row from a payment feed — its contracted value and when it landed. */
 export interface FeedDeal {
@@ -65,8 +66,6 @@ export interface WindowMoney {
   series: { day: string; cents: number }[];
 }
 
-const dayKey = (d: Date): string => d.toISOString().slice(0, 10);
-
 /** Contracted value from deals dated inside the window (revenue, else cash). */
 export function dealsRevenueInWindow(deals: FeedDeal[], from: Date, to: Date): number {
   let sum = 0;
@@ -84,6 +83,7 @@ function dailyCollectedSeries(
   payments: MixPayment[],
   from: Date,
   to: Date,
+  timeZone: string,
 ): { day: string; cents: number }[] {
   const byDay = new Map<string, number>();
   for (const p of payments) {
@@ -96,7 +96,7 @@ function dailyCollectedSeries(
     if (classifyPayment({ cashCents: cents, status: p.status }) !== "collected") {
       continue;
     }
-    const key = dayKey(p.occurredAt);
+    const key = dayKeyIn(p.occurredAt, timeZone);
     byDay.set(key, (byDay.get(key) ?? 0) + cents);
   }
   return [...byDay.entries()]
@@ -114,6 +114,8 @@ export function windowMoneyFromFeed(
   feed: WindowMoneyFeed,
   from: Date,
   to: Date,
+  /** The calendar the daily series is drawn on — the viewer's zone. */
+  timeZone = "UTC",
 ): WindowMoney {
   const mix = cashMix(feed.payments, from, to, feed.aliases ?? EMPTY_ALIASES);
   const cashCents = mixTotalCents(mix);
@@ -122,7 +124,7 @@ export function windowMoneyFromFeed(
     cashCents,
     revenueCents,
     mix,
-    series: dailyCollectedSeries(feed.payments, from, to),
+    series: dailyCollectedSeries(feed.payments, from, to, timeZone),
   };
 }
 
@@ -141,9 +143,14 @@ export interface WorkspaceMoneyVariant {
   mix: CashMix | null;
 }
 
-const boundsToDates = (b: RangeBounds, todayKey: string): { from: Date; to: Date } => ({
-  from: b.from ? new Date(`${b.from}T00:00:00Z`) : new Date(0),
-  to: b.to ? new Date(`${b.to}T23:59:59Z`) : new Date(`${todayKey}T23:59:59Z`),
+/** A day-key window as real instants: local midnight to end of day in the zone. */
+export const boundsToDates = (
+  b: RangeBounds,
+  todayKey: string,
+  timeZone: string,
+): { from: Date; to: Date } => ({
+  from: b.from ? dayStartIn(b.from, timeZone) : new Date(0),
+  to: dayEndIn(b.to ?? todayKey, timeZone),
 });
 
 type Slice = Pick<
@@ -156,12 +163,13 @@ function sliceFor(
   todayKey: string,
   feed: WindowMoneyFeed | null,
   ledgerRows: HomeRow[],
+  timeZone: string,
 ): Slice {
   // A payment feed wins — the same precedence the cash mix uses. The ledger is
   // the fallback ONLY when there is no feed at all (a ledger-native client).
   if (feed) {
-    const { from, to } = boundsToDates(b, todayKey);
-    const wm = windowMoneyFromFeed(feed, from, to);
+    const { from, to } = boundsToDates(b, todayKey, timeZone);
+    const wm = windowMoneyFromFeed(feed, from, to, timeZone);
     return {
       cashCents: wm.cashCents,
       revenueCents: wm.revenueCents,
@@ -184,10 +192,11 @@ function variantFor(
   todayKey: string,
   feed: WindowMoneyFeed | null,
   ledgerRows: HomeRow[],
+  timeZone: string,
 ): WorkspaceMoneyVariant {
-  const cur = sliceFor(b, todayKey, feed, ledgerRows);
+  const cur = sliceFor(b, todayKey, feed, ledgerRows, timeZone);
   const pb = previousBounds(b);
-  const prev = pb ? sliceFor(pb, todayKey, feed, ledgerRows) : null;
+  const prev = pb ? sliceFor(pb, todayKey, feed, ledgerRows, timeZone) : null;
   return {
     key,
     label: b.label,
@@ -213,16 +222,27 @@ export function buildWorkspaceVariants(
   ledgerRows: HomeRow[],
   todayKey: string,
   custom: RangeBounds | null,
+  /** The viewer's zone: where each window's days start and end. */
+  timeZone = "UTC",
 ): {
   variants: Record<string, WorkspaceMoneyVariant>;
   custom: WorkspaceMoneyVariant | null;
 } {
   const variants: Record<string, WorkspaceMoneyVariant> = {};
   for (const r of HOME_RANGES) {
-    variants[r] = variantFor(r, rangeBounds(r, todayKey), todayKey, feed, ledgerRows);
+    variants[r] = variantFor(
+      r,
+      rangeBounds(r, todayKey),
+      todayKey,
+      feed,
+      ledgerRows,
+      timeZone,
+    );
   }
   return {
     variants,
-    custom: custom ? variantFor("custom", custom, todayKey, feed, ledgerRows) : null,
+    custom: custom
+      ? variantFor("custom", custom, todayKey, feed, ledgerRows, timeZone)
+      : null,
   };
 }

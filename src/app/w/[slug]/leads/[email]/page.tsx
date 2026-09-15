@@ -26,6 +26,7 @@ import { resolveEmail } from "@/lib/tracking/aliases";
 import { listConfirmations } from "@/lib/crm/confirmation-store";
 import { confirmedBeforeCall } from "@/lib/crm/confirmation";
 import { WsPageHeader } from "@/components/workspace/ws-page-header";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function LeadDetailPage({
 }: {
   params: Promise<{ slug: string; email: string }>;
 }) {
+  const tz = await viewerTimeZone();
   const { slug, email: raw } = await params;
   const client = await rosterClientBySlug(slug);
   if (!client) notFound();
@@ -202,7 +204,7 @@ export default async function LeadDetailPage({
                           day: "numeric",
                           hour: "numeric",
                           minute: "2-digit",
-                          timeZone: "America/Chicago",
+                          timeZone: tz,
                         })
                       : "unscheduled"}
                   </span>
