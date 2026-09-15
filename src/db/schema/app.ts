@@ -1424,6 +1424,8 @@ export const offerSettings = appSchema.table(
     studentMinPaymentCents: bigint("student_min_payment_cents", { mode: "number" }),
     /** How many weeks the program runs. Null = open-ended, no "complete" column. */
     programLengthWeeks: integer("program_length_weeks"),
+    /** 1-on-1 coaching calls each student gets. Null = no limit tracked. */
+    oneOnOneCallLimit: integer("one_on_one_call_limit"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1435,6 +1437,10 @@ export const offerSettings = appSchema.table(
     check(
       "offer_settings_program_length_check",
       sql`${table.programLengthWeeks} is null or ${table.programLengthWeeks} between 1 and 260`,
+    ),
+    check(
+      "offer_settings_call_limit_check",
+      sql`${table.oneOnOneCallLimit} is null or ${table.oneOnOneCallLimit} between 1 and 520`,
     ),
   ],
 );
@@ -2430,6 +2436,50 @@ export const callOutcomeRules = appSchema.table(
     check(
       "call_outcome_rules_does_something_check",
       sql`${table.tag} is not null or ${table.notify}`,
+    ),
+  ],
+);
+
+/**
+ * 1-on-1 coaching calls held with a student — the fulfilment half of an offer
+ * that sells calls. Counted against the offer's one_on_one_call_limit on the
+ * Students board.
+ *
+ * Keyed by the student's email (lowercased), the same identity the board's
+ * payer keys resolve through. Idempotent on submission_key so a double-click
+ * logs one call. Voiding moves a call to the bin rather than deleting it.
+ */
+export const studentCalls = appSchema.table(
+  "student_calls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    studentEmail: text("student_email").notNull(),
+    heldAt: timestamp("held_at", { withTimezone: true }).notNull(),
+    coach: text("coach"),
+    notes: text("notes"),
+    submissionKey: text("submission_key").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+  },
+  (table) => [
+    uniqueIndex("student_calls_submission_key").on(table.submissionKey),
+    index("student_calls_client_email_idx").on(table.clientId, table.studentEmail),
+    check(
+      "student_calls_email_check",
+      sql`${table.studentEmail} = lower(trim(${table.studentEmail})) and position('@' in ${table.studentEmail}) > 1`,
+    ),
+    check(
+      "student_calls_coach_check",
+      sql`${table.coach} is null or length(trim(${table.coach})) between 1 and 80`,
+    ),
+    check(
+      "student_calls_notes_check",
+      sql`${table.notes} is null or length(${table.notes}) <= 2000`,
     ),
   ],
 );

@@ -2,7 +2,10 @@ import { GraduationCap } from "lucide-react";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
+import { StudentCallsPanel } from "@/components/students/student-calls-panel";
 import { StudentsBoardView } from "@/components/students/students-board";
+import { Panel } from "@/components/ui/panel";
+import { listStudentCalls } from "@/lib/students/calls-store";
 import { FeedFreshness } from "@/components/tracking/feed-freshness";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Kpi } from "@/components/ui/metric";
@@ -92,7 +95,22 @@ export default async function WorkspaceStudentsPage({
     );
   }
 
-  const { summary, board, columns, program } = data;
+  const { summary, board, columns, program, calls, callLimit } = data;
+  // Logging coaching calls is GV's fulfilment desk — never the client portal.
+  const [recentCalls, voidedCalls] =
+    !portalView && row
+      ? await Promise.all([
+          listStudentCalls(row.id, { voided: false, limit: 15 }),
+          listStudentCalls(row.id, { voided: true, limit: 15 }),
+        ])
+      : [[], []];
+  const asListRow = (c: (typeof recentCalls)[number]) => ({
+    id: c.id,
+    studentEmail: c.studentEmail,
+    heldAt: c.heldAt.toISOString(),
+    coach: c.coach,
+    notes: c.notes,
+  });
   return (
     <div className="space-y-6">
       {header(<FeedFreshness freshness={snapshotFreshness(data.syncedAt, now)} />)}
@@ -136,7 +154,35 @@ export default async function WorkspaceStudentsPage({
           explainer="The payment feed is connected but holds no collected, dated payments yet."
         />
       ) : (
-        <StudentsBoardView slug={slug} columns={columns} showCash={showCash} />
+        <StudentsBoardView
+          slug={slug}
+          columns={columns}
+          showCash={showCash}
+          calls={calls}
+          callLimit={callLimit}
+        />
+      )}
+
+      {!portalView && summary.total > 0 && (
+        <Panel
+          title="1-on-1 calls"
+          aside={
+            <span className="text-faint text-xs">
+              {callLimit === null
+                ? "No limit set — Setup → Students program"
+                : `${callLimit} per student`}
+            </span>
+          }
+        >
+          <StudentCallsPanel
+            slug={slug}
+            students={board.students
+              .filter((s): s is typeof s & { email: string } => s.email !== null)
+              .map((s) => ({ email: s.email, name: s.name }))}
+            recent={recentCalls.map(asListRow)}
+            voided={voidedCalls.map(asListRow)}
+          />
+        </Panel>
       )}
 
       <p className="text-faint text-xs">

@@ -9,6 +9,7 @@ import { isAllowed } from "@/lib/auth/allowlist";
 import { resolveRealRole } from "@/lib/auth/resolve-role";
 import { currentUser } from "@/lib/auth/server";
 import { getTeamBySlug } from "@/lib/sales/queries";
+import { validateCallLimit } from "@/lib/students/calls";
 import { validateProgram, type ProgramInput } from "@/lib/students/program";
 
 type Result = { ok: true } | { ok: false; errors: string[] };
@@ -26,16 +27,27 @@ async function requireAdmin() {
 export async function saveStudentProgramAction(
   slug: string,
   input: ProgramInput,
+  callLimit = "",
 ): Promise<Result> {
   await requireAdmin();
   const team = /^[a-z0-9-]{1,80}$/.test(slug) ? await getTeamBySlug(slug) : null;
   if (!team) return { ok: false, errors: ["This offer has no sales workspace yet."] };
   const checked = validateProgram(input);
-  if (!checked.ok) return checked;
+  const limit = validateCallLimit(callLimit);
+  if (!checked.ok || !limit.ok) {
+    return {
+      ok: false,
+      errors: [
+        ...(checked.ok ? [] : checked.errors),
+        ...(limit.ok ? [] : [limit.error]),
+      ],
+    };
+  }
 
   const values = {
     studentMinPaymentCents: checked.program.minPaymentCents,
     programLengthWeeks: checked.program.lengthWeeks,
+    oneOnOneCallLimit: limit.limit,
   };
   const db = getDb();
   await db

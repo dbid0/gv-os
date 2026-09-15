@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 
 import { cents, formatUSD } from "@/lib/money";
 import { weekLabel, type CohortColumn, type Student } from "@/lib/students/board";
+import { callUsage } from "@/lib/students/calls";
 import { displayName } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +22,16 @@ function StudentCard({
   slug,
   student,
   showCash,
+  calls,
+  callLimit,
 }: {
   slug: string;
   student: Student;
   showCash: boolean;
+  calls: number;
+  callLimit: number | null;
 }) {
+  const usage = callUsage(calls, callLimit);
   const label = student.name
     ? displayName(student.name)
     : (student.email ?? "No email");
@@ -61,6 +67,17 @@ function StudentCard({
           </span>
         )}
       </div>
+      {(callLimit !== null || calls > 0) && (
+        <p
+          className={cn(
+            "mt-1.5 text-[11px] tabular-nums",
+            usage.reached ? "text-warning" : "text-muted-foreground",
+          )}
+        >
+          {usage.label}
+          {usage.reached && " · limit reached"}
+        </p>
+      )}
       {student.refunded ? (
         <span className="border-destructive/40 text-destructive mt-2 inline-block rounded-full border px-2 py-0.5 text-[10px]">
           Refunded
@@ -99,11 +116,16 @@ export function StudentsBoardView({
   slug,
   columns,
   showCash,
+  calls = {},
+  callLimit = null,
   maxPerColumn = 40,
 }: {
   slug: string;
   columns: CohortColumn[];
   showCash: boolean;
+  /** 1-on-1 calls per student email. */
+  calls?: Record<string, number>;
+  callLimit?: number | null;
   maxPerColumn?: number;
 }) {
   const [query, setQuery] = useState("");
@@ -167,6 +189,8 @@ export function StudentsBoardView({
                         slug={slug}
                         student={s}
                         showCash={showCash}
+                        calls={s.email ? (calls[s.email] ?? 0) : 0}
+                        callLimit={callLimit}
                       />
                     ))
                 )}
