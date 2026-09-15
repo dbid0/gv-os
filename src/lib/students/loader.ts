@@ -22,6 +22,8 @@ import {
   leadsForClient,
   pickPaySource,
 } from "@/lib/tracking/queries";
+import { callsByStudent } from "@/lib/students/calls";
+import { activeStudentCallEmails, callLimitFor } from "@/lib/students/calls-store";
 import { applyTagRulesToFeed } from "@/lib/tracking/tag-rules";
 import { listTagRules } from "@/lib/tracking/tag-rules-store";
 
@@ -33,6 +35,10 @@ export type StudentsBoardData = {
   columns: CohortColumn[];
   summary: StudentsSummary;
   program: ProgramSettings;
+  /** 1-on-1 calls logged per student email (alias-resolved), active only. */
+  calls: Record<string, number>;
+  /** The offer's 1-on-1 limit per student, or null. */
+  callLimit: number | null;
 };
 
 /** An offer's student program settings; open-ended when none are saved. */
@@ -58,9 +64,10 @@ export async function loadStudentsBoard(
   clientId: string,
   now: Date,
 ): Promise<StudentsBoardData> {
-  const [snaps, program] = await Promise.all([
+  const [snaps, program, callLimit] = await Promise.all([
     latestSnapshotsBySource(clientId),
     programSettingsFor(clientId).catch(() => OPEN_PROGRAM),
+    callLimitFor(clientId).catch(() => null),
   ]);
   const paySource = pickPaySource(snaps);
   if (!paySource) {
@@ -76,14 +83,17 @@ export async function loadStudentsBoard(
       columns: groupByCohort([], program.lengthWeeks),
       summary: summarizeStudents([]),
       program,
+      calls: {},
+      callLimit,
     };
   }
 
-  const [{ payments }, aliases, rules, sheet] = await Promise.all([
+  const [{ payments }, aliases, rules, sheet, callRows] = await Promise.all([
     cashRowsForClient(paySource.snapshot.syncId),
     aliasMapForClient(clientId),
     listTagRules(clientId).catch(() => []),
     currentSnapshot(clientId),
+    activeStudentCallEmails(clientId).catch(() => []),
   ]);
 
   // Names from the lead record when the payment rows carry none.
@@ -103,5 +113,7 @@ export async function loadStudentsBoard(
     columns: groupByCohort(board.students, program.lengthWeeks),
     summary: summarizeStudents(board.students),
     program,
+    calls: Object.fromEntries(callsByStudent(callRows, aliases)),
+    callLimit,
   };
 }

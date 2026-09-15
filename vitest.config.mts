@@ -217,6 +217,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // 1-on-1 student calls: validation, per-person counts, usage vs limit.
+        // Pure, fully covered.
+        "src/lib/students/calls.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Call outcome rules: what a filed outcome tags and who it notifies.
         // Pure, fully covered.
         "src/lib/calls/outcome-rules.ts": {

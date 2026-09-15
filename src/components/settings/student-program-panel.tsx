@@ -16,11 +16,15 @@ export function StudentProgramPanel({
   slug,
   minPaymentDollars,
   lengthWeeks,
+  callLimit = "",
 }: {
   slug: string;
   minPaymentDollars: string;
   lengthWeeks: string;
+  /** 1-on-1 calls per student, as text; blank = no limit. */
+  callLimit?: string;
 }) {
+  const [limit, setLimit] = useState(callLimit);
   const [min, setMin] = useState(minPaymentDollars);
   const [weeks, setWeeks] = useState(lengthWeeks);
   const [errors, setErrors] = useState<string[]>([]);
@@ -31,10 +35,11 @@ export function StudentProgramPanel({
     startTransition(async () => {
       setErrors([]);
       setSaved(false);
-      const res = await saveStudentProgramAction(slug, {
-        minPayment: min,
-        lengthWeeks: weeks,
-      });
+      const res = await saveStudentProgramAction(
+        slug,
+        { minPayment: min, lengthWeeks: weeks },
+        limit,
+      );
       if (!res.ok) setErrors(res.errors);
       else setSaved(true);
     });
@@ -64,6 +69,19 @@ export function StudentProgramPanel({
               setSaved(false);
             }}
             placeholder="open-ended"
+            inputMode="numeric"
+            className={inputClass}
+          />
+        </label>
+        <label className="text-faint text-[11px]">
+          1-on-1 calls per student
+          <input
+            value={limit}
+            onChange={(e) => {
+              setLimit(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="no limit"
             inputMode="numeric"
             className={inputClass}
           />
