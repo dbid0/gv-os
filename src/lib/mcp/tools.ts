@@ -7,14 +7,26 @@ import { clients } from "@/db/schema/app";
 import { appEocLeadRows } from "@/lib/calls/eoc-store";
 import { loadCallLog } from "@/lib/calls/call-log-loader";
 import { CALL_STATES, type CallState } from "@/lib/calls/call-log";
+import { segmentByCloser, type CloserSegment } from "@/lib/calls/closer-segments";
 import { getClientReport } from "@/lib/clients/report";
 import { unreviewedIntegrityBanner } from "@/lib/notifications/count";
 import { COHORTS } from "@/lib/students/board";
+import { callUsage } from "@/lib/students/calls";
 import { loadStudentsBoard } from "@/lib/students/loader";
 import { resolveEmail } from "@/lib/tracking/aliases";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
+import { listLeadTags, listLeadViews } from "@/lib/tracking/lead-tags-store";
+import {
+  LEAD_HAS,
+  describeFilters,
+  filterLeads,
+  readLeadFilters,
+  tagUsage,
+  tagsByLead,
+  type LeadFilters,
+} from "@/lib/tracking/lead-views";
 import { loadOfferSales } from "@/lib/tracking/offer-metrics-loader";
-import { currentSnapshot, leadByEmail } from "@/lib/tracking/queries";
+import { currentSnapshot, leadByEmail, leadsForClient } from "@/lib/tracking/queries";
 import { ToolInputError, type ToolDefinition } from "@/lib/mcp/protocol";
 
 /** Integer cents as "1234.50", or null for unknown — never a guessed zero. */
@@ -48,6 +60,17 @@ async function offerBySlug(slug: unknown) {
   }
   return row;
 }
+
+const segment = (s: CloserSegment) => ({
+  closer: s.closer,
+  isAPerson: !s.unattributed,
+  held: s.held,
+  shows: s.shows,
+  noShows: s.noShows,
+  closes: s.closes,
+  showRatePct: pct(s.showRate),
+  closeRatePct: pct(s.closeRate),
+});
 
 const slugArg = {
   type: "string",
@@ -180,6 +203,10 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           outcome: r.outcome,
           outcomeWords: r.outcomeWords,
           recordedIn: r.reportSource === "app" ? "gv-os" : r.reportSource,
+          closer: r.closer,
+          movedTo: iso(r.movedTo),
+          movedFrom: iso(r.movedFrom),
+          cancelReason: r.cancelReason,
         })),
       };
     },
@@ -220,6 +247,7 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
         program: {
           minimumPayment: dollars(data.program.minPaymentCents),
           lengthWeeks: data.program.lengthWeeks,
+          oneOnOneCallsPerStudent: data.callLimit,
         },
         students: data.board.students
           .filter((s) => !cohort || s.cohort === cohort)
@@ -235,6 +263,13 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
             payments: s.payments,
             paidNet: dollars(s.netCents),
             refunded: s.refunded,
+            oneOnOneCalls: (() => {
+              const u = callUsage(
+                s.email ? (data.calls[s.email] ?? 0) : 0,
+                data.callLimit,
+              );
+              return { used: u.used, limit: u.limit, limitReached: u.reached };
+            })(),
           })),
       };
     },
@@ -279,9 +314,12 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
       if (!lead) {
         throw new ToolInputError(`No lead with ${email} on ${offer.name}.`);
       }
+      const tags =
+        tagsByLead(await listLeadTags(offer.id), aliases).get(canonical) ?? [];
       return {
         email: lead.email,
         inboxes,
+        tags,
         name: lead.name,
         reps: lead.reps,
         firstSeen: iso(lead.firstSeen),
@@ -298,6 +336,124 @@ export const GV_OS_TOOLS: ToolDefinition[] = [
           status: e.status ?? e.outcome,
           rep: e.rep,
           cash: dollars(e.cashCents),
+        })),
+      };
+    },
+  },
+  {
+    name: "calls_by_closer",
+    description:
+      "The offer's held calls re-cut per closer: held, shows, no-shows, closes, show and close rate. Calls with no report yet and reports naming no closer get their own rows, and the rows always add up to the total.",
+    inputSchema: {
+      type: "object",
+      properties: { slug: slugArg },
+      required: ["slug"],
+      additionalProperties: false,
+    },
+    run: async (args) => {
+      const offer = await offerBySlug(args.slug);
+      const { log } = await loadCallLog(
+        offer.id,
+        offer.countedCallSources ?? null,
+        new Date(),
+      );
+      const { rows, total } = segmentByCloser(log);
+      return { closers: rows.map(segment), total: segment(total) };
+    },
+  },
+  {
+    name: "list_leads",
+    description:
+      "The offer's leads, filtered the way the Leads page filters them: by a saved view's name, or by tag, stage (applied, booked, unbooked = applied but never booked, reported, paid), rep, and text. Also returns every tag with how many people carry it, and the saved views.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: slugArg,
+        view: {
+          type: "string",
+          description:
+            "A saved view's name (case doesn't matter). Overrides the other filters.",
+        },
+        tag: { type: "string", description: "Only leads carrying this tag." },
+        has: {
+          type: "string",
+          description: "Where the lead got to.",
+          enum: LEAD_HAS.map((h) => h.key),
+        },
+        rep: { type: "string", description: "Only leads this rep touched." },
+        q: { type: "string", description: "Text search on email, name or rep." },
+        limit: {
+          type: "integer",
+          description: "How many leads, 1 to 200 (default 50).",
+        },
+      },
+      required: ["slug"],
+      additionalProperties: false,
+    },
+    run: async (args) => {
+      const offer = await offerBySlug(args.slug);
+      const limit = args.limit === undefined ? 50 : Number(args.limit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+        throw new ToolInputError("limit must be a whole number between 1 and 200.");
+      }
+      const snapshot = await currentSnapshot(offer.id);
+      if (!snapshot) {
+        throw new ToolInputError(
+          `${offer.name} has no synced tracking sheet yet, so there are no leads to list.`,
+        );
+      }
+      const [appRows, aliases, tagRows, views] = await Promise.all([
+        appEocLeadRows(offer.id),
+        aliasMapForClient(offer.id),
+        listLeadTags(offer.id),
+        listLeadViews(offer.id),
+      ]);
+
+      let filters: LeadFilters;
+      if (args.view !== undefined) {
+        const wanted = String(args.view).trim().toLowerCase();
+        const view = views.find((v) => v.name.toLowerCase() === wanted);
+        if (!view) {
+          throw new ToolInputError(
+            `No saved view called "${String(args.view)}". Saved views: ${
+              views.map((v) => v.name).join(", ") || "none yet"
+            }.`,
+          );
+        }
+        filters = readLeadFilters(Object.fromEntries(new URLSearchParams(view.query)));
+      } else {
+        filters = readLeadFilters({
+          q: args.q === undefined ? undefined : String(args.q),
+          tag: args.tag === undefined ? undefined : String(args.tag),
+          has: args.has === undefined ? undefined : String(args.has),
+          rep: args.rep === undefined ? undefined : String(args.rep),
+        });
+      }
+
+      const all = await leadsForClient(snapshot.syncId, appRows, aliases);
+      const tags = tagsByLead(tagRows, aliases);
+      const leads = filterLeads(all, filters, tags);
+      return {
+        filters: describeFilters(filters),
+        matching: leads.length,
+        leads: leads.slice(0, limit).map((l) => ({
+          email: l.email,
+          name: l.name,
+          reps: l.reps,
+          tags: tags.get(l.email.toLowerCase()) ?? [],
+          applied: l.applied,
+          callsBooked: l.callsBooked,
+          endOfCallReports: l.eocReports,
+          paymentsNet: dollars(l.paymentsCents),
+          latestStatus: l.latestStatus,
+          lastSeen: iso(l.lastSeen),
+        })),
+        tags: tagUsage(tags),
+        savedViews: views.map((v) => ({
+          name: v.name,
+          filters: describeFilters(
+            readLeadFilters(Object.fromEntries(new URLSearchParams(v.query))),
+          ),
         })),
       };
     },

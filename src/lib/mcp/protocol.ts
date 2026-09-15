@@ -197,6 +197,8 @@ export async function handleMessage(
         if (error instanceof ToolInputError) {
           return { jsonrpc: "2.0", id, result: text(error.message, true) };
         }
+        // The caller gets a generic message; the reason stays in the server log.
+        console.error(`[mcp] ${tool.name} failed`, error);
         return {
           jsonrpc: "2.0",
           id,
