@@ -326,6 +326,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The Numbers page as a spreadsheet. A figure exported without its
+        // denominator, or an unknown written as 0, misleads off-platform where
+        // nobody can check it against the page. Fully covered.
+        "src/lib/tracking/numbers-csv.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         "src/lib/calls/call-scoreboard.ts": {
           statements: 100,
           branches: 100,
