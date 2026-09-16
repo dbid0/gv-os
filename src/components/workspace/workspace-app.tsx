@@ -74,6 +74,8 @@ export interface TeamspaceView {
   slug: string | null;
   name: string;
   accent: string;
+  /** false = no logo on file; the icon then draws the initial, no request. */
+  hasLogo?: boolean;
   pages: PageNode[];
 }
 

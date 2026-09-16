@@ -79,7 +79,13 @@ export default async function ClientHealthPage() {
               )}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                <ClientLogo slug={r.slug} name={r.name} accent={r.accent} size={40} />
+                <ClientLogo
+                  slug={r.slug}
+                  name={r.name}
+                  accent={r.accent}
+                  hasLogo={r.hasLogo}
+                  size={40}
+                />
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-medium">
                     {r.name}
