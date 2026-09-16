@@ -52,6 +52,11 @@ export function ViewAsMenu({
     setCookie("gv-dev-role", role);
     setCookie("gv-dev-client", clientSlug ?? null);
     if (role === "client" && clientSlug) {
+      // A hard navigation on purpose. The cookies set above are what the SERVER
+      // reads to decide who it is rendering for, and a client-side push can
+      // serve a route's cached RSC payload — rendered under the OLD role. That
+      // is a preview showing the wrong person's data, so the rule loses here.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
       window.location.assign(`/w/${clientSlug}`);
     } else {
       router.refresh();
@@ -111,7 +116,10 @@ export function ViewAsBanner({
     setCookie("gv-dev-role", null);
     setCookie("gv-dev-client", null);
     // A hard navigation, not a refresh: the preview may be standing on a
-    // page the admin shell renders differently (or a workspace-only page).
+    // page the admin shell renders differently (or a workspace-only page),
+    // and the cleared cookies above only take effect on a server render, so a
+    // cached client-side push could leave the admin inside the preview.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
     window.location.assign("/dashboard");
   };
 

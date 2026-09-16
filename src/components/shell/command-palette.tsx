@@ -71,7 +71,11 @@ export function CommandPalette({
         item.label.toLowerCase().includes(q) ||
         item.description.toLowerCase().includes(q),
     );
-  }, [query]);
+    // `roster` belongs here: the layout passes a fresh array on every server
+    // render, so a client added or archived in Setup arrives with no keystroke
+    // behind it. Without it the palette kept offering the roster it booted
+    // with until the next keypress. Recomputing is a filter over a short list.
+  }, [query, roster]);
 
   const close = useCallback(() => {
     setOpen(false);

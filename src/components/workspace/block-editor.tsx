@@ -420,8 +420,12 @@ export function BlockEditor({
             editor.replaceBlocks(
               editor.document,
               enrichPageMentions(
+                // The ref, like every other live prop this effect reads: the
+                // markdown parse above is async, so by the time it resolves
+                // the captured prop could describe a workspace the reader has
+                // already left, and the mentions would point at it.
                 colorizeCallouts(blocks),
-                basePath,
+                basePathRef.current,
                 describeRef.current,
               ),
             );
