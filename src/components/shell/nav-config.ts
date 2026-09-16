@@ -1,7 +1,6 @@
 import {
   BarChart3,
   Bell,
-  Building2,
   CalendarDays,
   Clapperboard,
   ClipboardList,
@@ -74,13 +73,6 @@ export const navigation: NavGroup[] = [
         icon: BarChart3,
         status: "ready",
         description: "Deals, commissions, and the rep leaderboard",
-      },
-      {
-        label: "Clients",
-        href: "/clients",
-        icon: Building2,
-        status: "ready",
-        description: "The active roster and each engagement",
       },
       {
         label: "Accounting",

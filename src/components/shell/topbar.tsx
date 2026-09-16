@@ -70,14 +70,11 @@ export function Topbar({
       <MobileNav />
 
       <div className="min-w-0">
+        {/* The page's name, and nothing else. The one-line explainer that used
+            to sit under it described a page the reader was already looking at. */}
         <h1 className="truncate text-sm font-medium">
           {current?.label ?? fallbackLabel ?? "GV OS"}
         </h1>
-        {current && (
-          <p className="text-muted-foreground truncate text-xs">
-            {current.description}
-          </p>
-        )}
       </div>
 
       {/* A preview build reading staging data must never be mistaken for prod. */}

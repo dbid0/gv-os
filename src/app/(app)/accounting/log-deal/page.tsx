@@ -17,7 +17,6 @@ export default async function LogDealPage() {
       <PageHeader
         title="Log a"
         highlight="deal."
-        description="Agency deal entry — writes straight into the finance sheet and syncs back into GV OS. The sheet stays the source of truth."
         actions={
           <Link
             href="/accounting"

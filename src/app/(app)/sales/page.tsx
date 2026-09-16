@@ -66,8 +66,7 @@ export default async function SalesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-sm">
-          {teams.length} sales {teams.length === 1 ? "team" : "teams"} — each an offer
-          with its own reps, EOD cadence, and commission structure.
+          {teams.length} {teams.length === 1 ? "team" : "teams"}
         </p>
         <div className="flex items-center gap-2">
           <Link
