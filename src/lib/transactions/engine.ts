@@ -6,15 +6,9 @@ import { sheetFeeCents } from "@/lib/accounting/sheet-mirror";
  * sheet formula (sheetFeeCents), never a re-implementation.
  */
 
-export const DEAL_TYPES = [
-  "Setup",
-  "DWY Build",
-  "DFY Build",
-  "Retainer",
-  "Rev-Share",
-  "Client Handoff",
-  "Other",
-] as const;
+// The vocabulary lives in one place now (deal-types.ts). Re-exported here so
+// the engine's existing importers keep working without a second copy to drift.
+export { DEAL_TYPES, type DealType } from "@/lib/accounting/deal-types";
 
 export const PAYMENT_METHODS = [
   "Wire",

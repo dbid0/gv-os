@@ -2516,3 +2516,35 @@ export const bookingExclusions = appSchema.table(
     ),
   ],
 );
+
+/**
+ * A third party owed money out of one deal — "10% to Jaiden", "owe Gerard
+ * $313.39". These claims have always existed; until now they lived only as a
+ * sentence in the deal's notes, so nothing could total them and the partner
+ * split shown for those deals was not what actually got paid.
+ *
+ * Their cut comes off NET, before the partners divide the remainder. The math
+ * is in lib/accounting/deal-split.ts; this is only where it is stored.
+ */
+export const dealPayees = appSchema.table(
+  "deal_payees",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    /** Free text: a person owed money, not a GV user account. */
+    name: text("name").notNull(),
+    /** fixed = a dollar amount · percent = a share of the deal's net. */
+    kind: text("kind").notNull(),
+    /** Cents when kind is "fixed". */
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
+    /** Basis points of net when kind is "percent" (1000 = 10%). */
+    rateBps: integer("rate_bps").notNull().default(0),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("deal_payees_transaction_idx").on(table.transactionId)],
+);
+
+export type DealPayeeRow = typeof dealPayees.$inferSelect;

@@ -2,6 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
+
+import { DEAL_TYPES, DEFAULT_DEAL_TYPE } from "@/lib/accounting/deal-types";
+import {
+  DealPayeesField,
+  toDealPayees,
+  type PayeeDraft,
+} from "@/components/accounting/deal-payees-field";
+import { danielPctBps } from "@/lib/accounting/sheet-mirror";
+import { autoProcessorFeeCents } from "@/lib/transactions/engine";
 import { Plus } from "lucide-react";
 
 import { logAgencyDeal } from "@/app/(app)/accounting/log-deal/actions";
@@ -50,7 +59,7 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
   const today = "";
   const [dateClosed, setDateClosed] = useState(today);
   const [client, setClient] = useState("");
-  const [dealType, setDealType] = useState("Rev Share");
+  const [dealType, setDealType] = useState<string>(DEFAULT_DEAL_TYPE);
   const [offer, setOffer] = useState("");
   const [revenue, setRevenue] = useState("");
   const [cash, setCash] = useState("");
@@ -60,6 +69,23 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
   const [agreement, setAgreement] = useState("");
   const [notes, setNotes] = useState("");
   const [payout, setPayout] = useState("");
+  const [payees, setPayees] = useState<PayeeDraft[]>([]);
+
+  // What the deal has made so far, for the live breakdown under the payouts.
+  const cashCentsSoFar = Math.round((Number(cash) || 0) * 100);
+  const netForPreview =
+    cashCentsSoFar -
+    autoProcessorFeeCents(
+      cashCentsSoFar,
+      method,
+      fee === "" ? null : Math.round(Number(fee) * 100),
+    );
+  // The share is this deal's own, not a constant.
+  const danielBps = danielPctBps(dealType, pct === "" ? null : Number(pct));
+  const partnersForPreview = [
+    { name: "Daniel", bps: danielBps },
+    { name: "Gus", bps: 10_000 - danielBps },
+  ];
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -83,6 +109,7 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
             agreement,
             notes,
             payoutStatus: payout,
+            payees: toDealPayees(payees),
           },
           allowDuplicate,
         );
@@ -151,13 +178,11 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
             value={dealType}
             onChange={(e) => setDealType(e.target.value)}
           >
-            {["Rev Share", "Client Handoff", "Setup Fee", "One-off", "Other"].map(
-              (t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ),
-            )}
+            {DEAL_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Offer">
@@ -251,6 +276,12 @@ export function AgencyDealForm({ clients }: { clients: string[] }) {
             ))}
           </select>
         </Field>
+        <DealPayeesField
+          payees={payees}
+          onChange={setPayees}
+          netCents={netForPreview}
+          partners={partnersForPreview}
+        />
         <Field label="Notes">
           <Input
             value={notes}
