@@ -326,6 +326,30 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // How a deal's net is divided: third-party payees off the top, then
+        // the partners. Real money to real people, and the pennies must always
+        // re-add to the whole — fully covered.
+        "src/lib/accounting/deal-split.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // The agency book Daniel and Gus read. Fully covered.
+        "src/lib/accounting/agency-summary.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        // One deal-type vocabulary. When this drifts, money groups under the
+        // wrong heading and every per-type total is quietly wrong.
+        "src/lib/accounting/deal-types.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The attribution donut's arcs. A part-to-whole picture that stops
         // summing to its own table is a lie told faster than the table can
         // correct it, so the reconcile check ships fully covered.

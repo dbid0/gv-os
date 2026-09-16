@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { noteWithPayees } from "@/lib/accounting/deal-split";
 import { devAuthBypass } from "@/lib/auth/dev-bypass";
 import { isAllowed } from "@/lib/auth/allowlist";
 import { currentUser } from "@/lib/auth/server";
@@ -36,6 +37,16 @@ const input = z.object({
   agreement: z.string().default(""),
   notes: z.string().default(""),
   payoutStatus: z.string().default(""),
+  /** Third parties owed a cut of this deal, before the partners split. */
+  payees: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        kind: z.enum(["fixed", "percent"]),
+        value: z.number(),
+      }),
+    )
+    .default([]),
 });
 
 /**
@@ -106,7 +117,7 @@ export async function logAgencyDeal(
       feeOverrideCents:
         i.feeOverrideDollars == null ? null : dollarsToCents(i.feeOverrideDollars),
       agreement: i.agreement.trim(),
-      notes: i.notes.trim(),
+      notes: noteWithPayees(i.notes, i.payees),
       payoutStatus: i.payoutStatus.trim(),
     },
     timestamp,
