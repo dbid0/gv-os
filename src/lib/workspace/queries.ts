@@ -39,6 +39,8 @@ export interface Teamspace {
   name: string;
   /** The teamspace's data colour, for its icon chip. */
   accent: string;
+  /** Whether a logo is on file, so the icon can skip a request that 404s. */
+  hasLogo?: boolean;
 }
 
 export interface TeamspaceTree extends Teamspace {
@@ -51,6 +53,19 @@ function accentForSlug(
 ): string {
   if (!slug) return AGENCY_ACCENT;
   return roster.find((c) => c.slug === slug)?.accent ?? AGENCY_ACCENT;
+}
+
+/**
+ * Whether this client has a logo on file, read off the roster the accent
+ * already comes from. Unknown (slug absent from the roster) stays undefined,
+ * which asks the icon to try the route and fall back — the old behaviour.
+ */
+function hasLogoForSlug(
+  roster: { slug: string; hasLogo?: boolean }[],
+  slug: string | null,
+): boolean | undefined {
+  if (!slug) return undefined;
+  return roster.find((c) => c.slug === slug)?.hasLogo;
 }
 
 function toLite(row: WorkspacePage): WorkspacePageLite {
@@ -95,6 +110,7 @@ export async function listTeamspaces(): Promise<Teamspace[]> {
         slug: c.slug,
         name: c.name,
         accent: accentForSlug(roster, c.slug),
+        hasLogo: hasLogoForSlug(roster, c.slug),
       })),
     ];
   } catch {

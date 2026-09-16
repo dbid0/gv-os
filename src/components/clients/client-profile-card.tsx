@@ -56,6 +56,8 @@ export interface ClientCard {
   summary: string;
   since: string;
   accent: string;
+  /** false = no logo on file; the avatar draws the initial without a request. */
+  hasLogo?: boolean;
 }
 
 /**
@@ -130,6 +132,7 @@ export function ClientProfileCard({ client }: { client: ClientCard }) {
               slug={client.slug}
               name={client.name}
               accent={client.accent}
+              hasLogo={client.hasLogo}
               size={44}
             />
           )}

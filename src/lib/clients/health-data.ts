@@ -23,6 +23,8 @@ export interface ClientHealthRow {
   slug: string;
   name: string;
   accent: string;
+  /** false = no logo on file; the avatar draws the initial without a request. */
+  hasLogo?: boolean;
   input: ClientHealthInput;
   health: ClientHealth;
 }
@@ -112,6 +114,7 @@ export async function getClientHealthData(): Promise<ClientHealthRow[]> {
           slug: c.slug,
           name: c.name,
           accent: c.accent,
+          hasLogo: c.hasLogo,
           input,
           health: clientHealth(input),
         };

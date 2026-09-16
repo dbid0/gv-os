@@ -29,6 +29,7 @@ export default async function ClientsPage() {
     summary: summaries[client.slug] ?? client.summary,
     since: client.since,
     accent: client.accent,
+    hasLogo: client.hasLogo,
   }));
 
   return (

@@ -10,6 +10,8 @@ export interface TeamspaceLike {
   slug: string | null;
   name: string;
   accent: string;
+  /** false = no logo on file, so the icon draws the initial without a request. */
+  hasLogo?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export function TeamspaceIcon({ ts, size = 20 }: { ts: TeamspaceLike; size?: num
         slug={ts.slug}
         name={ts.name}
         accent={ts.accent}
+        hasLogo={ts.hasLogo}
         size={size}
         radius="md"
       />
