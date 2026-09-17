@@ -46,6 +46,7 @@ function numbers(overrides: Partial<OfferNumbers> = {}): OfferNumbers {
     calls: callScoreboard(log, ALL, TZ),
     cash: {
       source: "stripe",
+      ticket: null,
       syncedAt: null,
       catalog: cashCatalog({
         payments: [
@@ -163,6 +164,7 @@ describe("numbersForMcp", () => {
         person: { by: "closer", name: "Sam Carter" },
         cash: {
           source: "sheet",
+          ticket: null,
           syncedAt: null,
           catalog: cashCatalog({
             payments: [
@@ -219,7 +221,7 @@ describe("numbersForMcp", () => {
     const out = numbersForMcp(
       numbers({
         totalBookings: 0,
-        cash: { source: null, syncedAt: null, catalog: null },
+        cash: { source: null, syncedAt: null, ticket: null, catalog: null },
         applications: {
           ...base.applications,
           numbers: { ...base.applications.numbers, source: null },

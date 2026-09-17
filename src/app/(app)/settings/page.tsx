@@ -113,6 +113,7 @@ export default async function SettingsPage() {
       eodAlertTime: existing?.eodAlertTime ?? null,
       bodAlertTime: existing?.bodAlertTime ?? "12:00",
       confettiThresholdCents: existing?.confettiThresholdCents ?? 500_000,
+      lowTicketMaxCents: existing?.lowTicketMaxCents ?? null,
       monthlyGoalCents: c.monthlyTargetCents,
       visibility: existing?.visibility ?? {},
     };

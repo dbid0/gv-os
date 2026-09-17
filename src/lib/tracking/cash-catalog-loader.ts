@@ -3,16 +3,19 @@ import "server-only";
 import { and, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { bookings, clients } from "@/db/schema/app";
+import { bookings, clients, offerSettings } from "@/db/schema/app";
 import { resolveEmail } from "@/lib/tracking/aliases";
 import { aliasMapForClient } from "@/lib/tracking/aliases-store";
 import { cashCatalog, type CashCatalog } from "@/lib/tracking/cash-catalog";
+import { ticketSplit, type TicketSplit } from "@/lib/tracking/ticket-split";
 import { cashRowsForClient, latestSnapshotsBySource } from "@/lib/tracking/queries";
 import { listTagRules } from "@/lib/tracking/tag-rules-store";
 import { boundsToDates } from "@/lib/tracking/window-money";
 import type { RangeBounds } from "@/lib/transactions/homepage";
 
 export type CashCatalogData = {
+  /** Counted cash split at the offer's low-ticket line. Null = no line set. */
+  ticket: TicketSplit | null;
   /** Which feed the cash came from: the processor snapshot, else the sheet. */
   source: "stripe" | "sheet" | null;
   syncedAt: Date | null;
@@ -37,37 +40,44 @@ export async function loadCashCatalog(
     snaps.find((x) => x.source === "stripe") ??
     snaps.find((x) => x.source === "sheet") ??
     null;
-  if (!paySource) return { source: null, syncedAt: null, catalog: null };
+  if (!paySource) return { source: null, syncedAt: null, catalog: null, ticket: null };
 
-  const [{ payments, deals }, aliases, rules, [fee], firstCalls] = await Promise.all([
-    cashRowsForClient(paySource.snapshot.syncId),
-    aliasMapForClient(clientId),
-    // Same fail-soft as the dashboard: a rules read that throws is no rules.
-    listTagRules(clientId).catch(() => []),
-    db
-      .select({
-        bps: clients.processorFeeBps,
-        flatCents: clients.processorFeeFlatCents,
-      })
-      .from(clients)
-      .where(eq(clients.id, clientId))
-      .limit(1),
-    db
-      .select({
-        email: sql<string>`lower(${bookings.inviteeEmail})`,
-        firstAt: sql<Date>`min(${bookings.startsAt})`,
-      })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.clientId, clientId),
-          ne(bookings.status, "canceled"),
-          isNotNull(bookings.inviteeEmail),
-          isNotNull(bookings.startsAt),
-        ),
-      )
-      .groupBy(sql`lower(${bookings.inviteeEmail})`),
-  ]);
+  const [{ payments, deals }, aliases, rules, [fee], firstCalls, [offer]] =
+    await Promise.all([
+      cashRowsForClient(paySource.snapshot.syncId),
+      aliasMapForClient(clientId),
+      // Same fail-soft as the dashboard: a rules read that throws is no rules.
+      listTagRules(clientId).catch(() => []),
+      db
+        .select({
+          bps: clients.processorFeeBps,
+          flatCents: clients.processorFeeFlatCents,
+        })
+        .from(clients)
+        .where(eq(clients.id, clientId))
+        .limit(1),
+      db
+        .select({
+          email: sql<string>`lower(${bookings.inviteeEmail})`,
+          firstAt: sql<Date>`min(${bookings.startsAt})`,
+        })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.clientId, clientId),
+            ne(bookings.status, "canceled"),
+            isNotNull(bookings.inviteeEmail),
+            isNotNull(bookings.startsAt),
+          ),
+        )
+        .groupBy(sql`lower(${bookings.inviteeEmail})`),
+      // The offer's own low-ticket line. Absent = no split is shown at all.
+      getDb()
+        .select({ lowTicketMaxCents: offerSettings.lowTicketMaxCents })
+        .from(offerSettings)
+        .where(eq(offerSettings.clientId, clientId))
+        .limit(1),
+    ]);
 
   // Keyed through the alias map, like the payer: someone who booked from one
   // inbox and paid from another still had a call before paying.
@@ -84,6 +94,19 @@ export async function loadCashCatalog(
   return {
     source: paySource.source === "stripe" ? "stripe" : "sheet",
     syncedAt: paySource.snapshot.syncedAt,
+    // Counted cash, split at the offer's line. The catalog itself stays
+    // undivided — this is a reading of it, not a change to it.
+    ticket: ticketSplit(
+      // The same window the catalog counts, so the split can never total to a
+      // different figure than the cash it is splitting.
+      payments
+        .filter(
+          (p) => p.occurredAt !== null && p.occurredAt >= from && p.occurredAt <= to,
+        )
+        // A row with no amount cannot be banded; it is not a $0 sale.
+        .filter((p): p is typeof p & { cashCents: number } => p.cashCents !== null),
+      offer?.lowTicketMaxCents ?? null,
+    ),
     catalog: cashCatalog({
       payments,
       rules,

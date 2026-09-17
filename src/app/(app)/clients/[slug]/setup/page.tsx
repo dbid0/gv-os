@@ -177,6 +177,7 @@ export default async function ClientSetupPage({
           eodAlertTime: offerRow?.eodAlertTime ?? null,
           bodAlertTime: offerRow?.bodAlertTime ?? "12:00",
           confettiThresholdCents: offerRow?.confettiThresholdCents ?? 500_000,
+          lowTicketMaxCents: offerRow?.lowTicketMaxCents ?? null,
           monthlyGoalCents,
           visibility: offerRow?.visibility ?? {},
         },

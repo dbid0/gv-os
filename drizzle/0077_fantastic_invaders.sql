@@ -1,0 +1,1 @@
+ALTER TABLE "app"."offer_settings" ADD COLUMN "low_ticket_max_cents" bigint;

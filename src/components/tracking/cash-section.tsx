@@ -108,6 +108,23 @@ export function CashSection({ data }: { data: CashCatalogData }) {
           sub={`${countOf(c.collectedCount)} payments`}
           tone="success"
         />
+        {/* Only when the offer has set its own line. An offer selling one
+            product has nothing to split, and a guessed line would read as a
+            real division of its cash. */}
+        {data.ticket && (
+          <>
+            <NumberTile
+              label="High ticket"
+              value={usdOf(data.ticket.high.cents)}
+              sub={`${countOf(data.ticket.high.count)} payments over ${usdOf(data.ticket.thresholdCents)}`}
+            />
+            <NumberTile
+              label="Low ticket"
+              value={usdOf(data.ticket.low.cents)}
+              sub={`${countOf(data.ticket.low.count)} payments up to ${usdOf(data.ticket.thresholdCents)}`}
+            />
+          </>
+        )}
         <NumberTile
           label="Revenue generated"
           value={usdOf(c.revenueGeneratedCents)}
