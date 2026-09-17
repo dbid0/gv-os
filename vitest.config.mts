@@ -342,6 +342,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The same book cut by client. A grouping slip here hides one
+        // offer's money inside another's column while both totals still look
+        // plausible, so every branch of the attribution stays covered.
+        "src/lib/accounting/client-book.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // One deal-type vocabulary. When this drifts, money groups under the
         // wrong heading and every per-type total is quietly wrong.
         "src/lib/accounting/deal-types.ts": {

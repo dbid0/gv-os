@@ -11,13 +11,19 @@ import { cn } from "@/lib/utils";
 /**
  * Accounting's two big lenses (Daniel's model): the AGENCY side — GV's own
  * book, where setup fees, processor fees, net-after-fees, payouts, and the
- * rev-share we EARN from clients all live — and the GROSS CLIENTS side, the
- * full client-layer revenue. The agency detail views hang off the agency tab.
+ * rev-share we EARN from clients all live — and the BY-CLIENT side, that same
+ * book grouped per offer. The agency detail views hang off the agency tab.
+ *
+ * The client tab used to point at the gross client ledger (what each offer
+ * collected from its own customers). That is a different question from the one
+ * the rest of Accounting answers, so it moved down a level and the tab now
+ * opens the book's own per-client cut, whose columns add back up to the
+ * totals on the agency tab.
  */
 
 const primary = [
   { label: "Agency", href: "/accounting", icon: Landmark },
-  { label: "Gross — clients", href: "/accounting/clients", icon: Building2 },
+  { label: "By client", href: "/accounting/clients", icon: Building2 },
 ];
 
 // Agency-side detail views (all GV's own book).
@@ -29,6 +35,9 @@ const detail = [
   { label: "Recovery", href: "/accounting/recovery" },
   { label: "Expenses", href: "/accounting/expenses" },
 ];
+
+// Client-side detail views, shown only on the client tab.
+const clientDetail = [{ label: "Gross ledger", href: "/accounting/clients/gross" }];
 
 export function AccountingTabs() {
   const pathname = usePathname();
@@ -76,10 +85,10 @@ export function AccountingTabs() {
         })}
       </div>
 
-      {/* Agency detail views — only relevant on the agency side. */}
-      {!onClients && (
+      {/* Each side lists only its own detail views. */}
+      {(onClients ? clientDetail : detail).length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {detail.map((d) => {
+          {(onClients ? clientDetail : detail).map((d) => {
             // Match sub-routes too (e.g. /accounting/revshare/statement keeps the
             // Rev-share chip lit), without over-matching a sibling.
             const active = pathname === d.href || pathname.startsWith(`${d.href}/`);

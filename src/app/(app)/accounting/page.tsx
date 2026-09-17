@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 
 const DRILL_DOWNS = [
   { label: "Transactions", href: "/accounting/transactions", icon: Receipt },
-  { label: "Client ledger", href: "/accounting/clients", icon: Receipt },
+  { label: "By client", href: "/accounting/clients", icon: Receipt },
   { label: "Rev share", href: "/accounting/revshare", icon: Wallet },
   { label: "Payouts", href: "/accounting/payouts", icon: Wallet },
   { label: "AR", href: "/accounting/ar", icon: Scale },
