@@ -11,6 +11,7 @@ import {
   bookings,
   clients,
   clientTrackingRows,
+  offerSettings,
   reps as repsTable,
 } from "@/db/schema/app";
 import { getClientReport, type ClientReport } from "@/lib/clients/report";
@@ -379,7 +380,20 @@ export async function loadOfferHome(
   const eocReports = mergeEocSources(sheetEoc, appEoc);
   const reportedEmails = reportedEmailsOf(eocReports ?? []);
 
-  // Funnel: the offer's lead-stitched stages, shaped to its offer model.
+  // Funnel: the offer's lead-stitched stages, shaped to its offer model, and
+  // the offer's own low-ticket line so the paid stage can be split at it. The
+  // same column the cash catalog splits on, read once per surface — there is
+  // one definition of the line and no price lives in code.
+  const lowTicketMaxCents = row
+    ? ((
+        await db
+          .select({ cents: offerSettings.lowTicketMaxCents })
+          .from(offerSettings)
+          .where(eq(offerSettings.clientId, row.id))
+          .limit(1)
+      )[0]?.cents ?? null)
+    : null;
+
   const funnelLeads = snapshot
     ? {
         leads: await leadsForClient(
@@ -388,6 +402,7 @@ export async function loadOfferHome(
           row ? await aliasMapForClient(row.id) : undefined,
         ),
         stageKeys: stagesForModel(offerModelOf(row?.offerModel ?? null)),
+        lowTicketMaxCents,
       }
     : null;
 

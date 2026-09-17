@@ -1,4 +1,5 @@
 import type { LeadSummary } from "@/lib/tracking/leads";
+import { ticketSplit, type TicketSplit } from "@/lib/tracking/ticket-split";
 
 /**
  * THIS OFFER'S FUNNEL, COUNTED IN PEOPLE.
@@ -56,6 +57,24 @@ export interface OfferFunnel {
    */
   skipped: number;
   totalLeads: number;
+  /**
+   * The paid stage split at the offer's low-ticket line, counted in BUYERS.
+   *
+   * An offer selling a $49 subscription beside a $5,000 program has two
+   * businesses inside one "Paid" bar, and undivided it reads as though
+   * hundreds of people bought the thing the sales team sells. The line is the
+   * offer's own (`ticketSplit`), so there is one definition of it across the
+   * app and no price is written into code.
+   *
+   * Null when the offer has not set a line: an offer that sells one thing has
+   * nothing to split, and a guessed line is worse than none because a wrong
+   * split still looks like an answer.
+   *
+   * Each buyer is banded on their TOTAL payments, so someone who bought the
+   * subscription and later the program counts once, as high ticket — which is
+   * what they are.
+   */
+  buyers: TicketSplit | null;
 }
 
 const STAGE_LABELS: Record<FunnelStageKey, string> = {
@@ -87,6 +106,8 @@ export function buildOfferFunnel(
    * business that does not work that way.
    */
   stageKeys: FunnelStageKey[] = ORDER,
+  /** The offer's low-ticket line. Unset = the paid stage is not split. */
+  lowTicketCents?: number | null,
 ): OfferFunnel {
   const reached = leads.map(stagesFor);
   const ORDER_FOR_OFFER = ORDER.filter((k) => stageKeys.includes(k));
@@ -144,6 +165,13 @@ export function buildOfferFunnel(
     ),
     skipped,
     totalLeads: leads.length,
+    // One entry per paying LEAD, not per payment, so `count` is buyers.
+    buyers: ticketSplit(
+      leads
+        .filter((l) => l.paymentsCents > 0)
+        .map((l) => ({ cashCents: l.paymentsCents })),
+      lowTicketCents,
+    ),
   };
 }
 
