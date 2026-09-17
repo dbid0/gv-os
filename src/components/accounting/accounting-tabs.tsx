@@ -34,6 +34,11 @@ export function AccountingTabs() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const onClients = pathname.startsWith("/accounting/clients");
+  // The book is the front page; it lists its own drill-downs underneath. This
+  // bar repeated them directly above, which is the "too much on here" Daniel
+  // was reading. It belongs on the sub-pages, where it is how you move between
+  // them.
+  if (pathname === "/accounting") return null;
 
   return (
     <div className="space-y-3">
