@@ -16,6 +16,7 @@ import {
 } from "@/components/shell/home-headline";
 import { RevenueOverTime } from "@/components/shell/revenue-over-time";
 import { SalesMetricsGrid } from "@/components/shell/sales-metrics-grid";
+import { PageHeader } from "@/components/shell/page-header";
 import { TeamsOverviewCard } from "@/components/shell/teams-overview-card";
 import { buildTeamsOverview } from "@/lib/teams-overview";
 import { shellUser } from "@/lib/auth/user";
@@ -235,6 +236,10 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
+      {/* Every other page names itself; this one did not, so the dashboard was
+          the only screen with no heading and no animated title. */}
+      <PageHeader title="The" highlight="dashboard." />
+
       <HomeHeadline
         variants={variants}
         initialMode={mode}
