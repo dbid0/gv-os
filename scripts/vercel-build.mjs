@@ -32,6 +32,10 @@ if (process.env.VERCEL_ENV === "production") {
   run("node", ["scripts/migration-status.mjs"]);
   run("npx", ["tsx", "src/db/migrate.ts"]);
   run("node", ["scripts/migration-status.mjs", "--require-none-pending"]);
+  // Seal a credential that was handed to this deploy through Vercel's secret
+  // store. A no-op unless CONNECT_SECRET is set, so it costs a deploy nothing
+  // the rest of the time. See scripts/connect-from-env.mts for why this exists.
+  run("npx", ["tsx", "scripts/connect-from-env.mts"]);
 } else {
   console.log(`vercel-build: ${process.env.VERCEL_ENV ?? "local"} — no migrations`);
 }
