@@ -18,10 +18,14 @@
  *   CONNECT_LABEL         what to call it
  *   CONNECT_CLIENT_SLUG   the offer it belongs to; omit for agency-wide
  *   CONNECT_SECRET        the API key
+ *   CONNECT_REPLACE       "1" to ROTATE an existing connection's key
  *
  * With CONNECT_SECRET unset this does nothing and exits 0, so it is safe to
  * leave in the build. Idempotent: an offer that already has this provider
- * connected is left exactly as it is.
+ * connected is left exactly as it is, UNLESS CONNECT_REPLACE is set — that is
+ * how a key gets rotated when the old one has stopped working. Replacing is
+ * opt-in because silently overwriting a working credential, on every deploy,
+ * would be a very quiet way to break a live integration.
  *
  * It talks to Postgres directly rather than through the app's db module: that
  * module is `server-only` and throws outside a Next render, and the sealing
@@ -36,6 +40,7 @@ const provider = process.env.CONNECT_PROVIDER?.trim();
 const secret = process.env.CONNECT_SECRET?.trim();
 const label = process.env.CONNECT_LABEL?.trim() || provider;
 const slug = process.env.CONNECT_CLIENT_SLUG?.trim();
+const replace = process.env.CONNECT_REPLACE?.trim() === "1";
 
 if (!secret || !provider) {
   console.log("connect-from-env: nothing to connect, skipping.");
@@ -87,7 +92,22 @@ try {
      limit 1
   `;
   if (already.length > 0) {
-    console.log("connect-from-env: already connected for that offer, leaving it.");
+    if (!replace) {
+      console.log("connect-from-env: already connected for that offer, leaving it.");
+      process.exit(0);
+    }
+    // Rotation: the credential changes, the connection does not. Keeping the
+    // same row means the offer's sync history and its client scope survive.
+    await sql`
+      update app.integrations
+         set secret_box  = ${seal(secret, credentialsKey)},
+             secret_hint = ${secretHint(secret)},
+             config      = ${sql.json({ method: "api_key" })},
+             status      = 'connected',
+             updated_at  = now()
+       where id = ${already[0].id}
+    `;
+    console.log("connect-from-env: existing connection re-keyed.");
     process.exit(0);
   }
 
