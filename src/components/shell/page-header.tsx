@@ -51,14 +51,14 @@ export function PageHeader({
           <div className="min-w-0 space-y-3">
             {status}
 
-            <h1 className="text-2xl font-bold tracking-tight text-balance">
+            {/* The gradient is on the WHOLE heading, not just the highlighted
+                word: the blue has to run across the entire headline, and a
+                sweep confined to the last two words reads as a glitch on the
+                end of the line rather than as motion through the title. */}
+            <h1 className="text-gradient-brand text-2xl font-bold tracking-tight text-balance">
               {title}
               {highlight && <> </>}
-              {highlight && (
-                <span className="text-gradient-brand whitespace-nowrap">
-                  {highlight}
-                </span>
-              )}
+              {highlight && <span className="whitespace-nowrap">{highlight}</span>}
             </h1>
 
             {description && (

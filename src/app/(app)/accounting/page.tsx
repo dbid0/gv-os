@@ -39,8 +39,19 @@ const DRILL_DOWNS = [
 
 export default async function AccountingPage() {
   const tz = await viewerTimeZone();
-  const summary = await agencyBook(dayKeyIn(new Date(), tz));
+  const { summary, syncedAt, refreshFailed } = await agencyBook(
+    dayKeyIn(new Date(), tz),
+  );
   const deals = summary.sections[0].rows.find((r) => r.key === "deals")?.allTime ?? 0;
+  const syncedLabel = syncedAt
+    ? syncedAt.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: tz,
+      })
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -55,6 +66,14 @@ export default async function AccountingPage() {
       />
 
       <AgencyBook summary={summary} />
+
+      <p className={refreshFailed ? "text-warning text-xs" : "text-faint text-xs"}>
+        {syncedLabel === null
+          ? "The finance sheet has not been read yet."
+          : refreshFailed
+            ? `Couldn't reach the finance sheet — showing it as of ${syncedLabel}.`
+            : `From the finance sheet, ${syncedLabel}.`}
+      </p>
 
       <div className="flex flex-wrap gap-2">
         {DRILL_DOWNS.map((d) => (

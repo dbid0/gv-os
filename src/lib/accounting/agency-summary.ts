@@ -1,39 +1,43 @@
 /**
  * THE AGENCY BOOK, as Daniel and Gus already read it.
  *
- * This is a replication, not a design: the Master Finance Sheet's summary block
- * is the shape the two of them actually run the agency off, so GV OS shows the
- * same rows in the same order with the same names. Three periods across, two
- * sections down. (Spec: global-ventures/gv-os/AGENCY-ACCOUNTING-SPEC.md.)
+ * A replication of the Master Finance Sheet's summary block — three periods
+ * across, two sections down, the sheet's own rows in the sheet's order.
+ * (Spec: global-ventures/gv-os/AGENCY-ACCOUNTING-SPEC.md.)
  *
- * It reads the figures the finance-sheet mirror already reconciled, so the
- * summary cannot drift from the book it mirrors.
+ * Every figure comes off the DEAL ROWS, exactly as the sheet's own summary
+ * formulas do, bucketed by each row's Date Closed:
  *
- * Two rules the sheet encodes that are easy to get wrong:
+ *   Revenue generated       Σ revenue
+ *   Cash collected (gross)  Σ cash
+ *   Processor fees paid     Σ fee
+ *   Net cash collected      Σ net
+ *   Outstanding AR          Σ AR                       (all time only)
+ *   Deals closed            row count
+ *   Daniel payout           Σ Daniel's share of net
+ *   Gus payout              Σ Gus's share of net
+ *   Unpaid payouts          Σ (Daniel + Gus) where Payout Status = "Not Yet"
+ *                                                      (all time only)
  *
- * - **AR and unpaid payouts are BALANCES, not flows.** The sheet leaves their
- *   monthly cells blank on purpose: "AR this month" is not a meaningful number,
- *   because the debt was booked whenever it was booked. They are all-time only,
- *   and a monthly figure would be invented.
+ * PARTNER SHARES ARE PER DEAL. The back catalogue runs 30/40/45/50, which is
+ * why all-time Daniel and Gus differ. The mirror computes each row's split
+ * with that row's own percentage, so the summary reads it off the row. An
+ * earlier version read a separate payouts table instead and the partner
+ * section came out wrong — that table is not what the sheet sums.
  *
- * - **A row can carry $0 revenue and real cash.** That is an installment paid
- *   against a contract booked on an earlier row. Revenue and cash are summed
- *   independently; pairing them per row would double-count the contract.
+ * AR and unpaid are BALANCES: the sheet leaves their monthly cells blank on
+ * purpose, and so does this.
+ *
+ * A row can carry $0 revenue and real cash — an installment against a contract
+ * booked on an earlier row. Revenue and cash are summed independently, as the
+ * sheet does, so the contract is never counted twice.
  *
  * Pure: no database, no clock (the caller passes today).
  */
 
-/**
- * One deal as the finance-sheet mirror RECONCILED it.
- *
- * The figures are read, not recomputed. The mirror already ran the sheet's
- * formula chain against this row and stored the result; recomputing here would
- * need the per-deal percentage and fee override, which the stored row does not
- * carry — so it would quietly answer with defaults and disagree with the
- * reconciliation the rest of the app trusts.
- */
+/** One deal row, with the figures the mirror reconciled for it. */
 export interface BookDeal {
-  /** yyyy-mm-dd. */
+  /** yyyy-mm-dd — the sheet's Date Closed, which is what it buckets on. */
   dateClosed: string;
   revenueCents: number;
   cashCents: number;
@@ -41,29 +45,12 @@ export interface BookDeal {
   netCents: number;
   /** Still owed on this deal's contract. */
   arCents: number;
+  /** This deal's share of net, at this deal's own percentage. */
+  danielCents: number;
+  gusCents: number;
+  /** As typed in the sheet: "Paid Out", "Pending", "Not Yet". */
+  payoutStatus: string;
 }
-
-/**
- * A partner's share of one month, as the payouts book recorded it.
- *
- * These are READ, never recomputed here. The per-deal split runs 30/40/45/50
- * across the back catalogue and is not stored on the transaction, so deriving
- * it from a default would quietly restate most of the book. The payouts table
- * holds what was actually apportioned.
- *
- * `partner` is data, not a constant: this module never names Daniel or Gus, so
- * a third partner needs no code change.
- */
-export interface PartnerPayoutRow {
-  /** yyyy-mm. */
-  month: string;
-  partner: string;
-  cents: number;
-  /** "paid" = out the door. Anything else counts as still owed. */
-  status: string;
-}
-
-export const PAID_STATUS = "paid";
 
 export type SummaryValue = number | null;
 
@@ -91,7 +78,8 @@ export interface AgencySummary {
   sections: SummarySection[];
 }
 
-const monthOf = (dateClosed: string) => dateClosed.slice(0, 7);
+/** The sheet's wording for a payout that has not gone out. */
+export const UNPAID_STATUS = "not yet";
 
 /** The yyyy-mm before this one, across a year boundary. */
 export function previousMonthKey(monthKey: string): string {
@@ -104,6 +92,8 @@ type Totals = {
   cashCents: number;
   feeCents: number;
   netCents: number;
+  danielCents: number;
+  gusCents: number;
   deals: number;
 };
 
@@ -112,25 +102,22 @@ const empty = (): Totals => ({
   cashCents: 0,
   feeCents: 0,
   netCents: 0,
+  danielCents: 0,
+  gusCents: 0,
   deals: 0,
 });
 
-function add(into: Totals, deal: BookDeal): Totals {
-  into.revenueCents += deal.revenueCents;
-  into.cashCents += deal.cashCents;
-  into.feeCents += deal.feeCents;
-  into.netCents += deal.netCents;
+function add(into: Totals, d: BookDeal): void {
+  into.revenueCents += d.revenueCents;
+  into.cashCents += d.cashCents;
+  into.feeCents += d.feeCents;
+  into.netCents += d.netCents;
+  into.danielCents += d.danielCents;
+  into.gusCents += d.gusCents;
   into.deals += 1;
-  return into;
 }
 
-export function agencySummary(
-  deals: BookDeal[],
-  /** The payouts book — what each partner was actually apportioned. */
-  partnerPayouts: PartnerPayoutRow[],
-  /** Today as yyyy-mm-dd, in the reader's zone — the caller owns the clock. */
-  todayKey: string,
-): AgencySummary {
+export function agencySummary(deals: BookDeal[], todayKey: string): AgencySummary {
   const thisMonthKey = todayKey.slice(0, 7);
   const lastMonthKey = previousMonthKey(thisMonthKey);
 
@@ -138,28 +125,20 @@ export function agencySummary(
   const now = empty();
   const prev = empty();
   let arCents = 0;
+  let unpaidCents = 0;
 
-  for (const deal of deals) {
-    add(all, deal);
-    const month = monthOf(deal.dateClosed);
-    if (month === thisMonthKey) add(now, deal);
-    else if (month === lastMonthKey) add(prev, deal);
+  for (const d of deals) {
+    add(all, d);
+    const month = d.dateClosed.slice(0, 7);
+    if (month === thisMonthKey) add(now, d);
+    else if (month === lastMonthKey) add(prev, d);
 
-    // A balance accumulates over the whole book, whatever month it was booked.
-    arCents += deal.arCents;
+    arCents += d.arCents;
+    // The sheet's casing and spacing are not reliable; the meaning is.
+    if (d.payoutStatus.trim().toLowerCase() === UNPAID_STATUS) {
+      unpaidCents += d.danielCents + d.gusCents;
+    }
   }
-
-  // One row per partner the book actually names, in a stable order.
-  const partners = [...new Set(partnerPayouts.map((p) => p.partner))].sort((a, b) =>
-    a.localeCompare(b),
-  );
-  const partnerTotal = (partner: string, month: string | null) =>
-    partnerPayouts
-      .filter((p) => p.partner === partner && (month === null || p.month === month))
-      .reduce((n, p) => n + p.cents, 0);
-  const unpaidCents = partnerPayouts
-    .filter((p) => p.status.trim().toLowerCase() !== PAID_STATUS)
-    .reduce((n, p) => n + p.cents, 0);
 
   const flow = (
     key: string,
@@ -204,15 +183,8 @@ export function agencySummary(
       {
         label: "Partner payouts",
         rows: [
-          ...partners.map((partner) => ({
-            key: `partner:${partner}`,
-            label: `${partner} payout`,
-            kind: "money" as const,
-            balanceOnly: false,
-            thisMonth: partnerTotal(partner, thisMonthKey),
-            lastMonth: partnerTotal(partner, lastMonthKey),
-            allTime: partnerTotal(partner, null),
-          })),
+          flow("daniel", "Daniel payout", (t) => t.danielCents),
+          flow("gus", "Gus payout", (t) => t.gusCents),
           balance("unpaid", "Unpaid payouts", unpaidCents),
         ],
       },
