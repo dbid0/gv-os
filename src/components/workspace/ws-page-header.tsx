@@ -28,7 +28,9 @@ export function WsPageHeader({
           <Icon className="text-brand size-4.5" />
         </span>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-gradient-brand text-xl font-semibold tracking-tight">
+            {title}
+          </h1>
           <p className="text-muted-foreground mt-0.5 max-w-3xl text-sm">{lede}</p>
         </div>
       </div>

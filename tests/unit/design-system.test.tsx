@@ -15,9 +15,16 @@ describe("PageHeader", () => {
     expect(heading).toHaveTextContent("The foundation is live.");
   });
 
-  it("keeps the highlight in the brand gradient, not a flat colour", () => {
+  it("runs the brand gradient across the WHOLE heading", () => {
+    // The gradient used to sit on the highlighted phrase alone, so the
+    // animated sweep was confined to the last two words and read as a glitch
+    // on the end of the line instead of motion through the title.
     render(<PageHeader title="Revenue" highlight="this month" />);
-    expect(screen.getByText("this month")).toHaveClass("text-gradient-brand");
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveClass("text-gradient-brand");
+    expect(heading).toHaveTextContent("Revenue this month");
+    // The highlight keeps only what it needs: not breaking mid-phrase.
+    expect(screen.getByText("this month")).toHaveClass("whitespace-nowrap");
   });
 
   it("renders description, status, and actions when given", () => {

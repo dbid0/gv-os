@@ -122,7 +122,9 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
       <header className="pt-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-gradient-brand text-3xl font-semibold tracking-tight">
+          Settings
+        </h1>
       </header>
 
       {/* Jump nav: one page, anchored sections — you can see everything this
