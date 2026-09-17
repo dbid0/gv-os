@@ -366,6 +366,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // The rep's call board. A slip here puts a cancelled call back on a
+        // rep's day, or drops a real one, and a rep works this list literally.
+        "src/lib/home/call-queue.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // One deal-type vocabulary. When this drifts, money groups under the
         // wrong heading and every per-type total is quietly wrong.
         "src/lib/accounting/deal-types.ts": {
