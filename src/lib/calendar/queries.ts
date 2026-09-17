@@ -1,9 +1,15 @@
 import "server-only";
 
-import { and, asc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { actionItems, clients, teamMembers } from "@/db/schema/app";
+import {
+  actionItems,
+  calendarFeedEvents,
+  clients,
+  integrations,
+  teamMembers,
+} from "@/db/schema/app";
 import { isSoftwareDevItem } from "@/lib/calendar/filter";
 
 /** An action item shaped for the calendar — its date, scope, and who owns it. */
@@ -85,5 +91,89 @@ export async function listCalendarItems(
     return shape(rows);
   } catch {
     return [];
+  }
+}
+
+/** One meeting from a connected calendar feed, ready to place on a day. */
+export interface CalendarFeedEvent {
+  id: string;
+  summary: string | null;
+  dayKey: string;
+  startsAt: Date;
+  endsAt: Date | null;
+  allDay: boolean;
+  clientName: string | null;
+  clientSlug: string | null;
+}
+
+/** Whether any calendar feed is connected, and when it last landed. */
+export interface CalendarFeedStatus {
+  connected: boolean;
+  lastSyncAt: Date | null;
+  lastSyncNote: string | null;
+}
+
+/**
+ * Mirrored calendar events inside [fromKey, toKey].
+ *
+ * Reads the mirror only — the pull is a sync job, so opening the calendar
+ * never waits on Google and a feed that is down leaves yesterday's events in
+ * place instead of emptying the month.
+ */
+export async function listCalendarFeedEvents(
+  fromKey: string,
+  toKey: string,
+): Promise<CalendarFeedEvent[]> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: calendarFeedEvents.id,
+        summary: calendarFeedEvents.summary,
+        dayKey: calendarFeedEvents.dayKey,
+        startsAt: calendarFeedEvents.startsAt,
+        endsAt: calendarFeedEvents.endsAt,
+        allDay: calendarFeedEvents.allDay,
+        clientName: clients.name,
+        clientSlug: clients.slug,
+      })
+      .from(calendarFeedEvents)
+      .leftJoin(clients, eq(calendarFeedEvents.clientId, clients.id))
+      .where(
+        and(
+          gte(calendarFeedEvents.dayKey, fromKey),
+          lte(calendarFeedEvents.dayKey, toKey),
+        ),
+      )
+      .orderBy(asc(calendarFeedEvents.startsAt));
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+/** The feed's own state, so the page can say where its events came from. */
+export async function calendarFeedStatus(): Promise<CalendarFeedStatus> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        lastSyncAt: integrations.lastSyncAt,
+        lastSyncNote: integrations.lastSyncNote,
+      })
+      .from(integrations)
+      .where(
+        and(eq(integrations.provider, "gcal"), eq(integrations.status, "connected")),
+      )
+      .orderBy(desc(integrations.lastSyncAt))
+      .limit(1);
+    const row = rows[0];
+    return {
+      connected: rows.length > 0,
+      lastSyncAt: row?.lastSyncAt ?? null,
+      lastSyncNote: row?.lastSyncNote ?? null,
+    };
+  } catch {
+    return { connected: false, lastSyncAt: null, lastSyncNote: null };
   }
 }

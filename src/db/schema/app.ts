@@ -979,6 +979,44 @@ export const sheetSyncRuns = appSchema.table("sheet_sync_runs", {
  * Phase A. Real client names and dollars live only in the database, never in
  * the repo.
  */
+/**
+ * Events mirrored from a connected calendar feed (Google's secret iCal URL).
+ *
+ * A MIRROR, not a source: every row belongs to the integration it came from
+ * and the whole set for that integration is replaced on each pull, because the
+ * feed is the truth and an event deleted in Google must disappear here too.
+ *
+ * `occurrenceKey` is uid + start: one instance of a repeating meeting. A UID
+ * alone would collapse a weekly standup into a single row.
+ */
+export const calendarFeedEvents = appSchema.table(
+  "calendar_feed_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id),
+    /** Scope inherited from the connection. Null = agency. */
+    clientId: uuid("client_id").references(() => clients.id),
+    occurrenceKey: text("occurrence_key").notNull(),
+    summary: text("summary"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    /** A whole day, not a time — shown without a clock. */
+    allDay: boolean("all_day").notNull().default(false),
+    /** The viewer-zone day this lands on, so the calendar grid can group. */
+    dayKey: text("day_key").notNull(),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_feed_events_key").on(
+      table.integrationId,
+      table.occurrenceKey,
+    ),
+    index("calendar_feed_events_day_idx").on(table.dayKey),
+  ],
+);
+
 export const sheetMirrorDeals = appSchema.table(
   "sheet_mirror_deals",
   {
