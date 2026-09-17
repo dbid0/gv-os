@@ -3,20 +3,38 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowUpRight, Mail, MailOpen, RefreshCw, Tag, Users } from "lucide-react";
+import {
+  ArrowUpRight,
+  MailOpen,
+  MousePointerClick,
+  RefreshCw,
+  UserMinus,
+} from "lucide-react";
 
 import { syncKitNow } from "@/app/(app)/email/actions";
 import { Button } from "@/components/ui/button";
-import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
-import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
-import { chartColorForClient, type DayBucket } from "@/lib/charts";
-import { emailOfferStats, type BroadcastStat } from "@/lib/email/offer-stats";
+import { emailOfferStats } from "@/lib/email/offer-stats";
 import type { KitOverviewRow } from "@/lib/email/queries";
-import { cn } from "@/lib/utils";
+import { recentSends, type SendRecord } from "@/lib/email/recent-sends";
 import { useViewerTimeZone } from "@/components/shell/time-zone";
+
+/**
+ * EMAIL, LED BY WHETHER IT LANDS.
+ *
+ * This page used to open on inventory — subscribers, sequence counts, tags, a
+ * list-growth chart and twelve sequence names per card. Daniel's read is that
+ * none of that is the question. So the account card now leads with its open
+ * and click rate and the sends behind them, and the whole of the inventory is
+ * one line at the bottom. The sequence list still exists — on the account's
+ * own page, which is what clicking through is for.
+ *
+ * Rates are pooled across sends and WEIGHTED BY RECIPIENTS (offer-stats), so a
+ * test send to a dozen people cannot move a headline. A rate nothing was
+ * measured over is a dash, never 0%.
+ */
 
 export function KitSyncButton() {
   const router = useRouter();
@@ -53,92 +71,82 @@ export function KitSyncButton() {
   );
 }
 
-const fmtWhen = (d: Date, timeZone: string) =>
-  new Date(d).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  });
+const fmtDay = (d: Date, timeZone: string) =>
+  new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone });
 
 /** A rate nothing was measured over is unknown — a dash, never 0%. */
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
 
+const count = (v: number | null) => (v === null ? "—" : v.toLocaleString("en-US"));
+
 export function EmailOverview({
   accounts,
-  growth = {},
   broadcasts = {},
 }: {
   accounts: KitOverviewRow[];
-  /** Subscriber count per CT day, keyed by connection — absent until capture began. */
-  growth?: Record<string, DayBucket[]>;
-  /** Each connection's sends. The page derives its rates from these. */
-  broadcasts?: Record<string, BroadcastStat[]>;
+  /** Each connection's sends. Every rate on this page derives from these. */
+  broadcasts?: Record<string, SendRecord[]>;
 }) {
   const timeZone = useViewerTimeZone();
-  // Cross-offer rollup — the clean overview that leads the section before the
-  // per-offer cards below (Daniel: "clean overview, then click per offer").
-  // Whether the email lands, not how much of it there is. Rates are pooled
-  // across every offer's sends — weighted by recipients, so a test send to a
-  // dozen people cannot move the agency headline.
-  const agency = emailOfferStats(
-    accounts.flatMap((a) => broadcasts[a.integrationId] ?? []),
-  );
-  const perOffer = [...accounts]
-    .sort((a, b) => (b.subscriberCount ?? 0) - (a.subscriberCount ?? 0))
-    .map((a) => ({
-      ...emailOfferStats(broadcasts[a.integrationId] ?? []),
-      name: a.clientName ?? "Agency",
-      subs: a.subscriberCount,
-      seqs: a.sequenceCount,
-    }));
+  const everySend = accounts.flatMap((a) => broadcasts[a.integrationId] ?? []);
+  const agency = emailOfferStats(everySend);
+
+  // Biggest sender first: the account whose email reaches the most people is
+  // the one whose open rate moves the agency's. Ordering by subscriber count
+  // ranked by list size — inventory again — and could put an account that has
+  // never sent at the top of a page about sending.
+  const cards = [...accounts]
+    .map((a) => {
+      const sends = broadcasts[a.integrationId] ?? [];
+      return {
+        account: a,
+        stats: emailOfferStats(sends),
+        sends: recentSends(sends, 4),
+      };
+    })
+    .sort((x, y) => y.stats.recipients - x.stats.recipients);
 
   return (
     <div className="space-y-6">
-      <section className="card-grad space-y-4 rounded-xl border p-5">
+      <section className="card-grad space-y-3 rounded-xl border p-5">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi
-            label="Accounts"
-            value={String(accounts.length)}
-            icon={Mail}
-            tone="brand"
-          />
           <Kpi
             label="Open rate"
             value={pct(agency.openRatePct)}
             icon={MailOpen}
-            tone="success"
+            tone="brand"
           />
-          <Kpi label="Click rate" value={pct(agency.clickRatePct)} />
           <Kpi
-            label="Emails sent"
-            value={agency.sent.toLocaleString("en-US")}
-            icon={Mail}
+            label="Click rate"
+            value={pct(agency.clickRatePct)}
+            icon={MousePointerClick}
+          />
+          <Kpi
+            label="Unsubscribed"
+            value={agency.unsubscribes.toLocaleString("en-US")}
+            icon={UserMinus}
+          />
+          <Kpi
+            label="Last send"
+            value={
+              agency.lastSentAt === null ? "—" : fmtDay(agency.lastSentAt, timeZone)
+            }
           />
         </div>
-        <div className="border-t pt-3">
-          <p className="text-faint mb-2 text-[11px] font-medium tracking-wider uppercase">
-            By offer
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {perOffer.map((o) => (
-              <span
-                key={o.name}
-                className="text-muted-foreground rounded-full border px-2.5 py-1 text-xs"
-              >
-                <span className="text-foreground font-medium">{o.name}</span> ·{" "}
-                <span className="text-foreground">{pct(o.openRatePct)}</span> open ·{" "}
-                {o.sent} sent · {o.subs === null ? "—" : o.subs.toLocaleString("en-US")}{" "}
-                subs
-              </span>
-            ))}
-          </div>
-        </div>
+        {/* Every rate names what it was measured over — house rule. */}
+        <p className="text-faint border-t pt-3 text-xs">
+          {agency.sent === 0
+            ? "No sends yet."
+            : `${agency.sent} sends · ${agency.measuredRecipients.toLocaleString("en-US")} recipients measured${
+                agency.untrackedSends > 0
+                  ? ` · ${agency.untrackedSends} with open tracking off`
+                  : ""
+              }`}
+        </p>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {accounts.map((a) => (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {cards.map(({ account: a, stats, sends }) => (
           <Link
             key={a.integrationId}
             href={`/email/${a.integrationId}`}
@@ -149,68 +157,36 @@ export function EmailOverview({
               aside={<ArrowUpRight className="text-faint size-4" />}
             >
               <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-sm font-medium">
-                    {a.accountName ?? a.label}
-                  </span>
-                  {a.plan && (
-                    <span className="text-faint rounded-full border px-1.5 text-[11px]">
-                      {a.plan}
-                    </span>
-                  )}
+                <div className="grid grid-cols-3 gap-3">
+                  <Kpi label="Open" value={pct(stats.openRatePct)} tone="brand" />
+                  <Kpi label="Click" value={pct(stats.clickRatePct)} />
+                  <Kpi label="Sends" value={String(stats.sent)} />
                 </div>
 
-                <div className="text-muted-foreground flex items-center gap-4 text-xs">
-                  {a.subscriberCount !== null && (
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="size-3.5" />{" "}
-                      <span className="numeric">
-                        {a.subscriberCount.toLocaleString("en-US")}
-                      </span>{" "}
-                      subscribers
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1">
-                    <Mail className="size-3.5" /> {a.sequenceCount} sequences
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Tag className="size-3.5" /> {a.tagCount} tags
-                  </span>
-                </div>
-
-                {(growth[a.integrationId]?.length ?? 0) >= 2 && (
-                  <div className="border-t pt-3">
-                    <p className="text-faint mb-2 text-[11px]">List growth — daily</p>
-                    <ColumnChart
-                      data={growth[a.integrationId] as DayBucket[]}
-                      color={chartColorForClient(a.clientName)}
-                    />
+                {sends.length > 0 && (
+                  <div className="space-y-1.5 border-t pt-3">
+                    {sends.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-baseline justify-between gap-3 text-sm"
+                      >
+                        <span className="truncate">
+                          {s.subject ?? <span className="text-faint">No subject</span>}
+                        </span>
+                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                          {fmtDay(s.sentAt, timeZone)} ·{" "}
+                          <span className="text-foreground font-medium">
+                            {pct(s.openRatePct)}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                <div className="space-y-1.5">
-                  {a.sequences.slice(0, 12).map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between gap-2 text-sm"
-                    >
-                      <span className={cn("truncate", s.hold && "text-faint")}>
-                        {s.name}
-                      </span>
-                      <StatusPill tone={s.hold ? "muted" : "live"}>
-                        {s.hold ? "Paused" : "Active"}
-                      </StatusPill>
-                    </div>
-                  ))}
-                  {a.sequences.length > 12 && (
-                    <p className="text-faint text-xs">
-                      +{a.sequences.length - 12} more
-                    </p>
-                  )}
-                </div>
-
                 <p className="text-faint border-t pt-2 text-[11px]">
-                  Last synced {fmtWhen(a.takenAt, timeZone)}
+                  {count(a.subscriberCount)} subscribers · {a.sequenceCount} sequences ·{" "}
+                  {a.tagCount} tags
                 </p>
               </div>
             </Panel>

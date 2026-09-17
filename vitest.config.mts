@@ -351,6 +351,21 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Email rates. Both modules decide when a rate is UNKNOWN rather
+        // than zero — an untracked send, an empty denominator — and a missed
+        // branch there prints "0% opened" about an email nobody measured.
+        "src/lib/email/offer-stats.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
+        "src/lib/email/recent-sends.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // One deal-type vocabulary. When this drifts, money groups under the
         // wrong heading and every per-type total is quietly wrong.
         "src/lib/accounting/deal-types.ts": {
