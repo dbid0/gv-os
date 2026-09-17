@@ -4,31 +4,19 @@ import { EmailOverview } from "@/components/email/email-overview";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
-import { latestPerDay, type DayBucket } from "@/lib/charts";
-import {
-  broadcastStatsByConnection,
-  kitGrowthByConnection,
-  latestKitOverview,
-} from "@/lib/email/queries";
+import { broadcastStatsByConnection, latestKitOverview } from "@/lib/email/queries";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
-import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Email - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
-  const tz = await viewerTimeZone();
   // Live when you're looking: kick a kit pull after the response.
   refreshProviderOnView("kit");
-  const [accounts, growthSamples, statsByConnection] = await Promise.all([
+  const [accounts, statsByConnection] = await Promise.all([
     latestKitOverview(),
-    kitGrowthByConnection(),
     broadcastStatsByConnection(),
   ]);
-  const growth: Record<string, DayBucket[]> = {};
-  for (const [integrationId, samples] of growthSamples) {
-    growth[integrationId] = latestPerDay(samples, tz);
-  }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -57,7 +45,6 @@ export default async function EmailPage() {
       ) : (
         <EmailOverview
           accounts={accounts}
-          growth={growth}
           broadcasts={Object.fromEntries(statsByConnection)}
         />
       )}
