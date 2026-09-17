@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarPlus, Coins, PhoneCall, Target } from "lucide-react";
 
 import { ActivityHeatmap } from "@/components/gamification/activity-heatmap";
+import { CallBoard } from "@/components/home/call-board";
 import { PbCountBadge } from "@/components/gamification/personal-bests";
 import { StreakBadge } from "@/components/gamification/streak-badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -86,7 +87,7 @@ function shortDate(d: Date, timeZone: string): string {
 
 export async function WingmanHome({ data }: { data: WingmanData }) {
   const tz = await viewerTimeZone();
-  const { rep, gamification, model, recentActivity, lastEods } = data;
+  const { rep, gamification, model, recentActivity, lastEods, calls } = data;
 
   if (!rep) {
     return (
@@ -121,6 +122,10 @@ export async function WingmanHome({ data }: { data: WingmanData }) {
         <StreakBadge days={model.streak.current} />
         <PbCountBadge count={model.pbCount} />
       </div>
+
+      {/* The board leads the page: it is the only part of this screen a rep
+          acts on. Everything below reports how the week has gone. */}
+      {calls && <CallBoard queue={calls} offerName={rep.teamName} />}
 
       <Panel
         title="Your quota pace"

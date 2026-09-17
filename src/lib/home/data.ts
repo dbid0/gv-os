@@ -3,7 +3,7 @@ import "server-only";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { activityReports, deals } from "@/db/schema/app";
+import { activityReports, bookings, deals, reps } from "@/db/schema/app";
 import { moneyEvents } from "@/db/schema/ledger";
 import { type RepGamification } from "@/lib/gamification/engine";
 import { getRepGamification } from "@/lib/gamification/queries";
@@ -32,7 +32,8 @@ import {
   type WingmanQuota,
   buildWingmanModel,
 } from "@/lib/home/wingman-model";
-import { dayKeyIn } from "@/lib/time/zone";
+import { callQueue, type CallQueue } from "@/lib/home/call-queue";
+import { dayEndIn, dayKeyIn, dayStartIn } from "@/lib/time/zone";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 /**
@@ -267,6 +268,62 @@ export interface WingmanData {
   model: WingmanModel;
   recentActivity: WingmanActivity[];
   lastEods: WingmanEod[];
+  /** The rep's offer's call board. Null when the rep is not scoped to an offer. */
+  calls: CallQueue | null;
+}
+
+/**
+ * The call board for the offer this rep works.
+ *
+ * Scoped by the REP'S OWN client_id, which is the only link between a rep and
+ * an offer that exists. Bookings carry no rep, so this is deliberately the
+ * offer's board rather than a personal assignment the data cannot support —
+ * and the UI names it that way.
+ *
+ * Null only when the rep row itself is gone — a rep always belongs to an
+ * offer. There is deliberately no agency-wide fallback: showing one offer's
+ * setter every booking GV has taken would be worse than showing them nothing.
+ */
+async function repCallQueue(
+  repId: string,
+  now: Date,
+  timeZone: string,
+): Promise<CallQueue | null> {
+  const db = getDb();
+  const rep = (
+    await db
+      .select({ clientId: reps.clientId })
+      .from(reps)
+      .where(eq(reps.id, repId))
+      .limit(1)
+  )[0];
+  if (!rep?.clientId) return null;
+
+  const dayKey = dayKeyIn(now, timeZone);
+  const dayStart = dayStartIn(dayKey, timeZone);
+  const dayEnd = dayEndIn(dayKey, timeZone);
+
+  // Everything from the start of today forward: the board never looks back, so
+  // yesterday's rows are not fetched only to be filtered away.
+  const rows = await db
+    .select({
+      id: bookings.id,
+      inviteeName: bookings.inviteeName,
+      eventType: bookings.eventType,
+      startsAt: bookings.startsAt,
+      status: bookings.status,
+    })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.clientId, rep.clientId),
+        // An undated booking has no start to compare, and it is counted, so it
+        // has to survive the filter.
+        sql`(${bookings.startsAt} is null or ${bookings.startsAt} >= ${dayStart})`,
+      ),
+    );
+
+  return callQueue(rows, now, dayStart, dayEnd);
 }
 
 /** The rep's most recent logged activity, newest first. */
@@ -317,13 +374,17 @@ export async function getWingmanData(
   repId: string,
   nowMs: number,
 ): Promise<WingmanData> {
-  const [gamView, allQuotas, rollup, recentActivity, lastEods] = await Promise.all([
-    getRepGamification(repId),
-    listQuotasWithPacing(nowMs),
-    getCommissionRollup(),
-    repRecentActivity(repId, 6),
-    repRecentEods(repId, 5),
-  ]);
+  const now = new Date(nowMs);
+  const timeZone = await viewerTimeZone();
+  const [gamView, allQuotas, rollup, recentActivity, lastEods, calls] =
+    await Promise.all([
+      getRepGamification(repId),
+      listQuotasWithPacing(nowMs),
+      getCommissionRollup(),
+      repRecentActivity(repId, 6),
+      repRecentEods(repId, 5),
+      repCallQueue(repId, now, timeZone),
+    ]);
 
   const myQuotas: WingmanQuota[] = allQuotas
     .filter((q) => q.scope === "rep" && q.repId === repId)
@@ -374,5 +435,6 @@ export async function getWingmanData(
     model,
     recentActivity,
     lastEods,
+    calls,
   };
 }
