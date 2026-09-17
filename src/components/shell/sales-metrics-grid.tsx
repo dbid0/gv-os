@@ -79,6 +79,13 @@ export function SalesMetricsGrid({
         <h2 className="text-faint text-[11px] font-medium tracking-wider uppercase">
           Sales metrics
         </h2>
+        {/* The window, named once for the whole wall. Without it the page
+            carried a third unlabelled "Cash collected" beneath two that each
+            named their own — the range picker's, the all-teams card's, and
+            this one — and nothing said they measured different things. */}
+        <span className="text-faint text-[11px] tracking-wide uppercase">
+          all time · deal cash
+        </span>
         <span className="bg-border h-px flex-1" />
         <div className="relative">
           <button

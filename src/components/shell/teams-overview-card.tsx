@@ -22,8 +22,12 @@ export async function TeamsOverviewCard({ overview }: { overview: TeamsOverview 
       <AmbientBackdrop bars={40} className="opacity-[0.08]" />
       <div className="relative mb-4 flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold tracking-tight">All teams overview</h2>
+        {/* "N teams" here and "Active teams: N" in the metrics wall counted
+            different things — teams with cash attributed vs active offers on
+            the roster — and read as a contradiction on one screen. Both are
+            real; this one now says which it is. */}
         <StatusPill tone={teams.length ? "live" : "muted"}>
-          {teams.length} {teams.length === 1 ? "team" : "teams"}
+          {teams.length} with cash
         </StatusPill>
         {/* The window, named once for all four figures. Without it the page
             carried two different numbers both labelled "Cash collected" — the
