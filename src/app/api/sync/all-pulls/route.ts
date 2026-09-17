@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth/server";
 import { pullCalendlyBookings, pullIclosedBookings } from "@/lib/bookings/capture";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
+import { pullCalendarFeeds } from "@/lib/calendar/feed-sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
 import { evaluateNotifications } from "@/lib/notifications/evaluate";
 import { pullStripeEvents } from "@/lib/payments/capture";
@@ -38,6 +39,7 @@ async function runAll() {
     ["pandadoc", pullPandaDocSigned],
     ["typeform", pullTypeformApplications],
     ["kit", pullKitSnapshots],
+    ["calendar", pullCalendarFeeds],
     ["stripe", pullStripeEvents],
   ] as const) {
     try {

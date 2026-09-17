@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
+
 import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
 
 import { Panel } from "@/components/ui/panel";
-import { StatusPill } from "@/components/ui/status";
 import { Kpi } from "@/components/ui/metric";
 import {
   Sheet,
@@ -15,7 +16,11 @@ import {
 } from "@/components/ui/sheet";
 import { monthGrid, monthLabel, stepMonth } from "@/lib/calendar/month-grid";
 import { groupByDay } from "@/lib/calendar/expand";
-import type { CalendarItem } from "@/lib/calendar/queries";
+import type {
+  CalendarFeedEvent,
+  CalendarFeedStatus,
+  CalendarItem,
+} from "@/lib/calendar/queries";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -35,6 +40,20 @@ function fullDate(dateKey: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+/**
+ * A meeting's clock time.
+ *
+ * The sync already resolved which DAY each event lands on, in the viewer's
+ * zone, so the grid never re-derives a day here — only the time shown inside
+ * the day it was already placed on.
+ */
+function timeOf(at: Date): string {
+  return new Date(at)
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    .replace(":00", "")
+    .replace(" ", "");
 }
 
 function ItemDot({ status }: { status: string }) {
@@ -76,10 +95,16 @@ function ClientTag({ name, accent }: { name: string; accent: string | null }) {
  */
 export function CalendarView({
   items,
+  events = [],
+  feed,
   todayKey,
   accents,
 }: {
   items: CalendarItem[];
+  /** Meetings mirrored from a connected calendar feed. */
+  events?: CalendarFeedEvent[];
+  /** Whether a feed is connected and when it last landed. */
+  feed?: CalendarFeedStatus;
   todayKey: string;
   /** slug → the client's accent colour, resolved server-side (DB roster). */
   accents: Record<string, string>;
@@ -104,13 +129,27 @@ export function CalendarView({
     [year, month, todayKey],
   );
 
+  // Events already carry the day they land on — the sync resolved it once, in
+  // the viewer's zone, so the grid never re-derives a day from a timestamp.
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarFeedEvent[]>();
+    for (const e of events) {
+      const list = map.get(e.dayKey) ?? [];
+      list.push(e);
+      map.set(e.dayKey, list);
+    }
+    return map;
+  }, [events]);
+
   const monthTasks = useMemo(() => [...tasksByDate.values()].flat(), [tasksByDate]);
   const done = monthTasks.filter((i) => i.status === "completed").length;
   const inProgress = monthTasks.filter((i) => i.status === "in_progress").length;
 
   const selectedTasks = selectedKey ? (tasksByDate.get(selectedKey) ?? []) : [];
+  const selectedEvents = selectedKey ? (eventsByDate.get(selectedKey) ?? []) : [];
 
-  const totalOnDay = (dateKey: string) => tasksByDate.get(dateKey)?.length ?? 0;
+  const totalOnDay = (dateKey: string) =>
+    (tasksByDate.get(dateKey)?.length ?? 0) + (eventsByDate.get(dateKey)?.length ?? 0);
 
   return (
     <div className="space-y-6">
@@ -173,9 +212,16 @@ export function CalendarView({
         <div className="grid grid-cols-7">
           {weeks.flat().map((cell) => {
             const dayTasks = tasksByDate.get(cell.dateKey) ?? [];
-            // Up to three task chips per cell; the rest roll into "+N more".
-            const shownTasks = dayTasks.slice(0, 3);
-            const overflow = dayTasks.length - shownTasks.length;
+            const dayEvents = eventsByDate.get(cell.dateKey) ?? [];
+            // Meetings first — a cell is read to answer "am I free", and an
+            // hour that is already committed answers it. Three chips in all;
+            // the rest roll into "+N more".
+            const shownEvents = dayEvents.slice(0, 2);
+            const shownTasks = dayTasks.slice(0, Math.max(0, 3 - shownEvents.length));
+            const overflow =
+              dayTasks.length -
+              shownTasks.length +
+              (dayEvents.length - shownEvents.length);
             return (
               <button
                 type="button"
@@ -185,7 +231,7 @@ export function CalendarView({
                   "hover:bg-secondary/40 focus-visible:ring-ring/50 min-h-24 border-r border-b p-1.5 text-left transition-colors outline-none last:border-r-0 focus-visible:ring-2 [&:nth-child(7n)]:border-r-0",
                   !cell.inMonth && "bg-secondary/30",
                 )}
-                aria-label={`${fullDate(cell.dateKey)}${dayTasks.length ? `, ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}` : ""}`}
+                aria-label={`${fullDate(cell.dateKey)}${dayEvents.length ? `, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}` : ""}${dayTasks.length ? `, ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}` : ""}`}
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span
@@ -200,6 +246,20 @@ export function CalendarView({
                   </span>
                 </div>
                 <div className="space-y-0.5">
+                  {shownEvents.map((e) => (
+                    <div
+                      key={e.id}
+                      title={`${e.allDay ? "All day" : timeOf(e.startsAt)} · ${e.summary ?? "No title"}`}
+                      className="border-brand/40 bg-brand-soft/40 flex items-center gap-1 rounded border-l-2 px-1 py-0.5 text-[11px]"
+                    >
+                      {!e.allDay && (
+                        <span className="text-faint shrink-0 tabular-nums">
+                          {timeOf(e.startsAt)}
+                        </span>
+                      )}
+                      <span className="truncate">{e.summary ?? "No title"}</span>
+                    </div>
+                  ))}
                   {shownTasks.map((it) => (
                     <div
                       key={it.id}
@@ -233,19 +293,25 @@ export function CalendarView({
         </Panel>
       )}
 
-      {/* Google Calendar sync is on the roadmap; until it's wired we never claim
-          events are synced. An honest marker, not a fake status. */}
-      <Panel
-        title="Google Calendar sync"
-        aside={<StatusPill tone="pending">Planned</StatusPill>}
-      >
-        <p className="text-muted-foreground text-sm">
-          Two-way sync with Google Calendar — so meetings and hours show up here
-          alongside the day&apos;s work — lands with the Google connection. Until then
-          the calendar reflects the GV OS task boards only; nothing is pushed to or
-          pulled from Google.
-        </p>
-      </Panel>
+      {/* The feed's real state. It used to say "Planned" — it is connected now,
+          so the panel reports what actually landed, or how to connect one. */}
+      <p className="text-faint text-xs">
+        {feed?.connected
+          ? `Google Calendar · ${
+              feed.lastSyncAt
+                ? `synced ${feed.lastSyncAt.toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}`
+                : "not pulled yet"
+            }${feed.lastSyncNote ? ` · ${feed.lastSyncNote}` : ""} · read-only`
+          : "No calendar connected."}{" "}
+        <Link href="/settings/integrations" className="text-brand hover:underline">
+          Integrations →
+        </Link>
+      </p>
 
       {/* Day detail — a light Sheet, no heavy motion, opened by clicking a day. */}
       <Sheet
@@ -257,14 +323,52 @@ export function CalendarView({
         <SheetContent className="gap-0">
           <SheetHeader className="border-b">
             <SheetTitle>{selectedKey ? fullDate(selectedKey) : ""}</SheetTitle>
+            {/* Names both kinds: with meetings above the tasks, a bare "1 task"
+                under three of them reads as a miscount. */}
             <SheetDescription>
               {selectedKey && totalOnDay(selectedKey) > 0
-                ? `${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}`
+                ? [
+                    selectedEvents.length > 0 &&
+                      `${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}`,
+                    selectedTasks.length > 0 &&
+                      `${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
                 : "Nothing on this day."}
             </SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-4">
+            {selectedEvents.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                  <CalendarDays className="size-3" /> Calendar
+                </h3>
+                {selectedEvents.map((e) => (
+                  <div
+                    key={e.id}
+                    className="border-brand/40 flex items-center gap-2 rounded-lg border border-l-2 px-3 py-2"
+                  >
+                    <span className="text-muted-foreground w-24 shrink-0 text-xs tabular-nums">
+                      {e.allDay
+                        ? "All day"
+                        : `${timeOf(e.startsAt)}${e.endsAt ? `–${timeOf(e.endsAt)}` : ""}`}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {e.summary ?? <span className="text-faint">No title</span>}
+                    </span>
+                    {e.clientName && (
+                      <ClientTag
+                        name={e.clientName}
+                        accent={e.clientSlug ? (accents[e.clientSlug] ?? null) : null}
+                      />
+                    )}
+                  </div>
+                ))}
+              </section>
+            )}
+
             {selectedTasks.length > 0 && (
               <section className="space-y-2">
                 <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">

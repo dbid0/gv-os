@@ -8,7 +8,7 @@
  * 8/20 brief).
  */
 
-export type CredentialKind = "api_key" | "token" | "mcp_url";
+export type CredentialKind = "api_key" | "token" | "mcp_url" | "ics_url";
 
 export interface Provider {
   value: string;
@@ -83,6 +83,18 @@ export const PROVIDERS: Provider[] = [
     group: "Bookings",
     credential: "token",
     feeds: "Calls booked per offer",
+  },
+  {
+    // Google publishes no API-key path: its Calendar API is OAuth, which means
+    // a Cloud project, a consent screen and refresh-token rotation for a
+    // read-only list of meetings. Every Google Calendar also exposes a private
+    // "secret address in iCal format" — one URL, pasted once here, revocable
+    // from Google's own settings. That is the credential this connects with.
+    value: "gcal",
+    label: "Google Calendar",
+    group: "Bookings",
+    credential: "ics_url",
+    feeds: "Events → the calendar",
   },
   {
     value: "typeform",
@@ -202,6 +214,7 @@ export const CREDENTIAL_LABELS: Record<CredentialKind, string> = {
   api_key: "API key",
   token: "Access token",
   mcp_url: "MCP endpoint URL",
+  ics_url: "Secret iCal address",
 };
 
 /**
