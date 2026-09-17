@@ -10,7 +10,10 @@ import { getClientReport } from "@/lib/clients/report";
 import { getViewerScope } from "@/lib/home/viewer-scope";
 import { scopeRowsToViewer } from "@/lib/home/visibility";
 import { loadRoster } from "@/lib/roster-server";
-import { listTeams } from "@/lib/sales/queries";
+import { listActivityReports, listDeals, listTeams } from "@/lib/sales/queries";
+import { salesTeamBoard } from "@/lib/sales/team-board";
+import { dayKeyIn } from "@/lib/time/zone";
+import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
 export const metadata = { title: "Teams - GV OS" };
 export const dynamic = "force-dynamic";
@@ -29,7 +32,13 @@ export default async function SalesPage() {
   const roster = await loadRoster();
   // Whose offers this viewer may read. A rep is granted /sales for their own
   // leaderboard and commissions, but must not see other clients' books.
-  const [scope, teamsAll] = await Promise.all([getViewerScope(), listTeams()]);
+  const [scope, teamsAll, deals, eodReports, tz] = await Promise.all([
+    getViewerScope(),
+    listTeams(),
+    listDeals(),
+    listActivityReports("eod"),
+    viewerTimeZone(),
+  ]);
   const teams = scopeRowsToViewer(teamsAll, (t) => t.id, scope.allowed);
 
   const cashByTeam = new Map<string, number>();
@@ -57,6 +66,29 @@ export default async function SalesPage() {
   );
 
   const ownerOf = (slug: string) => roster.find((c) => c.slug === slug)?.owner ?? null;
+  const todayKey = dayKeyIn(new Date(), tz);
+  const boardBySlug = new Map(
+    salesTeamBoard(
+      {
+        teams: teams.map((t) => ({
+          id: t.id,
+          slug: t.slug,
+          name: t.name,
+          monthlyTargetCents: t.monthlyTargetCents ?? null,
+        })),
+        cashBySlug: Object.fromEntries(cashByTeam),
+        deals: deals
+          .filter((d) => d.closedAt && d.clientId)
+          .map((d) => ({ clientId: d.clientId!, day: dayKeyIn(d.closedAt!, tz) })),
+        eods: eodReports.map((r) => ({
+          teamName: r.teamName,
+          day: dayKeyIn(new Date(r.reportDate), tz),
+        })),
+      },
+      todayKey,
+    ).map((row) => [row.slug, row] as const),
+  );
+
   const accentOf = (slug: string) =>
     roster.find((c) => c.slug === slug)?.accent ?? "var(--brand)";
   // Unknown (undefined) for a team that isn't a roster client: the avatar asks.
@@ -99,6 +131,7 @@ export default async function SalesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {teams.map((team) => {
+            const board = boardBySlug.get(team.slug);
             const goal = team.monthlyTargetCents ?? 0;
             const accent = accentOf(team.slug);
             const owner = ownerOf(team.slug);
@@ -126,8 +159,8 @@ export default async function SalesPage() {
                   <div className="bg-card p-4">
                     <p className="text-faint text-[11px]">Cash collected</p>
                     <p className="mt-0.5 text-lg font-semibold">
-                      {cashByTeam.has(team.slug) ? (
-                        <Money amount={cents(cashByTeam.get(team.slug) ?? 0)} />
+                      {board && board.cashCents !== null ? (
+                        <Money amount={cents(board.cashCents)} />
                       ) : (
                         "—"
                       )}
@@ -137,6 +170,18 @@ export default async function SalesPage() {
                     <p className="text-faint text-[11px]">Monthly goal</p>
                     <p className="mt-0.5 text-lg font-semibold">
                       {goal > 0 ? <Money amount={cents(goal)} /> : "—"}
+                    </p>
+                  </div>
+                  <div className="bg-card p-4">
+                    <p className="text-faint text-[11px]">Deals this month</p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                      {board?.dealsThisMonth ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-card p-4">
+                    <p className="text-faint text-[11px]">EODs today</p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                      {board?.eodsToday ?? 0}
                     </p>
                   </div>
                 </div>

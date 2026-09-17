@@ -64,8 +64,16 @@ describe("Sales in the nav", () => {
 describe("SalesTabs", () => {
   beforeEach(() => clearPersistedState());
 
-  it("offers the four RepVision views", () => {
+  it("stays out of the way on the Sales landing", () => {
+    // Teams first: landing on Sales used to mean reading ten tabs before
+    // seeing a single team. The tabs are things you open FROM a team.
     nav.pathname = "/sales";
+    const { container } = render(<SalesTabs />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("offers the views once you are inside one", () => {
+    nav.pathname = "/sales/deals";
     render(<SalesTabs />);
     ["Teams", "Deals", "Commissions", "Leaderboard"].forEach((label) => {
       expect(
