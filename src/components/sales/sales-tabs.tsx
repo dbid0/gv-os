@@ -45,6 +45,10 @@ const tabs = [
 export function SalesTabs({ role = "admin" }: { role?: Role }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
+  // Teams first. Landing on Sales used to mean reading ten tabs before seeing a
+  // single team; the tabs are things you open FROM a team, so they appear once
+  // you are inside one and stay out of the way on the way in.
+  if (pathname === "/sales") return null;
   // One source of truth: a tab shows exactly when the route would let the
   // role through — no second list to drift out of step with the guard.
   const visible = tabs.filter((t) => canAccessRoute(role, t.href));
