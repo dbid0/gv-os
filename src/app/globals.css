@@ -325,11 +325,47 @@
     color: transparent;
   }
 
+  /* The page title, with the blue running through it left to right.
+     The gradient is drawn wider than the text and slid across, so what moves
+     is the colour inside the letters — the text itself never shifts. One slow
+     pass; anything faster reads as a loading state rather than a heading. */
   .text-gradient-brand {
-    background: linear-gradient(100deg, #fff 10%, var(--brand) 90%);
+    background: linear-gradient(
+      100deg,
+      #fff 10%,
+      var(--brand) 35%,
+      #fff 55%,
+      var(--brand) 80%,
+      #fff 100%
+    );
+    background-size: 250% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    animation: brand-flow 7s linear infinite;
+  }
+
+  /* Ends where it started, so a single pass under reduced motion still lands
+     on a sensible white-to-blue rather than mid-sweep. */
+  @keyframes brand-flow {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -150% 0;
+    }
+  }
+
+  /* Anyone who asks for less motion gets the original static gradient, not a
+     frozen frame of the animated one. */
+  @media (prefers-reduced-motion: reduce) {
+    .text-gradient-brand {
+      background: linear-gradient(100deg, #fff 10%, var(--brand) 90%);
+      background-size: 100% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: none;
+    }
   }
 
   /* The blue as a surface: soft tinted panel with a brand hairline. Reserved

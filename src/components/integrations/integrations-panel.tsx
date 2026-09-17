@@ -32,6 +32,7 @@ import {
   type Provider,
   type SyncStatus,
 } from "@/lib/integrations/providers";
+import { providerLogo } from "@/lib/integrations/logos";
 import { isFailureNote, isStaleSync } from "@/lib/integrations/sync-note";
 import { cn } from "@/lib/utils";
 import { useViewerTimeZone } from "@/components/shell/time-zone";
@@ -83,6 +84,41 @@ type SortMode = "connected_first" | "az";
  * Two initials for multi-word names, else the first two letters — enough to keep
  * every tile distinct within its category.
  */
+function ProviderMark({
+  value,
+  label,
+  connected,
+}: {
+  value: string;
+  label: string;
+  connected?: boolean;
+}) {
+  const logo = providerLogo(value);
+  return (
+    <span
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold tracking-tight",
+        logo
+          ? "bg-white"
+          : connected
+            ? "border-brand/40 bg-brand-soft/40 text-brand"
+            : "bg-secondary text-muted-foreground",
+      )}
+      aria-hidden
+    >
+      {logo ? (
+        // A plain <img> on a white chip: the marks are vendored in their own
+        // brand colours, so they need a light surface to stay legible in dark
+        // mode, and the image optimizer has nothing to do with a static SVG.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} alt="" className="size-5 object-contain" />
+      ) : (
+        lettermark(label)
+      )}
+    </span>
+  );
+}
+
 function lettermark(label: string): string {
   const words = label.replace(/[()]/g, " ").trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
@@ -258,17 +294,11 @@ function ProviderCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold tracking-tight",
-            connected
-              ? "border-brand/40 bg-brand-soft/40 text-brand"
-              : "bg-secondary text-muted-foreground",
-          )}
-          aria-hidden
-        >
-          {lettermark(provider.label)}
-        </span>
+        <ProviderMark
+          value={provider.value}
+          label={provider.label}
+          connected={connected}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-foreground truncate text-sm font-medium">
