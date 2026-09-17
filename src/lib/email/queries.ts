@@ -4,6 +4,7 @@ import { desc, eq, isNotNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { clients, integrations, kitBroadcasts, kitSnapshots } from "@/db/schema/app";
+import type { BroadcastStat } from "@/lib/email/offer-stats";
 
 /** The latest snapshot per Kit connection, shaped for the Email section. */
 export interface KitOverviewRow {
@@ -103,4 +104,40 @@ export async function broadcastsForClient(clientId: string) {
     .from(kitBroadcasts)
     .where(eq(kitBroadcasts.clientId, clientId))
     .orderBy(desc(kitBroadcasts.sentAt));
+}
+
+/**
+ * Every account's broadcast stats, keyed by connection — the numbers the Email
+ * overview leads with. One read for the whole page rather than one per offer.
+ */
+export async function broadcastStatsByConnection(): Promise<
+  Map<string, BroadcastStat[]>
+> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      integrationId: kitBroadcasts.integrationId,
+      sentAt: kitBroadcasts.sentAt,
+      recipients: kitBroadcasts.recipients,
+      emailsOpened: kitBroadcasts.emailsOpened,
+      totalClicks: kitBroadcasts.totalClicks,
+      unsubscribes: kitBroadcasts.unsubscribes,
+      openTrackingDisabled: kitBroadcasts.openTrackingDisabled,
+    })
+    .from(kitBroadcasts);
+
+  const byConnection = new Map<string, BroadcastStat[]>();
+  for (const r of rows) {
+    const list = byConnection.get(r.integrationId) ?? [];
+    list.push({
+      sentAt: r.sentAt,
+      recipients: r.recipients,
+      emailsOpened: r.emailsOpened,
+      totalClicks: r.totalClicks,
+      unsubscribes: r.unsubscribes,
+      openTrackingDisabled: r.openTrackingDisabled,
+    });
+    byConnection.set(r.integrationId, list);
+  }
+  return byConnection;
 }
