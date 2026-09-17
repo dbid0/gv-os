@@ -3,27 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   agencySummary,
   previousMonthKey,
+  type BookDeal,
   type PartnerPayoutRow,
   type SummaryRow,
 } from "@/lib/accounting/agency-summary";
-import type { MirrorDealInput } from "@/lib/accounting/sheet-mirror";
-
-/** A deal row in the sheet's shape. Names are fictional — public repo. */
-const deal = (over: Partial<MirrorDealInput> = {}): MirrorDealInput => ({
-  rowIndex: 1,
-  timestamp: "2026-09-01",
+/** One reconciled deal, as the mirror stored it. */
+const deal = (over: Partial<BookDeal> = {}): BookDeal => ({
   dateClosed: "2026-09-01",
-  client: "North Studio",
-  dealType: "Setup",
-  offer: "Setup fee",
   revenueCents: 500_000,
   cashCents: 500_000,
-  method: "Wire",
-  pctEntered: 50,
-  feeOverrideCents: 0,
-  agreement: "Yes",
-  notes: "",
-  payoutStatus: "Paid Out",
+  feeCents: 0,
+  netCents: 500_000,
+  arCents: 0,
   ...over,
 });
 
@@ -105,19 +96,19 @@ describe("agencySummary", () => {
     expect(row(s, "cash").thisMonth).toBe(1_000_000);
   });
 
-  it("nets cash down by the fee the sheet charges", () => {
+  it("carries the fee and net the mirror reconciled", () => {
     const s = agencySummary(
-      [deal({ cashCents: 1_000_000, method: "Wire", feeOverrideCents: 12_345 })],
+      [deal({ cashCents: 1_000_000, feeCents: 12_345, netCents: 987_655 })],
       [],
       "2026-09-15",
     );
     expect(row(s, "fees").allTime).toBe(12_345);
-    expect(row(s, "net").allTime).toBe(1_000_000 - 12_345);
+    expect(row(s, "net").allTime).toBe(987_655);
   });
 
   it("treats AR as a balance, never a monthly flow", () => {
     const s = agencySummary(
-      [deal({ revenueCents: 1_000_000, cashCents: 300_000 })],
+      [deal({ revenueCents: 1_000_000, cashCents: 300_000, arCents: 700_000 })],
       [],
       "2026-09-15",
     );
@@ -179,7 +170,7 @@ describe("agencySummary — partner payouts", () => {
     // the transaction, so recomputing would restate most of the book. A 30/70
     // month must survive intact.
     const s = agencySummary(
-      [deal({ cashCents: 1_000_000, feeOverrideCents: 0 })],
+      [deal({ cashCents: 1_000_000 })],
       [
         pay({ partner: "Ada", cents: 300_000 }),
         pay({ partner: "Grace", cents: 700_000 }),

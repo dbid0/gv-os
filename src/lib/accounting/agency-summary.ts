@@ -6,8 +6,8 @@
  * same rows in the same order with the same names. Three periods across, two
  * sections down. (Spec: global-ventures/gv-os/AGENCY-ACCOUNTING-SPEC.md.)
  *
- * It is built on `sheet-mirror`'s `computeDeal`, which is already penny-exact
- * against that sheet, so the summary cannot drift from the book it mirrors.
+ * It reads the figures the finance-sheet mirror already reconciled, so the
+ * summary cannot drift from the book it mirrors.
  *
  * Two rules the sheet encodes that are easy to get wrong:
  *
@@ -23,7 +23,25 @@
  * Pure: no database, no clock (the caller passes today).
  */
 
-import { computeDeal, type MirrorDealInput } from "@/lib/accounting/sheet-mirror";
+/**
+ * One deal as the finance-sheet mirror RECONCILED it.
+ *
+ * The figures are read, not recomputed. The mirror already ran the sheet's
+ * formula chain against this row and stored the result; recomputing here would
+ * need the per-deal percentage and fee override, which the stored row does not
+ * carry — so it would quietly answer with defaults and disagree with the
+ * reconciliation the rest of the app trusts.
+ */
+export interface BookDeal {
+  /** yyyy-mm-dd. */
+  dateClosed: string;
+  revenueCents: number;
+  cashCents: number;
+  feeCents: number;
+  netCents: number;
+  /** Still owed on this deal's contract. */
+  arCents: number;
+}
 
 /**
  * A partner's share of one month, as the payouts book recorded it.
@@ -97,18 +115,17 @@ const empty = (): Totals => ({
   deals: 0,
 });
 
-function add(into: Totals, deal: MirrorDealInput): Totals {
-  const c = computeDeal(deal);
+function add(into: Totals, deal: BookDeal): Totals {
   into.revenueCents += deal.revenueCents;
   into.cashCents += deal.cashCents;
-  into.feeCents += c.feeCents;
-  into.netCents += c.netCents;
+  into.feeCents += deal.feeCents;
+  into.netCents += deal.netCents;
   into.deals += 1;
   return into;
 }
 
 export function agencySummary(
-  deals: MirrorDealInput[],
+  deals: BookDeal[],
   /** The payouts book — what each partner was actually apportioned. */
   partnerPayouts: PartnerPayoutRow[],
   /** Today as yyyy-mm-dd, in the reader's zone — the caller owns the clock. */
@@ -129,7 +146,7 @@ export function agencySummary(
     else if (month === lastMonthKey) add(prev, deal);
 
     // A balance accumulates over the whole book, whatever month it was booked.
-    arCents += computeDeal(deal).arCents;
+    arCents += deal.arCents;
   }
 
   // One row per partner the book actually names, in a stable order.
