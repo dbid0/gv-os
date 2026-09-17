@@ -161,7 +161,7 @@ export function WorkBoard({
     })),
     {
       id: "agency",
-      name: "Agency — no client",
+      name: "Agency",
       accent: "var(--brand)",
       items: byClient.get("agency") ?? [],
     },
@@ -299,102 +299,116 @@ export function WorkBoard({
         </Panel>
       ) : (
         <div className="space-y-4">
-          {groups.map((g) => (
-            <Panel
-              key={g.id}
-              title={g.name}
-              aside={
-                <span className="text-faint text-xs">
-                  {count(g.items, "not_started")} to do ·{" "}
-                  {count(g.items, "in_progress")} in progress ·{" "}
-                  {count(g.items, "completed")} done
-                </span>
-              }
-            >
-              {g.items.length === 0 ? (
-                <p className="text-faint py-3 text-center text-sm">No open work.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {g.items.map((it) => (
-                    <div
-                      key={it.id}
-                      className={cn(
-                        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border p-2.5",
-                        it.status === "completed" && "opacity-60",
-                      )}
-                    >
-                      <span
-                        aria-hidden
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ background: g.accent }}
-                      />
-                      <span
+          {groups
+            .filter((g) => g.items.length === 0)
+            .map((g) => (
+              <div
+                key={g.id}
+                className="text-muted-foreground flex items-center justify-between rounded-lg border border-dashed px-4 py-2 text-sm"
+              >
+                <span>{g.name}</span>
+                <span className="text-faint text-xs">Nothing open</span>
+              </div>
+            ))}
+          {groups
+            .filter((g) => g.items.length > 0)
+            .map((g) => (
+              <Panel
+                key={g.id}
+                title={g.name}
+                aside={
+                  <span className="text-faint text-xs">
+                    {count(g.items, "not_started")} to do ·{" "}
+                    {count(g.items, "in_progress")} in progress ·{" "}
+                    {count(g.items, "completed")} done
+                  </span>
+                }
+              >
+                {g.items.length === 0 ? (
+                  <p className="text-faint py-3 text-center text-sm">No open work.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {g.items.map((it) => (
+                      <div
+                        key={it.id}
                         className={cn(
-                          "min-w-0 flex-1 truncate text-sm",
-                          it.status === "completed" && "line-through",
+                          "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border p-2.5",
+                          it.status === "completed" && "opacity-60",
                         )}
                       >
-                        {it.title}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase",
-                          it.cadence === "daily" && "text-brand border-brand/30",
-                          it.cadence === "monthly" && "text-warning border-warning/30",
-                          it.cadence === "weekly" && "text-faint",
-                        )}
-                      >
-                        {it.cadence}
-                      </span>
-                      {it.dueDate && (
-                        <span className="text-faint text-[11px] whitespace-nowrap">
-                          due{" "}
-                          {new Date(`${it.dueDate}T12:00:00Z`).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                            },
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: g.accent }}
+                        />
+                        <span
+                          className={cn(
+                            "min-w-0 flex-1 truncate text-sm",
+                            it.status === "completed" && "line-through",
                           )}
+                        >
+                          {it.title}
                         </span>
-                      )}
-                      <select
-                        className={cn(selectClass, "h-8 w-32")}
-                        value={it.assigneeId ?? ""}
-                        disabled={pending}
-                        onChange={(e) =>
-                          act(() => assignWorkItem(it.id, e.target.value || null))
-                        }
-                        aria-label="Assign"
-                      >
-                        <option value="">Unassigned</option>
-                        {members.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                      <StatusButton
-                        status={it.status}
-                        disabled={pending}
-                        onCycle={() =>
-                          act(() =>
-                            setWorkItemStatus(
-                              it.id,
-                              STATUS_META[it.status]?.next ?? "in_progress",
-                            ),
-                          )
-                        }
-                      />
-                      {it.status === "completed" && (
-                        <Check className="text-success size-3.5 shrink-0" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          ))}
+                        <span
+                          className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase",
+                            it.cadence === "daily" && "text-brand border-brand/30",
+                            it.cadence === "monthly" &&
+                              "text-warning border-warning/30",
+                            it.cadence === "weekly" && "text-faint",
+                          )}
+                        >
+                          {it.cadence}
+                        </span>
+                        {it.dueDate && (
+                          <span className="text-faint text-[11px] whitespace-nowrap">
+                            due{" "}
+                            {new Date(`${it.dueDate}T12:00:00Z`).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
+                          </span>
+                        )}
+                        <select
+                          className={cn(selectClass, "h-8 w-32")}
+                          value={it.assigneeId ?? ""}
+                          disabled={pending}
+                          onChange={(e) =>
+                            act(() => assignWorkItem(it.id, e.target.value || null))
+                          }
+                          aria-label="Assign"
+                        >
+                          <option value="">Unassigned</option>
+                          {members.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                        <StatusButton
+                          status={it.status}
+                          disabled={pending}
+                          onCycle={() =>
+                            act(() =>
+                              setWorkItemStatus(
+                                it.id,
+                                STATUS_META[it.status]?.next ?? "in_progress",
+                              ),
+                            )
+                          }
+                        />
+                        {it.status === "completed" && (
+                          <Check className="text-success size-3.5 shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+            ))}
         </div>
       )}
     </div>

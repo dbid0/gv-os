@@ -39,7 +39,6 @@ export default async function TeamWorkPage() {
       <PageHeader
         title="Team"
         highlight="work."
-        description="Copywriting and delivery across every offer — who's on what, and how it's going per client. Status flows into the calendar; call notes drop tasks here automatically."
         actions={
           <Link
             href="/team"
