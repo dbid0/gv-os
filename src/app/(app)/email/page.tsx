@@ -5,7 +5,11 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { latestPerDay, type DayBucket } from "@/lib/charts";
-import { kitGrowthByConnection, latestKitOverview } from "@/lib/email/queries";
+import {
+  broadcastStatsByConnection,
+  kitGrowthByConnection,
+  latestKitOverview,
+} from "@/lib/email/queries";
 import { refreshProviderOnView } from "@/lib/integrations/refresh-on-view";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 
@@ -16,9 +20,10 @@ export default async function EmailPage() {
   const tz = await viewerTimeZone();
   // Live when you're looking: kick a kit pull after the response.
   refreshProviderOnView("kit");
-  const [accounts, growthSamples] = await Promise.all([
+  const [accounts, growthSamples, statsByConnection] = await Promise.all([
     latestKitOverview(),
     kitGrowthByConnection(),
+    broadcastStatsByConnection(),
   ]);
   const growth: Record<string, DayBucket[]> = {};
   for (const [integrationId, samples] of growthSamples) {
@@ -35,9 +40,6 @@ export default async function EmailPage() {
             <StatusPill tone={accounts.length ? "live" : "muted"}>
               {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
             </StatusPill>
-            {accounts.length > 0 && (
-              <span className="text-faint text-xs">Auto-syncing from Kit</span>
-            )}
           </span>
         }
       />
@@ -53,7 +55,11 @@ export default async function EmailPage() {
           </p>
         </Panel>
       ) : (
-        <EmailOverview accounts={accounts} growth={growth} />
+        <EmailOverview
+          accounts={accounts}
+          growth={growth}
+          broadcasts={Object.fromEntries(statsByConnection)}
+        />
       )}
     </div>
   );

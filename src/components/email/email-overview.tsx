@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowUpRight, Mail, RefreshCw, Tag, Users } from "lucide-react";
+import { ArrowUpRight, Mail, MailOpen, RefreshCw, Tag, Users } from "lucide-react";
 
 import { syncKitNow } from "@/app/(app)/email/actions";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import { chartColorForClient, type DayBucket } from "@/lib/charts";
+import { emailOfferStats, type BroadcastStat } from "@/lib/email/offer-stats";
 import type { KitOverviewRow } from "@/lib/email/queries";
 import { cn } from "@/lib/utils";
 import { useViewerTimeZone } from "@/components/shell/time-zone";
@@ -61,23 +62,33 @@ const fmtWhen = (d: Date, timeZone: string) =>
     timeZone,
   });
 
+/** A rate nothing was measured over is unknown — a dash, never 0%. */
+const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
+
 export function EmailOverview({
   accounts,
   growth = {},
+  broadcasts = {},
 }: {
   accounts: KitOverviewRow[];
   /** Subscriber count per CT day, keyed by connection — absent until capture began. */
   growth?: Record<string, DayBucket[]>;
+  /** Each connection's sends. The page derives its rates from these. */
+  broadcasts?: Record<string, BroadcastStat[]>;
 }) {
   const timeZone = useViewerTimeZone();
   // Cross-offer rollup — the clean overview that leads the section before the
   // per-offer cards below (Daniel: "clean overview, then click per offer").
-  const totalSubs = accounts.reduce((s, a) => s + (a.subscriberCount ?? 0), 0);
-  const totalSeqs = accounts.reduce((s, a) => s + a.sequenceCount, 0);
-  const totalTags = accounts.reduce((s, a) => s + a.tagCount, 0);
+  // Whether the email lands, not how much of it there is. Rates are pooled
+  // across every offer's sends — weighted by recipients, so a test send to a
+  // dozen people cannot move the agency headline.
+  const agency = emailOfferStats(
+    accounts.flatMap((a) => broadcasts[a.integrationId] ?? []),
+  );
   const perOffer = [...accounts]
     .sort((a, b) => (b.subscriberCount ?? 0) - (a.subscriberCount ?? 0))
     .map((a) => ({
+      ...emailOfferStats(broadcasts[a.integrationId] ?? []),
       name: a.clientName ?? "Agency",
       subs: a.subscriberCount,
       seqs: a.sequenceCount,
@@ -94,12 +105,17 @@ export function EmailOverview({
             tone="brand"
           />
           <Kpi
-            label="Subscribers"
-            value={totalSubs.toLocaleString("en-US")}
-            icon={Users}
+            label="Open rate"
+            value={pct(agency.openRatePct)}
+            icon={MailOpen}
+            tone="success"
           />
-          <Kpi label="Sequences" value={totalSeqs.toLocaleString("en-US")} />
-          <Kpi label="Tags" value={totalTags.toLocaleString("en-US")} icon={Tag} />
+          <Kpi label="Click rate" value={pct(agency.clickRatePct)} />
+          <Kpi
+            label="Emails sent"
+            value={agency.sent.toLocaleString("en-US")}
+            icon={Mail}
+          />
         </div>
         <div className="border-t pt-3">
           <p className="text-faint mb-2 text-[11px] font-medium tracking-wider uppercase">
@@ -112,8 +128,9 @@ export function EmailOverview({
                 className="text-muted-foreground rounded-full border px-2.5 py-1 text-xs"
               >
                 <span className="text-foreground font-medium">{o.name}</span> ·{" "}
-                {o.subs === null ? "—" : o.subs.toLocaleString("en-US")} subs · {o.seqs}{" "}
-                seq
+                <span className="text-foreground">{pct(o.openRatePct)}</span> open ·{" "}
+                {o.sent} sent · {o.subs === null ? "—" : o.subs.toLocaleString("en-US")}{" "}
+                subs
               </span>
             ))}
           </div>
