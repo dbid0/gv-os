@@ -20,11 +20,21 @@ async function requireUser() {
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** Blank or zero means the offer has no low-ticket line — stored as NULL so
+ *  nothing downstream reads it as "a line at $0". */
+const lowTicketCents = (v: number | ""): number | null =>
+  v === "" || v <= 0 ? null : Math.round(v * 100);
+
 const input = z.object({
   clientId: z.string().uuid(),
   eodAlertTime: z.string().regex(TIME).nullable(),
   bodAlertTime: z.string().regex(TIME).nullable(),
   confettiThresholdDollars: z.coerce.number().min(0).max(10_000_000),
+  /** "" = no low-ticket line for this offer. Never coerced to 0. */
+  lowTicketMaxDollars: z.union([
+    z.literal(""),
+    z.coerce.number().min(0).max(1_000_000),
+  ]),
   monthlyGoalDollars: z.coerce.number().min(0).max(10_000_000),
   visibility: z.object({
     cash: z.boolean(),
@@ -46,6 +56,7 @@ export async function saveOfferSettings(raw: unknown) {
       eodAlertTime: data.eodAlertTime,
       bodAlertTime: data.bodAlertTime,
       confettiThresholdCents: Math.round(data.confettiThresholdDollars * 100),
+      lowTicketMaxCents: lowTicketCents(data.lowTicketMaxDollars),
       visibility: data.visibility,
     })
     .onConflictDoUpdate({
@@ -54,6 +65,7 @@ export async function saveOfferSettings(raw: unknown) {
         eodAlertTime: data.eodAlertTime,
         bodAlertTime: data.bodAlertTime,
         confettiThresholdCents: Math.round(data.confettiThresholdDollars * 100),
+        lowTicketMaxCents: lowTicketCents(data.lowTicketMaxDollars),
         visibility: data.visibility,
         updatedAt: new Date(),
       },

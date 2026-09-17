@@ -13,6 +13,8 @@ export interface OfferSettingsRow {
   eodAlertTime: string | null;
   bodAlertTime: string | null;
   confettiThresholdCents: number;
+  /** Null = this offer has not set a low-ticket line. */
+  lowTicketMaxCents: number | null;
   monthlyGoalCents: number | null;
   visibility: Record<string, boolean>;
 }
@@ -31,6 +33,10 @@ function Row({ row }: { row: OfferSettingsRow }) {
   const [bod, setBod] = useState(row.bodAlertTime ?? "12:00");
   const [confetti, setConfetti] = useState(
     String(Math.round(row.confettiThresholdCents / 100)),
+  );
+  // Blank means "no line", which is different from $0 and must survive a save.
+  const [lowTicket, setLowTicket] = useState(
+    row.lowTicketMaxCents ? String(Math.round(row.lowTicketMaxCents / 100)) : "",
   );
   const [goal, setGoal] = useState(
     row.monthlyGoalCents ? String(Math.round(row.monthlyGoalCents / 100)) : "",
@@ -53,6 +59,7 @@ function Row({ row }: { row: OfferSettingsRow }) {
               eodAlertTime: eod || null,
               bodAlertTime: bod || null,
               confettiThresholdDollars: confetti,
+              lowTicketMaxDollars: lowTicket,
               monthlyGoalDollars: goal || 0,
               visibility: {
                 cash: vis.cash ?? false,
@@ -96,6 +103,16 @@ function Row({ row }: { row: OfferSettingsRow }) {
           value={confetti}
           onChange={(e) => setConfetti(e.target.value)}
           inputMode="numeric"
+          className="h-8 w-28 text-xs"
+        />
+      </label>
+      <label className="text-faint flex flex-col gap-1 text-[11px]">
+        Low ticket up to ($)
+        <Input
+          value={lowTicket}
+          onChange={(e) => setLowTicket(e.target.value)}
+          inputMode="numeric"
+          placeholder="none"
           className="h-8 w-28 text-xs"
         />
       </label>

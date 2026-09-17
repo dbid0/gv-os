@@ -1411,6 +1411,13 @@ export const offerSettings = appSchema.table(
     confettiThresholdCents: bigint("confetti_threshold_cents", { mode: "number" })
       .notNull()
       .default(500_000),
+    /**
+     * Where this offer's low ticket ends, in cents. Payments at or below it
+     * are the subscription/entry product; above it is what the sales team
+     * sells. NULL = the offer has not set a line, and no surface shows a
+     * split — a guessed one still looks like an answer.
+     */
+    lowTicketMaxCents: bigint("low_ticket_max_cents", { mode: "number" }),
     /** Client-portal visibility toggles (Phase 6 reads these). */
     visibility: jsonb("visibility")
       .$type<Record<string, boolean>>()

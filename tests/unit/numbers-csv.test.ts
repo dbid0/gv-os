@@ -53,6 +53,7 @@ function fullNumbers(): OfferNumbers {
     calls: callScoreboard(log, ALL, TZ),
     cash: {
       source: "stripe",
+      ticket: null,
       syncedAt: null,
       catalog: cashCatalog({
         payments: [
@@ -134,7 +135,7 @@ function bareNumbers(over: Partial<OfferNumbers> = {}): OfferNumbers {
     personOptions: { closers: [], setters: [] },
     totalBookings: 0,
     calls: callScoreboard([], ALL, TZ),
-    cash: { source: null, syncedAt: null, catalog: null },
+    cash: { source: null, syncedAt: null, ticket: null, catalog: null },
     applications: {
       numbers: {
         source: null,
@@ -236,7 +237,12 @@ describe("numbersCsvRows", () => {
   it("leaves an unknown blank — never 0, never a dash", () => {
     const rows = numbersCsvRows(
       bareNumbers({
-        cash: { source: "sheet", syncedAt: null, catalog: sheetCatalog() },
+        cash: {
+          source: "sheet",
+          syncedAt: null,
+          ticket: null,
+          catalog: sheetCatalog(),
+        },
       }),
     );
     // No payers, so there is no average order to state.
@@ -304,7 +310,12 @@ describe("numbersCsvRows", () => {
   it("breaks cash down by tag, day and hour, and keeps date-only cash out of the clock", () => {
     const rows = numbersCsvRows(
       bareNumbers({
-        cash: { source: "sheet", syncedAt: null, catalog: sheetCatalog() },
+        cash: {
+          source: "sheet",
+          syncedAt: null,
+          ticket: null,
+          catalog: sheetCatalog(),
+        },
       }),
     );
     expect(find(rows, "Cash", "Cash collected").over).toBe("sheet payment log");
