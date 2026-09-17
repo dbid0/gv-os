@@ -180,3 +180,80 @@ describe("the two motions inside Paid", () => {
     expect(f.paidWithoutDeal).toBe(0);
   });
 });
+
+describe("buildOfferFunnel — the two tickets", () => {
+  const LINE = 4_900;
+
+  it("splits buyers at the offer's own line, inclusive of it", () => {
+    // "Low ticket is anything up to $49" is how a human states it.
+    const f = buildOfferFunnel(
+      [
+        lead({ paymentsCents: 4_900 }),
+        lead({ paymentsCents: 100 }),
+        lead({ paymentsCents: 4_901 }),
+        lead({ paymentsCents: 500_000 }),
+      ],
+      undefined,
+      LINE,
+    );
+    expect(f.buyers).toMatchObject({
+      low: { count: 2, cents: 5_000 },
+      high: { count: 2, cents: 504_901 },
+      thresholdCents: LINE,
+    });
+  });
+
+  it("shows no split at all when the offer has not set a line", () => {
+    // A guessed line is worse than none: a wrong split still looks like an answer.
+    for (const line of [undefined, null, 0]) {
+      const f = buildOfferFunnel([lead({ paymentsCents: 4_900 })], undefined, line);
+      expect(f.buyers).toBeNull();
+    }
+  });
+
+  it("bands a buyer on their TOTAL, so an upgrade counts once as high ticket", () => {
+    // Someone who took the $49 and later the program is a high-ticket buyer.
+    const f = buildOfferFunnel(
+      [lead({ paymentsCents: 4_900 + 500_000 })],
+      undefined,
+      LINE,
+    );
+    expect(f.buyers).toMatchObject({ low: { count: 0 }, high: { count: 1 } });
+  });
+
+  it("counts only people who paid — the split is of the paid stage", () => {
+    const f = buildOfferFunnel(
+      [lead({ applied: true }), lead({ paymentsCents: 100 })],
+      undefined,
+      LINE,
+    );
+    expect(f.buyers?.low.count).toBe(1);
+    expect(f.buyers?.high.count).toBe(0);
+  });
+
+  it("leaves a refunded-to-zero buyer out of both bands", () => {
+    const f = buildOfferFunnel([lead({ paymentsCents: 0 })], undefined, LINE);
+    expect(f.buyers).toMatchObject({ low: { count: 0 }, high: { count: 0 } });
+  });
+
+  it("splits the paid stage exactly — the bands total it", () => {
+    const leads = [
+      lead({ paymentsCents: 4_900 }),
+      lead({ paymentsCents: 200_000 }),
+      lead({ paymentsCents: 1 }),
+    ];
+    const f = buildOfferFunnel(leads, undefined, LINE);
+    const paid = f.stages.find((s) => s.key === "paid")!.leads;
+    expect(f.buyers!.low.count + f.buyers!.high.count).toBe(paid);
+    expect(f.buyers!.low.cents + f.buyers!.high.cents).toBe(204_901);
+  });
+});
+
+describe("the ticket bands and the no-line note", () => {
+  it("still reports a split of zero buyers in the model", () => {
+    // The MODEL always answers; hiding empty bands is the panel's decision,
+    // so a caller that wants the zeros can still have them.
+    const f = buildOfferFunnel([lead({ applied: true })], undefined, 4_900);
+    expect(f.buyers).toMatchObject({ low: { count: 0 }, high: { count: 0 } });
+  });
+});

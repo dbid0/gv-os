@@ -87,7 +87,12 @@ export type OfferMetricsInputs = {
   /** Speed-to-lead, already computed by its own engine. */
   stl: OfferStl;
   /** Lead-stitched funnel inputs; absent = the surface didn't load leads. */
-  funnelLeads?: { leads: LeadSummary[]; stageKeys: FunnelStageKey[] } | null;
+  funnelLeads?: {
+    leads: LeadSummary[];
+    stageKeys: FunnelStageKey[];
+    /** The offer's low-ticket line; absent = the paid stage is not split. */
+    lowTicketMaxCents?: number | null;
+  } | null;
   /**
    * Windowed payments for the cash mix; absent = no processor/sheet feed. When
    * present, this feed ALSO owns the window money (headline + revenue): the
@@ -203,7 +208,11 @@ export function assembleOfferMetrics(
     paidMix: inputs.dealRows.length > 0 ? closesPaid(inputs.dealRows) : null,
     stuck,
     funnel: inputs.funnelLeads
-      ? buildOfferFunnel(inputs.funnelLeads.leads, inputs.funnelLeads.stageKeys)
+      ? buildOfferFunnel(
+          inputs.funnelLeads.leads,
+          inputs.funnelLeads.stageKeys,
+          inputs.funnelLeads.lowTicketMaxCents,
+        )
       : null,
     cashMix: mix,
     money: buildWindowMoney(mix, inputs.mixWindow, inputs.rangeMoney),
