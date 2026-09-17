@@ -34,6 +34,14 @@ export const metadata = { title: "Settings - GV OS" };
 export const dynamic = "force-dynamic";
 
 /** The reference product's setup tile: icon box, name, two lines, an arrow. */
+const SECTIONS = [
+  { id: "setup", label: "Account setup" },
+  { id: "goals", label: "Goals & targets" },
+  { id: "alerts", label: "Alerts & celebrations" },
+  { id: "rates", label: "Commission rates" },
+  { id: "discord", label: "Agency Discord" },
+];
+
 const SETUP_TILES = [
   {
     href: "/clients",
@@ -114,16 +122,26 @@ export default async function SettingsPage() {
     <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
       <header className="pt-2">
         <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">
-          Manage the agency&apos;s settings and preferences.
-        </p>
       </header>
 
-      <SettingsSection
-        icon={Boxes}
-        title="Account setup"
-        description="How this workspace is put together — set these up once, then get on with the work."
+      {/* Jump nav: one page, anchored sections — you can see everything this
+          workspace has without clicking through to find out. */}
+      <nav
+        aria-label="Settings sections"
+        className="flex flex-wrap gap-2 border-b pb-4"
       >
+        {SECTIONS.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className="bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
+
+      <SettingsSection id="setup" icon={Boxes} title="Account setup">
         <div className="grid gap-3 sm:grid-cols-2">
           {SETUP_TILES.map((t) => (
             <Link
@@ -147,34 +165,33 @@ export default async function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection
+        id="goals"
         icon={Target}
         title="Goals & targets"
-        description="Display currency and the monthly goal each dashboard measures against. Goals are targets — never money in the ledger."
+        description="A goal is a target, never money in the ledger."
       >
         <SettingsForm settings={settings} />
       </SettingsSection>
 
       <SettingsSection
+        id="alerts"
         icon={BellRing}
-        title="Per-offer alerts & celebrations"
-        description="EOD/BOD alert times feed the notification engine (misses fire once their report sources connect). The confetti threshold decides which closes get the full celebration — every close still gets the slide-in."
+        title="Alerts & celebrations"
+        description="Misses only fire once that offer's report source is connected."
       >
         <OfferSettingsPanel rows={rows} />
       </SettingsSection>
 
       <SettingsSection
+        id="rates"
         icon={Percent}
         title="Commission rates"
-        description="Setter, closer, and DM-setter rates per offer. Empty means unset — commissions derive unknown, never zero."
+        description="Empty means unset — commissions derive unknown, never zero."
       >
         <CommissionRatesPanel rows={ratesRows} />
       </SettingsSection>
 
-      <SettingsSection
-        icon={MessagesSquare}
-        title="Agency Discord"
-        description="Push GV OS updates into the agency Discord HQ."
-      >
+      <SettingsSection id="discord" icon={MessagesSquare} title="Agency Discord">
         <AgencyDiscordCard />
       </SettingsSection>
     </div>
