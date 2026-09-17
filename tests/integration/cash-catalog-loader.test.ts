@@ -106,6 +106,13 @@ describe.skipIf(!databaseUrl)("loadCashCatalog", () => {
   it("has no catalog without a payment feed", async () => {
     const clientId = await makeClient("empty", null);
     const data = await loadCashCatalog(clientId, ALL, "2026-09-30", TZ);
-    expect(data).toEqual({ source: null, syncedAt: null, catalog: null });
+    // No feed means no split either — an offer with no payments must not
+    // report two empty bands as if it had a low-ticket line.
+    expect(data).toEqual({
+      source: null,
+      syncedAt: null,
+      catalog: null,
+      ticket: null,
+    });
   });
 });
