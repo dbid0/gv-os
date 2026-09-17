@@ -8,7 +8,7 @@ import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
 import { parseIcs } from "@/lib/calendar/ics";
 import { failureNote } from "@/lib/integrations/sync-note";
-import { dayKeyIn } from "@/lib/time/zone";
+import { BUSINESS_TIME_ZONE, dayKeyIn } from "@/lib/time/zone";
 
 /**
  * Pull every connected calendar feed into the mirror.
@@ -54,7 +54,7 @@ function windowAround(now: Date): { from: Date; to: Date } {
 
 export async function pullCalendarFeeds(
   now: Date = new Date(),
-  timeZone = "America/Chicago",
+  timeZone = BUSINESS_TIME_ZONE,
 ): Promise<FeedResult[]> {
   const key = serverEnv().CREDENTIALS_KEY;
   if (!key) throw new Error("CREDENTIALS_KEY is not set — cannot open the vault.");
