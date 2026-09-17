@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
  * reads like a page of titled paragraphs you can operate.
  */
 export function SettingsSection({
+  id,
   icon: Icon,
   title,
   description,
@@ -18,6 +19,8 @@ export function SettingsSection({
   children,
   className,
 }: {
+  /** Anchor target, so the side nav can jump straight to this section. */
+  id?: string;
   icon: LucideIcon;
   title: string;
   description?: string;
@@ -27,7 +30,14 @@ export function SettingsSection({
   className?: string;
 }) {
   return (
-    <section className={cn("card-grad elev-card rounded-2xl border p-6", className)}>
+    <section
+      id={id}
+      // Clear the sticky topbar when jumped to, or the heading lands under it.
+      className={cn(
+        "card-grad elev-card scroll-mt-20 rounded-2xl border p-6",
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <Icon className="text-muted-foreground size-5 shrink-0" aria-hidden />
