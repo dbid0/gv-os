@@ -62,10 +62,18 @@ try {
       select id, name from app.clients where slug = ${slug} limit 1
     `;
     if (rows.length === 0) {
-      // Fail loudly: sealing a key against the WRONG offer is worse than not
-      // sealing it, and quietly falling back to agency-wide would do that.
-      console.error(`connect-from-env: no client with slug "${slug}" — refusing.`);
-      process.exit(1);
+      // Loud, but NOT fatal. Sealing a key against the wrong offer is worse
+      // than not sealing it, so this never guesses — but an optional connect
+      // step must not take a production deploy down with it. The available
+      // slugs are printed so the mistake is one line away from being fixed.
+      const all = await sql<{ slug: string }[]>`
+        select slug from app.clients where status = 'active' order by slug
+      `;
+      console.error(
+        `connect-from-env: no active client with slug "${slug}" — skipping. ` +
+          `Available: ${all.map((r) => r.slug).join(", ") || "(none)"}`,
+      );
+      process.exit(0);
     }
     clientId = rows[0].id;
     console.log(`connect-from-env: ${provider} → ${rows[0].name}`);
