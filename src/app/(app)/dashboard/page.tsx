@@ -50,6 +50,7 @@ import {
 import { listTransactions } from "@/lib/transactions/queries";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
 import { dayKeyIn } from "@/lib/time/zone";
+import { refreshProvidersOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = {
   title: "Dashboard - GV OS",
@@ -72,6 +73,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Live when you are looking: stale feeds pull after the response goes.
+  refreshProvidersOnView(["stripe", "iclosed", "calendly", "close"]);
   const tz = await viewerTimeZone();
   const roster = await loadRoster();
   const params = await searchParams;

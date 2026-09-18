@@ -9,6 +9,7 @@ import {
 import { loadRoster } from "@/lib/roster-server";
 import { dayKeyIn } from "@/lib/time/zone";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { refreshProvidersOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = { title: "Calendar - GV OS" };
 export const dynamic = "force-dynamic";
@@ -16,6 +17,8 @@ export const dynamic = "force-dynamic";
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export default async function CalendarPage() {
+  // Live when you are looking: stale feeds pull after the response goes.
+  refreshProvidersOnView(["iclosed", "calendly", "gcal"]);
   const tz = await viewerTimeZone();
   const todayKey = dayKeyIn(new Date(), tz);
   const [ty, tm] = todayKey.split("-").map(Number);

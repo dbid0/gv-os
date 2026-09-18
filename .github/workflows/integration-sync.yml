@@ -30,12 +30,10 @@ name: integration-sync
 # continue-on-error keeps that red step from failing the workflow (no email);
 # in-app staleness badges + the morning brief remain the real monitor.
 
+# SUPERSEDED as the schedule by sync-loop.yml, which pulls continuously
+# instead of every 30 minutes. Kept as a manual one-shot: dispatch it to force a
+# full pull (transcripts included) right now.
 on:
-  schedule:
-    - cron: "*/30 * * * *"
-    # The 11:00 UTC firing ALSO pulls the (slow) EOC transcripts — once a day,
-    # before the workday, deliberate. The money snapshots refresh every run.
-    - cron: "0 11 * * *"
   workflow_dispatch: {}
 
 jobs:
