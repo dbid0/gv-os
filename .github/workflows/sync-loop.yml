@@ -1,0 +1,100 @@
+name: sync-loop
+
+# EVERY INTEGRATION, PULLING CONTINUOUSLY.
+#
+# This replaces the every-30-minutes schedule. Daniel's instruction: no timed
+# sync — the app should be running and pulling from the APIs 24/7.
+#
+# A cron can't deliver that here. GitHub's scheduler is best-effort (runs fire
+# late or not at all under load — observed 2026-09-17), and Vercel's own cron
+# is once a day on this plan. So instead of a timer, this is ONE long-running
+# job that pulls back to back for almost the full six hours a job may live,
+# then exits. The hourly schedule below is not the cadence — it only makes
+# sure a successor is always queued. `cancel-in-progress: false` means a new
+# run WAITS for the current loop instead of killing it, and GitHub keeps one
+# waiting run per group, so the next loop starts the moment this one ends.
+# Public repo: Actions minutes are free, so an always-on runner costs nothing.
+#
+# What it pulls:
+#   all-pulls   every integration (Close, iClosed, Calendly, Stripe, Kit,
+#               Typeform, PandaDoc, calendar feeds) — the cheap leg
+#   tracking    the offer money mirrors (tracking sheet + Stripe) — heavier
+#   transcripts Fathom call transcripts — once a day, 11:00 UTC hour
+#
+# The rates are the knobs below. They are sized to the Vercel Hobby plan: its
+# active-CPU allowance is what pauses the whole app if exceeded, so the heavy
+# leg runs less often than the cheap one. On Vercel Pro both can drop.
+#
+# A failed pull never stops the loop — it logs a warning and the next pass
+# tries again. Pages also refresh stale feeds on view (refresh-on-view), so
+# anything being looked at is at most a minute old regardless.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: sync-loop
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    # Jobs die at 360 minutes; the loop leaves itself room to exit cleanly.
+    timeout-minutes: 358
+    steps:
+      - name: Pull continuously
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+          BASE_URL: https://os.globalventures.app
+          PULL_EVERY_S: "120"
+          TRACK_EVERY_S: "900"
+          RUN_FOR_MIN: "345"
+        run: |
+          if [ -z "$SYNC_SECRET" ]; then
+            echo "SYNC_SECRET repo secret not set — nothing to do."
+            exit 0
+          fi
+
+          call() {
+            # -w prints only the status; the body goes to a file so a secret
+            # can never end up in this public log via an echoed response.
+            local path="$1"
+            local code
+            code=$(curl -s -o /tmp/out.json -m 300 -X POST \
+              -H "Authorization: Bearer $SYNC_SECRET" \
+              -w "%{http_code}" "$BASE_URL$path") || code="000"
+            echo "$(date -u +%H:%M:%S) $path -> $code"
+            case "$code" in
+              2*) : ;;
+              *) echo "::warning::$path returned $code — retrying next pass" ;;
+            esac
+          }
+
+          start=$(date +%s)
+          stop=$((start + RUN_FOR_MIN * 60))
+          last_track=0
+          transcripts_done=""
+
+          while [ "$(date +%s)" -lt "$stop" ]; do
+            pass=$(date +%s)
+            call /api/sync/all-pulls
+
+            if [ $((pass - last_track)) -ge "$TRACK_EVERY_S" ]; then
+              q=""
+              today=$(date -u +%F)
+              if [ "$(date -u +%H)" = "11" ] && [ "$transcripts_done" != "$today" ]; then
+                q="?transcripts=1"
+                transcripts_done="$today"
+              fi
+              call "/api/sync/tracking$q"
+              last_track=$pass
+            fi
+
+            # Sleep out the rest of the interval; a pass that ran long simply
+            # starts the next one immediately.
+            wait_s=$((PULL_EVERY_S - ($(date +%s) - pass)))
+            if [ "$wait_s" -gt 0 ]; then sleep "$wait_s"; fi
+          done
+          echo "Loop window done; the queued run takes over."

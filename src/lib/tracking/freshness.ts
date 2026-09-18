@@ -12,13 +12,13 @@
  */
 
 /**
- * A snapshot is STALE when it is older than this. The scheduler refreshes the
- * tracking mirrors every 30 minutes (integration-sync.yml, the 30-minute leg),
- * so 90 minutes means at least two consecutive pulls did nothing for this offer —
- * the mirror is no longer keeping up and the figure should say so rather than
- * read as current. Generous enough that a single slow run never cries wolf.
+ * A snapshot is STALE when it is older than this. The continuous loop
+ * (sync-loop.yml) refreshes the tracking mirrors every 15 minutes, so 45
+ * minutes means three passes in a row did nothing for this offer — the mirror
+ * is no longer keeping up and the figure should say so rather than read as
+ * current. Generous enough that one slow pass never cries wolf.
  */
-export const SNAPSHOT_STALE_AFTER_MS = 90 * 60 * 1000;
+export const SNAPSHOT_STALE_AFTER_MS = 45 * 60 * 1000;
 
 export type SnapshotFreshnessState = "never" | "fresh" | "stale";
 

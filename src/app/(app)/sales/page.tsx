@@ -14,6 +14,7 @@ import { listActivityReports, listDeals, listTeams } from "@/lib/sales/queries";
 import { salesTeamBoard } from "@/lib/sales/team-board";
 import { dayKeyIn } from "@/lib/time/zone";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { refreshProvidersOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = { title: "Teams - GV OS" };
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export const dynamic = "force-dynamic";
  * connection pool.
  */
 export default async function SalesPage() {
+  // Live when you are looking: stale feeds pull after the response goes.
+  refreshProvidersOnView(["iclosed", "calendly", "close", "stripe"]);
   const roster = await loadRoster();
   // Whose offers this viewer may read. A rep is granted /sales for their own
   // leaderboard and commissions, but must not see other clients' books.

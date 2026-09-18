@@ -13,6 +13,7 @@ import { homeRangeHeadline, rangeBounds } from "@/lib/transactions/homepage";
 import { listTransactions } from "@/lib/transactions/queries";
 import { dayKeyIn } from "@/lib/time/zone";
 import { viewerTimeZone } from "@/lib/time/viewer-zone";
+import { refreshProvidersOnView } from "@/lib/integrations/refresh-on-view";
 
 export const metadata = { title: "Daily brief - GV OS" };
 export const dynamic = "force-dynamic";
@@ -40,6 +41,8 @@ const PACE_LABEL: Record<string, string> = {
  * the five queries that fed only them.
  */
 export default async function BriefPage() {
+  // Live when you are looking: stale feeds pull after the response goes.
+  refreshProvidersOnView(["stripe", "iclosed", "calendly", "close"]);
   const tz = await viewerTimeZone();
   const now = new Date();
   const todayKey = dayKeyIn(now, tz);

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { pullCalendlyBookings, pullIclosedBookings } from "@/lib/bookings/capture";
+import { pullCalendarFeeds } from "@/lib/calendar/feed-sync";
 import { pullCloseActivity } from "@/lib/crm/close-sync";
 import { pullPandaDocSigned, pullTypeformApplications } from "@/lib/docs/sync";
 import { pullKitSnapshots } from "@/lib/email/kit-sync";
@@ -15,6 +16,7 @@ const PULLS: Record<string, () => Promise<unknown>> = {
   typeform: pullTypeformApplications,
   pandadoc: pullPandaDocSigned,
   stripe: pullStripeEvents,
+  gcal: () => pullCalendarFeeds(),
 };
 
 /**

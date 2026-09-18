@@ -15,7 +15,7 @@ import { timeoutFetch } from "@/lib/net/timeout-fetch";
  * Discord), exactly like the Google credential — the plaintext never leaves
  * this module. The snapshot/digest sends from Settings are manual, a person
  * clicking a button. Fired notifications (evaluate.ts) are the one automatic
- * user: they post from inside the existing 30-minute integration-sync
+ * user: they post from inside the continuous sync loop
  * pull — no separate schedule — and soft-fail if no webhook is connected,
  * since a missing Discord credential must never block the in-app alert.
  */
