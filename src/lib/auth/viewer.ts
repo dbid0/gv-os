@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { currentUser } from "@/lib/auth/server";
@@ -18,8 +19,11 @@ import { effectiveRole, type Role } from "@/lib/auth/roles";
  * Fails OPEN to admin: role lookup is a convenience for hiding chrome, never
  * the security boundary (the guard and the server actions are), and a database
  * blip must not strip the owner's own navigation.
+ *
+ * Cached per request: the shell asks, a route layout asks, and the page asks,
+ * all inside one render, and the answer cannot differ between them.
  */
-export async function viewerRole(): Promise<Role> {
+export const viewerRole = cache(async function viewerRole(): Promise<Role> {
   try {
     const [user, cookieStore] = await Promise.all([currentUser(), cookies()]);
     const real = await resolveRealRole(user?.email ?? null);
@@ -28,7 +32,7 @@ export async function viewerRole(): Promise<Role> {
   } catch {
     return "admin";
   }
-}
+});
 
 /** Whether the viewer is browsing as an admin (owner view). */
 export async function viewerIsAdmin(): Promise<boolean> {
