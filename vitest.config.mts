@@ -366,6 +366,15 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // What the open rate covers. Kit measures broadcasts and nothing
+        // else, so a missed branch here lets a rate from two emails pass as
+        // the state of an entire email program.
+        "src/lib/email/coverage.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The rep's call board. A slip here puts a cancelled call back on a
         // rep's day, or drops a real one, and a rep works this list literally.
         "src/lib/home/call-queue.ts": {

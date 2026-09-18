@@ -71,3 +71,38 @@ describe("parseKitSubscriberTotal", () => {
     expect(parseKitSubscriberTotal({ pagination: { total_count: NaN } })).toBeNull();
   });
 });
+
+describe("parseKitSequences — a sequence's weight", () => {
+  it("keeps the email and subscriber counts Kit reports", () => {
+    // Without these a sequence is a name and a pill, and "47 emails to 153
+    // people" reads as one more row.
+    const out = parseKitSequences({
+      sequences: [
+        { id: 1, name: "Forever Nurture", email_count: 47, subscriber_count: 153 },
+      ],
+    });
+    expect(out[0]).toMatchObject({ emailCount: 47, subscriberCount: 153 });
+  });
+
+  it("leaves a count Kit did not report absent, never zero", () => {
+    const out = parseKitSequences({ sequences: [{ id: 1, name: "Bare" }] });
+    expect(out[0]).not.toHaveProperty("emailCount");
+    expect(out[0]).not.toHaveProperty("subscriberCount");
+  });
+
+  it("keeps a real zero", () => {
+    const out = parseKitSequences({
+      sequences: [{ id: 1, name: "Empty", email_count: 0, subscriber_count: 0 }],
+    });
+    expect(out[0]).toMatchObject({ emailCount: 0, subscriberCount: 0 });
+  });
+
+  it("rejects a count that is not a usable number", () => {
+    for (const bad of ["12", -1, null, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const out = parseKitSequences({
+        sequences: [{ id: 1, name: "Odd", email_count: bad }],
+      });
+      expect(out[0]).not.toHaveProperty("emailCount");
+    }
+  });
+});

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Kpi } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { useToast } from "@/components/ui/toast";
+import { emailCoverage } from "@/lib/email/coverage";
 import { emailOfferStats } from "@/lib/email/offer-stats";
 import type { KitOverviewRow } from "@/lib/email/queries";
 import { recentSends, type SendRecord } from "@/lib/email/recent-sends";
@@ -82,14 +83,25 @@ const count = (v: number | null) => (v === null ? "—" : v.toLocaleString("en-U
 export function EmailOverview({
   accounts,
   broadcasts = {},
+  now,
 }: {
   accounts: KitOverviewRow[];
   /** Each connection's sends. Every rate on this page derives from these. */
   broadcasts?: Record<string, SendRecord[]>;
+  /** Passed in so the server and the browser agree on how old a rate is. */
+  now: Date;
 }) {
   const timeZone = useViewerTimeZone();
   const everySend = accounts.flatMap((a) => broadcasts[a.integrationId] ?? []);
   const agency = emailOfferStats(everySend);
+  // What the headline does and does not cover. Kit reports stats for
+  // broadcasts only — every sequence email is invisible to it — so a bare
+  // rate can silently describe a fraction of the sending.
+  const coverage = emailCoverage(
+    agency.lastSentAt,
+    accounts.flatMap((a) => a.sequences),
+    now,
+  );
 
   // Biggest sender first: the account whose email reaches the most people is
   // the one whose open rate moves the agency's. Ordering by subscriber count
@@ -133,16 +145,35 @@ export function EmailOverview({
             }
           />
         </div>
-        {/* Every rate names what it was measured over — house rule. */}
-        <p className="text-faint border-t pt-3 text-xs">
-          {agency.sent === 0
-            ? "No sends yet."
-            : `${agency.sent} sends · ${agency.measuredRecipients.toLocaleString("en-US")} recipients measured${
-                agency.untrackedSends > 0
-                  ? ` · ${agency.untrackedSends} with open tracking off`
-                  : ""
-              }`}
-        </p>
+        {/* Every rate names what it was measured over, WHEN, and what it
+            could not see at all. Without the last two, a figure from two
+            broadcasts six weeks ago reads as the state of the email program. */}
+        <div className="space-y-1 border-t pt-3 text-xs">
+          <p className={coverage.stale ? "text-warning" : "text-faint"}>
+            {agency.sent === 0
+              ? "No broadcasts sent yet."
+              : `From ${agency.sent} broadcast${agency.sent === 1 ? "" : "s"} to ${agency.measuredRecipients.toLocaleString("en-US")} recipients${
+                  agency.untrackedSends > 0
+                    ? `, ${agency.untrackedSends} with open tracking off`
+                    : ""
+                }${
+                  coverage.daysSinceLastSend === null
+                    ? ""
+                    : coverage.daysSinceLastSend === 0
+                      ? " · sent today"
+                      : ` · last sent ${coverage.daysSinceLastSend} days ago`
+                }`}
+          </p>
+          {coverage.hasUnmeasured && (
+            <p className="text-faint">
+              {coverage.unmeasuredEmails} sequence email
+              {coverage.unmeasuredEmails === 1 ? "" : "s"}
+              {coverage.sequenceSubscribers !== null &&
+                ` to ${coverage.sequenceSubscribers.toLocaleString("en-US")} subscriber${coverage.sequenceSubscribers === 1 ? "" : "s"}`}{" "}
+              are not in these rates — Kit reports no stats for sequence emails.
+            </p>
+          )}
+        </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
