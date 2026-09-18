@@ -14,6 +14,7 @@ import {
 } from "@/lib/bookings/normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
 import { bookingWrite, needsInvitee, pickInvitee } from "@/lib/bookings/merge";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Bookings capture: Calendly + iClosed pulls, plus a per-connection webhook
@@ -32,7 +33,7 @@ const BROWSER_UA =
 const WINDOW_DAYS = 30;
 
 async function calendlyGet(token: string, url: string): Promise<Payload> {
-  const res = await fetch(url, {
+  const res = await timeoutFetch(url, {
     headers: { Authorization: `Bearer ${token}`, "User-Agent": BROWSER_UA },
   });
   if (!res.ok) {
@@ -58,7 +59,7 @@ const ICLOSED_PAGE_LIMIT = 100;
 const ICLOSED_MAX_PAGES = 20;
 
 async function iclosedGet(token: string, path: string): Promise<Payload> {
-  const res = await fetch(`${ICLOSED_BASE}${path}`, {
+  const res = await timeoutFetch(`${ICLOSED_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {

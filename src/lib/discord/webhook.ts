@@ -7,6 +7,7 @@ import { integrations } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
 import type { DiscordMessage } from "@/lib/discord/embed";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * The agency Discord sync sender. The webhook URL lives SEALED in the
@@ -69,7 +70,7 @@ export async function postToDiscordWebhook(
   url: string,
   message: DiscordMessage,
 ): Promise<void> {
-  const res = await fetch(url, {
+  const res = await timeoutFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(message),

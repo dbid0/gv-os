@@ -14,6 +14,7 @@ import {
   phoneFromCloseLead,
 } from "@/lib/crm/close-normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Close activity pull. For every connected `close` integration in the vault:
@@ -74,7 +75,7 @@ export async function pullCloseActivity(): Promise<
           const url =
             `https://api.close.com/api/v1/activity/${kind}/` +
             `?date_created__gt=${encodeURIComponent(since)}&_limit=${PAGE_LIMIT}&_skip=${skip}`;
-          const res = await fetch(url, { headers: { Authorization: auth } });
+          const res = await timeoutFetch(url, { headers: { Authorization: auth } });
           if (!res.ok) {
             throw new Error(
               `Close ${kind} pull failed (${res.status}): ${await res.text()}`,
@@ -181,7 +182,7 @@ async function resolveLeadEmails(
   let resolved = 0;
   for (const row of pending) {
     const leadId = row.leadId as string;
-    const res = await fetch(
+    const res = await timeoutFetch(
       `https://api.close.com/api/v1/lead/${encodeURIComponent(leadId)}/?_fields=id,contacts`,
       { headers: { Authorization: auth } },
     );

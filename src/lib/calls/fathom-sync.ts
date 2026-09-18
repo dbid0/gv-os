@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { activityLogs, callRecordings, integrations } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 import {
   MATCH_WINDOW_MS,
   matchRecordingToCall,
@@ -86,7 +87,7 @@ export async function pullFathomRecordings(): Promise<FathomPullResult[]> {
       let cursor: string | null = null;
 
       for (let page = 0; page < MAX_PAGES; page += 1) {
-        const res = await fetch(listUrl(since, cursor), {
+        const res = await timeoutFetch(listUrl(since, cursor), {
           headers: { "X-Api-Key": apiKey, Accept: "application/json" },
         });
         if (!res.ok) {

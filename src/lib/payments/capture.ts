@@ -8,6 +8,7 @@ import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
 import { failureNote } from "@/lib/integrations/sync-note";
 import { normalizePayment, normalizeStripe } from "@/lib/payments/normalize";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Payment capture: webhooks and pulls land processor events in
@@ -107,7 +108,7 @@ export async function pullStripeEvents(): Promise<
   for (const conn of connections) {
     try {
       const apiKey = open(conn.secretBox as string, key);
-      const res = await fetch(
+      const res = await timeoutFetch(
         "https://api.stripe.com/v1/events?limit=100&types[]=charge.succeeded&types[]=charge.refunded&types[]=charge.dispute.created&types[]=charge.failed",
         {
           headers: {
