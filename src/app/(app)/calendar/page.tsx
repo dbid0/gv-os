@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { stepMonth } from "@/lib/calendar/month-grid";
 import {
-  calendarFeedStatus,
+  listCalendarBookings,
   listCalendarFeedEvents,
   listCalendarItems,
 } from "@/lib/calendar/queries";
@@ -28,11 +28,16 @@ export default async function CalendarPage() {
   const lastDay = new Date(Date.UTC(to.year, to.month, 0)).getUTCDate();
   const toKey = `${to.year}-${pad(to.month)}-${pad(lastDay)}`;
 
-  const [items, events, feed] = await Promise.all([
+  // Booked calls come from the schedulers already syncing (iClosed,
+  // Calendly); a Google Calendar feed adds meetings only if one is connected.
+  const [items, calls, meetings] = await Promise.all([
     listCalendarItems(fromKey, toKey),
+    listCalendarBookings(fromKey, toKey, tz),
     listCalendarFeedEvents(fromKey, toKey),
-    calendarFeedStatus(),
   ]);
+  const events = [...calls, ...meetings].sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
+  );
   const accents = Object.fromEntries(
     (await loadRoster()).map((c) => [c.slug, c.accent]),
   );
@@ -43,7 +48,6 @@ export default async function CalendarPage() {
       <CalendarView
         items={items}
         events={events}
-        feed={feed}
         todayKey={todayKey}
         accents={accents}
       />

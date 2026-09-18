@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
 
@@ -16,11 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { monthGrid, monthLabel, stepMonth } from "@/lib/calendar/month-grid";
 import { groupByDay } from "@/lib/calendar/expand";
-import type {
-  CalendarFeedEvent,
-  CalendarFeedStatus,
-  CalendarItem,
-} from "@/lib/calendar/queries";
+import type { CalendarFeedEvent, CalendarItem } from "@/lib/calendar/queries";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -96,15 +90,12 @@ function ClientTag({ name, accent }: { name: string; accent: string | null }) {
 export function CalendarView({
   items,
   events = [],
-  feed,
   todayKey,
   accents,
 }: {
   items: CalendarItem[];
-  /** Meetings mirrored from a connected calendar feed. */
+  /** Booked calls, plus meetings from a calendar feed if one is connected. */
   events?: CalendarFeedEvent[];
-  /** Whether a feed is connected and when it last landed. */
-  feed?: CalendarFeedStatus;
   todayKey: string;
   /** slug → the client's accent colour, resolved server-side (DB roster). */
   accents: Record<string, string>;
@@ -249,7 +240,7 @@ export function CalendarView({
                   {shownEvents.map((e) => (
                     <div
                       key={e.id}
-                      title={`${e.allDay ? "All day" : timeOf(e.startsAt)} · ${e.summary ?? "No title"}`}
+                      title={`${e.allDay ? "All day" : timeOf(e.startsAt)} · ${e.summary ?? (e.kind === "call" ? "Call" : "No title")}`}
                       className="border-brand/40 bg-brand-soft/40 flex items-center gap-1 rounded border-l-2 px-1 py-0.5 text-[11px]"
                     >
                       {!e.allDay && (
@@ -257,7 +248,9 @@ export function CalendarView({
                           {timeOf(e.startsAt)}
                         </span>
                       )}
-                      <span className="truncate">{e.summary ?? "No title"}</span>
+                      <span className="truncate">
+                        {e.summary ?? (e.kind === "call" ? "Call" : "No title")}
+                      </span>
                     </div>
                   ))}
                   {shownTasks.map((it) => (
@@ -293,26 +286,6 @@ export function CalendarView({
         </Panel>
       )}
 
-      {/* The feed's real state. It used to say "Planned" — it is connected now,
-          so the panel reports what actually landed, or how to connect one. */}
-      <p className="text-faint text-xs">
-        {feed?.connected
-          ? `Google Calendar · ${
-              feed.lastSyncAt
-                ? `synced ${feed.lastSyncAt.toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}`
-                : "not pulled yet"
-            }${feed.lastSyncNote ? ` · ${feed.lastSyncNote}` : ""} · read-only`
-          : "No calendar connected."}{" "}
-        <Link href="/settings/integrations" className="text-brand hover:underline">
-          Integrations →
-        </Link>
-      </p>
-
       {/* Day detail — a light Sheet, no heavy motion, opened by clicking a day. */}
       <Sheet
         open={selectedKey !== null}
@@ -329,7 +302,7 @@ export function CalendarView({
               {selectedKey && totalOnDay(selectedKey) > 0
                 ? [
                     selectedEvents.length > 0 &&
-                      `${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}`,
+                      `${selectedEvents.length} ${selectedEvents.every((e) => e.kind === "call") ? "call" : "event"}${selectedEvents.length === 1 ? "" : "s"}`,
                     selectedTasks.length > 0 &&
                       `${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}`,
                   ]
@@ -340,34 +313,39 @@ export function CalendarView({
           </SheetHeader>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-4">
-            {selectedEvents.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
-                  <CalendarDays className="size-3" /> Calendar
-                </h3>
-                {selectedEvents.map((e) => (
-                  <div
-                    key={e.id}
-                    className="border-brand/40 flex items-center gap-2 rounded-lg border border-l-2 px-3 py-2"
-                  >
-                    <span className="text-muted-foreground w-24 shrink-0 text-xs tabular-nums">
-                      {e.allDay
-                        ? "All day"
-                        : `${timeOf(e.startsAt)}${e.endsAt ? `–${timeOf(e.endsAt)}` : ""}`}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {e.summary ?? <span className="text-faint">No title</span>}
-                    </span>
-                    {e.clientName && (
-                      <ClientTag
-                        name={e.clientName}
-                        accent={e.clientSlug ? (accents[e.clientSlug] ?? null) : null}
-                      />
-                    )}
-                  </div>
-                ))}
-              </section>
-            )}
+            {(["call", "event"] as const).map((kind) => {
+              const list = selectedEvents.filter((e) => e.kind === kind);
+              if (list.length === 0) return null;
+              return (
+                <section key={kind} className="space-y-2">
+                  <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                    <CalendarDays className="size-3" />{" "}
+                    {kind === "call" ? "Calls" : "Calendar"}
+                  </h3>
+                  {list.map((e) => (
+                    <div
+                      key={e.id}
+                      className="border-brand/40 flex items-center gap-2 rounded-lg border border-l-2 px-3 py-2"
+                    >
+                      <span className="text-muted-foreground w-24 shrink-0 text-xs tabular-nums">
+                        {e.allDay
+                          ? "All day"
+                          : `${timeOf(e.startsAt)}${e.endsAt ? `–${timeOf(e.endsAt)}` : ""}`}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {e.summary ?? <span className="text-faint">No name</span>}
+                      </span>
+                      {e.clientName && (
+                        <ClientTag
+                          name={e.clientName}
+                          accent={e.clientSlug ? (accents[e.clientSlug] ?? null) : null}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </section>
+              );
+            })}
 
             {selectedTasks.length > 0 && (
               <section className="space-y-2">

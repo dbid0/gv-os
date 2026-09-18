@@ -1,15 +1,16 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
   actionItems,
+  bookings,
   calendarFeedEvents,
   clients,
-  integrations,
   teamMembers,
 } from "@/db/schema/app";
+import { dayEndIn, dayKeyIn, dayStartIn } from "@/lib/time/zone";
 import { isSoftwareDevItem } from "@/lib/calendar/filter";
 
 /** An action item shaped for the calendar — its date, scope, and who owns it. */
@@ -94,9 +95,11 @@ export async function listCalendarItems(
   }
 }
 
-/** One meeting from a connected calendar feed, ready to place on a day. */
+/** One timed thing on the calendar: a booked call or a calendar-feed meeting. */
 export interface CalendarFeedEvent {
   id: string;
+  /** A booked sales call (iClosed/Calendly) or a meeting from a calendar feed. */
+  kind: "call" | "event";
   summary: string | null;
   dayKey: string;
   startsAt: Date;
@@ -104,13 +107,6 @@ export interface CalendarFeedEvent {
   allDay: boolean;
   clientName: string | null;
   clientSlug: string | null;
-}
-
-/** Whether any calendar feed is connected, and when it last landed. */
-export interface CalendarFeedStatus {
-  connected: boolean;
-  lastSyncAt: Date | null;
-  lastSyncNote: string | null;
 }
 
 /**
@@ -146,34 +142,64 @@ export async function listCalendarFeedEvents(
         ),
       )
       .orderBy(asc(calendarFeedEvents.startsAt));
-    return rows;
+    return rows.map((r) => ({ ...r, kind: "event" as const }));
   } catch {
     return [];
   }
 }
 
-/** The feed's own state, so the page can say where its events came from. */
-export async function calendarFeedStatus(): Promise<CalendarFeedStatus> {
+/**
+ * Booked calls inside [fromKey, toKey], from the schedulers that are already
+ * syncing (iClosed, Calendly) — no new connection, no new credential.
+ *
+ * Cancelled bookings are left off: a call that is not happening does not hold
+ * the hour. A reschedule's new time is its own row, so it still appears.
+ * Bookings carry no day column, so each one is placed on its day in the
+ * VIEWER's zone here — the same zone the grid is drawn in.
+ */
+export async function listCalendarBookings(
+  fromKey: string,
+  toKey: string,
+  timeZone: string,
+): Promise<CalendarFeedEvent[]> {
   try {
     const db = getDb();
     const rows = await db
       .select({
-        lastSyncAt: integrations.lastSyncAt,
-        lastSyncNote: integrations.lastSyncNote,
+        id: bookings.id,
+        inviteeName: bookings.inviteeName,
+        eventType: bookings.eventType,
+        startsAt: bookings.startsAt,
+        clientName: clients.name,
+        clientSlug: clients.slug,
       })
-      .from(integrations)
+      .from(bookings)
+      .leftJoin(clients, eq(bookings.clientId, clients.id))
       .where(
-        and(eq(integrations.provider, "gcal"), eq(integrations.status, "connected")),
+        and(
+          ne(bookings.status, "canceled"),
+          gte(bookings.startsAt, dayStartIn(fromKey, timeZone)),
+          lte(bookings.startsAt, dayEndIn(toKey, timeZone)),
+          // An archived offer's calls never paint the calendar.
+          or(isNull(bookings.clientId), ne(clients.status, "archived")),
+        ),
       )
-      .orderBy(desc(integrations.lastSyncAt))
-      .limit(1);
-    const row = rows[0];
-    return {
-      connected: rows.length > 0,
-      lastSyncAt: row?.lastSyncAt ?? null,
-      lastSyncNote: row?.lastSyncNote ?? null,
-    };
+      .orderBy(asc(bookings.startsAt));
+
+    return rows
+      .filter((r): r is typeof r & { startsAt: Date } => r.startsAt !== null)
+      .map((r) => ({
+        id: `call:${r.id}`,
+        kind: "call" as const,
+        summary: r.inviteeName ?? r.eventType,
+        dayKey: dayKeyIn(r.startsAt, timeZone),
+        startsAt: r.startsAt,
+        endsAt: null,
+        allDay: false,
+        clientName: r.clientName,
+        clientSlug: r.clientSlug,
+      }));
   } catch {
-    return { connected: false, lastSyncAt: null, lastSyncNote: null };
+    return [];
   }
 }
