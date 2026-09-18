@@ -18,6 +18,7 @@ import { matchesSheetClient } from "@/lib/clients/sheet-aliases";
 import { liveSpeedToLead } from "@/lib/crm/speed-to-lead-live";
 import { buildAlertBatchMessage, type AlertNotification } from "@/lib/discord/embed";
 import { postToAgencyDiscord } from "@/lib/discord/webhook";
+import { fileNewNotifications } from "@/lib/notifications/store";
 import {
   bodReminderRule,
   callReviewRule,
@@ -264,15 +265,9 @@ export async function evaluateNotifications(): Promise<{
     ...speedToLeadBreachRule(speedToLeadBreaches),
   ];
 
-  const created: Candidate[] = [];
-  for (const c of candidates) {
-    const inserted = await db
-      .insert(notifications)
-      .values(c)
-      .onConflictDoNothing({ target: [notifications.dedupeKey] })
-      .returning({ id: notifications.id });
-    if (inserted.length > 0) created.push(c);
-  }
+  // Filed in one statement; only the genuinely new ones come back, which is
+  // what decides who gets paged. See lib/notifications/store.
+  const created = await fileNewNotifications(candidates);
 
   // Deliver the newly-fired alerts to the agency Discord — warning/critical
   // only, batched into one post. Info-level rows (a signed agreement, the
