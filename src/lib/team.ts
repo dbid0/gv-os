@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -77,15 +79,23 @@ const memberColumns = {
   notes: teamMembers.notes,
 } as const;
 
-/** The full roster, each member with their lane resolved. */
-export async function listTeamMembers(): Promise<TeamMemberRow[]> {
+/**
+ * The full roster, each member with their lane resolved.
+ *
+ * React cache(): the shell, the viewer scope and several pages all want the
+ * roster inside one render, and it cannot change mid-request. Per request
+ * only — nothing is held between them.
+ */
+export const listTeamMembers = cache(async function listTeamMembers(): Promise<
+  TeamMemberRow[]
+> {
   const db = getDb();
   return db
     .select(memberColumns)
     .from(teamMembers)
     .leftJoin(clients, eq(teamMembers.clientId, clients.id))
     .orderBy(asc(teamMembers.name));
-}
+});
 
 /** Active members only, for assignee pickers. */
 export async function listActiveMembers(): Promise<

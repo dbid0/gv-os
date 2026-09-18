@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -24,8 +25,17 @@ import { roleFromTeamRows, type Role } from "@/lib/auth/roles";
  *
  * This only changes what a logged-in user SEES. It does not touch who may log
  * in — that stays the allowlist (`allowlist.ts`), unchanged.
+ *
+ * WRAPPED IN React cache(): a person's role cannot change midway through
+ * rendering one page, but this was being asked three times per load — the
+ * sidebar, the topbar, and any route layout or page that checks it — each one
+ * its own query. Measured on /sales: three scans of team_members for a single
+ * render. Now one, keyed by email, for the whole request. Nothing is held
+ * between requests, so a role change still takes effect on the next load.
  */
-export async function resolveRealRole(email: string | null | undefined): Promise<Role> {
+export const resolveRealRole = cache(async function resolveRealRole(
+  email: string | null | undefined,
+): Promise<Role> {
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return "admin";
 
@@ -50,4 +60,4 @@ export async function resolveRealRole(email: string | null | undefined): Promise
     // A DB blip must never restrict — least of all an owner. When in doubt, admin.
     return "admin";
   }
-}
+});

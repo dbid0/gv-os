@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 
@@ -33,39 +35,41 @@ export interface ViewerScope {
   label: string | null;
 }
 
-export async function getViewerScope(): Promise<ViewerScope> {
-  try {
-    const [user, members, cookieStore] = await Promise.all([
-      shellUser(),
-      listTeamMembers(),
-      cookies(),
-    ]);
-    const roster = selectHomeIdentity(members, user?.email ?? null);
+export const getViewerScope = cache(
+  async function getViewerScope(): Promise<ViewerScope> {
+    try {
+      const [user, members, cookieStore] = await Promise.all([
+        shellUser(),
+        listTeamMembers(),
+        cookies(),
+      ]);
+      const roster = selectHomeIdentity(members, user?.email ?? null);
 
-    const db = getDb();
-    const rows = await db
-      .select({ id: clients.id, slug: clients.slug, name: clients.name })
-      .from(clients)
-      .where(eq(clients.status, "active"));
+      const db = getDb();
+      const rows = await db
+        .select({ id: clients.id, slug: clients.slug, name: clients.name })
+        .from(clients)
+        .where(eq(clients.status, "active"));
 
-    // "View as" is a preview of a NARROWER seat, so scoping honours it too —
-    // otherwise previewing a rep would still show the owner every offer.
-    const roleCookie = cookieStore.get("gv-dev-role")?.value ?? "";
-    const previewRole = isPlatformRole(roleCookie) ? roleCookie : null;
-    const laneSlug = cookieStore.get("gv-dev-client")?.value ?? "";
-    const previewLane = rows.find((r) => r.slug === laneSlug)?.id ?? null;
-    const identity = applyPreview(roster, previewRole, previewLane);
+      // "View as" is a preview of a NARROWER seat, so scoping honours it too —
+      // otherwise previewing a rep would still show the owner every offer.
+      const roleCookie = cookieStore.get("gv-dev-role")?.value ?? "";
+      const previewRole = isPlatformRole(roleCookie) ? roleCookie : null;
+      const laneSlug = cookieStore.get("gv-dev-client")?.value ?? "";
+      const previewLane = rows.find((r) => r.slug === laneSlug)?.id ?? null;
+      const identity = applyPreview(roster, previewRole, previewLane);
 
-    const allowed = visibleClientIds(
-      identity,
-      rows.map((r) => r.id),
-    );
-    const label =
-      allowed?.length === 1
-        ? (rows.find((r) => r.id === allowed[0])?.name ?? null)
-        : null;
-    return { allowed, restricted: allowed !== null, label };
-  } catch {
-    return { allowed: null, restricted: false, label: null };
-  }
-}
+      const allowed = visibleClientIds(
+        identity,
+        rows.map((r) => r.id),
+      );
+      const label =
+        allowed?.length === 1
+          ? (rows.find((r) => r.id === allowed[0])?.name ?? null)
+          : null;
+      return { allowed, restricted: allowed !== null, label };
+    } catch {
+      return { allowed: null, restricted: false, label: null };
+    }
+  },
+);
