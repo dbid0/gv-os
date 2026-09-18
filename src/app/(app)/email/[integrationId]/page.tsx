@@ -9,6 +9,7 @@ import { ColumnChart } from "@/components/ui/column-chart";
 import { Kpi } from "@/components/ui/metric";
 import { buttonVariants } from "@/components/ui/button";
 import { chartColorForClient, latestPerDay } from "@/lib/charts";
+import { emailCoverage } from "@/lib/email/coverage";
 import { emailOfferStats } from "@/lib/email/offer-stats";
 import {
   broadcastStatsByConnection,
@@ -75,6 +76,7 @@ export default async function EmailOfferPage({
   const broadcasts = statsByConnection.get(integrationId) ?? [];
   const stats = emailOfferStats(broadcasts);
   const sends = recentSends(broadcasts);
+  const coverage = emailCoverage(stats.lastSentAt, account.sequences, new Date());
   const active = account.sequences.filter((s) => !s.hold).length;
   const paused = account.sequences.length - active;
 
@@ -124,10 +126,18 @@ export default async function EmailOfferPage({
       <Panel
         title="Sends"
         aside={
-          <span className="text-faint text-xs">
+          <span
+            className={coverage.stale ? "text-warning text-xs" : "text-faint text-xs"}
+          >
             {stats.sent === 0
               ? "none yet"
-              : `${stats.measuredRecipients.toLocaleString("en-US")} recipients measured`}
+              : `${stats.measuredRecipients.toLocaleString("en-US")} recipients${
+                  coverage.daysSinceLastSend === null
+                    ? ""
+                    : coverage.daysSinceLastSend === 0
+                      ? " · sent today"
+                      : ` · last sent ${coverage.daysSinceLastSend} days ago`
+                }`}
           </span>
         }
       >
@@ -199,14 +209,35 @@ export default async function EmailOfferPage({
               <Link
                 key={s.id}
                 href={`/email/${integrationId}/sequence/${s.id}`}
-                className="hover:bg-secondary/50 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                className="hover:bg-secondary/50 flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors"
               >
-                <span className={cn("truncate", s.hold && "text-faint")}>{s.name}</span>
+                <span className={cn("min-w-0 flex-1 truncate", s.hold && "text-faint")}>
+                  {s.name}
+                </span>
+                {/* A sequence's weight, not just its name: 47 emails to 260
+                    people is a different object from one more row. A count the
+                    snapshot never captured stays absent rather than showing 0. */}
+                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                  {[
+                    s.emailCount !== undefined &&
+                      `${s.emailCount} email${s.emailCount === 1 ? "" : "s"}`,
+                    s.subscriberCount !== undefined &&
+                      `${s.subscriberCount.toLocaleString("en-US")} in it`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
                 <StatusPill tone={s.hold ? "muted" : "live"}>
                   {s.hold ? "Paused" : "Active"}
                 </StatusPill>
               </Link>
             ))}
+            {coverage.hasUnmeasured && (
+              <p className="text-faint pt-2 text-xs">
+                Kit reports no stats for sequence emails, so these{" "}
+                {coverage.unmeasuredEmails} are not in the rates above.
+              </p>
+            )}
           </div>
         )}
       </Panel>

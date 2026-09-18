@@ -945,7 +945,16 @@ export const kitSnapshots = appSchema.table(
      * column existed — never backfilled with a fake zero. */
     subscriberCount: bigint("subscriber_count", { mode: "number" }),
     sequences: jsonb("sequences")
-      .$type<{ id: number; name: string; hold?: boolean }[]>()
+      .$type<
+        {
+          id: number;
+          name: string;
+          hold?: boolean;
+          /** Optional: an older snapshot has neither. Missing = unknown. */
+          emailCount?: number;
+          subscriberCount?: number;
+        }[]
+      >()
       .notNull()
       .default([]),
     takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),

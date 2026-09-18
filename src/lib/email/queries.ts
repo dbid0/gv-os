@@ -18,7 +18,13 @@ export interface KitOverviewRow {
   sequenceCount: number;
   tagCount: number;
   subscriberCount: number | null;
-  sequences: { id: number; name: string; hold?: boolean }[];
+  sequences: {
+    id: number;
+    name: string;
+    hold?: boolean;
+    emailCount?: number;
+    subscriberCount?: number;
+  }[];
   takenAt: Date;
 }
 

@@ -11,6 +11,9 @@ export const metadata = { title: "Email - GV OS" };
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
+  // One clock for the page, read on the server: how old a rate is must not
+  // depend on when the browser happens to hydrate.
+  const now = new Date();
   // Live when you're looking: kick a kit pull after the response.
   refreshProviderOnView("kit");
   const [accounts, statsByConnection] = await Promise.all([
@@ -46,6 +49,7 @@ export default async function EmailPage() {
         <EmailOverview
           accounts={accounts}
           broadcasts={Object.fromEntries(statsByConnection)}
+          now={now}
         />
       )}
     </div>

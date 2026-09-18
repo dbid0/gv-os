@@ -11,7 +11,25 @@ export interface KitSequence {
   id: number;
   name: string;
   hold?: boolean;
+  /**
+   * How many emails the sequence contains, and how many people are in it.
+   *
+   * These were thrown away, which left a sequence as a name and a pill. That
+   * is the difference between "Forever Nurture" reading as one more row and
+   * reading as 47 emails going to real people — and on an account that sends
+   * almost everything through sequences, it is the difference between a page
+   * that describes the email program and one that does not.
+   *
+   * Optional because an older snapshot has neither, and a missing count is
+   * unknown, never zero.
+   */
+  emailCount?: number;
+  subscriberCount?: number;
 }
+
+/** A count Kit gave us, or undefined — never a fabricated zero. */
+const count = (v: unknown): number | undefined =>
+  typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : undefined;
 
 const asArray = (v: unknown): Payload[] =>
   Array.isArray(v)
@@ -22,11 +40,17 @@ const asArray = (v: unknown): Payload[] =>
 export function parseKitSequences(body: unknown): KitSequence[] {
   const root = (body ?? {}) as Payload;
   return asArray(root.sequences)
-    .map((s) => ({
-      id: typeof s.id === "number" ? s.id : Number(s.id),
-      name: typeof s.name === "string" ? s.name : "(unnamed)",
-      ...(typeof s.hold === "boolean" ? { hold: s.hold } : {}),
-    }))
+    .map((s) => {
+      const emailCount = count(s.email_count);
+      const subscriberCount = count(s.subscriber_count);
+      return {
+        id: typeof s.id === "number" ? s.id : Number(s.id),
+        name: typeof s.name === "string" ? s.name : "(unnamed)",
+        ...(typeof s.hold === "boolean" ? { hold: s.hold } : {}),
+        ...(emailCount === undefined ? {} : { emailCount }),
+        ...(subscriberCount === undefined ? {} : { subscriberCount }),
+      };
+    })
     .filter((s) => Number.isFinite(s.id));
 }
 
