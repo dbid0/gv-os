@@ -2,6 +2,7 @@ import "server-only";
 
 import { googleAccessToken } from "@/lib/google/sheets";
 import { driveFolderIdValid } from "@/lib/google/drive-kind";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Client Drive assets — a live read of the client's folder through the sealed
@@ -30,9 +31,12 @@ export async function listDriveFolder(folderId: string): Promise<DriveAsset[]> {
     supportsAllDrives: "true",
     includeItemsFromAllDrives: "true",
   });
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await timeoutFetch(
+    `https://www.googleapis.com/drive/v3/files?${params}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   if (!res.ok) {
     throw new Error(`Drive list failed: ${res.status} ${await res.text()}`);
   }

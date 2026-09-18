@@ -8,6 +8,7 @@ import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
 import { phoneKey } from "@/lib/crm/close-normalize";
 import { currentSnapshot } from "@/lib/tracking/queries";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * APPLICATIONS BECOME LEADS — the handoff that never existed.
@@ -73,7 +74,7 @@ async function leadExists(
   if (email) queries.push(`email:"${email}"`);
   if (phone) queries.push(`phone:"${phone}"`);
   for (const q of queries) {
-    const res = await fetch(
+    const res = await timeoutFetch(
       `https://api.close.com/api/v1/lead/?query=${encodeURIComponent(q)}&_fields=id&_limit=1`,
       { headers: { Authorization: auth } },
     );
@@ -145,7 +146,7 @@ export async function pushApplicantsToClose(
     const contact: Record<string, unknown> = { name: a.name ?? a.email ?? "" };
     if (a.email) contact.emails = [{ email: a.email, type: "office" }];
     if (a.phone) contact.phones = [{ phone: a.phone, type: "mobile" }];
-    const res = await fetch("https://api.close.com/api/v1/lead/", {
+    const res = await timeoutFetch("https://api.close.com/api/v1/lead/", {
       method: "POST",
       headers: { Authorization: auth, "Content-Type": "application/json" },
       body: JSON.stringify({

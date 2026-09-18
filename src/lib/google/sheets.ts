@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { integrations } from "@/db/schema/app";
 import { serverEnv } from "@/env.server";
 import { open } from "@/lib/crypto/secretbox";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Google Sheets access for the finance-sheet mirror.
@@ -87,7 +88,7 @@ export async function googleAccessToken(): Promise<string> {
 }
 
 async function accessToken(cred: GoogleCredential): Promise<string> {
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const res = await timeoutFetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -120,7 +121,7 @@ export async function readSheetValues(
     valueRenderOption: "UNFORMATTED_VALUE",
     dateTimeRenderOption: "FORMATTED_STRING",
   });
-  const res = await fetch(
+  const res = await timeoutFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       sheetId,
     )}/values/${encodeURIComponent(range)}?${params}`,
@@ -144,7 +145,7 @@ export async function readSheetValues(
  */
 export async function readSheetTitles(sheetId: string): Promise<string[]> {
   const token = await googleAccessToken();
-  const res = await fetch(
+  const res = await timeoutFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       sheetId,
     )}?fields=sheets(properties(title))`,
@@ -175,7 +176,7 @@ export async function appendFinanceSheetRow(row: (string | number)[]): Promise<s
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
   });
-  const res = await fetch(
+  const res = await timeoutFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${financeSheetId()}/values/${encodeURIComponent(
       "Raw Data!A:M",
     )}:append?${params}`,
@@ -212,7 +213,7 @@ export async function fetchFinanceSheet(): Promise<FinanceSheetData> {
   });
   params.append("ranges", RAW_RANGE);
   params.append("ranges", COMPUTED_RANGE);
-  const res = await fetch(
+  const res = await timeoutFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${financeSheetId()}/values:batchGet?${params}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );

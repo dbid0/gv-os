@@ -375,6 +375,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // Every outbound call's deadline. A missed branch here turns a hung
+        // provider back into a page that never loads.
+        "src/lib/net/timeout-fetch.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // The rep's call board. A slip here puts a cancelled call back on a
         // rep's day, or drops a real one, and a rep works this list literally.
         "src/lib/home/call-queue.ts": {

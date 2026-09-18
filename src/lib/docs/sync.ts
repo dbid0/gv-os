@@ -13,6 +13,7 @@ import {
   normalizeTypeformResponse,
 } from "@/lib/docs/normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * PandaDoc signed-docs poll + Typeform applications pull. Both follow the
@@ -54,7 +55,7 @@ export async function pullPandaDocSigned(): Promise<
   for (const conn of rows) {
     try {
       const apiKey = open(conn.secretBox as string, key);
-      const res = await fetch(
+      const res = await timeoutFetch(
         "https://api.pandadoc.com/public/v1/documents?count=100&order_by=-date_modified",
         { headers: { Authorization: `API-Key ${apiKey}` } },
       );
@@ -128,9 +129,12 @@ export async function pullTypeformApplications(): Promise<
     try {
       const token = open(conn.secretBox as string, key);
       const headers = { Authorization: `Bearer ${token}` };
-      const formsRes = await fetch("https://api.typeform.com/forms?page_size=20", {
-        headers,
-      });
+      const formsRes = await timeoutFetch(
+        "https://api.typeform.com/forms?page_size=20",
+        {
+          headers,
+        },
+      );
       if (!formsRes.ok) {
         throw new Error(
           `Typeform forms list failed (${formsRes.status}): ${await formsRes.text()}`,
@@ -143,7 +147,7 @@ export async function pullTypeformApplications(): Promise<
       for (const form of forms) {
         const formId = typeof form.id === "string" ? form.id : null;
         if (!formId) continue;
-        const respRes = await fetch(
+        const respRes = await timeoutFetch(
           `https://api.typeform.com/forms/${formId}/responses?since=${encodeURIComponent(since)}&page_size=100&completed=true`,
           { headers },
         );

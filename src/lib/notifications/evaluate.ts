@@ -6,7 +6,6 @@ import { getDb } from "@/db/client";
 import {
   activityReports,
   clients,
-  notifications,
   offerSettings,
   reps,
   sheetSyncRuns,
@@ -30,7 +29,6 @@ import {
   signedDocRule,
   speedToLeadBreachRule,
   spineDriftRule,
-  type Candidate,
   type PaymentFailureState,
   type RepWellbeingState,
   type SpeedToLeadBreachState,

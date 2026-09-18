@@ -9,6 +9,7 @@ import { open } from "@/lib/crypto/secretbox";
 import { parseIcs } from "@/lib/calendar/ics";
 import { failureNote } from "@/lib/integrations/sync-note";
 import { BUSINESS_TIME_ZONE, dayKeyIn } from "@/lib/time/zone";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Pull every connected calendar feed into the mirror.
@@ -81,7 +82,7 @@ export async function pullCalendarFeeds(
   for (const conn of connections) {
     try {
       const url = open(conn.secretBox as string, key);
-      const res = await fetch(url, { headers: { Accept: "text/calendar" } });
+      const res = await timeoutFetch(url, { headers: { Accept: "text/calendar" } });
       if (!res.ok) {
         throw new Error(`Calendar feed failed (${res.status}).`);
       }

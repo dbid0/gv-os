@@ -13,6 +13,7 @@ import {
   parseKitTagCount,
 } from "@/lib/email/kit-parse";
 import { failureNote } from "@/lib/integrations/sync-note";
+import { timeoutFetch } from "@/lib/net/timeout-fetch";
 
 /**
  * Kit account snapshot pull — one snapshot per connected `kit` integration
@@ -21,7 +22,7 @@ import { failureNote } from "@/lib/integrations/sync-note";
  */
 
 async function kitGet(apiKey: string, path: string): Promise<unknown> {
-  const res = await fetch(`https://api.kit.com/v4${path}`, {
+  const res = await timeoutFetch(`https://api.kit.com/v4${path}`, {
     headers: { "X-Kit-Api-Key": apiKey, "Content-Type": "application/json" },
   });
   if (!res.ok) {
