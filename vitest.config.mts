@@ -375,6 +375,14 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        // How far back a Close pass reads. A slip narrows the window past
+        // what speed-to-lead needs, and calls silently stop being recorded.
+        "src/lib/crm/close-window.ts": {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
         // Every outbound call's deadline. A missed branch here turns a hung
         // provider back into a page that never loads.
         "src/lib/net/timeout-fetch.ts": {

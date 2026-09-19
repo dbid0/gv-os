@@ -15,21 +15,21 @@ import {
 } from "@/lib/crm/close-normalize";
 import { failureNote } from "@/lib/integrations/sync-note";
 import { timeoutFetch } from "@/lib/net/timeout-fetch";
+import { closePullWindow, readFullSweepAt } from "@/lib/crm/close-window";
 
 /**
  * Close activity pull. For every connected `close` integration in the vault:
- * pull the last 7 days of calls, SMS, and emails (paginated, capped) and
- * capture them idempotently. Runs on the sync schedule; a re-run of the same
- * window is a no-op thanks to the (provider, external_id) unique key.
+ * pull calls, SMS and emails created since the last successful pass (with a
+ * full thirty-day sweep every few hours — lib/crm/close-window) and capture
+ * them idempotently, a page per statement. A re-read of the same rows is a
+ * no-op thanks to the (provider, external_id) unique key.
  */
 
 const KINDS = ["call", "sms", "email"] as const;
 const PAGE_LIMIT = 100;
 const MAX_PAGES_PER_KIND = 10;
-// A month, not a week: speed-to-lead is judged over 30 days, so the dialler's
-// record must cover the same window the applications do. Captures are
-// idempotent on (provider, external_id) — re-pulling costs reads, never dupes.
-const WINDOW_DAYS = 30;
+// How far back each pass reads — only what is new since the last success,
+// with a full thirty-day sweep every few hours. See lib/crm/close-window.
 
 export async function pullCloseActivity(): Promise<
   {
@@ -48,6 +48,8 @@ export async function pullCloseActivity(): Promise<
       id: integrations.id,
       clientId: integrations.clientId,
       secretBox: integrations.secretBox,
+      lastSyncAt: integrations.lastSyncAt,
+      config: integrations.config,
     })
     .from(integrations)
     .where(
@@ -58,10 +60,16 @@ export async function pullCloseActivity(): Promise<
       ),
     );
 
-  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const results = [];
 
   for (const conn of connections) {
+    const startedAt = new Date();
+    const window = closePullWindow(
+      startedAt,
+      conn.lastSyncAt,
+      readFullSweepAt(conn.config),
+    );
+    const since = window.since.toISOString();
     try {
       const apiKey = open(conn.secretBox as string, key);
       const auth = `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`;
@@ -88,32 +96,42 @@ export async function pullCloseActivity(): Promise<
           const rows = body.data ?? [];
           fetched += rows.length;
           if (kind === "call") callRows.push(...rows);
+
+          // ONE insert per page, not one per row. This ran a round-trip for
+          // every activity — ~400 sequential statements per pass, nearly all
+          // no-ops against rows already stored. Close ids are unique, but a
+          // page is de-duplicated anyway so a repeated id can never put the
+          // same key twice into one statement.
+          const byId = new Map<string, typeof crmActivity.$inferInsert>();
           for (const row of rows) {
             const normalized = normalizeCloseActivity(kind, row);
-            if (!normalized) continue;
+            if (!normalized || byId.has(normalized.externalId)) continue;
+            byId.set(normalized.externalId, {
+              integrationId: conn.id,
+              provider: "close",
+              externalId: normalized.externalId,
+              clientId: conn.clientId,
+              kind: normalized.kind,
+              userId: normalized.userId,
+              userName: normalized.userName,
+              direction: normalized.direction,
+              durationSeconds: normalized.durationSeconds,
+              occurredAt: normalized.occurredAt
+                ? new Date(normalized.occurredAt)
+                : null,
+              leadId: normalized.leadId,
+              raw: row,
+            });
+          }
+          if (byId.size > 0) {
             const inserted = await db
               .insert(crmActivity)
-              .values({
-                integrationId: conn.id,
-                provider: "close",
-                externalId: normalized.externalId,
-                clientId: conn.clientId,
-                kind: normalized.kind,
-                userId: normalized.userId,
-                userName: normalized.userName,
-                direction: normalized.direction,
-                durationSeconds: normalized.durationSeconds,
-                occurredAt: normalized.occurredAt
-                  ? new Date(normalized.occurredAt)
-                  : null,
-                leadId: normalized.leadId,
-                raw: row,
-              })
+              .values([...byId.values()])
               .onConflictDoNothing({
                 target: [crmActivity.provider, crmActivity.externalId],
               })
               .returning({ id: crmActivity.id });
-            if (inserted.length > 0) captured += 1;
+            captured += inserted.length;
           }
           if (!body.has_more) break;
           skip += PAGE_LIMIT;
@@ -128,9 +146,20 @@ export async function pullCloseActivity(): Promise<
       await db
         .update(integrations)
         .set({
-          lastSyncAt: new Date(),
-          lastSyncNote: `pulled ${fetched} activities (30d), captured ${captured} new, resolved ${resolvedLeads} lead emails`,
+          // The pass's START, not its end: the next incremental window is
+          // measured from here, so nothing created during a slow pass slips
+          // between two windows.
+          lastSyncAt: startedAt,
+          lastSyncNote: `pulled ${fetched} activities (${window.full ? "30d sweep" : "since last pull"}), captured ${captured} new, resolved ${resolvedLeads} lead emails`,
           updatedAt: new Date(),
+          ...(window.full
+            ? {
+                config: {
+                  ...((conn.config as Record<string, unknown> | null) ?? {}),
+                  closeFullSweepAt: startedAt.toISOString(),
+                },
+              }
+            : {}),
         })
         .where(eq(integrations.id, conn.id));
       results.push({
